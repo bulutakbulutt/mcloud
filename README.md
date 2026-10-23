@@ -1,4 +1,4 @@
-# AppleMusicMac
+# mcloud
 
 Apple Music görünümünden esinlenen, macOS için Spicetify teması.
 
