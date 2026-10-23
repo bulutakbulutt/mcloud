@@ -1,0 +1,142 @@
+/* AppleMusicMac 2.4 — reference-proportioned layout for Spotify 1.3.x. */
+:root {
+ color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
+ --am-side:14.4vw; --am-pad:2.34vw; --am-font:clamp(13px,.98vw,20px);
+ --am-text:#dedede; --am-sub:#969696;
+ --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+ --encore-title-font-stack:var(--encore-body-font-stack);
+}
+html,body,#main,.Root {background:var(--am-bg)!important;font-family:var(--encore-body-font-stack)!important}
+.encore-dark-theme,.encore-base-set {--background-base:#1f1f1f;--background-elevated-base:#292929;--background-highlight:#383838;--text-base:#dedede;--text-subdued:#969696;--text-bright-accent:#fa2d48;--essential-bright-accent:#fa2d48;--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;--encore-title-font-stack:var(--encore-body-font-stack)}
+/* The theme shell persists across Spotify router transitions. */
+body.am-ready .am-layout {
+  display:grid!important;
+  grid-template:"top-banner top-banner top-banner" 0 "global-nav global-nav global-nav" 76px "left-sidebar main-view right-sidebar" minmax(0,1fr) "now-playing-bar now-playing-bar now-playing-bar" 0 / var(--am-side) minmax(0,1fr) 0!important;
+  width:100%!important;height:100%!important;padding:0!important;gap:0!important;
+}
+body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .am-native-right {display:none!important}
+body.am-ready .am-native-main {grid-area:main-view!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
+body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!important;padding-inline:calc(var(--am-side) + 16px) 16px!important;box-sizing:border-box}
+
+body.am-queue-open .am-native-right {display:flex!important;position:fixed!important;right:0;top:64px;bottom:110px;width:min(360px,35vw)!important;z-index:45;background:#282828}
+#am-sidebar,#am-player {box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;color:var(--am-text);font-size:var(--am-font);letter-spacing:-.02em}
+#am-sidebar *,#am-player * {box-sizing:border-box}
+#am-sidebar button,#am-player button {appearance:none;font:inherit;letter-spacing:inherit;border:0;color:inherit;cursor:pointer;background:none;text-align:left;padding:0;min-width:0}
+#am-sidebar button:focus-visible,#am-player button:focus-visible {outline:2px solid #fa4662;outline-offset:3px}
+#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(110deg,#262626,#282727);border-right:1px solid #ffffff02;display:flex;flex-direction:column;padding:0 .64vw}
+.am-drag {height:3.9vw;min-height:54px;flex-shrink:0;-webkit-app-region:drag}
+.am-navigation {flex:1;overflow:auto;scrollbar-width:none;padding:0 0 20px}
+#am-sidebar .am-nav-row {display:flex;align-items:center;gap:.55vw;height:2.25vw;min-height:32px;width:100%;padding:0 1.15vw;border-radius:.55vw;white-space:nowrap;font-weight:500;color:#f2f2f2}
+.am-nav-row svg {width:1.3vw;height:1.3vw;min-width:19px;min-height:19px;color:#7d7d7d;flex-shrink:0}
+#am-sidebar .am-nav-row:hover{background:#ffffff09}
+#am-sidebar .am-nav-row.am-selected{background:#494848;font-weight:650}
+.am-nav-row.am-selected svg {color:#a0a0a0}
+.am-nav-heading {font-size:.79em;font-weight:650;letter-spacing:0;color:#747474;margin:1.18vw .4vw .25vw .4vw}
+#am-player {position:fixed;z-index:60;bottom:1.3vw;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);width:48.4vw;height:3.75vw;min-height:54px;border-radius:999px;border:1px solid #ffffff21;background:#6464646e;backdrop-filter:blur(28px) saturate(.8);-webkit-backdrop-filter:blur(28px) saturate(.8);box-shadow:inset 0 1px 2px #ffffff18,0 4px 12px #0001;display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:0 .85vw;gap:.6vw}
+.am-transport,.am-player-extras {display:flex;align-items:center;gap:.35vw}
+#am-player button {display:grid;place-items:center;width:1.7vw;height:2.2vw;min-width:23px;min-height:32px;color:#d2d2d2}
+#am-player button:hover {color:white}
+#am-player svg {width:1.1vw;height:1.1vw;min-width:16px;min-height:16px}
+#am-player .am-play svg {width:1.8vw;height:1.8vw;min-width:25px;min-height:25px}
+#am-player .am-active {color:#fa4662}
+.am-player-track {position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;min-width:0;height:100%}
+.am-apple {font-size:2.1vw;line-height:1;color:#969696}
+#am-player .am-track-info {display:none;width:100%;height:100%;text-align:center;align-content:center;gap:1px}
+.am-has-track .am-apple{display:none}
+#am-player .am-has-track .am-track-info {display:grid;grid-template-columns:minmax(0,1fr)}
+.am-track-title {font-size:.7em;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-track-artist {font-size:.6em;color:#b4b4b4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-volume-wrap {position:relative;display:flex;align-items:center}
+.am-volume {display:none;position:absolute;bottom:100%;right:0;width:95px;accent-color:#ddd;background:#454545;padding:10px;border-radius:8px}
+.am-volume-wrap:hover .am-volume,.am-volume-wrap:focus-within .am-volume {display:block}
+.am-seek {position:absolute;bottom:3px;left:25%;width:50%;height:8px;margin:0;opacity:0;accent-color:#d6d6d6;transition:opacity .12s}
+#am-player:hover .am-seek,.am-seek:focus-visible {opacity:1}
+body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
+@media(max-width:900px){:root{--am-side:180px;--am-font:13px}#am-sidebar .am-nav-row{padding:0 12px;height:34px;gap:8px}.am-nav-heading{margin:18px 8px 5px}.am-drag{height:60px}#am-player{width:min(650px,calc(100vw - 200px));gap:4px}.am-track-artist{display:none}}
+@media(prefers-reduced-transparency:reduce){#am-player{background:#494949;backdrop-filter:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+
+
+body:not(.am-library-open) #am-library {display:none!important}
+body.am-library-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
+#am-library {box-sizing:border-box;position:fixed;inset:76px 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:24px var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
+.am-library-title {font-size:28px;letter-spacing:-.04em;margin:0 0 8px;font-weight:650}
+.am-library-status {font-size:13px;color:var(--am-sub);margin:0 0 24px}
+.am-library-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 22px}
+.am-library-card {appearance:none;border:0;padding:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:5px}
+.am-library-card:focus-visible {outline:2px solid #fa4662;outline-offset:6px;border-radius:8px}
+.am-library-art {display:grid;place-items:center;aspect-ratio:1;width:100%;background:#303030;border-radius:8px;overflow:hidden;margin-bottom:4px}
+.am-library-art img {width:100%;height:100%;object-fit:cover}
+.am-library-art svg {width:40%;height:40%;color:#999}
+.am-artist-art {border-radius:50%}
+.am-library-card:hover .am-library-art {filter:brightness(1.1)}
+.am-library-name {font-size:14px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am-library-sub {font-size:12px;color:var(--am-sub)}
+.am-library-retry {border:1px solid #666;border-radius:8px;background:#333;color:white;padding:8px 14px;cursor:pointer}
+
+/* macOS toolbar: retain the original nodes, handlers, menus and extension buttons. */
+body.am-ready #global-nav-bar {
+ position:fixed!important;inset:12px 20px auto calc(var(--am-side) + 20px)!important;
+ width:auto!important;height:50px!important;min-height:50px!important;margin:0!important;padding:6px 10px!important;
+ gap:12px!important;border:0!important;border-radius:13px;background:transparent!important;
+ backdrop-filter:none;-webkit-backdrop-filter:none;
+ box-shadow:none!important;z-index:50!important;
+ font-family:var(--encore-body-font-stack)!important;
+}
+#global-nav-bar .am-toolbar-leading,#global-nav-bar .am-toolbar-trailing {display:flex!important;align-items:center;gap:6px;flex:0 0 auto;min-width:0}
+#global-nav-bar .am-toolbar-center {display:flex!important;align-items:center;justify-content:center;flex:1 1 auto;min-width:0}
+#global-nav-bar .am-toolbar-center > div {width:min(100%,620px);min-width:0;gap:8px}
+#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:transparent!important;color:#b4b4b4;box-shadow:none!important;transform:none!important}
+#global-nav-bar button:hover {background:#ffffff0c!important;color:#f5f5f5}
+#global-nav-bar button:focus-visible {outline:2px solid #fa4662;outline-offset:2px}
+#global-nav-bar button:disabled {opacity:.35}
+#global-nav-bar button svg {width:18px!important;height:18px!important}
+#global-nav-bar button img {width:28px!important;height:28px!important;border-radius:7px}
+#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:#ffffff07!important;outline-color:#fa4662!important}
+#global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
+#global-nav-bar .am-toolbar-leading div:empty {display:none!important}
+#global-nav-bar .am-toolbar-trailing div:empty {display:none!important}
+/* Spicy Lyrics owns its fullscreen page, including playback and exit controls. */
+body.am-spicy-fullscreen #am-sidebar,
+body.am-spicy-fullscreen #am-library,body.am-spicy-fullscreen #am-player {display:none!important}
+body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-events:none!important}
+#am-fullscreen-toggle {flex-shrink:0}
+@media(max-width:900px){body.am-ready #global-nav-bar{left:calc(var(--am-side) + 10px)!important;right:10px!important;gap:5px!important}#global-nav-bar .am-toolbar-center > div{gap:3px}}
+
+/* Friend Activity is a native sidebar panel; show its actual pane as a sheet. */
+body.am-ready :is(.am-native-sidebar,.am-native-right).am-native-panel-open {
+ display:flex!important;position:fixed!important;inset:76px 20px 110px auto!important;
+ width:min(360px,calc(100vw - var(--am-side) - 40px))!important;min-width:0!important;
+ z-index:55!important;border:1px solid #ffffff16;border-radius:14px;background:#282828!important;
+ box-shadow:0 12px 40px #0006;overflow:hidden;
+}
+body.am-queue-open .am-native-right {top:76px}
+body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
+
+/* Native panels share Spotify's stacking context; lift it over the custom Radyo view. */
+body.am-friends-open #main {z-index:30!important}
+body.am-friends-open #main,body.am-friends-open .Root,body.am-friends-open .am-layout {background:transparent!important}
+body.am-ready .am-friends-sheet {
+ position:fixed!important;inset:76px 20px 110px auto!important;visibility:visible!important;pointer-events:auto!important;
+ width:min(360px,calc(100vw - var(--am-side) - 40px))!important;height:auto!important;z-index:55!important;
+ background:#282828!important;color:var(--am-text);border:1px solid #ffffff16;border-radius:14px;
+ box-shadow:0 12px 40px #0006;overflow:auto;
+}
+/* The pane positions the sheet; its inner feed must remain in normal flow. */
+body.am-ready .am-friends-sheet {
+ position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;
+ border:0!important;border-radius:0;box-shadow:none;box-sizing:border-box;
+}
+
+body.am-ready .am-native-panel-open {
+ display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
+ position:fixed!important;inset:76px 20px 110px auto!important;width:min(360px,calc(100vw - var(--am-side) - 40px))!important;
+ min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;
+ background:#282828!important;border:1px solid #ffffff16;border-radius:14px;box-shadow:0 12px 40px #0006;overflow:hidden;
+}
+
+body.am-ready .am-native-panel-open .am-friends-fill {
+ display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
+ width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
+ position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
+}
