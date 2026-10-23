@@ -2,7 +2,7 @@
 
 Apple Music görünümünden esinlenen, macOS için Spicetify teması.
 
-<img width="1157" height="958" alt="image" src="https://github.com/user-attachments/assets/f5bbb13f-159f-4901-8578-12920d607856" />
+<img width="1047" height="846" alt="image" src="https://github.com/user-attachments/assets/bad21c4c-5f79-4ccc-9b45-ebc5b61879e1" />
 
 
 ## Özellikler
