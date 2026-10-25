@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- A stripped-down copy of Spotify's desktop layout: just the grid panes and
+     toolbar groups theme.js binds to. Open directly in a browser or via smoke.mjs. -->
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>mcloud preview</title>
+<link rel="stylesheet" href="../user.css">
+<style>
+  body {margin:0}
+  .layout {display:grid;height:100vh;grid-template-areas:"global-nav global-nav global-nav" "left-sidebar main-view right-sidebar" "now-playing-bar now-playing-bar now-playing-bar";grid-template-columns:280px 1fr 0;grid-template-rows:64px 1fr 90px}
+  .left {grid-area:left-sidebar;background:#111}
+  .right {grid-area:right-sidebar}
+  .bar {grid-area:now-playing-bar;background:#000}
+  .view {grid-area:main-view;background:#121212;color:#fff;padding:20px;font:14px sans-serif}
+</style>
+</head>
+<body class="encore-dark-theme">
+<div id="main"><div class="Root"><div class="layout">
+  <div id="global-nav-bar" style="grid-area:global-nav;display:flex">
+    <div><button aria-label="Geri">‹</button><button aria-label="İleri">›</button></div>
+    <div><div role="search"><input placeholder="Ne çalmak istiyorsun?"></div></div>
+    <div><button aria-label="Profil">E</button></div>
+  </div>
+  <div class="left"></div>
+  <div class="view BPRPH_jrStQIw2m2qfDl"><h1>Ana Sayfa</h1><p>Spotify içerik alanı (mock)</p></div>
+  <div class="right"></div>
+  <div class="bar"><button data-testid="control-button-queue">Sıra</button></div>
+</div></div></div>
+<script src="spicetify-mock.js"></script>
+<script src="../theme.js"></script>
+</body>
+</html>
