@@ -193,30 +193,24 @@ try {
     assert.match(layout.blur, /blur/);
   });
 
-  await check('artist page: wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
+  await check('artist page: wheel scrolls the page, Shift+wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
     const index = await page.evaluate(() => [...document.querySelectorAll('#am-artist .am-shelf-track')].findIndex(t => t.scrollWidth > t.clientWidth + 1));
     assert.ok(index >= 0);
     const row = page.locator('#am-artist .am-shelf-track').nth(index);
     const rowLeft = () => page.evaluate(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft, index);
     const pageTop = () => page.evaluate(() => document.getElementById('am-artist').scrollTop);
+    // A plain wheel over a row scrolls the page, as in any browser...
     await row.hover();
-    await page.mouse.wheel(0, 300);
-    await page.waitForFunction(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft > 0, index);
-    // A gesture that started on the row stays on it after the pointer leaves the row...
     const top = await pageTop();
-    await page.mouse.move(700, 120);
-    await page.mouse.wheel(0, 200);
-    await page.waitForTimeout(150);
-    assert.equal(await pageTop(), top);
-    // ...and after a pause, a page scroll that passes over the row keeps scrolling the page.
-    await page.waitForTimeout(450);
     await page.mouse.wheel(0, 200);
     await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);
-    const left = await rowLeft(), box = await row.boundingBox();
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.wheel(0, 100);
-    await page.waitForTimeout(150);
-    assert.equal(await rowLeft(), left);
+    assert.equal(await rowLeft(), 0);
+    // ...and Shift+wheel scrolls the row sideways (the browser's own behaviour).
+    await row.hover();
+    await page.keyboard.down('Shift');
+    await page.mouse.wheel(0, 300);
+    await page.keyboard.up('Shift');
+    await page.waitForFunction(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft > 0, index);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-artist-actions')).getPropertyValue('-webkit-app-region') || getComputedStyle(document.querySelector('.am-artist-actions')).appRegion), 'no-drag');
     await page.evaluate(() => { document.getElementById('am-artist').scrollTop = 0; });
   });

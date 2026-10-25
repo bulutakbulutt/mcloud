@@ -73,34 +73,6 @@
   // Windows draws its caption buttons over the top-right corner of the window.
   document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
   let main, root, nativeNav, currentMode = 'native';
-  // A mouse wheel over a horizontal row scrolls the row, as a trackpad swipe does in Apple Music. Like the
-  // browser's own scroll latching, a wheel gesture sticks to what it started on: a page scroll that passes
-  // over a row keeps scrolling the page, and a row scroll that reaches the row's end stops there rather
-  // than handing over to the page. A 400ms pause ends the gesture.
-  const wheelHosts=new WeakSet();let wheelLatch=null,wheelLatchUntil=0;
-  function rowUnder(event,delta) {
-    for(let node=event.target;node&&node!==event.currentTarget;node=node.parentElement){
-      const wide=node.scrollWidth>node.clientWidth+1,tall=node.scrollHeight>node.clientHeight+40;
-      if(!wide&&!tall)continue;
-      const style=getComputedStyle(node);
-      // The first real vertical scroller up the tree is the page itself. (Rows may overflow a few
-      // pixels vertically from hover effects, hence the 40px margin.)
-      if(tall&&/(auto|scroll)/.test(style.overflowY))return null;
-      if(!wide||!/(auto|scroll)/.test(style.overflowX))continue;
-      // A row already at its end in this direction leaves the gesture to the page.
-      return (delta<0?node.scrollLeft<=0:node.scrollLeft>=node.scrollWidth-node.clientWidth-1)?null:node;
-    }
-    return null;
-  }
-  function wheelRows(event) {
-    if(event.ctrlKey||event.shiftKey||Math.abs(event.deltaX)>=Math.abs(event.deltaY))return;
-    const delta=event.deltaMode===1?event.deltaY*40:event.deltaY;
-    if(event.timeStamp>wheelLatchUntil)wheelLatch=rowUnder(event,delta)||'page';
-    wheelLatchUntil=event.timeStamp+400;
-    if(wheelLatch==='page'||!wheelLatch.isConnected)return;
-    event.preventDefault();wheelLatch.scrollBy({left:delta,behavior:'smooth'});
-  }
-  function wheelHost(node){if(node&&!wheelHosts.has(node)){wheelHosts.add(node);node.addEventListener('wheel',wheelRows,{passive:false});}}
   function bindLayout() {
     root = document.querySelector('.Root');
     if (!root) return false;
@@ -113,7 +85,7 @@
       }
     }
     if (!main) return false;
-    main.classList.add('am-native-main');wheelHost(main);
+    main.classList.add('am-native-main');
     const layout = main.parentElement;
     layout.classList.add('am-layout');
     const bindings = {'left-sidebar':'am-native-sidebar','right-sidebar':'am-native-right','now-playing-bar':'am-native-player'};
@@ -691,7 +663,6 @@
     thumb.addEventListener('pointerup',stop);thumb.addEventListener('pointercancel',stop);
   }
   overlayScrollbar(artistView,'am-scroll-artist');overlayScrollbar(libraryView,'am-scroll-library');
-  wheelHost(artistView);wheelHost(libraryView);
   const nativeArtists=new Set();
   let artistRequest=0,artistScroll=0;
   function hexToHsl(hex) {

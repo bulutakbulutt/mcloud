@@ -1,6 +1,6 @@
 # Status — where we left off
 
-Working notes for the next session (people and agents). Read after AGENTS.md. Last updated with commit `29e565b` on `feature/one-line-install-and-polish`; `main` is kept fast-forwarded to the same commit so the one-line installers serve it.
+Working notes for the next session (people and agents). Read after AGENTS.md. Last updated after the wheel change (see git log) on `feature/one-line-install-and-polish`; `main` is kept fast-forwarded to the same commit so the one-line installers serve it.
 
 ## Next up
 
@@ -13,7 +13,8 @@ Working notes for the next session (people and agents). Read after AGENTS.md. La
    - **Spicy Lyrics layout** was verified in the real client on this machine (page beside the sidebar, background under the glass). The stale-page fix (`body:not(.am-spicy-route)`) covers a restart race seen once; ask the user if Spicy still "doesn't open".
    - **Marketplace/Home overlap** in the toolbar was never reproduced; the fix (natural width for the history and custom-navlinks groups, `justify-content:safe center`) is preventive.
    - The **home chips bar** is glass now but looks dark when dark artwork scrolls under it; that is the glass working, not a bug.
-3. Known gaps, not started: the top toolbar row (`#global-nav-bar` area) is a solid band rather than glass over the page; Spotify's home carousels do not slide under the sidebar (only `#am-artist` rows do).
+3. **Make the top bar one piece with the sidebar** (user request, deferred). The toolbar row (`#global-nav-bar` area, grid row `global-nav`) is a solid band, measurably lighter than the glass sidebar: toolbar (39,39,39) vs sidebar ~(26–33) over a (31,31,31) page. The user wants them to read as one material. Options: (a) cheap — give the toolbar row the sidebar's material and tone so the two form one L-shaped frame; (b) full — let the page run under the toolbar too (span `.am-native-main` into the `global-nav` row, pad the scroll content by `--am-header`), which also needs Spotify's sticky bars moved down: `.main-topBar-container` (absolute, top 0), the home chips bar (sticky, top 0) and the track list header (sticky, inline `top: 64px`).
+4. Known gaps, not started: Spotify's home carousels do not slide under the sidebar (only `#am-artist` rows do).
 
 ## Decisions and why
 
@@ -28,7 +29,7 @@ Working notes for the next session (people and agents). Read after AGENTS.md. La
 - **Fonts:** Spotify pins its own font on `<html>` for non-Latin locales (Turkish included) with an `!important` no `:root` rule beats; the Inter stack is declared on `body`.
 - **Artist colour** is sampled from the artwork (i.scdn.co allows CORS); grey artwork keeps a grey page. Artists without `visuals.headerImage` get the round portrait layout.
 - **Right panel:** Friend Activity and the queue are read from the panel itself (an `<aside>` labelled like the button with `data-restore-focus-key` `buddy_feed` / `queue`), so any close button closes the sheet.
-- **Wheel over rows:** latched per gesture like browser scroll latching (400ms pause ends a gesture); a page scroll passing over a row never turns sideways.
+- **Wheel over rows:** the theme no longer turns the vertical wheel sideways. The user asked for the usual browser behaviour: the wheel scrolls the page everywhere, Shift+wheel (and a trackpad's horizontal swipe) scrolls a row. Chromium does that natively; two earlier attempts at converting the wheel (first plain, then latched per gesture) felt like the page and the rows kept taking over from each other.
 - **Windows "Transparency effects" off** reports `prefers-reduced-transparency`; the theme then shows solid surfaces with the glass rim (this is why some people saw a flat player).
 - **macOS native Liquid Glass** cannot be used: Spotify's UI is a Chromium page, Spicetify only reaches its HTML/CSS/JS, and the native material is an AppKit view. Only Spotify could adopt it.
 
