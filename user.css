@@ -223,7 +223,6 @@ body.am-ready .am-native-panel-open .am-friends-fill {
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-sidebar {background:var(--am-tint-side);border-right-color:#ffffff0d}
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
-body.am-tinted.am-liquid #am-player {background:color-mix(in srgb,var(--am-tint-top) 28%,transparent)}
 body.am-tinted .am-nav-heading {color:#ffffff73}
 body.am-tinted #am-sidebar .am-nav-row.am-selected {background:#ffffff1f}
 body:not(.am-artist-open) #am-artist {display:none!important}
@@ -306,13 +305,12 @@ body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none;filter:none}}
 
-/* Liquid Glass player: low blur, refraction along the rim (#am-glass in theme.js) and a specular edge.
+/* Liquid Glass player: clear glass with refraction and a rim light along the edge (#am-glass in theme.js),
+   tinted like Apple Music's: a little lighter at the top and bottom, no drop shadow, no saturation boost.
    Browsers without SVG backdrop filters drop this declaration and keep the frosted blur above. */
-body.am-liquid #am-player {background:#ffffff0d;backdrop-filter:url(#am-glass) saturate(1.5) brightness(1.06);-webkit-backdrop-filter:url(#am-glass) saturate(1.5) brightness(1.06);border-color:#ffffff38;box-shadow:inset 0 1px 0 #ffffff70,inset 0 -1px 0 #ffffff26,inset 1px 0 0 #ffffff1a,inset -1px 0 0 #ffffff1a,0 10px 30px #0000004d}
-body.am-liquid #am-player::before {content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(180deg,#ffffff1f,#ffffff00 45%),radial-gradient(120% 140% at 15% -20%,#ffffff24,#ffffff00 55%)}
-body.am-liquid #am-player > * {position:relative}
+body.am-liquid #am-player {background:linear-gradient(180deg,#ffffff24,#8c8c8c33 14% 83%,#ffffff2e);backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0006}
-@media(prefers-reduced-transparency:reduce){body.am-liquid #am-player{background:#3a3a3a;backdrop-filter:none;-webkit-backdrop-filter:none}body.am-liquid #am-player::before{display:none}}
+@media(prefers-reduced-transparency:reduce){body.am-liquid #am-player{background:#3a3a3a;backdrop-filter:none;-webkit-backdrop-filter:none}}
 
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */
 body.am-windows.am-ready #global-nav-bar {right:150px!important}

@@ -386,24 +386,33 @@
   },{passive:false});
   document.body.append(player);
   // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26.
-  // The displacement map is redrawn for the player's size; red/green encode the x/y shift.
+  // The glass is a 40px slab whose outer 7.75px round off as a convex bezel, height 5·(1-(1-x)^2.5).
+  // Snell's law (n=1.5, as in kube.io's "Liquid Glass in the Browser") turns the bezel's slope into an inward shift: ~17px at the edge, easing to 0
+  // with zero slope where the top turns flat, so the outer ~7px mirror the content just inside them.
+  // Fitted to Apple Music's player, which has no blur, tint shift or colour fringing inside the glass.
+  // Blue holds the 1px rim light, which brightens the refracted page rather than painting white:
+  // full strength at the top, about half at the bottom, faint on the sides.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="soft"/><feDisplacementMap in="soft" in2="map" scale="44" xChannelSelector="R" yChannelSelector="G"/></filter>';
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" result="glass"/><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
-  const glassMap=glass.querySelector('feImage');let glassSize='';
+  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=7.75;let glassSize='';
+  const bezelShift=edge=>{const x=Math.min(1,Math.max(0,edge)/bezel),a=Math.atan(12.5/bezel*Math.pow(1-x,1.5));return (40+5*(1-Math.pow(1-x,2.5)))*Math.tan(a-Math.asin(Math.sin(a)/1.5));};
   function drawGlassMap() {
+    // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
+    // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
     const w=player.offsetWidth,h=player.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
-    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-    const context=canvas.getContext('2d'),image=context.createImageData(w,h),r=h/2,band=Math.min(r,18);
+    const r=h/2,max=bezelShift(0),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const context=canvas.getContext('2d'),image=context.createImageData(w,h),data=image.data;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-      // Vector from the pixel to the pill's centre line points inwards; strength rises towards the rim.
+      // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
       const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
-      const t=edge<band?Math.pow(1-Math.max(0,edge)/band,2):0,i=(y*w+x)*4;
-      image.data[i]=128+127*t*dx/length;image.data[i+1]=128+127*t*dy/length;image.data[i+2]=128;image.data[i+3]=255;
+      const t=edge<bezel?bezelShift(edge)/max/length:0,light=.2+.8*Math.max(0,dy/length)+.35*Math.max(0,-dy/length),i=(y*w+x)*4;
+      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(255*light*Math.min(1,Math.max(0,(1.1-edge)/.6)));data[i+3]=255;
     }
     context.putImageData(image,0,0);
     glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
+    glassShift.setAttribute('scale',(2*max).toFixed(2));
   }
   if(typeof ResizeObserver==='function')new ResizeObserver(drawGlassMap).observe(player);drawGlassMap();
   // One shared popover serves the "…" track menu and the profile menu.

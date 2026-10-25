@@ -91,6 +91,27 @@ try {
     await page.setViewportSize({ width: 1440, height: 900 });
   });
 
+  await check('liquid glass map follows the player size', async () => {
+    const map = () => page.evaluate(() => {
+      const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
+      return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), scale: Number(shift.getAttribute('scale')) };
+    });
+    const first = await map();
+    assert.equal(first.size, '700x54');
+    assert.ok(first.href.startsWith('data:image/png') && first.scale > 30 && first.scale < 40);
+    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
+    // A content-box change fires the ResizeObserver but must not redraw the map.
+    await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
+    await page.waitForTimeout(100);
+    assert.equal((await map()).href, 'data:image/png;base64,kept');
+    await page.setViewportSize({ width: 900, height: 900 });
+    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === String(document.getElementById('am-player').offsetWidth));
+    assert.notEqual((await map()).href, 'data:image/png;base64,kept');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
+    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+  });
+
   await check('artist page', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
