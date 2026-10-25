@@ -307,12 +307,13 @@
   function marquee(cls) {
     const root=el('div','am-marquee '+cls),inner=el('span','am-marquee-inner'),first=el('span',''),copy=el('span','');
     copy.setAttribute('aria-hidden','true');inner.append(first,copy);root.append(inner);
-    // Scroll only text that overflows, at a constant reading speed.
+    // Scroll only text that overflows, at a constant reading speed. It moves in whole device pixels:
+    // every frame in between would re-run the player's glass filter for no visible change.
     function fit() {
       root.classList.remove('am-marquee-on');
       const overflow=first.offsetWidth>root.clientWidth+1&&!reducedMotion.matches;
       root.classList.toggle('am-marquee-on',overflow);
-      if(overflow)root.style.setProperty('--am-marquee-duration',((first.offsetWidth+48)/28).toFixed(1)+'s');
+      if(overflow){root.style.setProperty('--am-marquee-duration',((first.offsetWidth+48)/28).toFixed(1)+'s');root.style.setProperty('--am-marquee-steps',String(Math.max(1,Math.round((first.offsetWidth+48)*(window.devicePixelRatio||1)))));}
     }
     if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(root);
     return {root,set(text){if(first.textContent===text)return;first.textContent=copy.textContent=text;root.title=text;fit();}};
@@ -362,7 +363,10 @@
     fraction=Math.min(1,Math.max(0,fraction||0));
     // Ease between the 1 s player ticks; jump on seeks, drags and track changes.
     const smooth=!jump&&previousPlaying&&!reducedMotion.matches&&Math.abs(fraction-shownFraction)<.02;
-    barFill.style.transition=smooth?'transform 1s linear':'none';
+    // Step once per device pixel the bar actually moves (a few per second) instead of every frame,
+    // since each frame behind the Liquid Glass player re-runs its filter.
+    const steps=smooth?Math.max(1,Math.round(Math.abs(fraction-shownFraction)*bar.offsetWidth*(window.devicePixelRatio||1))):0;
+    barFill.style.transition=smooth?'transform 1s steps('+steps+')':'none';
     if(Math.abs(fraction-shownFraction)>.0001){barFill.style.transform='scaleX('+fraction.toFixed(4)+')';shownFraction=fraction;}
     if(!dragging){const position=String(Math.round(fraction*1000));if(seek.value!==position)seek.value=position;}
     if(track.classList.contains('am-scrubbing')){
