@@ -25,6 +25,11 @@ body.am-queue-open .am-native-right {display:flex!important;position:fixed!impor
 #am-sidebar button:focus-visible,#am-player button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:3px}
 #am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(110deg,#262626,#282727);border-right:1px solid #ffffff02;display:flex;flex-direction:column;padding:0 .64vw}
 .am-drag {height:3.9vw;min-height:54px;flex-shrink:0;-webkit-app-region:drag}
+.am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
+.am-sidebar-resizer::after {content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;background:#ffffff2e;opacity:0;transition:opacity .15s}
+.am-sidebar-resizer:hover::after,.am-sidebar-resizer:focus-visible::after,.am-resizing .am-sidebar-resizer::after {opacity:1}
+body.am-resizing {cursor:col-resize;user-select:none}
+body.am-resizing * {transition:none!important}
 .am-navigation {flex:1;overflow:auto;scrollbar-width:none;padding:0 0 20px}
 #am-sidebar .am-nav-row {display:flex;align-items:center;gap:.55vw;height:2.25vw;min-height:32px;width:100%;padding:0 1.15vw;border-radius:.55vw;white-space:nowrap;font-weight:500;color:#f2f2f2}
 .am-nav-row svg {width:1.3vw;height:1.3vw;min-width:19px;min-height:19px;color:var(--am-accent);flex-shrink:0}

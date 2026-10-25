@@ -39,7 +39,7 @@
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const accents={red:['Kırmızı','#fa2d48','#fa4662'],pink:['Pembe','#ff375f','#ff5c7c'],orange:['Turuncu','#ff9f0a','#ffb340'],yellow:['Sarı','#ffd60a','#ffe04d'],green:['Yeşil','#30d158','#5ade7a'],teal:['Turkuaz','#40c8e0','#6dd6ea'],blue:['Mavi','#0a84ff','#409cff'],purple:['Mor','#bf5af2','#cf7ff5'],spotify:['Spotify Yeşili','#1ed760','#3be477']};
-  const settings={accent:'red',artwork:true,sort:'library'};
+  const settings={accent:'red',artwork:true,sort:'library',sidebar:0};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   if(!accents[settings.accent])settings.accent='red';
   function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
@@ -48,6 +48,9 @@
     document.documentElement.style.setProperty('--am-accent',accent);
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
+    // 0 keeps the proportional default width from user.css.
+    if(settings.sidebar>0)document.documentElement.style.setProperty('--am-side','min('+settings.sidebar+'px,40vw)');
+    else document.documentElement.style.removeProperty('--am-side');
   }
   applySettings();
   const accentListeners=[];
@@ -108,6 +111,23 @@
   heading('Listeler');
   row('Tüm Listeler', 'grid', () => openLibrary('playlists'), '/collection/playlists');
   document.body.append(sidebar);
+  // As in Apple Music, the sidebar's right edge resizes it; double-click resets.
+  const resizer=el('div','am-sidebar-resizer');resizer.tabIndex=0;
+  resizer.setAttribute('role','separator');resizer.setAttribute('aria-orientation','vertical');resizer.setAttribute('aria-label','Kenar çubuğu genişliği');
+  sidebar.append(resizer);
+  const clampSidebar=width=>Math.round(Math.min(360,innerWidth*.4,Math.max(170,width)));
+  function setSidebarWidth(width,save){settings.sidebar=width&&clampSidebar(width);applySettings();if(save)saveSettings();}
+  resizer.addEventListener('pointerdown',event=>{
+    if(event.button!==0)return;event.preventDefault();resizer.setPointerCapture(event.pointerId);document.body.classList.add('am-resizing');
+    const stop=new AbortController(),end=()=>{stop.abort();document.body.classList.remove('am-resizing');saveSettings();};
+    resizer.addEventListener('pointermove',move=>setSidebarWidth(move.clientX,false),{signal:stop.signal});
+    resizer.addEventListener('pointerup',end,{signal:stop.signal});resizer.addEventListener('pointercancel',end,{signal:stop.signal});
+  });
+  resizer.addEventListener('dblclick',()=>setSidebarWidth(0,true));
+  resizer.addEventListener('keydown',event=>{
+    const step={ArrowLeft:-10,ArrowRight:10}[event.key];if(!step)return;
+    event.preventDefault();setSidebarWidth(sidebar.offsetWidth+step,true);
+  });
   // Apple Music keeps the account in the sidebar's bottom-left corner.
   const profile=el('button','am-profile');profile.type='button';profile.hidden=true;profile.setAttribute('aria-haspopup','menu');
   const avatar=el('span','am-avatar'),profileName=el('span','am-profile-name');profile.append(avatar,profileName);sidebar.append(profile);

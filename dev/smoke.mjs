@@ -63,6 +63,19 @@ try {
     await page.keyboard.press('Escape');
   });
 
+  await check('sidebar resizes and resets', async () => {
+    const side = () => page.evaluate(() => document.getElementById('am-sidebar').offsetWidth);
+    const box = await page.locator('.am-sidebar-resizer').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + 300);
+    await page.mouse.down();
+    await page.mouse.move(300, box.y + 300, { steps: 5 });
+    await page.mouse.up();
+    assert.equal(await side(), 300);
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).sidebar, 300);
+    await page.dblclick('.am-sidebar-resizer');
+    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-side')), '');
+  });
+
   await check('volume wheel', async () => {
     await page.hover('.am-volume-wrap');
     await page.mouse.wheel(0, 100);

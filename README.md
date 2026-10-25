@@ -63,6 +63,7 @@ Ayarlar bu bilgisayarda saklanır ve Spotify yeniden başlasa da korunur.
 | Kısayol | İşlev |
 | --- | --- |
 | İlerleme çizgisine tıklama / sürükleme | Şarkıda o noktaya gider. |
+| Kenar çubuğunun sağ kenarını sürükleme | Kenar çubuğunu genişletir veya daraltır. Çift tıklama varsayılana döndürür. |
 | Ses simgesi üzerinde fare tekerleği | Sesi %5 adımlarla değiştirir. |
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>F</kbd> (kitaplıkta) | Filtre kutusuna odaklanır. |
 | <kbd>Esc</kbd> (filtre kutusunda) | Filtreyi temizler. |
