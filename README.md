@@ -50,6 +50,7 @@ Betik şunları yapar:
 - **Kitaplık:** Hesabınızdaki listeler, albümler ve sanatçılar kapaklarıyla listelenir. İsme göre filtrelenebilir, kitaplık sırasına ya da A–Z'ye göre sıralanabilir.
 - **Spicy Lyrics:** Oynatıcıdan sözleri açıp kapatabilir, tam ekrana geçebilirsiniz.
 - **Vurgu rengi:** Kırmızı, pembe, turuncu, sarı, yeşil, turkuaz, mavi, mor veya Spotify yeşili.
+- **Yazı tipi:** macOS'ta Apple'ın kendi fontu SF Pro kullanılır. Windows ve Linux'ta temaya gömülü Inter kullanılır; internetten bir şey indirilmez ve tüm Türkçe harfleri içerir.
 - **Hafif:** Yalnızca ekrandaki kapaklar yüklenir. Görünmeyen kapakların kaynakları bırakılır, pencere gizliyken arka plan işleri durur.
 
 ## Ayarlar
@@ -59,6 +60,7 @@ Sol alt köşedeki **profilinize** tıklayınca vurgu rengini seçebilir, Spotif
 | Ayar | Açıklama |
 | --- | --- |
 | Oynatıcıda albüm kapağı | Oynatıcıda çalan parçanın kapağını gösterir. |
+| Liquid Glass oynatıcı | macOS 26 tarzı cam efekti: oynatıcının kenarlarında arkadaki sayfa kırılır. Kapatınca klasik buzlu cama döner. |
 | Renk: … | Vurgu rengini değiştirir. |
 
 Ayarlar bu bilgisayarda saklanır ve Spotify yeniden başlasa da korunur.

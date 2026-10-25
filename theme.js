@@ -42,7 +42,7 @@
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const accents={red:['Kırmızı','#fa2d48','#fa4662'],pink:['Pembe','#ff375f','#ff5c7c'],orange:['Turuncu','#ff9f0a','#ffb340'],yellow:['Sarı','#ffd60a','#ffe04d'],green:['Yeşil','#30d158','#5ade7a'],teal:['Turkuaz','#40c8e0','#6dd6ea'],blue:['Mavi','#0a84ff','#409cff'],purple:['Mor','#bf5af2','#cf7ff5'],spotify:['Spotify Yeşili','#1ed760','#3be477']};
-  const settings={accent:'red',artwork:true,sort:'library',sidebar:0};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   if(!accents[settings.accent])settings.accent='red';
   function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
@@ -51,6 +51,7 @@
     document.documentElement.style.setProperty('--am-accent',accent);
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
+    document.body.classList.toggle('am-liquid',settings.liquid);
     // 0 keeps the proportional default width from user.css.
     if(settings.sidebar>0)document.documentElement.style.setProperty('--am-side','min('+settings.sidebar+'px,40vw)');
     else document.documentElement.style.removeProperty('--am-side');
@@ -64,6 +65,8 @@
     return /^(https:|spotify:|data:image\/)/.test(source)?source:'';
   }
   const formatTime=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+  // Windows draws its caption buttons over the top-right corner of the window.
+  document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
   let main, root, nativeNav, currentMode = 'native';
   function bindLayout() {
     root = document.querySelector('.Root');
@@ -382,6 +385,27 @@
     try{const level=Math.round(Math.min(1,Math.max(0,S.Player.getVolume()-Math.sign(event.deltaY)*.05))*100)/100;S.Player.setVolume(level);volume.value=String(level);}catch{}
   },{passive:false});
   document.body.append(player);
+  // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26.
+  // The displacement map is redrawn for the player's size; red/green encode the x/y shift.
+  const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feGaussianBlur in="SourceGraphic" stdDeviation="1.6" result="soft"/><feDisplacementMap in="soft" in2="map" scale="44" xChannelSelector="R" yChannelSelector="G"/></filter>';
+  document.body.append(glass);
+  const glassMap=glass.querySelector('feImage');let glassSize='';
+  function drawGlassMap() {
+    const w=player.offsetWidth,h=player.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const context=canvas.getContext('2d'),image=context.createImageData(w,h),r=h/2,band=Math.min(r,18);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      // Vector from the pixel to the pill's centre line points inwards; strength rises towards the rim.
+      const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
+      const t=edge<band?Math.pow(1-Math.max(0,edge)/band,2):0,i=(y*w+x)*4;
+      image.data[i]=128+127*t*dx/length;image.data[i+1]=128+127*t*dy/length;image.data[i+2]=128;image.data[i+3]=255;
+    }
+    context.putImageData(image,0,0);
+    glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
+  }
+  if(typeof ResizeObserver==='function')new ResizeObserver(drawGlassMap).observe(player);drawGlassMap();
   // One shared popover serves the "…" track menu and the profile menu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
   let popoverAnchor=null;
@@ -792,7 +816,7 @@
     const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item('Renk: '+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
-    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),...colors]).register();
+    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),toggle('Liquid Glass oynatıcı','liquid'),...colors]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();

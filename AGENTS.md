@@ -36,6 +36,9 @@ There is no build step and no runtime dependency. Spotify loads `theme.js` and `
 - **Performance is a feature.** Do no work while `document.hidden`, load artwork lazily through the shared `IntersectionObserver`, release image sources that leave the viewport, and avoid per-second DOM writes unless the value changed.
 - **No network calls other than Spotify's own image CDN.** The theme must not load remote scripts, fonts or analytics.
 - Spicy Lyrics is optional. Drive it only by clicking its own controls (`SpicyLyrics_PageButton`, `SpicyLyrics_FullscreenButton`).
+- `install.ps1` must stay pure ASCII. Windows PowerShell 5.1 reads BOM-less files as ANSI, and a BOM breaks `iwr | iex`; write Turkish text as `\uXXXX` escapes inside `T '...'`.
+- The embedded font is Inter subset to Latin + Latin Extended-A with its variable axes (`pyftsubset InterVariable.woff2 --unicodes="U+0000-00FF,U+0100-017F,U+0218-021B,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+20BA,U+2122,U+2190-2193,U+2212,U+2215,U+FEFF,U+FFFD" --layout-features='kern,liga,calt,ccmp,locl,mark,mkmk,tnum,case' --flavor=woff2`), base64-encoded into the last `@font-face` in `user.css`. Its licence is in `licenses/Inter-OFL.txt`.
+- The Liquid Glass player uses an SVG displacement filter (`#am-glass`) in `backdrop-filter`. It works in Chromium (Spotify's engine) only; keep the plain blur declaration before it as the fallback.
 - The installers must stay idempotent (re-running one updates the theme), must refuse to run as root/admin, and must only print Spicetify's error output when the last `apply` attempt fails.
 
 ## Verifying changes

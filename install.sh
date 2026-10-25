@@ -131,5 +131,5 @@ if ! apply_theme; then
   die "Spicetify uygulanamadı. Spotify'ın en az bir kez açılıp kapatıldığından emin olup tekrar deneyin."
 fi
 
-ok "mcloud kuruldu. Ayarlar: Spotify'da profil menüsü → mcloud."
+ok "mcloud kuruldu. Ayarlar: sol alttaki profil veya Spotify'ın profil menüsü → mcloud."
 printf '  Söz düğmeleri için Spicy Lyrics eklentisini Spicetify Marketplace üzerinden kurun.\n'

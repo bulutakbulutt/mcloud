@@ -1,11 +1,14 @@
-# mcloud - Windows için tek komutla kurulum.
+# mcloud - one-line theme installer for Windows.
 #
 #   iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1 | iex
 #   & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1))) -Uninstall
 #
-# Yalnızca temayı kurar; Spicetify'ın önceden kurulu olması gerekir. Tema
-# dosyalarını Spicetify'ın Themes klasörüne indirir, temayı seçer ve uygular.
-# Tekrar çalıştırmak temayı günceller.
+# Installs only the theme; Spicetify must already be installed. Downloads the
+# theme into Spicetify's Themes folder, selects it and applies it. Running it
+# again updates the theme.
+#
+# Keep this file pure ASCII: Windows PowerShell 5.1 reads BOM-less files as
+# ANSI, and a BOM breaks `iwr | iex`. Turkish text goes through T with \u escapes.
 param(
   [switch]$Uninstall,
   [string]$Ref = $(if ($env:MCLOUD_REF) { $env:MCLOUD_REF } else { 'main' })
@@ -14,12 +17,15 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# Spicetify prints UTF-8; decode it as such and let the console show Turkish letters.
+try { [Console]::OutputEncoding = [Text.Encoding]::UTF8; $OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 
 $Repo = if ($env:MCLOUD_REPO) { $env:MCLOUD_REPO } else { 'bulutakbulutt/mcloud' }
 $Theme = 'AppleMusicMac'
 $Scheme = 'Dark'
 $Files = 'theme.js', 'user.css', 'color.ini'
 
+function T([string]$Text) { [regex]::Unescape($Text) }
 function Write-Step([string]$Text) { Write-Host "==> $Text" -ForegroundColor Cyan }
 function Write-Ok([string]$Text) { Write-Host "OK  $Text" -ForegroundColor Green }
 function Write-Fail([string]$Text) { Write-Host "HATA $Text" -ForegroundColor Red; throw $Text }
@@ -38,7 +44,7 @@ function Invoke-Spicetify {
   & $script:Spicetify @args 2>&1 | ForEach-Object { "$_" }
 }
 
-# Spicetify'ın kendi hata çıktısı en anlaşılır açıklamadır; yalnızca son denemeyi göster.
+# Spicetify's own error output explains failures best; show only the last attempt.
 function Invoke-Apply {
   $output = $null
   foreach ($attempt in @(@('apply'), @('backup', 'apply'), @('restore', 'backup', 'apply'))) {
@@ -51,12 +57,12 @@ function Invoke-Apply {
 
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-  Write-Fail 'PowerShell''i yönetici olarak değil, normal kullanıcı olarak açın; Spicetify yönetici modunda çalışmayı reddeder.'
+  Write-Fail (T 'PowerShell''i y\u00f6netici olarak de\u011fil, normal kullan\u0131c\u0131 olarak a\u00e7\u0131n; Spicetify y\u00f6netici modunda \u00e7al\u0131\u015fmay\u0131 reddeder.')
 }
 
 $script:Spicetify = Find-Spicetify
 if (-not $script:Spicetify) {
-  Write-Fail 'Spicetify bulunamadı. Önce Spicetify''ı kurun: https://spicetify.app/docs/getting-started'
+  Write-Fail (T 'Spicetify bulunamad\u0131. \u00d6nce Spicetify''\u0131 kurun: https://spicetify.app/docs/getting-started')
 }
 Write-Ok "Spicetify: $(Invoke-Spicetify -v | Select-Object -Last 1)"
 
@@ -65,17 +71,17 @@ $configDir = if ($config) { Split-Path -Parent $config } else { Join-Path $env:A
 $themeDir = Join-Path $configDir "Themes\$Theme"
 
 if ($Uninstall) {
-  Write-Step 'mcloud kaldırılıyor...'
+  Write-Step (T 'mcloud kald\u0131r\u0131l\u0131yor...')
   if ((Invoke-Spicetify config current_theme | Select-Object -Last 1) -eq $Theme) {
     Invoke-Spicetify config current_theme ' ' color_scheme ' ' inject_theme_js 0 | Out-Null
   }
   if (Test-Path -LiteralPath $themeDir) { Remove-Item -LiteralPath $themeDir -Recurse -Force }
-  if (-not (Invoke-Apply)) { Write-Fail 'Spicetify uygulanamadı. Yukarıdaki çıktıyı kontrol edin.' }
-  Write-Ok 'mcloud kaldırıldı.'
+  if (-not (Invoke-Apply)) { Write-Fail (T 'Spicetify uygulanamad\u0131. Yukar\u0131daki \u00e7\u0131kt\u0131y\u0131 kontrol edin.') }
+  Write-Ok (T 'mcloud kald\u0131r\u0131ld\u0131.')
   return
 }
 
-# install.ps1 bir klondan çalıştırıldığında indirmek yerine yerel dosyaları kullan.
+# Run from a clone: use the local files instead of downloading.
 $source = if ($PSCommandPath -and (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $PSCommandPath) 'theme.js'))) {
   Split-Path -Parent $PSCommandPath
 }
@@ -84,11 +90,11 @@ $staging = Join-Path ([IO.Path]::GetTempPath()) ("mcloud-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $staging | Out-Null
 try {
   if ($source) {
-    Write-Step "Yerel dosyalar kullanılıyor: $source"
+    Write-Step ((T 'Yerel dosyalar kullan\u0131l\u0131yor: ') + $source)
     foreach ($file in $Files) { Copy-Item -LiteralPath (Join-Path $source $file) -Destination $staging }
   }
   else {
-    Write-Step "Tema indiriliyor ($Repo@$Ref)..."
+    Write-Step ((T 'Tema indiriliyor') + " ($Repo@$Ref)...")
     foreach ($file in $Files) {
       Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/$Repo/$Ref/$file" -OutFile (Join-Path $staging $file)
     }
@@ -99,16 +105,16 @@ try {
 finally {
   Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
 }
-Write-Ok "Tema dosyaları: $themeDir"
+Write-Ok ((T 'Tema dosyalar\u0131: ') + $themeDir)
 
-Write-Step 'Spicetify ayarlanıyor...'
+Write-Step (T 'Spicetify ayarlan\u0131yor...')
 Invoke-Spicetify config current_theme $Theme color_scheme $Scheme inject_css 1 inject_theme_js 1 | Out-Null
-if ($LASTEXITCODE -ne 0) { Write-Fail 'Spicetify ayarları yazılamadı.' }
+if ($LASTEXITCODE -ne 0) { Write-Fail (T 'Spicetify ayarlar\u0131 yaz\u0131lamad\u0131.') }
 
-Write-Step 'Spotify''a uygulanıyor (Spotify yeniden başlayacak)...'
+Write-Step (T 'Spotify''a uygulan\u0131yor (Spotify yeniden ba\u015flayacak)...')
 if (-not (Invoke-Apply)) {
-  Write-Fail 'Spicetify uygulanamadı. Spotify''ın en az bir kez açılıp kapatıldığından emin olup tekrar deneyin. Microsoft Store sürümü desteklenmez; spotify.com sürümünü kullanın.'
+  Write-Fail (T 'Spicetify uygulanamad\u0131. Spotify''\u0131n en az bir kez a\u00e7\u0131l\u0131p kapat\u0131ld\u0131\u011f\u0131ndan emin olup tekrar deneyin. Microsoft Store s\u00fcr\u00fcm\u00fc desteklenmez; spotify.com s\u00fcr\u00fcm\u00fcn\u00fc kullan\u0131n.')
 }
 
-Write-Ok 'mcloud kuruldu. Ayarlar: Spotify''da profil menüsü -> mcloud.'
-Write-Host '    Söz düğmeleri için Spicy Lyrics eklentisini Spicetify Marketplace üzerinden kurun.'
+Write-Ok (T 'mcloud kuruldu. Ayarlar: sol alttaki profil veya Spotify''\u0131n profil men\u00fcs\u00fc -> mcloud.')
+Write-Host (T '    S\u00f6z d\u00fc\u011fmeleri i\u00e7in Spicy Lyrics eklentisini Spicetify Marketplace \u00fczerinden kurun.')
