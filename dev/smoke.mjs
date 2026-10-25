@@ -83,6 +83,27 @@ try {
     await page.mouse.move(10, 10);
   });
 
+  await check('volume capsule: hover opens it, the speaker mutes and restores', async () => {
+    const open = () => page.evaluate(() => document.getElementById('am-player').classList.contains('am-volume-open'));
+    await page.waitForFunction(() => !document.getElementById('am-player').classList.contains('am-volume-open'));
+    await page.hover('.am-volume-button');
+    await page.waitForFunction(() => document.getElementById('am-player').classList.contains('am-volume-open'));
+    // The capsule's clip-path also clips clicks, so let it finish growing.
+    await page.waitForFunction(() => !document.querySelector('.am-volume-capsule').getAnimations().length);
+    const box = await page.locator('.am-volume').boundingBox();
+    await page.mouse.click(box.x + box.width * 0.8, box.y + box.height / 2);
+    await page.waitForFunction(() => Math.abs(window.__mockState.volume - 0.8) < 0.06);
+    const level = await page.evaluate(() => window.__mockState.volume);
+    await page.click('.am-volume-button');
+    await page.waitForFunction(() => window.__mockState.volume === 0);
+    assert.equal(await page.locator('.am-volume-button path[opacity]').count(), 1);
+    await page.click('.am-volume-button');
+    await page.waitForFunction(l => window.__mockState.volume === l, level);
+    assert.ok(await open());
+    await page.mouse.move(10, 10);
+    await page.waitForFunction(() => !document.getElementById('am-player').classList.contains('am-volume-open'));
+  });
+
   await check('player width follows the window up to 700px', async () => {
     const width = () => page.evaluate(() => document.getElementById('am-player').offsetWidth);
     assert.equal(await width(), 700);

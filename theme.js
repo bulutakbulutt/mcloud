@@ -24,7 +24,10 @@
     repeat:'<path d="M4 10V7a2 2 0 0 1 2-2h14l-4-4M20 14v3a2 2 0 0 1-2 2H4l4 4M20 5l-4 4M4 19l4-4"/>',
     lyrics:'<rect x="3" y="3" width="18" height="15" rx="3"/><path d="m8 18 1 4 5-4M8 8h2v4H8M14 8h2v4h-2"/>',
     queue:'<path d="M8 5h14M8 12h14M8 19h14"/><circle cx="3" cy="5" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="19" r=".8"/>',
-    volume:'<path d="M3 9h4l5-5v16l-5-5H3zM16 7a8 8 0 0 1 0 10M19 3a13 13 0 0 1 0 18"/>',
+    volume:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10M20.5 4.5a10.6 10.6 0 0 1 0 15"/>',
+    volume2:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>',
+    volume1:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/>',
+    volumeMuted:'<mask id="am-mute-cut"><rect width="24" height="24" fill="white"/><path d="M2.5 20.5l14-16" stroke="black" stroke-width="4.5"/></mask><path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor" mask="url(#am-mute-cut)"/><path d="M2.5 20.5l14-16"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10" opacity=".35"/>',
     fullscreen:'<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
     chevron:'<path d="m9 4 8 8-8 8"/>',
     star:'<path d="m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z"/>',
@@ -375,14 +378,34 @@
     if(native){document.body.classList.toggle('am-queue-open');native.click();}
     else S.showNotification('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
   }));
-  const volumeWrap=el('div','am-volume-wrap');
+  // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
+  // lyrics and queue buttons; the speaker mutes and brings back the previous level.
+  const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
   const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label','Ses seviyesi');
-  volume.addEventListener('input',safe(()=>S.Player.setVolume(Number(volume.value))));
-  volumeWrap.append(button('Sesi kapat / aç','volume',safe(()=>S.Player.setVolume(S.Player.getVolume()>0?0:.5))),volume);extras.append(volumeWrap);
-  // Scrolling over the volume control nudges the level in 5% steps.
+  let unmutedVolume=.5,volumeIcon='volume',volumeTimer=0;
+  const volumeButton=button('Sesi kapat / aç','volume',safe(()=>setVolume(S.Player.getVolume()>0?0:unmutedVolume)),'am-volume-button');
+  function renderVolume(level) {
+    volume.style.setProperty('--am-level',(level*100).toFixed(1)+'%');
+    const icon=level<=0?'volumeMuted':level<.34?'volume1':level<.67?'volume2':'volume';
+    if(icon!==volumeIcon){volumeIcon=icon;volumeButton.innerHTML=svg(icon);}
+  }
+  function setVolume(level) {
+    level=Math.round(Math.min(1,Math.max(0,level))*100)/100;if(level>0)unmutedVolume=level;
+    S.Player.setVolume(level);volume.value=String(level);renderVolume(level);
+  }
+  function openVolume(open,delay){clearTimeout(volumeTimer);volumeTimer=setTimeout(()=>player.classList.toggle('am-volume-open',open),delay);}
+  volume.addEventListener('input',safe(()=>setVolume(Number(volume.value))));
+  volumeWrap.addEventListener('pointerenter',()=>openVolume(true,player.classList.contains('am-volume-open')?0:500));
+  // Range inputs count as :focus-visible even after a click, so keyboard focus is told apart by hover instead.
+  volumeWrap.addEventListener('pointerleave',()=>openVolume(false,400));
+  volumeWrap.addEventListener('focusin',()=>{if(!volumeWrap.matches(':hover'))openVolume(true,0);});
+  volumeWrap.addEventListener('focusout',event=>{if(!volumeWrap.contains(event.relatedTarget)&&!volumeWrap.matches(':hover'))openVolume(false,0);});
+  volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);
+  try{renderVolume(S.Player.getVolume());volume.value=String(S.Player.getVolume());}catch{}
+  // Scrolling over the volume control opens it and nudges the level in 5% steps.
   volumeWrap.addEventListener('wheel',event=>{
-    if(!event.deltaY)return;event.preventDefault();
-    try{const level=Math.round(Math.min(1,Math.max(0,S.Player.getVolume()-Math.sign(event.deltaY)*.05))*100)/100;S.Player.setVolume(level);volume.value=String(level);}catch{}
+    if(!event.deltaY)return;event.preventDefault();openVolume(true,0);
+    try{setVolume(S.Player.getVolume()-Math.sign(event.deltaY)*.05);}catch{}
   },{passive:false});
   document.body.append(player);
   // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26.
@@ -538,7 +561,7 @@
     if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?'Duraklat':'Çal');play.title=playing?'Duraklat':'Çal';}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
-    const level=String(S.Player.getVolume());if(volume.value!==level)volume.value=level;
+    const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
     if(!dragging)renderProgress(S.Player.getProgressPercent()||0,false);
     const liked=!!S.Player.getHeart?.();
     star.classList.toggle('am-active',liked);setAttributeIfChanged(star,'aria-pressed',String(liked));
