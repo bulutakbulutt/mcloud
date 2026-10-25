@@ -2,6 +2,8 @@
 
 Guidance for AI coding agents (Claude Code, Codex, Cursor, …) and human contributors.
 
+Work in progress, open tasks and the reasons behind recent design decisions are in [STATUS.md](STATUS.md); read it before continuing.
+
 ## What this is
 
 mcloud is a [Spicetify](https://spicetify.app) theme that restyles the Spotify desktop client to look like Apple Music on macOS. Spicetify installs it under the theme name `AppleMusicMac`; keep that name, because existing installs and the installers depend on it.
