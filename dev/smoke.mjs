@@ -120,7 +120,7 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale > 30 && first.scale < 40);
+    assert.ok(first.href.startsWith('data:image/png') && first.scale > 5 && first.scale < 12);
     assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // A content-box change fires the ResizeObserver but must not redraw the map.
     await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
@@ -138,7 +138,7 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
-    assert.ok(await page.evaluate(() => document.body.classList.contains('am-tinted')));
+    await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
     assert.equal(await page.locator('.am-song').count(), 9);
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     await page.click('.am-hero-follow');
@@ -147,6 +147,14 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });
   await shot('artist');
+
+  await check('locale-prefixed artist links and portrait-only artists', async () => {
+    await page.evaluate(() => { window.__savedHeader = window.__mockArtist.visuals.headerImage; window.__mockArtist.visuals.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
+    await page.waitForSelector('body.am-artist-open .am-hero-avatar .am-hero-portrait');
+    assert.equal(await page.locator('.am-hero-image').count(), 0);
+    await page.evaluate(() => { window.__mockArtist.visuals.headerImage = window.__savedHeader; Spicetify.Platform.History.push('/'); });
+    await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
+  });
 
   await check('page and artist view run under the glass sidebar', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));

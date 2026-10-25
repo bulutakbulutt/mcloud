@@ -7,6 +7,9 @@
  --encore-title-font-stack:var(--encore-body-font-stack);
 }
 html,body,#main,.Root {background:var(--am-bg)!important;font-family:var(--encore-body-font-stack)!important}
+/* For non-Latin locales, Turkish included, Spotify pins its own font on <html> (.spotify-mix-non-latin) with an
+   !important that no :root rule here could beat. Declared on body, the stack reaches everything below it. */
+body {--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif!important;--encore-title-font-stack:var(--encore-body-font-stack)!important}
 .encore-dark-theme,.encore-base-set {--background-base:#1f1f1f;--background-elevated-base:#292929;--background-highlight:#383838;--text-base:#dedede;--text-subdued:#969696;--text-bright-accent:var(--am-accent);--essential-bright-accent:var(--am-accent);--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;--encore-title-font-stack:var(--encore-body-font-stack)}
 /* The theme shell persists across Spotify router transitions. */
 body.am-ready .am-layout {
@@ -22,6 +25,9 @@ body.am-ready .am-native-main {grid-area:main-view / left-sidebar / main-view / 
 body.am-ready .am-native-main .main-view-container__scroll-node-child {padding-left:var(--am-side)!important;box-sizing:border-box;container:main-view-grid-area / inline-size;position:relative;overflow-x:clip}
 body.am-ready .am-native-main .main-topBar-container {padding-left:var(--am-side)!important;box-sizing:border-box}
 body.am-ready .am-native-main :is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"] {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
+/* Spotify's scrolled top bars (the home chips row, playlist and album titles) fill with the page's colour; here they
+   are the theme's glass instead, reaching under the sidebar. They are the colour layers that fade in by opacity. */
+body.am-ready .am-native-main [style*="--background-base"][style*="opacity"] {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;background:color-mix(in srgb,var(--am-bg) 74%,transparent)!important;backdrop-filter:blur(30px) saturate(1.5);-webkit-backdrop-filter:blur(30px) saturate(1.5);box-shadow:0 1px 0 #ffffff0f}
 /* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
 body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main,.main-topBar-container) {--content-spacing:var(--am-pad)!important}
 body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!important;padding-inline:calc(var(--am-side) + 16px) 16px!important;box-sizing:border-box}
@@ -82,7 +88,8 @@ body.am-resizing * {transition:none!important}
 .am-lcd-text {flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px}
 .am-title-row {display:flex;align-items:center;gap:6px;min-width:0}
 #am-player .am-star {width:auto;min-width:0;height:auto;min-height:0;color:#9a9a9a;opacity:0;transition:opacity .15s,color .15s}
-#am-player .am-star svg {width:13px;height:13px}
+/* The star spans the title's cap height, but its arms sit above its middle; half a pixel down centres it optically. */
+#am-player .am-star svg {width:13px;height:13px;transform:translateY(.5px)}
 #am-player .am-star.am-active {color:var(--am-accent);opacity:1}
 #am-player .am-star.am-active svg path {fill:currentColor}
 #am-player .am-lcd:hover .am-star,#am-player .am-star:focus-visible {opacity:1}
@@ -271,6 +278,9 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-artist-hero {position:relative;height:clamp(380px,74vh,780px);display:flex;align-items:flex-end;justify-content:center;padding-left:var(--am-side)}
 .am-hero-media {position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 40%,#0000 97%);mask-image:linear-gradient(180deg,#000 40%,#0000 97%)}
 .am-hero-image {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));filter:blur(calc(var(--am-hero-progress,0) * 14px));will-change:transform}
+/* Artists without a wide header image: the round portrait over a glow of their colour, as in Apple Music. */
+.am-artist-hero.am-hero-avatar {height:auto;min-height:clamp(380px,62vh,620px);align-items:center;padding-top:48px;background:radial-gradient(60% 55% at calc(50% + var(--am-side) / 2) 34%,color-mix(in srgb,var(--am-tint-top,#555),#fff 16%),transparent 75%)}
+.am-hero-portrait {width:clamp(170px,17vw,250px);aspect-ratio:1;border-radius:50%;object-fit:cover;box-shadow:0 12px 40px #0006;margin-bottom:10px;background:#ffffff14}
 .am-hero-content {position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 32px 26px;text-align:center}
 .am-hero-pill {padding:4px 10px;border-radius:7px;background:#00000040;backdrop-filter:blur(10px);font-size:11px;font-weight:600}
 .am-artist-name {margin:0;font-size:clamp(30px,3vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.1;text-shadow:0 1px 18px #0003}
@@ -340,7 +350,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
    tinted like Apple Music's: a little lighter at the top and bottom, no drop shadow, no saturation boost.
    Browsers without SVG backdrop filters drop this declaration and keep the frosted blur above. */
 body.am-liquid #am-player {background:linear-gradient(180deg,#ffffff24,#8c8c8c33 14% 83%,#ffffff2e);backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
-body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0006}
+body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 @media(prefers-reduced-transparency:reduce){body.am-liquid #am-player{background:#3a3a3a;backdrop-filter:none;-webkit-backdrop-filter:none}}
 
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */

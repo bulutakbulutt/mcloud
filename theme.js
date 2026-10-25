@@ -7,6 +7,8 @@
   const S = window.Spicetify;
   if (!S?.Platform?.History) return;
   const H = S.Platform.History;
+  // Links inside Spotify's pages carry a locale prefix (/intl-tr/artist/…); routes are matched without it.
+  const routePath = () => (H.location.pathname || '/').replace(/^\/intl-[a-z]{2}(?:-[a-z0-9]+)?(?=\/|$)/i, '') || '/';
   const icons = {
     search:'<circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/>',
     home:'<path d="m3 10 9-8 9 8v11h-7v-7h-4v7H3z"/>',
@@ -174,7 +176,7 @@
     }catch(e){console.warn('[AppleMusicMac] Profile',e);}
   })();
   function updateNav() {
-    const path = H.location.pathname;
+    const path = routePath();
     for (const { b, key } of navItems) {
       const selected = currentMode === 'library' ? key === libraryKeys[libraryKind] : path === key;
       b.classList.toggle('am-selected', selected);
@@ -432,19 +434,21 @@
   },{passive:false});
   document.body.append(player);
   // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26.
-  // The glass is a 40px slab whose outer 7.75px round off as a convex bezel, height 5·(1-(1-x)^2.5).
-  // Snell's law (n=1.5, as in kube.io's "Liquid Glass in the Browser") turns the bezel's slope into an inward shift: ~17px at the edge, easing to 0
-  // with zero slope where the top turns flat, so the outer ~7px mirror the content just inside them.
-  // Fitted to Apple Music's player, which has no tint shift or colour fringing inside the glass. Chromium
-  // samples the displacement per pixel, which steps on 1x screens, so a slight blur smooths the result.
-  // Blue holds the 1px rim light, which brightens the refracted page rather than painting white:
-  // full strength at the top, about half at the bottom, faint on the sides.
+  // The outer 14px act as a convex edge: each pixel shows the page up to 4.4px further in, easing to 0
+  // where the glass turns flat. The mapping never folds back, so the edge magnifies what is under it.
+  // (Apple's 2x glass mirrors the outer ~7px instead; on 1x screens that fold broke cards and round
+  // avatars into slivers and swirls.) A 0.7px blur smooths Chromium's per-pixel sampling and softens text
+  // behind the glass, and a curve brings white down to about half, so the player's white text stays
+  // readable over bright artwork and busy pages, as in Apple Music. Blue holds the 1px rim light, which brightens the
+  // refracted page rather than painting white: full at the top, about half at the bottom, faint on the sides.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".5" edgeMode="duplicate" result="glass"/><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  const curve='tableValues=".02 .2 .36 .47 .54"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
-  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=7.75;let glassSize='';
-  const bezelShift=edge=>{const x=Math.min(1,Math.max(0,edge)/bezel),a=Math.atan(12.5/bezel*Math.pow(1-x,1.5));return (40+5*(1-Math.pow(1-x,2.5)))*Math.tan(a-Math.asin(Math.sin(a)/1.5));};
+  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=14;let glassSize='';
+  // Shift 4.4·(1-x)³: its slope at the edge (-3·4.4/14 ≈ -0.94) stays above -1, which is what keeps it from folding.
+  const bezelShift=edge=>4.4*Math.pow(1-Math.min(1,Math.max(0,edge)/bezel),3);
   function drawGlassMap() {
     // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
     // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
@@ -569,7 +573,7 @@
     if(page!==observedSpicyPage){spicyObserver.disconnect();observedSpicyPage=page;if(page)spicyObserver.observe(page,{attributes:true,attributeFilter:['class']});}
     const fullscreen=!!page?.classList.contains('Fullscreen');
     document.body.classList.toggle('am-spicy-fullscreen',fullscreen);
-    const lyricsOpen=H.location.pathname==='/SpicyLyrics';
+    const lyricsOpen=routePath()==='/SpicyLyrics';
     const available=!!document.getElementById('SpicyLyrics_PageButton');
     lyricsButton.classList.toggle('am-active',lyricsOpen);
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));
@@ -656,12 +660,40 @@
   function setTint(hex) {
     const hsl=hexToHsl(hex),style=document.documentElement.style;
     if(!hsl){document.body.classList.remove('am-tinted');return;}
-    const [h,s]=hsl,sat=Math.round(Math.min(.85,Math.max(.35,s))*100),hue=Math.round(h);
+    // A grey photo keeps a grey page; raising its saturation would turn hue 0 into red.
+    const [h,s]=hsl,sat=Math.round((s<.1?s:Math.min(.85,Math.max(.35,s)))*100),hue=Math.round(h);
     style.setProperty('--am-tint-top',`hsl(${hue} ${sat}% 38%)`);
     style.setProperty('--am-tint-bg',`hsl(${hue} ${Math.round(sat*.8)}% 14%)`);
     style.setProperty('--am-tint-text',`hsl(${hue} ${Math.min(100,sat+10)}% 78%)`);
     document.body.classList.add('am-tinted');
   }
+  // Apple Music takes the page colour from the artwork. Spotify's extracted colour is often off (grey
+  // photos come back reddish), so the artwork is sampled: the most colourful hue family wins, and an
+  // image with little colour gives its plain average. i.scdn.co allows CORS, so the canvas stays readable.
+  function artworkColor(url) {
+    return new Promise(resolve=>{
+      if(!url)return resolve(null);
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
+      img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const size=32,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+        const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(img,0,0,size,size);
+        const data=context.getImageData(0,0,size,size).data,bins=Array.from({length:12},()=>[0,0,0,0]),total=[0,0,0];
+        for(let i=0;i<data.length;i+=4){
+          const r=data[i],g=data[i+1],b=data[i+2],max=Math.max(r,g,b),chroma=max-Math.min(r,g,b);
+          total[0]+=r;total[1]+=g;total[2]+=b;
+          if(chroma<24||max<40)continue;
+          const hue=max===r?((g-b)/chroma+6)%6:max===g?(b-r)/chroma+2:(r-g)/chroma+4,bin=bins[Math.floor(hue*2)%12];
+          bin[0]+=r*chroma;bin[1]+=g*chroma;bin[2]+=b*chroma;bin[3]+=chroma;
+        }
+        const count=data.length/4,best=bins.reduce((a,b)=>b[3]>a[3]?b:a);
+        const rgb=best[3]>count*12?best.slice(0,3).map(v=>v/best[3]):total.map(v=>v/count);
+        resolve('#'+rgb.map(v=>Math.round(v).toString(16).padStart(2,'0')).join(''));
+      }catch{resolve(null);}};
+      img.src=url;
+    });
+  }
+  const smallImage=visual=>spotifyImage([...(visual?.sources||[])].sort((a,b)=>(a.width||0)-(b.width||0))[0]?.url||'');
   function closeArtist() {
     if(!document.body.classList.contains('am-artist-open')&&!artistView.hasChildNodes())return;
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
@@ -729,7 +761,11 @@
     }
     if(request!==artistRequest)return;
     const visuals=artist.visuals||{},discography=artist.discography||{},related=artist.relatedContent||{};
-    setTint(visuals.headerImage?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex);
+    // Artists without a wide header image get Apple Music's round portrait instead of a stretched avatar.
+    const avatarOnly=!visuals.headerImage?.sources?.length;
+    const spotifyColor=visuals.headerImage?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
+    const fallbackTint=setTimeout(()=>{if(request===artistRequest)setTint(spotifyColor);},600);
+    artworkColor(smallImage(visuals.headerImage||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
     const back=button('Geri','left',()=>H.goBack?.(),'am-artist-back');
@@ -743,9 +779,10 @@
     actions.append(button('Paylaş','share',copyLink),moreButton);
     page.append(back,actions);
     // Hero: full-bleed artwork that fades into the tint, name and the play/follow pair.
-    const hero=el('header','am-artist-hero');
-    const heroArt=lazyImage(artistImage(visuals.headerImage||visuals.avatarImage,true),'am-hero-image');heroArt.loading='eager';
+    const hero=el('header','am-artist-hero'+(avatarOnly?' am-hero-avatar':''));
+    const heroArt=lazyImage(artistImage(visuals.headerImage||visuals.avatarImage,true),avatarOnly?'am-hero-portrait':'am-hero-image');heroArt.loading='eager';
     const heroContent=el('div','am-hero-content');
+    if(avatarOnly)heroContent.append(heroArt);
     const concerts=artist.goods?.events?.concerts?.items||[];
     if(concerts.length)heroContent.append(el('span','am-hero-pill','Yaklaşan Konserler'));
     heroContent.append(el('h1','am-artist-name',artist.profile.name));
@@ -759,8 +796,9 @@
     follow.classList.toggle('am-active',saved);follow.title=saved?'Takibi bırak':'Takip et';
     heroActions.append(playButton,follow);heroContent.append(heroActions);
     // The mask lives on a wrapper so the drifting image never shows a hard clipped edge.
-    const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
-    hero.append(heroMedia,heroContent);page.append(hero);
+    if(avatarOnly)hero.append(heroContent);
+    else{const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);hero.append(heroMedia,heroContent);}
+    page.append(hero);
     const body=el('div','am-artist-body');page.append(body);
     // Latest release and top songs share one horizontal row, as in Apple Music.
     const latest=discography.latest;
@@ -859,11 +897,11 @@
     const query=new URLSearchParams(H.location.search);
     const kind=query.get('am-library');
     if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
-    const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(H.location.pathname)?.[1];
+    const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
     if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
     closeArtist();
     currentMode='native';++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');
-    document.body.classList.toggle('am-search-open',H.location.pathname.startsWith('/search'));updateNav();
+    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
