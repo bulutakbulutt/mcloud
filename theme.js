@@ -343,6 +343,10 @@
   const title=marquee('am-track-title'),subtitle=marquee('am-track-subtitle');
   const star=button('Beğenilen Şarkılar\'a ekle','star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
   title.root.addEventListener('click',()=>{const item=S.Player.data?.item;const uri=item?.album?.uri||item?.metadata?.album_uri||item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
+  // As in Apple Music, the artist — album line asks where to go.
+  subtitle.root.setAttribute('role','button');subtitle.root.tabIndex=0;subtitle.root.setAttribute('aria-haspopup','menu');
+  subtitle.root.addEventListener('click',()=>togglePopover(subtitle.root,subtitleMenu));
+  subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
   const more=button('Diğer seçenekler','more',()=>togglePopover(more,trackMenu),'am-more');
   lcd.append(fullscreenButton,text,more);
@@ -515,6 +519,15 @@
       }},
     ];
   }
+  function subtitleMenu() {
+    const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
+    const albumUri=item.album?.uri||meta.album_uri,artists=(item.artists||[]).filter(artist=>artist?.uri);
+    if(!artists.length&&meta.artist_uri)artists.push({uri:meta.artist_uri,name:meta.artist_name||''});
+    return [
+      ...artists.map(artist=>({label:artists.length>1?'Sanatçıya Git: '+artist.name:'Sanatçıya Git',action:()=>openUri(artist.uri)})),
+      ...(albumUri?[{label:'Albüme Git',action:()=>openUri(albumUri)}]:[]),
+    ];
+  }
   let boundToolbar=null, toolbarChildren=[];
   function bindToolbar() {
     const toolbar=document.getElementById('global-nav-bar');
@@ -545,7 +558,11 @@
   }
   let friendPane=null;
   function syncNativePanels() {
-    const feed=document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
+    // Spotify 1.3 opens Friend Activity in the right panel as an <aside> labelled like its toolbar button
+    // (data-restore-focus-key="buddy_feed"); the panel otherwise holds the hidden Now Playing view.
+    const label=document.querySelector('[data-restore-focus-key="buddy_feed"]')?.getAttribute('aria-label');
+    const feed=(label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`))
+      ||document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement;
     document.body.classList.toggle('am-friends-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
@@ -905,7 +922,7 @@
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
-  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"]';
+  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
   let reconciliation=null;
   function scheduleReconcile(records) {
     if(document.hidden||reconciliation!==null)return;

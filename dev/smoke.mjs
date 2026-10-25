@@ -46,6 +46,22 @@ try {
     await page.waitForFunction(() => !document.querySelector('.am-player-track').classList.contains('am-scrubbing'));
   });
 
+  await check('subtitle asks between artist and album', async () => {
+    await page.click('.am-track-subtitle');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sanatçıya Git', 'Albüme Git']);
+    await page.keyboard.press('Escape');
+  });
+
+  await check('Friend Activity opens as a sheet', async () => {
+    await page.click('[data-restore-focus-key="buddy_feed"]');
+    await page.waitForFunction(() => document.body.classList.contains('am-friends-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    const box = await page.locator('.am-native-right').boundingBox();
+    assert.ok(box.width > 200 && box.height > 200);
+    await page.click('[data-restore-focus-key="buddy_feed"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-friends-open'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
+  });
+
   await check('star toggles Liked Songs', async () => {
     await page.click('.am-star');
     await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
