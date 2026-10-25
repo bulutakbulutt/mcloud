@@ -38,10 +38,15 @@ Betik şunları yapar:
 ## Özellikler
 
 - **Apple Music yerleşimi:** Kırmızı simgeli kalıcı sol menü, sol alt köşede profil ve Ana Sayfa ile açılış.
-- **Apple Music oynatıcısı:** Ortada albüm kapağı, şarkı adı ve kayan "Sanatçı — Albüm" satırı yer alır.
+- **Apple Music oynatıcısı:** Pencereyle birlikte en fazla 700 piksele kadar genişler, sonra içeriğin ortasında kalır. Cam görünümü alttaki sayfanın rengini alır. Ortada albüm kapağı, şarkı adı ve kayan "Sanatçı — Albüm" satırı yer alır.
   - Alttaki ince ilerleme çizgisi her zaman tıklanabilir. Üzerine gelince kalınlaşır, geçen ve kalan süre görünür, rakamlar Apple Music gibi kayarak değişir.
   - Kapağın üzerine gelince tam ekran düğmesi çıkar.
   - ☆ ile şarkıyı Beğenilen Şarkılar'a ekleyebilirsiniz. "…" menüsünde albüme veya sanatçıya gitme ve bağlantı kopyalama seçenekleri var.
+- **Sanatçı sayfaları:** Apple Music tarzında yeniden çizilir.
+  - Tam genişlikte sanatçı görseli, büyük isim, oynat ve takip et düğmeleri var.
+  - Son Çıkan ve Popüler Şarkılar yan yana; ardından Albümler, Single'lar ve EP'ler, Yaklaşan Konserler, Yer Aldığı ve Benzer Sanatçılar rafları geliyor.
+  - Tüm pencere sanatçının rengine bürünür.
+  - Spotify'ın görünümüne geçmek için sağ üstteki "…" menüsünden **Spotify Sayfasında Aç**'ı seçin.
 - **Kitaplık:** Hesabınızdaki listeler, albümler ve sanatçılar kapaklarıyla listelenir. İsme göre filtrelenebilir, kitaplık sırasına ya da A–Z'ye göre sıralanabilir.
 - **Spicy Lyrics:** Oynatıcıdan sözleri açıp kapatabilir, tam ekrana geçebilirsiniz.
 - **Vurgu rengi:** Kırmızı, pembe, turuncu, sarı, yeşil, turkuaz, mavi, mor veya Spotify yeşili.

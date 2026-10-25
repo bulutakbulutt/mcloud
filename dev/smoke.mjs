@@ -83,6 +83,34 @@ try {
     await page.mouse.move(10, 10);
   });
 
+  await check('player width follows the window up to 700px', async () => {
+    const width = () => page.evaluate(() => document.getElementById('am-player').offsetWidth);
+    assert.equal(await width(), 700);
+    await page.setViewportSize({ width: 900, height: 900 });
+    assert.ok(await width() < 700);
+    await page.setViewportSize({ width: 1440, height: 900 });
+  });
+
+  await check('artist page', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-artist-name');
+    assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-tinted')));
+    assert.equal(await page.locator('.am-song').count(), 9);
+    assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
+    await page.click('.am-hero-follow');
+    await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
+    await page.click('.am-artist-back');
+    await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
+  });
+  await shot('artist');
+
+  await check('artist page falls back to Spotify on errors', async () => {
+    await page.evaluate(() => { Spicetify.GraphQL.Request = async () => ({ errors: [{ message: 'boom' }] }); Spicetify.Platform.History.push('/artist/broken'); });
+    await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
+    errors.splice(0, errors.length, ...errors.filter(e => !e.includes('using Spotify page')));
+  });
+
   await check('library filter and sort', async () => {
     await page.click('text=Albümler');
     await page.waitForSelector('.am-library-card');

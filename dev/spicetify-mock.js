@@ -40,4 +40,40 @@
     },
   };
   window.__mockState = state;
+  // Shape follows Spotify's queryArtistOverview response (artistUnion).
+  const cover = (n, i) => ({ sources: [{ url: art(i * 47, n.slice(0, 2)), width: 300, height: 300 }] });
+  const release = (n, i, type, year) => ({ releases: { items: [{ uri: 'spotify:album:r' + i, name: n, type, date: { year }, coverArt: cover(n, i) }] } });
+  window.__mockArtist = {
+    uri: 'spotify:artist:mock', saved: false,
+    profile: { name: 'Sena Şener', biography: { text: 'Sena Şener, <b>İstanbul</b> doğumlu şarkıcı ve söz yazarı.' } },
+    stats: { monthlyListeners: 1234567 },
+    visuals: {
+      headerImage: { sources: [{ url: art(355, 'SŞ'), width: 1280, height: 720 }], extractedColors: { colorRaw: { hex: '#C8102E' } } },
+      avatarImage: { sources: [{ url: art(355, 'SŞ'), width: 640 }] },
+    },
+    goods: { events: { concerts: { items: [
+      { title: 'Edirne', date: { isoString: '2026-11-13T22:00:00' }, venue: { name: 'Black Corner Pub', location: { name: 'Edirne, Türkiye' } } },
+      { title: 'Ankara', date: { isoString: '2026-11-21T22:00:00' }, venue: { name: 'Milyon Event Hall', location: { name: 'Ankara, Türkiye' } } },
+    ] } } },
+    discography: {
+      latest: { uri: 'spotify:album:latest', name: 'Sev Diyeydi', type: 'SINGLE', date: { year: 2026, month: 10, day: 23 }, coverArt: cover('Sev Diyeydi', 1), tracks: { totalCount: 1 } },
+      topTracks: { items: ['Sev Diyeydi', 'Sevmemeliyiz', 'Alışılır Mı Aşka', 'Affettim Herkesi', 'Fly Above', 'Affetmem', 'Dönmek', 'Kaybettiklerimi Geri Ver', 'Feel'].map((n, i) => ({ track: { uri: 'spotify:track:t' + i, name: n, albumOfTrack: { uri: 'spotify:album:a' + i, name: n + ' - Single', coverArt: cover(n, i + 3) }, artists: { items: [{ profile: { name: 'Sena Şener' } }] } } })) },
+      albums: { items: [release('İnsan Gelir İnsan Geçer (Deluxe)', 20, 'ALBUM', 2018)] },
+      singles: { items: ['Sev Diyeydi', 'Alışılır Mı Aşka', 'Aşkından Ölmemeli', 'Gurbet', 'Defolup Gidelim', 'Affettim Herkesi', 'Kaybettiklerimi Geri Ver'].map((n, i) => release(n, 30 + i, 'SINGLE', 2026 - i)) },
+    },
+    relatedContent: {
+      appearsOn: { items: ['Feel (feat. Sena Şener)', 'Waiting on the Shore', 'Slavery'].map((n, i) => ({ releases: { items: [{ uri: 'spotify:album:ap' + i, name: n, artists: { items: [{ profile: { name: 'Mahmut Orhan' } }] }, coverArt: cover(n, 50 + i) }] } })) },
+      relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
+    },
+  };
+  Spicetify.Locale = { getLocale: () => 'tr' };
+  Spicetify.GraphQL = {
+    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' } },
+    Request: async (def, vars) => (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
+  };
+  Object.assign(Spicetify.Platform.LibraryAPI, {
+    add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
+    remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
+  });
+  Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();
