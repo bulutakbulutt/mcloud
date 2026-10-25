@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.6. Local theme UI; no remote scripts or credentials. */
+/* AppleMusicMac 2.7. Local theme UI; no remote scripts or credentials. */
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
@@ -34,6 +34,26 @@
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
+  // Preferences are per Spotify profile on this computer; nothing leaves the client.
+  const accents={red:['Kırmızı','#fa2d48','#fa4662'],pink:['Pembe','#ff375f','#ff5c7c'],orange:['Turuncu','#ff9f0a','#ffb340'],yellow:['Sarı','#ffd60a','#ffe04d'],green:['Yeşil','#30d158','#5ade7a'],teal:['Turkuaz','#40c8e0','#6dd6ea'],blue:['Mavi','#0a84ff','#409cff'],purple:['Mor','#bf5af2','#cf7ff5'],spotify:['Spotify Yeşili','#1ed760','#3be477']};
+  const settings={accent:'red',artwork:true,progress:true,sort:'library'};
+  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
+  if(!accents[settings.accent])settings.accent='red';
+  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
+  function applySettings(){
+    const [,accent,focus]=accents[settings.accent];
+    document.documentElement.style.setProperty('--am-accent',accent);
+    document.documentElement.style.setProperty('--am-accent-focus',focus);
+    document.body.classList.toggle('am-no-artwork',!settings.artwork);
+    document.body.classList.toggle('am-no-progress',!settings.progress);
+  }
+  applySettings();
+  function spotifyImage(source='') {
+    if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
+    if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
+    return /^(https:|spotify:|data:image\/)/.test(source)?source:'';
+  }
+  const formatTime=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
   let main, root, nativeNav, currentMode = 'native';
   function bindLayout() {
     root = document.querySelector('.Root');
@@ -139,10 +159,7 @@
     H.push({pathname:'/',search:'?am-library='+kind+(folder?'&am-folder='+encodeURIComponent(folder):'')});
   }
   function libraryImage(item) {
-    let source=item.images?.[0]?.url || item.images?.items?.[0]?.url || item.image?.sources?.[0]?.url || '';
-    if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
-    if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
-    return /^(https:|spotify:)/.test(source)?source:'';
+    return spotifyImage(item.images?.[0]?.url || item.images?.items?.[0]?.url || item.image?.sources?.[0]?.url || '');
   }
   // Keep only the fields rendered by this theme; release them when the page closes.
   async function loadLibrary(folder, request, kind) {
@@ -170,11 +187,28 @@
     libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));
     const status=el('p','am-library-status','Kitaplığın yükleniyor…');libraryView.append(status);
     try {
-      let items=await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
-      status.textContent=items.length?items.length+' öğe':'Bu bölümde kayıtlı öğe yok.';
+      const all=await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
+      let items=all;
+      status.textContent=all.length?all.length+' öğe':'Bu bölümde kayıtlı öğe yok.';
+      const tools=el('div','am-library-tools');
+      const filter=el('input','am-library-filter');filter.type='search';filter.placeholder='Filtrele';filter.setAttribute('aria-label','Kitaplığı filtrele');
+      const sort=el('select','am-library-sort');sort.setAttribute('aria-label','Sıralama');
+      for(const [value,label] of [['library','Kitaplık sırası'],['name','Ada göre (A–Z)']]){const option=el('option','',label);option.value=value;sort.append(option);}
+      sort.value=settings.sort==='name'?'name':'library';
+      tools.append(filter,sort);if(all.length)status.before(tools);
       const grid=el('div','am-library-grid');libraryView.append(grid);
       let rendered=0;
       const more=el('button','am-library-retry','Daha fazla göster');
+      function showItems() {
+        const query=filter.value.trim().toLocaleLowerCase('tr');
+        items=query?all.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):all.slice();
+        if(sort.value==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
+        status.textContent=query?(items.length?items.length+' / '+all.length+' öğe':'Eşleşen öğe yok.'):all.length+' öğe';
+        releaseArtwork();grid.replaceChildren();rendered=0;libraryView.append(more);appendBatch();
+      }
+      let filterTimer=null;
+      filter.addEventListener('input',()=>{clearTimeout(filterTimer);filterTimer=setTimeout(()=>{if(request===libraryRequest)showItems();},120);});
+      sort.addEventListener('change',()=>{settings.sort=sort.value;saveSettings();showItems();});
       function appendBatch() {
         if(request!==libraryRequest) return;
         const fragment=document.createDocumentFragment();
@@ -196,7 +230,7 @@
         for(const img of artwork)observeArtwork(img);
         if(rendered>=items.length) more.remove();
       }
-      more.onclick=appendBatch;libraryView.append(more);appendBatch();
+      more.onclick=appendBatch;libraryView.append(more);if(sort.value==='name')showItems();else appendBatch();
     }catch(e){if(request!==libraryRequest)return;status.textContent='Kitaplık yüklenemedi. Yeniden dene.';const retry=el('button','am-library-retry','Yeniden dene');retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label','Oynatıcı');
@@ -209,6 +243,12 @@
   const repeat=button('Yinele','repeat',safe(()=>S.Player.toggleRepeat()));controls.append(shuffle,back,play,next,repeat);
   const track=el('div','am-player-track');player.append(track);
   const logo=el('span','am-apple','');track.append(logo);
+  const cover=el('img','am-track-art');cover.alt='';cover.decoding='async';cover.hidden=true;
+  cover.addEventListener('error',()=>{cover.hidden=true;});
+  cover.addEventListener('load',()=>{cover.hidden=false;});
+  const progress=el('span','am-progress'),progressFill=el('span','am-progress-fill');progress.append(progressFill);
+  const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
+  track.append(cover,progress,elapsed,remaining);
   const info=el('button','am-track-info');info.type='button';info.title='Çalan parçayı aç';
   const title=el('span','am-track-title'),artist=el('span','am-track-artist');info.append(title,artist);track.append(info);
   info.onclick=()=>{const uri=S.Player.data?.item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));};
@@ -226,8 +266,13 @@
   const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label','Ses seviyesi');
   volume.addEventListener('input',safe(()=>S.Player.setVolume(Number(volume.value))));
   volumeWrap.append(button('Sesi kapat / aç','volume',safe(()=>S.Player.setVolume(S.Player.getVolume()>0?0:.5))),volume);extras.append(volumeWrap);
+  // Scrolling over the volume control nudges the level in 5% steps.
+  volumeWrap.addEventListener('wheel',event=>{
+    if(!event.deltaY)return;event.preventDefault();
+    try{const level=Math.round(Math.min(1,Math.max(0,S.Player.getVolume()-Math.sign(event.deltaY)*.05))*100)/100;S.Player.setVolume(level);volume.value=String(level);}catch{}
+  },{passive:false});
   const seek=el('input','am-seek');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.setAttribute('aria-label','Çalma konumu');
-  seek.addEventListener('input',()=>{const d=S.Player.getDuration();if(d)S.Player.seek(Math.round(Number(seek.value)/1000*d));});player.append(seek);document.body.append(player);
+  seek.addEventListener('input',()=>{const d=S.Player.getDuration();if(d)S.Player.seek(Math.round(Number(seek.value)/1000*d));});track.append(seek);document.body.append(player);
   let boundToolbar=null, toolbarChildren=[];
   function bindToolbar() {
     const toolbar=document.getElementById('global-nav-bar');
@@ -298,11 +343,22 @@
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=String(S.Player.getVolume());if(volume.value!==level)volume.value=level;
-    if(player.matches(':hover,:focus-within')&&document.activeElement!==seek){const position=String(Math.round((S.Player.getProgressPercent()||0)*1000));if(seek.value!==position)seek.value=position;}
+    const percent=S.Player.getProgressPercent()||0;
+    if(player.matches(':hover,:focus-within')){
+      if(document.activeElement!==seek){const position=String(Math.round(percent*1000));if(seek.value!==position)seek.value=position;}
+      const duration=S.Player.getDuration()||0,position=S.Player.getProgress?.()??percent*duration;
+      elapsed.textContent=duration?formatTime(position):'';remaining.textContent=duration?'-'+formatTime(duration-position):'';
+    }
+    if(settings.progress){const scale='scaleX('+Math.min(1,Math.max(0,percent)).toFixed(3)+')';if(progressFill.style.transform!==scale)progressFill.style.transform=scale;}
     const item=S.Player.data?.item,meta=item?.metadata||{};
     const trackTitle=item?.name||meta.title||'',trackArtist=meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'';
     const key=[item?.uri,trackTitle,trackArtist].join('\n');
-    if(key!==previousTrack){previousTrack=key;title.textContent=trackTitle;artist.textContent=trackArtist;track.classList.toggle('am-has-track',!!trackTitle);}
+    if(key!==previousTrack){
+      previousTrack=key;title.textContent=trackTitle;artist.textContent=trackArtist;track.classList.toggle('am-has-track',!!trackTitle);
+      const images=item?.images?.length?item.images:item?.album?.images||[];
+      const art=spotifyImage((images.find(i=>i.label==='small')||images.find(i=>i.label==='standard')||images[0])?.url||meta.image_small_url||meta.image_url||'');
+      if(!art){cover.hidden=true;cover.removeAttribute('src');}else if(cover.getAttribute('src')!==art)cover.src=art;
+    }
   }
   S.Player.addEventListener('songchange',syncPlayer);S.Player.addEventListener('onplaypause',syncPlayer);
   player.addEventListener('pointerenter',syncPlayer);
@@ -344,5 +400,18 @@
     if(document.hidden){observer.disconnect();clearTimeout(reconciliation);reconciliation=null;}
     else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();observer.observe(root,{childList:true,subtree:true});}
   });
+  document.addEventListener('keydown',event=>{
+    if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
+    const input=libraryView.querySelector('.am-library-filter');
+    if(input){event.preventDefault();input.focus();input.select();}
+  });
+  // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
+  if(S.Menu?.SubMenu&&S.Menu?.Item){
+    const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();syncPlayer();});return item;};
+    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item('Renk: '+label,settings.accent===key,()=>{
+      settings.accent=key;saveSettings();applySettings();colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===key));
+    }));
+    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),toggle('İlerleme çizgisi','progress'),...colors]).register();
+  }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
