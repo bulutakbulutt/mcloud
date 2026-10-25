@@ -48,7 +48,7 @@ There is no build step and no runtime dependency. Spotify loads `theme.js` and `
 
 ## Verifying changes
 
-There is no Spotify in CI, so the checks below catch syntax errors and broken wiring, not drift in Spotify's DOM. When a change depends on real Spotify markup, say so in the PR and describe how you tested it in the client.
+There is no Spotify in CI, so the checks below catch syntax errors and broken wiring, not drift in Spotify's DOM. When a change depends on real Spotify markup, say so in the PR and describe how you tested it in the client. `dev/client/` holds scripts that inspect the running client over its DevTools port (start Spotify with `--remote-debugging-port=9229`); STATUS.md describes them.
 
 ```sh
 node --check theme.js
