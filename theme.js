@@ -71,6 +71,25 @@
   // Windows draws its caption buttons over the top-right corner of the window.
   document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
   let main, root, nativeNav, currentMode = 'native';
+  // A mouse wheel over a horizontal row scrolls the row, as a trackpad swipe does in Apple Music;
+  // at either end of the row the page scrolls on.
+  const wheelHosts=new WeakSet();
+  function wheelRows(event) {
+    if(event.ctrlKey||event.shiftKey||Math.abs(event.deltaX)>=Math.abs(event.deltaY))return;
+    for(let node=event.target;node&&node!==event.currentTarget;node=node.parentElement){
+      const wide=node.scrollWidth>node.clientWidth+1,tall=node.scrollHeight>node.clientHeight+40;
+      if(!wide&&!tall)continue;
+      const style=getComputedStyle(node);
+      // The first real vertical scroller up the tree is the page itself: let it scroll. (Rows may
+      // overflow a few pixels vertically from hover effects, hence the 40px margin.)
+      if(tall&&/(auto|scroll)/.test(style.overflowY))return;
+      if(!wide||!/(auto|scroll)/.test(style.overflowX))continue;
+      const delta=event.deltaMode===1?event.deltaY*40:event.deltaY;
+      if(delta<0?node.scrollLeft<=0:node.scrollLeft>=node.scrollWidth-node.clientWidth-1)return;
+      event.preventDefault();node.scrollBy({left:delta,behavior:'smooth'});return;
+    }
+  }
+  function wheelHost(node){if(node&&!wheelHosts.has(node)){wheelHosts.add(node);node.addEventListener('wheel',wheelRows,{passive:false});}}
   function bindLayout() {
     root = document.querySelector('.Root');
     if (!root) return false;
@@ -83,7 +102,7 @@
       }
     }
     if (!main) return false;
-    main.classList.add('am-native-main');
+    main.classList.add('am-native-main');wheelHost(main);
     const layout = main.parentElement;
     layout.classList.add('am-layout');
     const bindings = {'left-sidebar':'am-native-sidebar','right-sidebar':'am-native-right','now-playing-bar':'am-native-player'};
@@ -595,6 +614,34 @@
   // Artist pages are redrawn after Apple Music from Spotify's own artist query.
   // Any missing API or failed request falls back to Spotify's native page.
   const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label','Sanatçı');document.body.append(artistView);
+  // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
+  // overlay thumb, as on macOS, shows while scrolling or hovered and can be dragged.
+  function overlayScrollbar(view,cls) {
+    const thumb=el('div','am-scroll-thumb '+cls);document.body.append(thumb);
+    let hideTimer=0,drag=null;
+    function place(show) {
+      const range=view.scrollHeight-view.clientHeight,box=view.getBoundingClientRect();
+      if(range<=1||!box.height){thumb.style.opacity='0';return;}
+      const height=Math.max(36,box.height*view.clientHeight/view.scrollHeight);
+      thumb.style.height=height+'px';thumb.style.transform='translateY('+(box.top+(box.height-height)*view.scrollTop/range).toFixed(1)+'px)';
+      if(!show)return;
+      thumb.style.opacity='1';clearTimeout(hideTimer);
+      hideTimer=setTimeout(()=>{if(!drag&&!thumb.matches(':hover'))thumb.style.opacity='0';},900);
+    }
+    view.addEventListener('scroll',()=>place(true),{passive:true});
+    thumb.addEventListener('pointerenter',()=>place(true));
+    thumb.addEventListener('pointerleave',()=>place(true));
+    thumb.addEventListener('pointerdown',event=>{event.preventDefault();drag={y:event.clientY,top:view.scrollTop};thumb.setPointerCapture(event.pointerId);thumb.classList.add('am-dragging');});
+    thumb.addEventListener('pointermove',event=>{
+      if(!drag)return;
+      const track=view.clientHeight-thumb.offsetHeight;
+      view.scrollTop=drag.top+(event.clientY-drag.y)*(view.scrollHeight-view.clientHeight)/Math.max(1,track);
+    });
+    const stop=()=>{if(!drag)return;drag=null;thumb.classList.remove('am-dragging');place(true);};
+    thumb.addEventListener('pointerup',stop);thumb.addEventListener('pointercancel',stop);
+  }
+  overlayScrollbar(artistView,'am-scroll-artist');overlayScrollbar(libraryView,'am-scroll-library');
+  wheelHost(artistView);wheelHost(libraryView);
   const nativeArtists=new Set();
   let artistRequest=0,artistScroll=0;
   function hexToHsl(hex) {
@@ -612,7 +659,6 @@
     const [h,s]=hsl,sat=Math.round(Math.min(.85,Math.max(.35,s))*100),hue=Math.round(h);
     style.setProperty('--am-tint-top',`hsl(${hue} ${sat}% 38%)`);
     style.setProperty('--am-tint-bg',`hsl(${hue} ${Math.round(sat*.8)}% 14%)`);
-    style.setProperty('--am-tint-side',`hsl(${hue} ${Math.round(sat*.6)}% 20% / .94)`);
     style.setProperty('--am-tint-text',`hsl(${hue} ${Math.min(100,sat+10)}% 78%)`);
     document.body.classList.add('am-tinted');
   }

@@ -117,6 +117,7 @@ try {
       const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
       return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), scale: Number(shift.getAttribute('scale')) };
     });
+    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
     assert.ok(first.href.startsWith('data:image/png') && first.scale > 30 && first.scale < 40);
@@ -146,6 +147,32 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });
   await shot('artist');
+
+  await check('page and artist view run under the glass sidebar', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-artist-name');
+    const layout = await page.evaluate(() => {
+      const side = document.getElementById('am-sidebar').getBoundingClientRect().width, view = document.getElementById('am-artist');
+      return { side, main: document.querySelector('.am-native-main').getBoundingClientRect().x, pad: parseFloat(getComputedStyle(document.querySelector('.main-view-container__scroll-node-child')).paddingLeft),
+        header: document.querySelector('[data-testid="playlist-page"] > [style*="background-color"]').getBoundingClientRect().x, artist: view.getBoundingClientRect().x, gutter: view.offsetWidth - view.clientWidth,
+        blur: getComputedStyle(document.getElementById('am-sidebar')).backdropFilter };
+    });
+    assert.deepEqual([layout.main, Math.round(layout.pad), layout.header, layout.artist, layout.gutter], [0, Math.round(layout.side), 0, 0, 0]);
+    assert.match(layout.blur, /blur/);
+  });
+
+  await check('artist page: wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
+    const index = await page.evaluate(() => [...document.querySelectorAll('#am-artist .am-shelf-track')].findIndex(t => t.scrollWidth > t.clientWidth + 1));
+    assert.ok(index >= 0);
+    await page.locator('#am-artist .am-shelf-track').nth(index).hover();
+    await page.mouse.wheel(0, 300);
+    await page.waitForFunction(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft > 0, index);
+    await page.mouse.move(700, 300);
+    await page.mouse.wheel(0, 400);
+    await page.waitForFunction(() => document.getElementById('am-artist').scrollTop > 0 && document.querySelector('.am-scroll-artist').style.opacity === '1');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-artist-actions')).getPropertyValue('-webkit-app-region') || getComputedStyle(document.querySelector('.am-artist-actions')).appRegion), 'no-drag');
+    await page.evaluate(() => { document.getElementById('am-artist').scrollTop = 0; });
+  });
 
   await check('artist page falls back to Spotify on errors', async () => {
     await page.evaluate(() => { Spicetify.GraphQL.Request = async () => ({ errors: [{ message: 'boom' }] }); Spicetify.Platform.History.push('/artist/broken'); });

@@ -1,7 +1,7 @@
 /* AppleMusicMac 2.7 — reference-proportioned layout for Spotify 1.3.x. */
 :root {
  color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
- --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-pad:2.34vw; --am-font:clamp(13px,.98vw,20px);
+ --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
  --am-text:#dedede; --am-sub:#969696; --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
  --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;
  --encore-title-font-stack:var(--encore-body-font-stack);
@@ -15,7 +15,15 @@ body.am-ready .am-layout {
   width:100%!important;height:100%!important;padding:0!important;gap:0!important;
 }
 body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .am-native-right {display:none!important}
-body.am-ready .am-native-main {grid-area:main-view!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
+/* The page runs under the glass sidebar, as in Apple Music: the main view spans the sidebar's column, Spotify's
+   content keeps clear of it (the size container moves along so its layouts see the visible width), and the
+   full-width colour layers of playlist headers reach the window's edge. */
+body.am-ready .am-native-main {grid-area:main-view / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
+body.am-ready .am-native-main .main-view-container__scroll-node-child {padding-left:var(--am-side)!important;box-sizing:border-box;container:main-view-grid-area / inline-size;position:relative;overflow-x:clip}
+body.am-ready .am-native-main .main-topBar-container {padding-left:var(--am-side)!important;box-sizing:border-box}
+body.am-ready .am-native-main :is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"] {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
+/* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
+body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main,.main-topBar-container) {--content-spacing:var(--am-pad)!important}
 body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!important;padding-inline:calc(var(--am-side) + 16px) 16px!important;box-sizing:border-box}
 
 body.am-queue-open .am-native-right {display:flex!important;position:fixed!important;right:0;top:64px;bottom:110px;width:min(360px,35vw)!important;z-index:45;background:#282828}
@@ -23,7 +31,9 @@ body.am-queue-open .am-native-right {display:flex!important;position:fixed!impor
 #am-sidebar *,#am-player * {box-sizing:border-box}
 #am-sidebar button,#am-player button {appearance:none;font:inherit;letter-spacing:inherit;border:0;color:inherit;cursor:pointer;background:none;text-align:left;padding:0;min-width:0}
 #am-sidebar button:focus-visible,#am-player button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:3px}
-#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(110deg,#262626,#282727);border-right:1px solid #ffffff02;display:flex;flex-direction:column;padding:0 .64vw}
+/* Sidebar after Apple Music on macOS 26: a glass pane over the page, which shows through it darkened by about
+   15% (a little more towards its edge), with rows, insets and type in fixed points rather than window units. */
+#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(90deg,#0000001f,#00000030);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 #ffffff0a;display:flex;flex-direction:column;padding:0 10px;font-size:13px}
 /* Same height as the toolbar row, so the first item lines up with the page content. */
 .am-drag {height:var(--am-header);flex-shrink:0;-webkit-app-region:drag}
 .am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
@@ -32,18 +42,18 @@ body.am-queue-open .am-native-right {display:flex!important;position:fixed!impor
 body.am-resizing {cursor:col-resize;user-select:none}
 body.am-resizing * {transition:none!important}
 .am-navigation {flex:1;overflow:auto;scrollbar-width:none;padding:0 0 20px}
-#am-sidebar .am-nav-row {display:flex;align-items:center;gap:.55vw;height:2.25vw;min-height:32px;width:100%;padding:0 1.15vw;border-radius:.55vw;white-space:nowrap;font-weight:500;color:#f2f2f2}
-.am-nav-row svg {width:1.3vw;height:1.3vw;min-width:19px;min-height:19px;color:var(--am-accent);flex-shrink:0}
-#am-sidebar .am-nav-row:hover{background:#ffffff09}
-#am-sidebar .am-nav-row.am-selected{background:#494848;font-weight:650}
+#am-sidebar .am-nav-row {display:flex;align-items:center;gap:10px;height:32px;width:100%;padding:0 16px;border-radius:8px;white-space:nowrap;font-weight:500;color:#f2f2f2}
+.am-nav-row svg {width:18px;height:18px;color:var(--am-accent);flex-shrink:0}
+#am-sidebar .am-nav-row:hover{background:#ffffff0d}
+#am-sidebar .am-nav-row.am-selected{background:#ffffff1f;font-weight:650}
 /* Account chip in the bottom-left corner, as in Apple Music. */
-#am-sidebar .am-profile {display:flex;align-items:center;gap:.6vw;width:100%;margin:0 0 1vw;padding:.45vw .55vw;border-radius:.55vw;font-weight:500;color:#f2f2f2;flex-shrink:0}
+#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2;flex-shrink:0}
 #am-sidebar .am-profile[hidden] {display:none}
-#am-sidebar .am-profile:hover {background:#ffffff09}
-.am-avatar {position:relative;display:grid;place-items:center;width:2.1vw;height:2.1vw;min-width:28px;min-height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
+#am-sidebar .am-profile:hover {background:#ffffff0d}
+.am-avatar {position:relative;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
 .am-avatar img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .am-profile-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.am-nav-heading {font-size:.79em;font-weight:650;letter-spacing:0;color:#747474;margin:1.18vw .4vw .25vw .4vw}
+.am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:#ffffff5c;margin:16px 6px 4px}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
 #am-player {position:fixed;z-index:60;bottom:16px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);width:min(calc(100vw - var(--am-side) - 64px),700px);height:54px;border-radius:999px;border:1px solid #ffffff24;background:#ffffff17;backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px #ffffff26,0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
@@ -138,7 +148,7 @@ body.am-resizing * {transition:none!important}
 .am-swatch.am-selected {box-shadow:0 0 0 2px #2c2c2e,0 0 0 4px #f2f2f2}
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
-@media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-sidebar .am-nav-row{padding:0 12px;height:34px;gap:8px}.am-nav-heading{margin:18px 8px 5px}#am-player{width:calc(100vw - var(--am-side) - 24px);gap:8px}}
+@media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{width:calc(100vw - var(--am-side) - 24px);gap:8px}}
 @media(prefers-reduced-transparency:reduce){#am-player{background:#3a3a3a;backdrop-filter:none}#am-popover{background:#2c2c2e;backdrop-filter:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,#am-popover{animation:none}}
 
@@ -174,7 +184,11 @@ body.am-ready #global-nav-bar {
  font-family:var(--encore-body-font-stack)!important;
 }
 #global-nav-bar .am-toolbar-leading,#global-nav-bar .am-toolbar-trailing {display:flex!important;align-items:center;gap:6px;flex:0 0 auto;min-width:0}
-#global-nav-bar .am-toolbar-center {display:flex!important;align-items:center;justify-content:center;flex:1 1 auto;min-width:0}
+#global-nav-bar .am-toolbar-center {display:flex!important;align-items:center;justify-content:safe center;flex:1 1 auto;min-width:0}
+/* Spotify pulls the history buttons 8px left and lets the extension icons (Marketplace) shrink, so with a
+   narrow toolbar Marketplace slid under Home. Keep both groups at their natural width. */
+#global-nav-bar .main-globalNav-historyButtonsWrapper {flex:0 0 auto!important;margin-left:0!important}
+#global-nav-bar .custom-navlinks-scrollable_container {flex:0 0 auto!important;margin-left:6px!important}
 #global-nav-bar .am-toolbar-center > div {width:min(100%,620px);min-width:0;gap:8px}
 #global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:transparent!important;color:#b4b4b4;box-shadow:none!important;transform:none!important}
 #global-nav-bar button:hover {background:#ffffff0c!important;color:#f5f5f5}
@@ -231,25 +245,30 @@ body.am-ready .am-native-panel-open .am-friends-fill {
 }
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
-body.am-tinted #am-sidebar {background:var(--am-tint-side);border-right-color:#ffffff0d}
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
 body.am-tinted .am-nav-heading {color:#ffffff73}
-body.am-tinted #am-sidebar .am-nav-row.am-selected {background:#ffffff1f}
 body:not(.am-artist-open) #am-artist {display:none!important}
 body.am-artist-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
 body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:none!important}
-#am-artist {box-sizing:border-box;position:fixed;inset:0 0 0 var(--am-side);z-index:10;overflow:auto;overflow-x:hidden;color:white;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:thin;scrollbar-color:#ffffff40 transparent}
+/* The artist page fills the window under the glass sidebar; its content starts beside it. */
+#am-artist {box-sizing:border-box;position:fixed;inset:0;z-index:10;overflow:auto;overflow-x:hidden;color:white;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:none}
 #am-artist *,#am-artist *::before {box-sizing:border-box}
+/* Overlay scrollbar (theme.js): Windows' classic one took a column and cut the artwork and colour short. */
+#am-library {scrollbar-width:none}
+.am-scroll-thumb {position:fixed;top:0;right:3px;z-index:58;width:7px;border-radius:4px;background:#ffffff59;opacity:0;transition:opacity .3s,width .15s,background-color .15s;-webkit-app-region:no-drag}
+.am-scroll-thumb:hover,.am-scroll-thumb.am-dragging {width:9px;opacity:1;background:#ffffff8c}
+body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scroll-library {display:none}
 #am-artist button {appearance:none;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:0;cursor:pointer;text-align:left}
 #am-artist button:focus-visible {outline:2px solid white;outline-offset:2px}
 #am-artist svg {width:18px;height:18px;flex-shrink:0}
-.am-artist-loading {margin:0;padding:120px 32px;color:#ffffff99;font-size:13px}
-#am-artist .am-artist-back,#am-artist .am-artist-actions {position:fixed;top:12px;z-index:3;display:flex;align-items:center;height:36px;border-radius:999px;background:color-mix(in srgb,var(--am-tint-top,#555) 70%,#fff 12%);box-shadow:inset 0 1px 1px #ffffff2e,0 2px 8px #0002;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.am-artist-loading {margin:0;padding:120px 32px 120px calc(var(--am-side) + 32px);color:#ffffff99;font-size:13px}
+/* These sit in the window's title-bar strip, which Spotify marks draggable; no-drag gives them clicks back. */
+#am-artist .am-artist-back,#am-artist .am-artist-actions {-webkit-app-region:no-drag;position:fixed;top:12px;z-index:3;display:flex;align-items:center;height:36px;border-radius:999px;background:color-mix(in srgb,var(--am-tint-top,#555) 70%,#fff 12%);box-shadow:inset 0 1px 1px #ffffff2e,0 2px 8px #0002;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 #am-artist .am-artist-back {left:calc(var(--am-side) + 12px);width:36px;justify-content:center}
 #am-artist .am-artist-actions {right:14px;padding:0 4px;gap:2px}
 #am-artist .am-artist-actions button {display:grid;place-items:center;width:32px;height:32px;border-radius:50%}
 #am-artist .am-artist-actions button:hover,#am-artist .am-artist-back:hover {background:#ffffff1f}
-.am-artist-hero {position:relative;height:clamp(380px,74vh,780px);display:flex;align-items:flex-end;justify-content:center}
+.am-artist-hero {position:relative;height:clamp(380px,74vh,780px);display:flex;align-items:flex-end;justify-content:center;padding-left:var(--am-side)}
 .am-hero-media {position:absolute;inset:0;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 40%,#0000 97%);mask-image:linear-gradient(180deg,#000 40%,#0000 97%)}
 .am-hero-image {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));filter:blur(calc(var(--am-hero-progress,0) * 14px));will-change:transform}
 .am-hero-content {position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 32px 26px;text-align:center}
@@ -262,12 +281,14 @@ body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:
 #am-artist .am-hero-follow {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#ffffff26;backdrop-filter:blur(10px)}
 #am-artist .am-hero-follow svg {width:17px;height:17px}
 #am-artist .am-hero-follow.am-active svg path {fill:currentColor}
-.am-artist-body {display:flex;flex-direction:column;gap:30px;padding-top:10px}
+.am-artist-body {display:flex;flex-direction:column;gap:30px;padding:10px 0 0 var(--am-side)}
 .am-shelf {position:relative}
 #am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}
 #am-artist button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:#ffffffa0}
 .am-shelf-track {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding:0 32px;padding:0 32px 4px;scrollbar-width:none}
 .am-shelf-track::-webkit-scrollbar {display:none}
+/* Rows reach under the sidebar, so cards slide behind the glass as they scroll. */
+#am-artist .am-shelf-track {margin-left:calc(-1 * var(--am-side));padding-left:calc(var(--am-side) + 32px);scroll-padding-left:calc(var(--am-side) + 32px)}
 .am-shelf-track > * {scroll-snap-align:start}
 #am-artist .am-shelf-arrow {position:absolute;top:calc(50% + 4px);transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#00000059;backdrop-filter:blur(10px);opacity:0;transition:opacity .15s;z-index:2}
 #am-artist .am-shelf-arrow svg {width:15px;height:15px;stroke-width:2.4}
