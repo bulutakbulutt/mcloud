@@ -1,0 +1,19 @@
+
+{
+  "name": "mcloud",
+  "description": "An Apple Music-inspired Spicetify theme with a floating glass player, custom sidebar, library and artist pages.",
+  "preview": "docs/screenshot.png",
+  "readme": "README.md",
+  "usercss": "user.css",
+  "schemes": "color.ini",
+  "include": [
+    "https://cdn.jsdelivr.net/gh/bulutakbulutt/mcloud@main/theme.js"
+  ],
+  "authors": [
+    {
+      "name": "bulutakbulutt",
+      "url": "https://github.com/bulutakbulutt"
+    }
+  ],
+  "tags": ["apple-music", "dark", "macos", "minimal"]
+}
