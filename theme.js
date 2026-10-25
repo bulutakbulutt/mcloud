@@ -73,23 +73,32 @@
   // Windows draws its caption buttons over the top-right corner of the window.
   document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
   let main, root, nativeNav, currentMode = 'native';
-  // A mouse wheel over a horizontal row scrolls the row, as a trackpad swipe does in Apple Music;
-  // at either end of the row the page scrolls on.
-  const wheelHosts=new WeakSet();
-  function wheelRows(event) {
-    if(event.ctrlKey||event.shiftKey||Math.abs(event.deltaX)>=Math.abs(event.deltaY))return;
+  // A mouse wheel over a horizontal row scrolls the row, as a trackpad swipe does in Apple Music. Like the
+  // browser's own scroll latching, a wheel gesture sticks to what it started on: a page scroll that passes
+  // over a row keeps scrolling the page, and a row scroll that reaches the row's end stops there rather
+  // than handing over to the page. A 400ms pause ends the gesture.
+  const wheelHosts=new WeakSet();let wheelLatch=null,wheelLatchUntil=0;
+  function rowUnder(event,delta) {
     for(let node=event.target;node&&node!==event.currentTarget;node=node.parentElement){
       const wide=node.scrollWidth>node.clientWidth+1,tall=node.scrollHeight>node.clientHeight+40;
       if(!wide&&!tall)continue;
       const style=getComputedStyle(node);
-      // The first real vertical scroller up the tree is the page itself: let it scroll. (Rows may
-      // overflow a few pixels vertically from hover effects, hence the 40px margin.)
-      if(tall&&/(auto|scroll)/.test(style.overflowY))return;
+      // The first real vertical scroller up the tree is the page itself. (Rows may overflow a few
+      // pixels vertically from hover effects, hence the 40px margin.)
+      if(tall&&/(auto|scroll)/.test(style.overflowY))return null;
       if(!wide||!/(auto|scroll)/.test(style.overflowX))continue;
-      const delta=event.deltaMode===1?event.deltaY*40:event.deltaY;
-      if(delta<0?node.scrollLeft<=0:node.scrollLeft>=node.scrollWidth-node.clientWidth-1)return;
-      event.preventDefault();node.scrollBy({left:delta,behavior:'smooth'});return;
+      // A row already at its end in this direction leaves the gesture to the page.
+      return (delta<0?node.scrollLeft<=0:node.scrollLeft>=node.scrollWidth-node.clientWidth-1)?null:node;
     }
+    return null;
+  }
+  function wheelRows(event) {
+    if(event.ctrlKey||event.shiftKey||Math.abs(event.deltaX)>=Math.abs(event.deltaY))return;
+    const delta=event.deltaMode===1?event.deltaY*40:event.deltaY;
+    if(event.timeStamp>wheelLatchUntil)wheelLatch=rowUnder(event,delta)||'page';
+    wheelLatchUntil=event.timeStamp+400;
+    if(wheelLatch==='page'||!wheelLatch.isConnected)return;
+    event.preventDefault();wheelLatch.scrollBy({left:delta,behavior:'smooth'});
   }
   function wheelHost(node){if(node&&!wheelHosts.has(node)){wheelHosts.add(node);node.addEventListener('wheel',wheelRows,{passive:false});}}
   function bindLayout() {
@@ -437,11 +446,13 @@
     try{setVolume(S.Player.getVolume()-Math.sign(event.deltaY)*.05);}catch{}
   },{passive:false});
   document.body.append(player);
-  // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26.
-  // The outer 14px act as a convex edge: each pixel shows the page up to 4.4px further in, easing to 0
-  // where the glass turns flat. The mapping never folds back, so the edge magnifies what is under it.
-  // (Apple's 2x glass mirrors the outer ~7px instead; on 1x screens that fold broke cards and round
-  // avatars into slivers and swirls.) A 0.7px blur smooths Chromium's per-pixel sampling and softens text
+  // Liquid Glass: an SVG lens refracts the page along the player's rim, as on macOS 26. Apple describes it
+  // as lensing: the edge bends and concentrates light rather than blurring it. The rim is a circular-arc
+  // bezel refracted with Snell's law (n=1.5), as in kube.io's "Liquid Glass in the Browser": the shift is 0
+  // at the very edge, peaks just inside it and eases to 0 where the glass turns flat, so a thin outer band
+  // gathers the page and the band inside it magnifies. It is made as strong as it can be (thicker glass)
+  // while the mapping never folds back, since folds broke cards and round avatars into slivers and swirls
+  // on 1x screens (Apple's 2x glass mirrors its outer ~7px). A 0.7px blur smooths Chromium's per-pixel sampling and softens text
   // behind the glass, and a curve brings white down to about half, so the player's white text stays
   // readable over bright artwork and busy pages, as in Apple Music. Blue holds the 1px rim light, which brightens the
   // refracted page rather than painting white: full at the top, about half at the bottom, faint on the sides.
@@ -450,14 +461,26 @@
   const curve='tableValues=".02 .2 .36 .47 .54"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
   glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
-  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=14;let glassSize='';
-  // Shift 4.4·(1-x)³: its slope at the edge (-3·4.4/14 ≈ -0.94) stays above -1, which is what keeps it from folding.
-  const bezelShift=edge=>4.4*Math.pow(1-Math.min(1,Math.max(0,edge)/bezel),3);
+  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=16;let glassSize='';
+  // Shift by distance from the edge, tabulated once. Height h=√(1-(1-x)²) over the bezel; the ray bends by
+  // a-asin(sin a/1.5) at slope angle a and travels h deep. A circular arc ends with a sloped shift, which
+  // would leave a seam where the magnification jumps, so (1-x⁴) eases it to 0 with zero slope. The table is
+  // then scaled until its steepest fall reaches -0.9 px/px: beyond -1 neighbouring pixels would swap order,
+  // i.e. the image would fold. With a 16px bezel the shift peaks at ~8.6px, 2.5px in from the edge.
+  const bezelTable=(()=>{
+    const table=new Float32Array(257);let fall=0;
+    for(let i=0;i<=256;i++){const x=Math.max(1e-4,i/256),h=Math.sqrt(1-(1-x)**2),a=Math.atan((1-x)/Math.max(1e-4,h));table[i]=bezel*h*Math.tan(a-Math.asin(Math.sin(a)/1.5))*(1-x**4);}
+    for(let i=1;i<=256;i++)fall=Math.min(fall,(table[i]-table[i-1])*256/bezel);
+    for(let i=0;i<=256;i++)table[i]*=fall<0?.9/-fall:1;
+    return table;
+  })();
+  const bezelPeak=Math.max(...bezelTable);
+  const bezelShift=edge=>{const f=Math.min(1,Math.max(0,edge)/bezel)*256,i=Math.min(255,Math.floor(f));return bezelTable[i]+(bezelTable[i+1]-bezelTable[i])*(f-i);};
   function drawGlassMap() {
     // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
     // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
     const w=player.offsetWidth,h=player.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
-    const r=h/2,max=bezelShift(0),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    const r=h/2,max=bezelPeak,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
     const context=canvas.getContext('2d'),image=context.createImageData(w,h),data=image.data;
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
@@ -907,6 +930,17 @@
     artistView.style.setProperty('--am-hero-progress',progress.toFixed(3));
   }
   artistView.addEventListener('scroll',()=>{artistScroll=artistView.scrollTop;if(!heroFrame)heroFrame=requestAnimationFrame(updateHero);},{passive:true});
+  // Sticky bars such as the home chips row paint a solid layer: an absolute child of the sticky bar with only
+  // an inline opacity, nothing user.css could select. The first scroll that may show it tags it as glass,
+  // re-checking at most once a second while it is missing (Spotify replaces it when the chips change). React
+  // rewrites this node's className as it scrolls, so the tag is an attribute it leaves alone.
+  let glassBar=null,glassBarCheck=0;
+  document.addEventListener('scroll',event=>{
+    if(currentMode!=='native'||glassBar?.isConnected&&glassBar.hasAttribute('data-am-glass')||event.timeStamp-glassBarCheck<1000||!main?.contains(event.target))return;
+    glassBarCheck=event.timeStamp;
+    for(const layer of main.querySelectorAll('.main-view-container__scroll-node-child [style*="opacity"]'))
+      if(layer.parentElement&&getComputedStyle(layer).position==='absolute'&&getComputedStyle(layer.parentElement).position==='sticky'){layer.setAttribute('data-am-glass','');glassBar=layer;break;}
+  },{capture:true,passive:true});
   H.listen(() => {
     syncSpicyControls();
     document.body.classList.add('am-ready');

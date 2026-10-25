@@ -136,7 +136,7 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale > 5 && first.scale < 12);
+    assert.ok(first.href.startsWith('data:image/png') && first.scale > 10 && first.scale < 30);
     assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // A content-box change fires the ResizeObserver but must not redraw the map.
     await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
@@ -188,12 +188,27 @@ try {
   await check('artist page: wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
     const index = await page.evaluate(() => [...document.querySelectorAll('#am-artist .am-shelf-track')].findIndex(t => t.scrollWidth > t.clientWidth + 1));
     assert.ok(index >= 0);
-    await page.locator('#am-artist .am-shelf-track').nth(index).hover();
+    const row = page.locator('#am-artist .am-shelf-track').nth(index);
+    const rowLeft = () => page.evaluate(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft, index);
+    const pageTop = () => page.evaluate(() => document.getElementById('am-artist').scrollTop);
+    await row.hover();
     await page.mouse.wheel(0, 300);
     await page.waitForFunction(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft > 0, index);
-    await page.mouse.move(700, 300);
-    await page.mouse.wheel(0, 400);
-    await page.waitForFunction(() => document.getElementById('am-artist').scrollTop > 0 && document.querySelector('.am-scroll-artist').style.opacity === '1');
+    // A gesture that started on the row stays on it after the pointer leaves the row...
+    const top = await pageTop();
+    await page.mouse.move(700, 120);
+    await page.mouse.wheel(0, 200);
+    await page.waitForTimeout(150);
+    assert.equal(await pageTop(), top);
+    // ...and after a pause, a page scroll that passes over the row keeps scrolling the page.
+    await page.waitForTimeout(450);
+    await page.mouse.wheel(0, 200);
+    await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);
+    const left = await rowLeft(), box = await row.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.wheel(0, 100);
+    await page.waitForTimeout(150);
+    assert.equal(await rowLeft(), left);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-artist-actions')).getPropertyValue('-webkit-app-region') || getComputedStyle(document.querySelector('.am-artist-actions')).appRegion), 'no-drag');
     await page.evaluate(() => { document.getElementById('am-artist').scrollTop = 0; });
   });
