@@ -19,7 +19,8 @@ There is no build step and no runtime dependency. Spotify loads `theme.js` and `
 ## How `theme.js` works
 
 - It waits for `Spicetify.Platform.History`, then binds Spotify's own layout panes by **grid area name** (`left-sidebar`, `main-view`, …) instead of hashed class names, and tags them with `am-native-*` classes that `user.css` hides or restyles.
-- It adds its own UI: `#am-sidebar` (navigation), `#am-player` (floating player) and `#am-library` (library grid).
+- It adds its own UI: `#am-sidebar` (navigation and the profile chip), `#am-player` (floating player), `#am-library` (library grid) and `#am-popover` (shared menu for "…" and the profile).
+- The player's centre "LCD" mirrors Apple Music: artwork (click = fullscreen), a title and marquee subtitle, and a scrubber that is a transparent `<input type="range">` over a hairline bar. Hovering it adds `.am-scrubbing`, which blurs the text, thickens the bar and shows rolling time digits (`rollText`).
 - The library view is routed through Spotify's history as `/?am-library=<kind>&am-folder=<uri>`, so back/forward work.
 - Spotify's toolbar (`#global-nav-bar`), Friend Activity and the queue keep their native React nodes; the theme only adds classes and repositions them. Do not move or clone React-owned nodes.
 - A `MutationObserver` reconciles bindings after Spotify replaces host nodes. It deliberately ignores lyric-line and progress churn; keep it that way.

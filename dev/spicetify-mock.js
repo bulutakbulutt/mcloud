@@ -8,7 +8,7 @@
   ['Frank Ocean','Tame Impala','Radiohead','Daft Punk','Lorde','Phoebe Bridgers'].forEach((n, i) => library.push({ uri: 'spotify:artist:' + i, type: 'artist', name: n, images: [{ url: art(200 + i * 20, n[0]) }] }));
   ['Sabah Kahvesi','Koşu','Odak','Yol Şarkıları'].forEach((n, i) => library.push({ uri: 'spotify:playlist:' + i, type: 'playlist', name: n, images: [{ url: art(i * 90, '♪') }], owner: { displayName: 'emir' } }));
   window.__mockLibrary = library;
-  const state = { playing: true, shuffle: false, repeat: 0, volume: .6, progress: 83000, duration: 245000 };
+  const state = { liked: false, playing: true, shuffle: false, repeat: 0, volume: .6, progress: 83000, duration: 245000 };
   window.__menus = [];
   window.Spicetify = {
     showNotification: m => { (window.__notes ||= []).push(m); },
@@ -18,13 +18,14 @@
     },
     Player: {
       origin: { _state: {} },
-      data: { item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean' }], album: { uri: 'spotify:album:0', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0' } } },
+      data: { item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean', uri: 'spotify:artist:0' }], album: { uri: 'spotify:album:0', name: 'Blonde', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0' } } },
       isPlaying: () => state.playing, togglePlay: () => { state.playing = !state.playing; },
       getShuffle: () => state.shuffle, toggleShuffle: () => { state.shuffle = !state.shuffle; },
       getRepeat: () => state.repeat, toggleRepeat: () => { state.repeat = (state.repeat + 1) % 3; },
       getVolume: () => state.volume, setVolume: v => { state.volume = v; },
       getProgress: () => state.progress, getDuration: () => state.duration,
       getProgressPercent: () => state.progress / state.duration, seek: ms => { state.progress = ms; },
+      getHeart: () => state.liked, toggleHeart: () => { state.liked = !state.liked; },
       back() {}, next() {},
       addEventListener: (n, f) => (playerListeners[n] ||= []).push(f),
     },
@@ -34,6 +35,7 @@
         push(p) { this.location = typeof p === 'string' ? { pathname: p, search: '' } : { pathname: p.pathname, search: p.search || '' }; listeners.forEach(f => f(this.location)); },
         listen: f => listeners.push(f),
       },
+      UserAPI: { getUser: async () => ({ username: 'emir', displayName: 'Emir Bilici', images: [] }) },
       LibraryAPI: { getContents: async ({ offset }) => ({ items: offset ? [] : library, totalLength: library.length }) },
     },
   };

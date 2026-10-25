@@ -29,21 +29,45 @@ try {
   await check('shell renders', async () => {
     assert.equal(await page.locator('#am-sidebar .am-nav-row').count(), 8);
     assert.ok(await page.locator('#am-player .am-has-track').isVisible());
-    assert.equal(await page.textContent('.am-track-title'), 'Nights');
-    await page.waitForFunction(() => !document.querySelector('.am-track-art').hidden);
+    assert.equal(await page.textContent('.am-track-title .am-marquee-inner > span'), 'Nights');
+    await page.waitForFunction(() => !document.querySelector('.am-track-art img').hidden);
   });
   await shot('home');
 
-  await check('player shows times on hover', async () => {
-    await page.hover('.am-track-title');
+  await check('scrubber: hover shows times, click seeks', async () => {
+    await page.hover('.am-seek');
+    await page.waitForFunction(() => document.querySelector('.am-player-track').classList.contains('am-scrubbing'));
     await page.waitForFunction(() => document.querySelector('.am-time-elapsed').textContent === '1:23');
-    assert.equal(await page.textContent('.am-time-remaining'), '-2:42');
+    assert.equal(await page.textContent('.am-time-remaining'), '−2:42');
+    const box = await page.locator('.am-seek').boundingBox();
+    await page.mouse.click(box.x + box.width * 0.75, box.y + box.height / 2);
+    await page.waitForFunction(() => Math.abs(window.__mockState.progress / window.__mockState.duration - 0.75) < 0.02);
+    await page.mouse.move(10, 10);
+    await page.waitForFunction(() => !document.querySelector('.am-player-track').classList.contains('am-scrubbing'));
+  });
+
+  await check('star toggles Liked Songs', async () => {
+    await page.click('.am-star');
+    await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
+  });
+
+  await check('track menu and profile corner', async () => {
+    await page.click('.am-more');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('#am-popover').isHidden());
+    assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
+    assert.equal(await page.textContent('.am-avatar'), 'EB');
+    await page.click('.am-profile');
+    assert.equal(await page.locator('#am-popover .am-swatch').count(), 9);
+    await page.keyboard.press('Escape');
   });
 
   await check('volume wheel', async () => {
     await page.hover('.am-volume-wrap');
     await page.mouse.wheel(0, 100);
     await page.waitForFunction(() => window.__mockState.volume === 0.55);
+    await page.mouse.move(10, 10);
   });
 
   await check('library filter and sort', async () => {

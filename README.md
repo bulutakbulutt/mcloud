@@ -37,8 +37,11 @@ Betik şunları yapar:
 
 ## Özellikler
 
-- **Apple Music yerleşimi:** Kalıcı sol menü ve Ana Sayfa ile açılış.
-- **Yüzen oynatıcı:** Ortadaki ekranda albüm kapağı, ince ilerleme çizgisi, üzerine gelince geçen ve kalan süre ile sarma çubuğu.
+- **Apple Music yerleşimi:** Kırmızı simgeli kalıcı sol menü, sol alt köşede profil ve Ana Sayfa ile açılış.
+- **Apple Music oynatıcısı:** Ortada albüm kapağı, şarkı adı ve kayan "Sanatçı — Albüm" satırı yer alır.
+  - Alttaki ince ilerleme çizgisi her zaman tıklanabilir. Üzerine gelince kalınlaşır, geçen ve kalan süre görünür, rakamlar Apple Music gibi kayarak değişir.
+  - Kapağın üzerine gelince tam ekran düğmesi çıkar.
+  - ☆ ile şarkıyı Beğenilen Şarkılar'a ekleyebilirsiniz. "…" menüsünde albüme veya sanatçıya gitme ve bağlantı kopyalama seçenekleri var.
 - **Kitaplık:** Hesabınızdaki listeler, albümler ve sanatçılar kapaklarıyla listelenir. İsme göre filtrelenebilir, kitaplık sırasına ya da A–Z'ye göre sıralanabilir.
 - **Spicy Lyrics:** Oynatıcıdan sözleri açıp kapatabilir, tam ekrana geçebilirsiniz.
 - **Vurgu rengi:** Kırmızı, pembe, turuncu, sarı, yeşil, turkuaz, mavi, mor veya Spotify yeşili.
@@ -46,12 +49,11 @@ Betik şunları yapar:
 
 ## Ayarlar
 
-Spotify'da sağ üstteki **profil menüsü → mcloud** altında:
+Sol alt köşedeki **profilinize** tıklayınca vurgu rengini seçebilir, Spotify profilinizi ve ayarlarınızı açabilirsiniz. Spotify'ın sağ üstteki **profil menüsü → mcloud** altında da şu ayarlar var:
 
 | Ayar | Açıklama |
 | --- | --- |
-| Oynatıcıda albüm kapağı | Yüzen oynatıcıda çalan parçanın kapağını gösterir. |
-| İlerleme çizgisi | Oynatıcının altındaki ince ilerleme çizgisini gösterir. |
+| Oynatıcıda albüm kapağı | Oynatıcıda çalan parçanın kapağını gösterir. |
 | Renk: … | Vurgu rengini değiştirir. |
 
 Ayarlar bu bilgisayarda saklanır ve Spotify yeniden başlasa da korunur.
@@ -60,6 +62,7 @@ Ayarlar bu bilgisayarda saklanır ve Spotify yeniden başlasa da korunur.
 
 | Kısayol | İşlev |
 | --- | --- |
+| İlerleme çizgisine tıklama / sürükleme | Şarkıda o noktaya gider. |
 | Ses simgesi üzerinde fare tekerleği | Sesi %5 adımlarla değiştirir. |
 | <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>F</kbd> (kitaplıkta) | Filtre kutusuna odaklanır. |
 | <kbd>Esc</kbd> (filtre kutusunda) | Filtreyi temizler. |

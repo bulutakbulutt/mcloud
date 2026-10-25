@@ -26,7 +26,10 @@
     queue:'<path d="M8 5h14M8 12h14M8 19h14"/><circle cx="3" cy="5" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="19" r=".8"/>',
     volume:'<path d="M3 9h4l5-5v16l-5-5H3zM16 7a8 8 0 0 1 0 10M19 3a13 13 0 0 1 0 18"/>',
     fullscreen:'<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/>',
-    chevron:'<path d="m9 4 8 8-8 8"/>'
+    chevron:'<path d="m9 4 8 8-8 8"/>',
+    star:'<path d="m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z"/>',
+    more:'<circle cx="5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.6" fill="currentColor" stroke="none"/>',
+    expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/>'
   };
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.music}</svg>`;
   function el(tag, cls, text) { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; }
@@ -36,7 +39,7 @@
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const accents={red:['Kırmızı','#fa2d48','#fa4662'],pink:['Pembe','#ff375f','#ff5c7c'],orange:['Turuncu','#ff9f0a','#ffb340'],yellow:['Sarı','#ffd60a','#ffe04d'],green:['Yeşil','#30d158','#5ade7a'],teal:['Turkuaz','#40c8e0','#6dd6ea'],blue:['Mavi','#0a84ff','#409cff'],purple:['Mor','#bf5af2','#cf7ff5'],spotify:['Spotify Yeşili','#1ed760','#3be477']};
-  const settings={accent:'red',artwork:true,progress:true,sort:'library'};
+  const settings={accent:'red',artwork:true,sort:'library'};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   if(!accents[settings.accent])settings.accent='red';
   function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
@@ -45,9 +48,10 @@
     document.documentElement.style.setProperty('--am-accent',accent);
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
-    document.body.classList.toggle('am-no-progress',!settings.progress);
   }
   applySettings();
+  const accentListeners=[];
+  function setAccent(key){settings.accent=key;saveSettings();applySettings();accentListeners.forEach(fn=>fn());}
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
     if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
@@ -104,6 +108,23 @@
   heading('Listeler');
   row('Tüm Listeler', 'grid', () => openLibrary('playlists'), '/collection/playlists');
   document.body.append(sidebar);
+  // Apple Music keeps the account in the sidebar's bottom-left corner.
+  const profile=el('button','am-profile');profile.type='button';profile.hidden=true;profile.setAttribute('aria-haspopup','menu');
+  const avatar=el('span','am-avatar'),profileName=el('span','am-profile-name');profile.append(avatar,profileName);sidebar.append(profile);
+  (async()=>{
+    try{
+      const user=await S.Platform.UserAPI?.getUser?.();const name=user?.displayName||user?.username||'';if(!name)return;
+      profileName.textContent=name;avatar.textContent=name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toLocaleUpperCase('tr');
+      const image=spotifyImage(user.images?.[0]?.url||user.avatar?.sources?.[0]?.url||'');
+      if(image){const img=el('img','');img.alt='';img.decoding='async';img.onerror=()=>img.remove();img.src=image;avatar.append(img);}
+      profile.onclick=()=>togglePopover(profile,()=>[
+        ...(user.username?[{label:'Profil',action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
+        {label:'Ayarlar',action:()=>go('/preferences')},
+        '-',{swatches:true},
+      ]);
+      profile.hidden=false;
+    }catch(e){console.warn('[AppleMusicMac] Profile',e);}
+  })();
   function updateNav() {
     const path = H.location.pathname;
     for (const { b, key } of navItems) {
@@ -236,32 +257,98 @@
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label','Oynatıcı');
   const controls=el('div','am-transport');player.append(controls);
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>S.showNotification('Bu işlem şu anda kullanılamıyor.')); } catch { S.showNotification('Oynatıcı henüz hazır değil.'); } };
-  const shuffle=button('Karıştır','shuffle',safe(()=>S.Player.toggleShuffle()));
+  const shuffle=button('Karıştır','shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
   const back=button('Önceki parça','back',safe(()=>S.Player.back()));
   const play=button('Çal','play',safe(()=>S.Player.togglePlay()),'am-play');
   const next=button('Sonraki parça','next',safe(()=>S.Player.next()));
-  const repeat=button('Yinele','repeat',safe(()=>S.Player.toggleRepeat()));controls.append(shuffle,back,play,next,repeat);
+  const repeat=button('Yinele','repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
+  // The centre "LCD" follows Apple Music: artwork, title, a marquee subtitle
+  // and a hairline scrubber that is always clickable and thickens on hover.
   const track=el('div','am-player-track');player.append(track);
-  const logo=el('span','am-apple','');track.append(logo);
-  const cover=el('img','am-track-art');cover.alt='';cover.decoding='async';cover.hidden=true;
+  const logo=el('span','am-apple','');track.append(logo);
+  const lcd=el('div','am-lcd');track.append(lcd);
+  const fullscreenButton=el('button','am-track-art');fullscreenButton.type='button';fullscreenButton.id='am-fullscreen-toggle';
+  fullscreenButton.setAttribute('aria-label','Tam ekran');fullscreenButton.title='Tam ekran';
+  const cover=el('img','');cover.alt='';cover.decoding='async';cover.hidden=true;
   cover.addEventListener('error',()=>{cover.hidden=true;});
   cover.addEventListener('load',()=>{cover.hidden=false;});
-  const progress=el('span','am-progress'),progressFill=el('span','am-progress-fill');progress.append(progressFill);
+  const expand=el('span','am-art-expand');expand.innerHTML=svg('expand');
+  fullscreenButton.append(cover,expand);fullscreenButton.addEventListener('click',toggleFullscreen);
+  const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+  function marquee(cls) {
+    const root=el('div','am-marquee '+cls),inner=el('span','am-marquee-inner'),first=el('span',''),copy=el('span','');
+    copy.setAttribute('aria-hidden','true');inner.append(first,copy);root.append(inner);
+    // Scroll only text that overflows, at a constant reading speed.
+    function fit() {
+      root.classList.remove('am-marquee-on');
+      const overflow=first.offsetWidth>root.clientWidth+1&&!reducedMotion.matches;
+      root.classList.toggle('am-marquee-on',overflow);
+      if(overflow)root.style.setProperty('--am-marquee-duration',((first.offsetWidth+48)/28).toFixed(1)+'s');
+    }
+    if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(root);
+    return {root,set(text){if(first.textContent===text)return;first.textContent=copy.textContent=text;root.title=text;fit();}};
+  }
+  const text=el('div','am-lcd-text'),titleRow=el('div','am-title-row');
+  const title=marquee('am-track-title'),subtitle=marquee('am-track-subtitle');
+  const star=button('Beğenilen Şarkılar\'a ekle','star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
+  title.root.addEventListener('click',()=>{const item=S.Player.data?.item;const uri=item?.album?.uri||item?.metadata?.album_uri||item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
+  titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
+  const more=button('Diğer seçenekler','more',()=>togglePopover(more,trackMenu),'am-more');
+  lcd.append(fullscreenButton,text,more);
+  const scrub=el('div','am-scrub');
   const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
-  track.append(cover,progress,elapsed,remaining);
-  const info=el('button','am-track-info');info.type='button';info.title='Çalan parçayı aç';
-  const title=el('span','am-track-title'),artist=el('span','am-track-artist');info.append(title,artist);track.append(info);
-  info.onclick=()=>{const uri=S.Player.data?.item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));};
+  const bar=el('span','am-bar'),barFill=el('span','am-bar-fill');bar.append(barFill);
+  const seek=el('input','am-seek');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.setAttribute('aria-label','Çalma konumu');
+  scrub.append(elapsed,remaining,bar,seek);track.append(scrub);
+  let dragging=false,shownFraction=-1;
+  function setScrubbing(on){track.classList.toggle('am-scrubbing',on);if(on)renderProgress(dragging?Number(seek.value)/1000:S.Player.getProgressPercent?.()||0,true);}
+  seek.addEventListener('pointerenter',()=>setScrubbing(true));
+  // Mouse users leave scrub mode with the pointer; keyboard focus keeps it open.
+  const keyboardFocus=()=>seek.matches(':focus-visible');
+  seek.addEventListener('pointerleave',()=>{if(!dragging&&!keyboardFocus())setScrubbing(false);});
+  seek.addEventListener('pointerdown',()=>{dragging=true;setScrubbing(true);});
+  seek.addEventListener('input',()=>{dragging=true;renderProgress(Number(seek.value)/1000,true);});
+  seek.addEventListener('change',()=>{
+    dragging=false;const d=S.Player.getDuration?.();
+    if(d)safe(()=>S.Player.seek(Math.round(Number(seek.value)/1000*d)))();
+    if(!seek.matches(':hover')&&!keyboardFocus())setScrubbing(false);
+  });
+  window.addEventListener('pointerup',()=>{if(!dragging)return;dragging=false;if(!seek.matches(':hover'))setScrubbing(false);});
+  seek.addEventListener('focus',()=>{if(keyboardFocus())setScrubbing(true);});
+  seek.addEventListener('blur',()=>{if(!seek.matches(':hover'))setScrubbing(false);});
+  // Digits roll like SwiftUI's numericText transition; a length change just swaps.
+  function rollText(node,value,down) {
+    const old=node.dataset.value??'';if(old===value)return;node.dataset.value=value;
+    if(old.length!==value.length||reducedMotion.matches||!track.classList.contains('am-scrubbing')){
+      node.replaceChildren(...[...value].map(c=>{const slot=el('span','am-digit');slot.append(el('span','',c));return slot;}));return;
+    }
+    [...value].forEach((c,i)=>{
+      const slot=node.children[i],current=slot.lastElementChild;if(current.textContent===c)return;
+      slot.querySelectorAll('.am-digit-out').forEach(n=>n.remove());
+      current.className='am-digit-out'+(down?' am-down':'');slot.append(el('span','am-digit-in'+(down?' am-down':''),c));
+      setTimeout(()=>current.remove(),400);
+    });
+  }
+  function renderProgress(fraction,jump) {
+    fraction=Math.min(1,Math.max(0,fraction||0));
+    // Ease between the 1 s player ticks; jump on seeks, drags and track changes.
+    const smooth=!jump&&previousPlaying&&!reducedMotion.matches&&Math.abs(fraction-shownFraction)<.02;
+    barFill.style.transition=smooth?'transform 1s linear':'none';
+    if(Math.abs(fraction-shownFraction)>.0001){barFill.style.transform='scaleX('+fraction.toFixed(4)+')';shownFraction=fraction;}
+    if(!dragging){const position=String(Math.round(fraction*1000));if(seek.value!==position)seek.value=position;}
+    if(track.classList.contains('am-scrubbing')){
+      const duration=S.Player.getDuration?.()||0,position=fraction*duration;
+      rollText(elapsed,duration?formatTime(position):'',false);rollText(remaining,duration?'−'+formatTime(duration-position):'',true);
+    }
+  }
   const extras=el('div','am-player-extras');player.append(extras);
   const lyricsButton=button('Spicy Lyrics sözlerini aç / kapat','lyrics',toggleSpicyLyrics);
   lyricsButton.id='am-lyrics-toggle';
-  const fullscreenButton=button('Spicy Lyrics tam ekran','fullscreen',toggleSpicyFullscreen);
-  fullscreenButton.id='am-fullscreen-toggle';
   extras.append(lyricsButton,button('Çalma sırası','queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native){document.body.classList.toggle('am-queue-open');native.click();}
     else S.showNotification('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
-  }),fullscreenButton);
+  }));
   const volumeWrap=el('div','am-volume-wrap');
   const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label','Ses seviyesi');
   volume.addEventListener('input',safe(()=>S.Player.setVolume(Number(volume.value))));
@@ -271,8 +358,53 @@
     if(!event.deltaY)return;event.preventDefault();
     try{const level=Math.round(Math.min(1,Math.max(0,S.Player.getVolume()-Math.sign(event.deltaY)*.05))*100)/100;S.Player.setVolume(level);volume.value=String(level);}catch{}
   },{passive:false});
-  const seek=el('input','am-seek');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.setAttribute('aria-label','Çalma konumu');
-  seek.addEventListener('input',()=>{const d=S.Player.getDuration();if(d)S.Player.seek(Math.round(Number(seek.value)/1000*d));});track.append(seek);document.body.append(player);
+  document.body.append(player);
+  // One shared popover serves the "…" track menu and the profile menu.
+  const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
+  let popoverAnchor=null;
+  function closePopover(){if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popoverAnchor?.setAttribute('aria-expanded','false');popoverAnchor=null;}
+  function togglePopover(anchor,build) {
+    if(popoverAnchor===anchor){closePopover();return;}
+    closePopover();
+    const entries=build();if(!entries.length)return;
+    for(const entry of entries){
+      if(entry==='-'){popover.append(el('div','am-popover-separator'));continue;}
+      if(entry.swatches){
+        const row=el('div','am-popover-swatches');
+        for(const [key,[label,color]] of Object.entries(accents)){
+          const swatch=el('button','am-swatch');swatch.type='button';swatch.title=label;swatch.setAttribute('aria-label','Vurgu rengi: '+label);
+          swatch.style.background=color;swatch.classList.toggle('am-selected',settings.accent===key);
+          swatch.onclick=()=>{setAccent(key);row.querySelectorAll('.am-swatch').forEach(n=>n.classList.toggle('am-selected',n===swatch));};
+          row.append(swatch);
+        }
+        popover.append(row);continue;
+      }
+      const item=el('button','am-popover-item',entry.label);item.type='button';item.setAttribute('role','menuitem');
+      item.onclick=()=>{closePopover();entry.action();};popover.append(item);
+    }
+    popoverAnchor=anchor;anchor.setAttribute('aria-expanded','true');popover.hidden=false;
+    const rect=anchor.getBoundingClientRect(),width=popover.offsetWidth;
+    const left=anchor===more?rect.left+rect.width/2-width/2:rect.left;
+    popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,left)))+'px';
+    popover.style.bottom=Math.round(innerHeight-rect.top+10)+'px';
+    popover.querySelector('button')?.focus({preventScroll:true});
+  }
+  document.addEventListener('pointerdown',event=>{if(!popover.hidden&&!popover.contains(event.target)&&!popoverAnchor?.contains(event.target))closePopover();},true);
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!popover.hidden){const anchor=popoverAnchor;closePopover();anchor?.focus();}});
+  const openUri=uri=>{if(uri)go('/'+uri.split(':').slice(1).join('/'));};
+  function trackMenu() {
+    const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
+    const albumUri=item.album?.uri||meta.album_uri,artistUri=item.artists?.[0]?.uri||meta.artist_uri;
+    return [
+      ...(albumUri?[{label:'Albüme Git',action:()=>openUri(albumUri)}]:[]),
+      ...(artistUri?[{label:'Sanatçıya Git',action:()=>openUri(artistUri)}]:[]),
+      {label:'Şarkı Bağlantısını Kopyala',action:async()=>{
+        const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
+        try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);S.showNotification('Bağlantı kopyalandı.');}
+        catch{S.showNotification('Bağlantı kopyalanamadı.');}
+      }},
+    ];
+  }
   let boundToolbar=null, toolbarChildren=[];
   function bindToolbar() {
     const toolbar=document.getElementById('global-nav-bar');
@@ -295,7 +427,12 @@
     native.click();
   }
   function toggleSpicyLyrics() { runSpicyControl('SpicyLyrics_PageButton'); }
-  function toggleSpicyFullscreen() { runSpicyControl('SpicyLyrics_FullscreenButton'); }
+  // Artwork opens Spicy Lyrics' fullscreen view, or Spotify's own when it is absent.
+  function toggleFullscreen() {
+    if(document.getElementById('SpicyLyrics_FullscreenButton')){runSpicyControl('SpicyLyrics_FullscreenButton');return;}
+    const native=document.querySelector('[data-testid="fullscreen-mode-button"]');
+    if(native)native.click();else S.showNotification('Tam ekran bu Spotify sürümünde kullanılamıyor.');
+  }
   let friendPane=null;
   function syncNativePanels() {
     const feed=document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
@@ -333,7 +470,7 @@
     setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?'Spicy Lyrics sözlerini kapat':'Spicy Lyrics sözlerini aç'):'Spicy Lyrics yükleniyor…');
     fullscreenButton.classList.toggle('am-active',fullscreen);
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
-    setAttributeIfChanged(fullscreenButton,'title',fullscreen?'Spicy Lyrics tam ekrandan çık':'Spicy Lyrics tam ekran');
+    setAttributeIfChanged(fullscreenButton,'title',fullscreen?'Tam ekrandan çık':'Tam ekran');
   }
   let previousTrack='',previousPlaying=null;
   function syncPlayer() {
@@ -343,21 +480,23 @@
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=String(S.Player.getVolume());if(volume.value!==level)volume.value=level;
-    const percent=S.Player.getProgressPercent()||0;
-    if(player.matches(':hover,:focus-within')){
-      if(document.activeElement!==seek){const position=String(Math.round(percent*1000));if(seek.value!==position)seek.value=position;}
-      const duration=S.Player.getDuration()||0,position=S.Player.getProgress?.()??percent*duration;
-      elapsed.textContent=duration?formatTime(position):'';remaining.textContent=duration?'-'+formatTime(duration-position):'';
-    }
-    if(settings.progress){const scale='scaleX('+Math.min(1,Math.max(0,percent)).toFixed(3)+')';if(progressFill.style.transform!==scale)progressFill.style.transform=scale;}
+    if(!dragging)renderProgress(S.Player.getProgressPercent()||0,false);
+    const liked=!!S.Player.getHeart?.();
+    star.classList.toggle('am-active',liked);setAttributeIfChanged(star,'aria-pressed',String(liked));
+    setAttributeIfChanged(star,'title',liked?'Beğenilen Şarkılar\'dan çıkar':'Beğenilen Şarkılar\'a ekle');
     const item=S.Player.data?.item,meta=item?.metadata||{};
     const trackTitle=item?.name||meta.title||'',trackArtist=meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'';
-    const key=[item?.uri,trackTitle,trackArtist].join('\n');
+    const album=item?.album?.name||meta.album_title||'';
+    const key=[item?.uri,trackTitle,trackArtist,album].join('\n');
     if(key!==previousTrack){
-      previousTrack=key;title.textContent=trackTitle;artist.textContent=trackArtist;track.classList.toggle('am-has-track',!!trackTitle);
+      const changed=previousTrack!=='';previousTrack=key;closePopover();
+      title.set(trackTitle);subtitle.set([trackArtist,album].filter(Boolean).join(' — '));
+      track.classList.toggle('am-has-track',!!trackTitle);
       const images=item?.images?.length?item.images:item?.album?.images||[];
       const art=spotifyImage((images.find(i=>i.label==='small')||images.find(i=>i.label==='standard')||images[0])?.url||meta.image_small_url||meta.image_url||'');
       if(!art){cover.hidden=true;cover.removeAttribute('src');}else if(cover.getAttribute('src')!==art)cover.src=art;
+      renderProgress(S.Player.getProgressPercent()||0,true);
+      if(changed&&!reducedMotion.matches){lcd.classList.remove('am-swap');void lcd.offsetWidth;lcd.classList.add('am-swap');}
     }
   }
   S.Player.addEventListener('songchange',syncPlayer);S.Player.addEventListener('onplaypause',syncPlayer);
@@ -407,11 +546,10 @@
   });
   // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
   if(S.Menu?.SubMenu&&S.Menu?.Item){
-    const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();syncPlayer();});return item;};
-    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item('Renk: '+label,settings.accent===key,()=>{
-      settings.accent=key;saveSettings();applySettings();colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===key));
-    }));
-    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),toggle('İlerleme çizgisi','progress'),...colors]).register();
+    const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
+    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item('Renk: '+label,settings.accent===key,()=>setAccent(key)));
+    accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
+    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),...colors]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
