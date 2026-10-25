@@ -6,7 +6,7 @@
 
 Kalıcı yan menü, yüzen oynatıcı, kapaklı kitaplık görünümü ve Spicy Lyrics entegrasyonu.
 
-<img width="1047" height="846" alt="mcloud ekran görüntüsü" src="https://github.com/user-attachments/assets/bad21c4c-5f79-4ccc-9b45-ebc5b61879e1" />
+<img width="1047" height="846" alt="mcloud: Spicy Lyrics açıkken cam kenar çubuğu ve Liquid Glass oynatıcı" src="docs/screenshot.png" />
 
 </div>
 

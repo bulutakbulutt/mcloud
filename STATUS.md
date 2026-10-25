@@ -13,7 +13,7 @@ Working notes for the next session (people and agents). Read after AGENTS.md. Wo
 3. **Make the top bar one piece with the sidebar.** The toolbar row (`#global-nav-bar` area, grid row `global-nav`) is a solid band, measurably lighter than the glass sidebar: toolbar (39,39,39) vs sidebar ~(26–33) over a (31,31,31) page. Options: (a) cheap — give the toolbar row the sidebar's material and tone so the two read as one L-shaped frame; (b) full — let the page run under the toolbar too (span `.am-native-main` into the `global-nav` row, pad the scroll content by `--am-header`), which also needs Spotify's sticky bars moved down: `.main-topBar-container` (absolute, top 0), the home chips bar (sticky, top 0) and the track list header (sticky, inline `top: 64px`). Ask the user which before starting (b).
 4. Checked only partly; ask the user when they next test:
    - **Spicy Lyrics** works in the real client here (opens and closes from the player's lyrics button, page beside the sidebar, background under the glass). The stale-page guard (`body:not(.am-spicy-route)`) covers a restart race seen once. The user had said it "doesn't open" on their side.
-   - **Marketplace/Home overlap** in the toolbar was never reproduced; the fix is preventive.
+   - **Marketplace/Home overlap** in the toolbar: reproduced and fixed. In wide windows Spotify's centered layout makes the toolbar's centre group (Home + search) `position:absolute` across the whole bar; it is now forced back into the flex row. Checked at 900, 1047, 1440 and 1920 CSS px.
    - The **home chips bar** is glass but looks dark when dark artwork scrolls under it; that is the glass working.
 5. Known gaps, not started: Spotify's home carousels do not slide under the sidebar (only `#am-artist` rows do).
 
@@ -58,4 +58,5 @@ Working notes for the next session (people and agents). Read after AGENTS.md. Wo
   - `node dev/client/fonts.mjs` shows which font really renders.
   Restart Spotify normally afterwards so the port is not left open. Spotify here runs at devicePixelRatio ≈ 0.91, so screenshot pixels are ~0.91× CSS pixels. Install with `.\install.ps1` from the clone first (it restarts Spotify).
 - CPU: `node dev/client/cpu.mjs` (preview, real GPU via ANGLE/D3D11).
+- **README screenshot** (`docs/screenshot.png`): CARNIVAL by ¥$ (track `2McT2fkH0VDqPsbiB9HWPq`) in Spicy Lyrics, paused at 4540 ms so "She ride … carnival" is lit up to its last letter, captured at 1047×846 CSS px and 2x through `Emulation.setDeviceMetricsOverride` + `Page.captureScreenshot`, with the sidebar's profile chip hidden and 40px rounded corners. Mute while seeking and restore the user's volume afterwards.
 - Reference material: Apple Music on macOS 26 screen recordings (player, volume capsule, sidebar) sent by the user; the measured values are in the commit messages from `4cb4d3b` on. Comparisons were always shown to the user as side-by-side screenshots, at 2x and 1x.
