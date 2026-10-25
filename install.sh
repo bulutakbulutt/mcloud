@@ -112,9 +112,12 @@ if [ -n "$src" ]; then
   step "Yerel dosyalar kullanılıyor: $src"
   for f in $FILES; do cp "$src/$f" "$tmp/theme/$f"; done
 else
-  step "Tema indiriliyor ($REPO@$REF)…"
+  # raw.githubusercontent.com caches a branch for minutes; pin its current commit so a fresh push installs at once.
+  pin=$(curl -fsSL -H 'Accept: application/vnd.github.sha' "https://api.github.com/repos/$REPO/commits/$REF" 2>/dev/null || true)
+  if printf '%s' "$pin" | grep -Eq '^[0-9a-f]{40}$'; then label="$REPO@$REF, commit $(printf '%.7s' "$pin")"; else pin=$REF; label="$REPO@$REF"; fi
+  step "Tema indiriliyor ($label)…"
   for f in $FILES; do
-    curl -fsSL "https://raw.githubusercontent.com/$REPO/$REF/$f" -o "$tmp/theme/$f" || die "$f indirilemedi."
+    curl -fsSL "https://raw.githubusercontent.com/$REPO/$pin/$f" -o "$tmp/theme/$f" || die "$f indirilemedi."
   done
 fi
 

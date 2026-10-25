@@ -412,12 +412,13 @@
   // The glass is a 40px slab whose outer 7.75px round off as a convex bezel, height 5·(1-(1-x)^2.5).
   // Snell's law (n=1.5, as in kube.io's "Liquid Glass in the Browser") turns the bezel's slope into an inward shift: ~17px at the edge, easing to 0
   // with zero slope where the top turns flat, so the outer ~7px mirror the content just inside them.
-  // Fitted to Apple Music's player, which has no blur, tint shift or colour fringing inside the glass.
+  // Fitted to Apple Music's player, which has no tint shift or colour fringing inside the glass. Chromium
+  // samples the displacement per pixel, which steps on 1x screens, so a slight blur smooths the result.
   // Blue holds the 1px rim light, which brightens the refracted page rather than painting white:
   // full strength at the top, about half at the bottom, faint on the sides.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" result="glass"/><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".5" edgeMode="duplicate" result="glass"/><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
   const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=7.75;let glassSize='';
   const bezelShift=edge=>{const x=Math.min(1,Math.max(0,edge)/bezel),a=Math.atan(12.5/bezel*Math.pow(1-x,1.5));return (40+5*(1-Math.pow(1-x,2.5)))*Math.tan(a-Math.asin(Math.sin(a)/1.5));};

@@ -94,9 +94,18 @@ try {
     foreach ($file in $Files) { Copy-Item -LiteralPath (Join-Path $source $file) -Destination $staging }
   }
   else {
-    Write-Step ((T 'Tema indiriliyor') + " ($Repo@$Ref)...")
+    # raw.githubusercontent.com caches a branch for minutes; pin its current commit so a fresh push installs at once.
+    $pin = $Ref
+    try {
+      $sha = (Invoke-WebRequest -UseBasicParsing -Headers @{ Accept = 'application/vnd.github.sha' } -Uri "https://api.github.com/repos/$Repo/commits/$Ref").Content
+      if ($sha -is [byte[]]) { $sha = [Text.Encoding]::ASCII.GetString($sha) }
+      if ("$sha".Trim() -match '^[0-9a-f]{40}$') { $pin = "$sha".Trim() }
+    }
+    catch {}
+    $label = if ($pin -ne $Ref) { "$Repo@$Ref, commit $($pin.Substring(0, 7))" } else { "$Repo@$Ref" }
+    Write-Step ((T 'Tema indiriliyor') + " ($label)...")
     foreach ($file in $Files) {
-      Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/$Repo/$Ref/$file" -OutFile (Join-Path $staging $file)
+      Invoke-WebRequest -UseBasicParsing -Uri "https://raw.githubusercontent.com/$Repo/$pin/$file" -OutFile (Join-Path $staging $file)
     }
   }
   New-Item -ItemType Directory -Path $themeDir -Force | Out-Null
