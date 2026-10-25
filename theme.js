@@ -413,7 +413,7 @@
   lyricsButton.id='am-lyrics-toggle';
   extras.append(lyricsButton,button('Çalma sırası','queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
-    if(native){document.body.classList.toggle('am-queue-open');native.click();}
+    if(native)native.click();
     else S.showNotification('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
   }));
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
@@ -454,12 +454,14 @@
   // while the mapping never folds back, since folds broke cards and round avatars into slivers and swirls
   // on 1x screens (Apple's 2x glass mirrors its outer ~7px). A 0.7px blur smooths Chromium's per-pixel sampling and softens text
   // behind the glass, and a curve brings white down to about half, so the player's white text stays
-  // readable over bright artwork and busy pages, as in Apple Music. Blue holds the 1px rim light, which brightens the
-  // refracted page rather than painting white: full at the top, about half at the bottom, faint on the sides.
+  // readable over bright artwork and busy pages, as in Apple Music. Blue holds the specular rim, after kube.io's
+  // player (opacity ~0.4, saturation ~6): a soft ~3px band whose strength follows the angle between the edge's
+  // normal and a light from -60° (the far side catches half), lit with a saturated, brightened copy of the
+  // refracted page, so the rim takes the colours under it instead of painting white.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
   const curve='tableValues=".02 .2 .36 .47 .54"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feComponentTransfer in="glass"><feFuncR type="linear" slope="1.6" intercept=".1"/><feFuncG type="linear" slope="1.6" intercept=".1"/><feFuncB type="linear" slope="1.6" intercept=".1"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="5"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
   const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=16;let glassSize='';
   // Shift by distance from the edge, tabulated once. Height h=√(1-(1-x)²) over the bezel; the ray bends by
@@ -485,8 +487,10 @@
     for(let y=0;y<h;y++)for(let x=0;x<w;x++){
       // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
       const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
-      const t=edge<bezel?bezelShift(edge)/max/length:0,light=.2+.8*Math.max(0,dy/length)+.35*Math.max(0,-dy/length),i=(y*w+x)*4;
-      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(255*light*Math.min(1,Math.max(0,(1.1-edge)/.6)));data[i+3]=255;
+      // Outward normal (-dx,-dy)/length against the light (cos -60°, sin -60°) in screen axes.
+      const t=edge<bezel?bezelShift(edge)/max/length:0,facing=(-dx*.5+dy*.866)/length,i=(y*w+x)*4;
+      const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/3)**2;
+      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(155*light*band);data[i+3]=255;
     }
     context.putImageData(image,0,0);
     glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
@@ -581,13 +585,14 @@
   }
   let friendPane=null;
   function syncNativePanels() {
-    // Spotify 1.3 opens Friend Activity in the right panel as an <aside> labelled like its toolbar button
-    // (data-restore-focus-key="buddy_feed"); the panel otherwise holds the hidden Now Playing view.
-    const label=document.querySelector('[data-restore-focus-key="buddy_feed"]')?.getAttribute('aria-label');
-    const feed=(label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`))
+    // Spotify 1.3 opens Friend Activity and the queue in the right panel as an <aside> labelled like the button
+    // that opens it (data-restore-focus-key "buddy_feed" / "queue"); the panel otherwise holds the hidden Now
+    // Playing view. Reading the open state from the panel itself means any close button closes the sheet.
+    const panelFor=key=>{const label=document.querySelector(`[data-restore-focus-key="${key}"]`)?.getAttribute('aria-label');return label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`);};
+    const feed=panelFor('buddy_feed')||panelFor('queue')
       ||document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement;
-    document.body.classList.toggle('am-friends-open',!!feed);
+    document.body.classList.toggle('am-panel-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
     feed.classList.add('am-friends-sheet');
     if(friendPane?.contains(feed)){for(let n=feed;n&&n!==friendPane;n=n.parentElement)n.classList.add('am-friends-fill');return;}
@@ -614,6 +619,7 @@
     const fullscreen=!!page?.classList.contains('Fullscreen');
     document.body.classList.toggle('am-spicy-fullscreen',fullscreen);
     const lyricsOpen=routePath()==='/SpicyLyrics';
+    document.body.classList.toggle('am-spicy-route',lyricsOpen);
     const available=!!document.getElementById('SpicyLyrics_PageButton');
     lyricsButton.classList.toggle('am-active',lyricsOpen);
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));

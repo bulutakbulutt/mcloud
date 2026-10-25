@@ -218,6 +218,9 @@ body.am-ready #global-nav-bar {
    only (no var() or clamp()); a wide one is harmless, since Spotify's main view clips the page's other edges. */
 body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) {left:var(--am-side)!important;width:calc(100% - var(--am-side))!important;overflow:clip!important;overflow-clip-margin:800px}
 body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy-dynamic-bg {left:calc(-1 * var(--am-side))!important;width:calc(100% + var(--am-side))!important}
+/* When Spotify restarts on the lyrics route, Spicy can mount its page twice and remove only one, leaving lyrics
+   over every other page. Off the /SpicyLyrics route, a page left in the main view is hidden. */
+body.am-ready:not(.am-spicy-route) .am-native-main #SpicyLyricsPage:not(.CardMode) {display:none!important}
 body.am-spicy-fullscreen #am-sidebar,
 body.am-spicy-fullscreen #am-library,body.am-spicy-fullscreen #am-player {display:none!important}
 body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-events:none!important}
@@ -225,7 +228,7 @@ body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-ev
 
 /* Friend Activity opens in Spotify's right panel. The theme shows that pane (not a copy) as a glass sheet that
    slides in from the right edge; the queue uses the same sheet. */
-body.am-ready .am-native-panel-open,body.am-queue-open .am-native-right {
+body.am-ready .am-native-panel-open {
  display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
  position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:min(340px,calc(100vw - var(--am-side) - 40px))!important;
  min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;overflow:hidden;color:var(--am-text);
@@ -233,11 +236,11 @@ body.am-ready .am-native-panel-open,body.am-queue-open .am-native-right {
  box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 18px 50px #0007;
  transition:opacity .25s ease,transform .4s cubic-bezier(.2,.9,.3,1);
 }
-@starting-style {body.am-ready .am-native-panel-open,body.am-queue-open .am-native-right {opacity:0;transform:translateX(28px) scale(.98)}}
+@starting-style {body.am-ready .am-native-panel-open {opacity:0;transform:translateX(28px) scale(.98)}}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
 /* Native panels share Spotify's stacking context; lift it over the custom views. */
-body.am-friends-open #main {z-index:30!important}
-body.am-friends-open #main,body.am-friends-open .Root,body.am-friends-open .am-layout {background:transparent!important}
+body.am-panel-open #main {z-index:30!important}
+body.am-panel-open #main,body.am-panel-open .Root,body.am-panel-open .am-layout {background:transparent!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. */
 body.am-ready .am-friends-sheet {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
@@ -352,7 +355,7 @@ body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid 
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
  #am-sidebar{background:#1a1a1a;backdrop-filter:none;-webkit-backdrop-filter:none}
  body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"]{background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
- body.am-ready .am-native-panel-open,body.am-queue-open .am-native-right{background:#262626!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+ body.am-ready .am-native-panel-open{background:#262626!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 }
 
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */

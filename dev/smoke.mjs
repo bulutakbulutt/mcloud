@@ -54,11 +54,19 @@ try {
 
   await check('Friend Activity opens as a sheet', async () => {
     await page.click('[data-restore-focus-key="buddy_feed"]');
-    await page.waitForFunction(() => document.body.classList.contains('am-friends-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    await page.waitForFunction(() => document.body.classList.contains('am-panel-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
     const box = await page.locator('.am-native-right').boundingBox();
     assert.ok(box.width > 200 && box.height > 200);
     await page.click('[data-restore-focus-key="buddy_feed"]');
-    await page.waitForFunction(() => !document.body.classList.contains('am-friends-open'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
+  });
+
+  await check('queue sheet closes from the panel\'s own close button', async () => {
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    await page.click('.am-native-right aside button[aria-label="Kapat"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
