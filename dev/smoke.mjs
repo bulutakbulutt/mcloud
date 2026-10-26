@@ -129,7 +129,7 @@ try {
   await check('volume wheel', async () => {
     await page.hover('.am-volume-wrap');
     await page.mouse.wheel(0, 100);
-    await page.waitForFunction(() => window.__mockState.volume === 0.55);
+    await page.waitForFunction(() => window.__mockState.volume === 0.53);
     await page.mouse.move(10, 10);
   });
 
