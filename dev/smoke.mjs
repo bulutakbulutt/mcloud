@@ -173,10 +173,16 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale > 10 && first.scale < 30);
+    assert.ok(first.href.startsWith('data:image/png') && first.scale === 32);
     assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length]; }), ['R', 'B', 3]);
+    // Two states fitted to macOS's own glass: focused (slight blur and a darken halo) and, with the window in the
+    // background, diffuse (blur before and after the bend). Both tone by luminance.
+    const blurs = id => page.evaluate(id => [...document.querySelectorAll(`#${id} feGaussianBlur`)].map(b => b.getAttribute('stdDeviation')), id);
+    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length]; }), ['R', 'B', 2]);
+    assert.deepEqual([await blurs('am-glass'), await blurs('am-glass-inactive')], [['0.4', '9.5'], ['4', '4.25']]);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    if (!(await page.evaluate(() => document.hasFocus()))) assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /#am-glass-inactive/);
     // A content-box change fires the ResizeObserver but must not redraw the map.
     await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);

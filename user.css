@@ -2,7 +2,6 @@
 :root {
  color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
  --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
- --am-glass-tint:linear-gradient(180deg,#ffffff29,#9a9a9a33 14% 83%,#ffffff33);
  --am-text:#dedede; --am-sub:#969696; --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
  --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;
  --encore-title-font-stack:var(--encore-body-font-stack);
@@ -403,13 +402,16 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none;filter:none}}
 
-/* Liquid Glass player: clear glass with refraction and a rim light along the edge (#am-glass in theme.js),
-   tinted like Apple Music's: a little lighter at the top and bottom, no drop shadow, no saturation boost.
-   Browsers without SVG backdrop filters drop this declaration and keep the frosted blur above. */
-body.am-liquid #am-player {background:var(--am-glass-tint);backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
+/* Liquid Glass player: #am-glass in theme.js, fitted to macOS's own glass, already carries its blur, lens and tone,
+   so there is no tint, border or shadow on top. Browsers without SVG backdrop filters drop this declaration and keep
+   the frosted blur above. */
+body.am-liquid #am-player {background:none;backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
-body.am-liquid .am-toast {background:var(--am-glass-tint);backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
+body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
+/* With the window in the background the glass turns diffuse, as macOS's glass does. */
+body.am-liquid.am-window-inactive #am-player {backdrop-filter:url(#am-glass-inactive);-webkit-backdrop-filter:url(#am-glass-inactive)}
+body.am-liquid.am-window-inactive .am-toast {backdrop-filter:url(#am-glass-toast-inactive);-webkit-backdrop-filter:url(#am-glass-toast-inactive)}
 /* Windows' "Transparency effects" off reports reduced transparency; glass then becomes solid, but keeps its depth. */
 @media(prefers-reduced-transparency:reduce){
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
