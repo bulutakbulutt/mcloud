@@ -6,7 +6,8 @@
 
 Kalıcı yan menü, yüzen oynatıcı, kapaklı kitaplık görünümü ve Spicy Lyrics entegrasyonu.
 
-<img width="1047" height="846" alt="mcloud: Spicy Lyrics açıkken cam kenar çubuğu ve Liquid Glass oynatıcı" src="docs/screenshot.png" />
+<img width="1254" height="1254" alt="Unknown" src="https://github.com/user-attachments/assets/5dfe8c2c-c5fa-4b0d-8bb3-d43596734af8" />
+
 
 </div>
 
@@ -149,24 +150,9 @@ Spicy Lyrics kurulu değil ya da henüz yüklenmedi. Eklentiyi Marketplace'ten k
 
 Spotify 1.3.6.1921 ve Spicetify 2.46.2 ile macOS'ta hazırlandı. Kurulum betikleri macOS, Linux ve Windows'ta çalışır, ancak tema en çok macOS'ta denendi. Spotify arayüz güncellemeleri uyarlama gerektirebilir; bir sorun görürseniz Spotify ve Spicetify sürümlerinizle birlikte [issue açın](https://github.com/bulutakbulutt/mcloud/issues).
 
-Bellek optimizasyonları temanın kendi işlerini azaltır. Spotify'ın toplam RAM kullanımı için ölçülmüş bir tasarruf oranı verilmez.
+## Özel Teşekkürler
 
-## Geliştirme
-
-```sh
-git clone https://github.com/bulutakbulutt/mcloud && cd mcloud
-./install.sh            # klondaki dosyaları kurar (indirmez)
-```
-
-Spotify açmadan hızlı kontrol için `dev/preview.html` dosyasını tarayıcıda açın veya smoke testini çalıştırın:
-
-```sh
-npm i --no-save playwright && npx playwright install chromium
-node dev/smoke.mjs
-```
-
-Kod yapısı ve kurallar için [AGENTS.md](AGENTS.md) dosyasına bakın.
-
----
+Harika bir platform sundukları için Spicetify topluluğuna teşekkürler.
+Ayrıca emribilemir ve f0rknturkoglu'na katkılarından ötürü teşekkür ederim.
 
 Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
