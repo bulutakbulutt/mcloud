@@ -33,7 +33,8 @@ const page_html = `<!doctype html><html><body style="margin:0;background:#000">
 <svg width="0" height="0" style="position:absolute"><filter id="g" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"></filter></svg>
 <script>
 window.build = p => {
-  const w = 701, h = 55, r = h / 2, bar = document.getElementById('bar'), f = document.getElementById('g');
+  const w = 701, h = p.barH || 55, r = h / 2, bar = document.getElementById('bar'), f = document.getElementById('g');
+  bar.style.top = (p.barTop ?? 40) + 'px'; bar.style.height = h + 'px'; bar.style.borderRadius = r + 'px';
   // Shift (pt, inward positive) by distance from the edge: piecewise linear through p.knots/p.shift.
   const K = p.knots, V = p.shift, shiftAt = d => { if (d >= K[K.length - 1]) return 0; let i = 0; while (d > K[i + 1]) i++; const t = (d - K[i]) / (K[i + 1] - K[i]); return V[i] + (V[i + 1] - V[i]) * t; };
   const max = Math.max(1e-3, ...V.map(Math.abs));
@@ -55,12 +56,12 @@ window.build = p => {
     mx.data[i + 3] = my.data[i + 3] = mr.data[i + 3] = 255;
   }
   const url = d => { x.putImageData(d, 0, 0); return c.toDataURL(); };
-  const hiImg = p.hi ? '<feImage result="mh" preserveAspectRatio="none" width="701" height="55" href="' + url(mh) + '"/>' : '';
+  const hiImg = p.hi ? '<feImage result="mh" preserveAspectRatio="none" width="701" height="' + h + '" href="' + url(mh) + '"/>' : '';
   const lut = p.lut.map(v => (v / 255).toFixed(4)).join(' '), tf = 'type="table" tableValues="' + lut + '"';
   f.setAttribute('color-interpolation-filters', p.linear ? 'linearRGB' : 'sRGB');
-  f.innerHTML = hiImg + '<feImage result="mx" preserveAspectRatio="none" width="701" height="55" href="' + url(mx) + '"/>'
-    + '<feImage result="my" preserveAspectRatio="none" width="701" height="55" href="' + url(my) + '"/>'
-    + '<feImage result="mr" preserveAspectRatio="none" width="701" height="55" href="' + url(mr) + '"/>'
+  f.innerHTML = hiImg + '<feImage result="mx" preserveAspectRatio="none" width="701" height="' + h + '" href="' + url(mx) + '"/>'
+    + '<feImage result="my" preserveAspectRatio="none" width="701" height="' + h + '" href="' + url(my) + '"/>'
+    + '<feImage result="mr" preserveAspectRatio="none" width="701" height="' + h + '" href="' + url(mr) + '"/>'
     + '<feColorMatrix in="mx" values="1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/><feColorMatrix in="my" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1" result="y"/>'
     + '<feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/>'
     + '<feGaussianBlur in="SourceGraphic" stdDeviation="' + Math.max(0, p.preBlur) + '" edgeMode="duplicate" result="pre"/>'
@@ -93,14 +94,16 @@ async function render(p, name) {
   return png(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 781, height: apple[name].h / 2 } }));
 }
 // Error inside the bar (plus 1pt), mean abs per channel.
-function error(a, b) {
+// Captures of Apple Music's own player (mf*) carry its icons; compare only the stretches between them there.
+const glyphFree = x => (x >= 420 && x < 700) || (x >= 860 && x < 1180);
+function error(a, b, name = '') {
   let e = 0, n = 0;
-  for (let y = 78; y < 192 && y < a.h; y++) for (let x = 78; x < 1484; x += 2) { const o = (y * a.w + x) * 3; for (let k = 0; k < 3; k++) { e += Math.abs(a.d[o + k] - b.d[o + k]); n++; } }
+  for (let y = 78; y < 192 && y < a.h; y++) for (let x = 78; x < 1484; x += 2) { if (name.startsWith('mf') && !glyphFree(x)) continue; const o = (y * a.w + x) * 3; for (let k = 0; k < 3; k++) { e += Math.abs(a.d[o + k] - b.d[o + k]); n++; } }
   return e / n;
 }
 async function score(p, save) {
   let total = 0, wsum = 0; const parts = {};
-  for (const n of patterns) { const img = await render(p, n); const e = error(img, apple[n]); parts[n] = +e.toFixed(2); const w = weights[n] || 1; total += e * w; wsum += w;
+  for (const n of patterns) { const img = await render(p, n); const e = error(img, apple[n], n); parts[n] = +e.toFixed(2); const w = weights[n] || 1; total += e * w; wsum += w;
     if (save) fs.writeFileSync(`${save}/${n}.png`, await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 781, height: apple[n].h / 2 } })); }
   return { total: +(total / wsum).toFixed(3), parts };
 }

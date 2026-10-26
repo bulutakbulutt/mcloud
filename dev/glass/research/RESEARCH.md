@@ -98,6 +98,28 @@ the glass in the same steps (`compare/scroll-side-by-side.mp4`; frames in `local
 change of the rim band between frames: native 5.8, ours 6.4. Frame times while scrolling Spotify are unchanged by the
 device-resolution maps (p95 ~18ms with and without the glass).
 
+## Scrolling Apple Music itself (ground truth in motion)
+
+- Synthetic scrolling works when it looks like a trackpad: `swipe.swift` warps the cursor over Music's content and
+  posts `CGEvent` scroll events through the HID tap with `scrollWheelEventIsContinuous = 1` and scroll phases
+  (began 1, changed 2, ended 4). Plain wheel events posted to Music's pid (no phase, cursor elsewhere) were ignored
+  going down. Music is activated first and re-activated if it loses focus; frames are window captures.
+- 50 steps of -160px over 50 events moved the content exactly 6px (3pt) per step (alignment error ~0.1).
+- Scrolling down moves the content up, so what passes behind the player is visible above it a few frames later. That
+  gives the barless content (`music-scroll/content.png`) for the first ~30 frames; `music-scroll/ref/00NN.png` are
+  Music's frames (2x, 1562 wide, player at x 40pt, top 40.5pt, 701x54pt in this crop).
+- `motion/ours-music.mjs` scrolls the same content under our glass in Spotify in the same steps (focused).
+- **Colour:** the stitched PNG must carry the display's profile (`sips -e display.icc`, extracted from a capture with
+  `sips -x`); untagged, Spotify treats it as sRGB and converts it to P3, which made everything look paler.
+- Results (shipped glass 644fe5e, aligned, glyph-free stretches only): outside the bar 0.0, middle of the bar 5.0,
+  bottom 5pt band 4.7, top 5pt band 13.2 (`compare/music-vs-ours-scroll.mp4`, `compare/music-vs-ours-top-edge.png`).
+  The top-band gap: where the rim mirrors bright content from inside, ours is brighter (mirror band ~142 vs Music
+  ~121, edge pixel 182 vs 141); on dark content the two match row for row.
+- Fitting directly to these Music frames (`fit.mjs`, patterns `mf00..mf30`, `barTop` 40.5, `barH` 54, Music's icons
+  masked): 6.5 -> 5.45, preferring a weaker top highlight on bright content, a slightly shallower mirror
+  (`[13,15.6,14.1,14.7,14.25,10.9,8.5,3,0.75,0]`) and a wider darken blur (19px). The highlight table it found is
+  noisy (negative entries): it needs a constrained shape (e.g. a*exp(-d/b)) before shipping. `params/fit-music.log`.
+
 ## Open questions
 
 - Synthetic scroll events scroll Music's home unreliably (up sometimes, down never), so motion against Music itself
