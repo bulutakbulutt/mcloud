@@ -209,8 +209,9 @@ try {
     });
     assert.deepEqual([layout.main, Math.round(layout.pad), layout.header, layout.artist, layout.gutter], [0, Math.round(layout.side), 0, 0, 0]);
     // ...and under the toolbar: the main view starts at the window's top and its scroll viewport keeps the toolbar's height clear.
-    const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, parseFloat(getComputedStyle(document.querySelector('[data-overlayscrollbars-viewport]')).paddingTop)]);
-    assert.deepEqual(top, [0, 56]);
+    // Scrollers nested in a page (playlist action bars) keep their own padding.
+    const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].map(v => parseFloat(getComputedStyle(v).paddingTop))]);
+    assert.deepEqual(top, [0, 56, 0]);
     assert.match(layout.blur, /blur/);
   });
 

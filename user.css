@@ -27,15 +27,17 @@ body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .
    stop below it without moving them; the top colour layers reach up into it, so the toolbar takes the page's
    colour (the home page's follows the hovered shortcut). --am-page-top is shorter than the sidebar's header:
    Spotify's bars bring their own top padding, and the full height left a wide gap under the toolbar. */
-body.am-ready .am-native-main [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
-body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child,[data-testid="entity-header"] > [style*="background-color"]) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
+/* Only the page's own viewport: OverlayScrollbars also wraps smaller scrollers inside pages (playlist action bars). */
+body.am-ready .am-native-main .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
+body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child,[data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]):first-child) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
 body.am-ready .am-native-main main > div > [style^="background-color"]:first-child {left:0!important;right:0!important;width:auto!important}
 /* Spotify paint-contains the playlist title bar, which would clip its glass at the toolbar. */
 body.am-ready .am-native-main .main-topBar-container {top:var(--am-page-top)!important;contain:layout style!important}
 body.am-ready .am-native-main {grid-area:global-nav / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
 body.am-ready .am-native-main .main-view-container__scroll-node-child {padding-left:var(--am-side)!important;box-sizing:border-box;container:main-view-grid-area / inline-size;position:relative;overflow-x:clip}
 body.am-ready .am-native-main .main-topBar-container {padding-left:var(--am-side)!important;box-sizing:border-box}
-body.am-ready .am-native-main :is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"] {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
+/* Newer playlist pages colour these layers through an inline --background-base instead of background-color. */
+body.am-ready .am-native-main :is(:is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"],:is([data-testid="entity-header"],.playlist-playlist-playlistContent) > [style*="--background-base"]:first-child) {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
 /* Spotify's scrolled top bars (the home chips row, playlist and album titles) fill with the page's colour; here they
    are the theme's glass instead, reaching under the sidebar. They are the colour layers that fade in by opacity. */
 body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {top:calc(-1 * var(--am-page-top))!important;left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;border-radius:0!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 #ffffff0f}
