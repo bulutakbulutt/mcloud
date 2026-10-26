@@ -99,7 +99,9 @@ body.am-resizing * {transition:none!important}
 body.am-ready .notistack-SnackbarContainer {bottom:84px!important}
 .am-toast {position:fixed;z-index:70;bottom:84px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translate(-50%,8px);max-width:min(420px,calc(100vw - var(--am-side) - 48px));padding:9px 16px;border-radius:999px;background:#2c2c2eeb;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px #ffffff26,0 8px 24px #0006;color:#f2f2f2;font:600 13px var(--encore-body-font-stack);letter-spacing:-.01em;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
 .am-toast.am-toast-show {opacity:1;transform:translate(-50%,0)}
-#am-player {position:fixed;z-index:60;bottom:16px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);width:min(calc(100vw - var(--am-side) - 64px),700px);height:54px;border-radius:999px;border:1px solid #ffffff24;background:#ffffff17;backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px #ffffff26,0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
+/* Whole device pixels for the glass: --am-side is in vw, so a centred player could land on a half pixel, which blurs
+   its edge and highlight on 1x screens. The width is rounded to an even number and the left edge to a whole pixel. */
+#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid #ffffff24;background:#ffffff17;backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px #ffffff26,0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
 #am-player button {display:grid;place-items:center;width:28px;height:32px;color:#e8e8e8;transition:color .15s,transform .12s}
 #am-player button[hidden] {display:none}
@@ -195,7 +197,7 @@ body.am-ready .notistack-SnackbarContainer {bottom:84px!important}
 .am-swatch.am-selected {box-shadow:0 0 0 2px #2c2c2e,0 0 0 4px #f2f2f2}
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
-@media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{width:calc(100vw - var(--am-side) - 24px);gap:8px}}
+@media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
 @media(prefers-reduced-transparency:reduce){#am-popover{background:#2c2c2e;backdrop-filter:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,#am-popover{animation:none}}
 

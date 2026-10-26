@@ -457,7 +457,7 @@
   //    mirrors what is just inside it; flat from 14px in), drawn at device resolution: the outermost 2px hold
   //    four steps of the bend on a 2x screen, which keeps the fold as soft as Apple's;
   //  - a highlight along the top and bottom edges (none at the round ends' middles): the outermost device pixel
-  //    mixes 13% toward ~2.2x white, fading over ~5px;
+  //    mixes 13% toward ~2x white, fading over ~5px;
   //  - a "darken" halo: bright detail is pulled toward its darker surroundings (a min with a 13.5px blur,
   //    mixed in at 70%) while dark detail stays, so fine bright lines dim and edges shade into bright areas but
   //    blacks never lift; a plain blur could not match both the sharp detail and the wide shading;
@@ -468,8 +468,9 @@
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
   const glassStates={
     focused:{pre:.4,post:0,darken:.7,darkenBlur:13.5,gain:1.05,lensAt:[0,.5,1,1.5,2,3,4,6,9,14],lens:[15,15.6,16.1,15.7,12.25,10.9,7.5,5,.75,0],
-      // Highlight along the top and bottom edges, every 0.5px from the edge, mixed toward 2.23x white.
-      highlight:[.13,.072,.027,.019,.015,.012,.01,.007,.006,.005,.004,.003,.002,.001,0],highlightTo:2.23,highlightPow:3.5,
+      // Highlight along the top and bottom edges, every 0.5px from the edge, mixed toward 2x white (fitted to Apple
+      // Music's own frames: stronger and it overshoots over bright artwork).
+      highlight:[.13,.085,.032,.019,.014,.011,.009,.007,.005,.004,.003,.002,.001,.0005,0],highlightTo:2,highlightPow:3.5,
       tone:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]},
   };
   // On wide-gamut (P3) Macs Chromium converts the recombined map from sRGB to P3 before displacing, and that
