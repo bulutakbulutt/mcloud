@@ -62,6 +62,9 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
 /* Sidebar after Apple Music on macOS 26: a glass pane over the page, which shows through it darkened by about
    15% (a little more towards its edge), with rows, insets and type in fixed points rather than window units. */
 #am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(90deg,#0000001f,#00000030);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 #ffffff0a;display:flex;flex-direction:column;padding:0 10px;font-size:13px}
+/* Edge glow under the sidebar glass: a heavily blurred backdrop reaching --am-glow past the sidebar, so the
+   artwork beside the edge bleeds its colour in, as on Apple Music; masked to the sidebar, strongest at the edge. */
+#am-sidebar-glow {--am-glow:140px;position:fixed;inset:0 auto 0 0;width:calc(var(--am-side) + var(--am-glow));z-index:39;pointer-events:none;backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);-webkit-mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side));mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side))}
 /* Same height as the toolbar row, so the first item lines up with the page content. */
 .am-drag {height:var(--am-header);flex-shrink:0;-webkit-app-region:drag}
 .am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
@@ -268,7 +271,7 @@ body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy
 /* When Spotify restarts on the lyrics route, Spicy can mount its page twice and remove only one, leaving lyrics
    over every other page. Off the /SpicyLyrics route, a page left in the main view is hidden. */
 body.am-ready:not(.am-spicy-route) .am-native-main #SpicyLyricsPage:not(.CardMode) {display:none!important}
-body.am-spicy-fullscreen #am-sidebar,
+body.am-spicy-fullscreen #am-sidebar,body.am-spicy-fullscreen #am-sidebar-glow,
 body.am-spicy-fullscreen #am-library,body.am-spicy-fullscreen #am-player {display:none!important}
 body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-events:none!important}
 @media(max-width:900px){body.am-ready #global-nav-bar{left:calc(var(--am-side) + 10px)!important;right:10px!important;gap:5px!important}#global-nav-bar .am-toolbar-center > div{gap:3px}}
@@ -403,6 +406,7 @@ body.am-liquid .am-toast {background:var(--am-glass-tint);backdrop-filter:url(#a
 @media(prefers-reduced-transparency:reduce){
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
  #am-sidebar{background:#1a1a1a;backdrop-filter:none;-webkit-backdrop-filter:none}
+ #am-sidebar-glow{display:none}
  .am-toast,body.am-liquid .am-toast{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
  body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"]{background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
  body.am-ready .am-native-panel-open{background:#262626!important;backdrop-filter:none;-webkit-backdrop-filter:none}

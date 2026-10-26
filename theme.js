@@ -130,7 +130,10 @@
   row('Göz At', 'store', () => go('/search'), 'browse');
   heading('Listeler');
   row('Tüm Listeler', 'grid', () => openLibrary('playlists'), '/collection/playlists');
-  document.body.append(sidebar);
+  // Apple Music's sidebar glass picks up the colours of the artwork beside it. A blurred backdrop that reaches past
+  // the sidebar's edge carries those colours in; user.css shows it only inside the sidebar, fading from the edge.
+  const sidebarGlow=el('div','');sidebarGlow.id='am-sidebar-glow';sidebarGlow.setAttribute('aria-hidden','true');
+  document.body.append(sidebarGlow,sidebar);
   // As in Apple Music, the sidebar's right edge resizes it; double-click resets.
   const resizer=el('div','am-sidebar-resizer');resizer.tabIndex=0;
   resizer.setAttribute('role','separator');resizer.setAttribute('aria-orientation','vertical');resizer.setAttribute('aria-label','Kenar çubuğu genişliği');

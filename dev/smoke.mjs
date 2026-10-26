@@ -230,6 +230,9 @@ try {
     const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].map(v => parseFloat(getComputedStyle(v).paddingTop))]);
     assert.deepEqual(top, [0, 56, 0]);
     assert.match(layout.blur, /blur/);
+    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it.
+    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex)]; });
+    assert.deepEqual(glow, [140, true, true]);
   });
 
   await check('artist page: wheel scrolls the page, Shift+wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
