@@ -185,6 +185,10 @@ try {
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     await page.click('.am-hero-follow');
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
+    // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
+    await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
+    await page.waitForFunction(() => document.querySelector('.am-toast').classList.contains('am-toast-show'));
+    assert.match(await page.textContent('.am-toast'), /^Bağlantı kopyala/);
     await page.click('.am-artist-back');
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });

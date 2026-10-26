@@ -45,6 +45,11 @@
   };
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.music}</svg>`;
   function el(tag, cls, text) { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; }
+  // Spotify's toasts live inside its own stacking context, under the floating player and the artist view, so the
+  // theme shows its messages in a toast of its own above the player.
+  const toast=el('div','am-toast');toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');document.body.append(toast);
+  let toastTimer=0;
+  function notify(message) { toast.textContent=message;toast.classList.add('am-toast-show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('am-toast-show'),2600); }
   function button(label, icon, fn, cls = '') {
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
@@ -154,7 +159,7 @@
   const newsButton=button('Yenilikler','bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
   const friendsButton=button('Arkadaş etkinliği','friends',()=>{
     const native=nativeToolbarButton('[data-restore-focus-key="buddy_feed"]');
-    if(native)native.click();else S.showNotification('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');
+    if(native)native.click();else notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');
   },'am-account-button');
   account.append(profile,newsButton,friendsButton);sidebar.append(account);
   (async()=>{
@@ -303,7 +308,7 @@
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label','Oynatıcı');
   const controls=el('div','am-transport');player.append(controls);
-  const safe = fn => () => { try { const result=fn();result?.catch?.(()=>S.showNotification('Bu işlem şu anda kullanılamıyor.')); } catch { S.showNotification('Oynatıcı henüz hazır değil.'); } };
+  const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify('Bu işlem şu anda kullanılamıyor.')); } catch { notify('Oynatıcı henüz hazır değil.'); } };
   const shuffle=button('Karıştır','shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
   const back=button('Önceki parça','back',safe(()=>S.Player.back()));
   const play=button('Çal','play',safe(()=>S.Player.togglePlay()),'am-play');
@@ -403,12 +408,12 @@
   // Spotify Connect opens its device list in the right panel, shown as the same glass sheet as the queue.
   const connectButton=button('Bir cihaza bağlan','devices',()=>{
     const native=nativeConnect();
-    if(native)native.click();else S.showNotification('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.');
+    if(native)native.click();else notify('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.');
   });
   extras.append(popupLyricsButton,lyricsButton,connectButton,button('Çalma sırası','queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
-    else S.showNotification('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
+    else notify('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
   }));
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
@@ -535,8 +540,8 @@
       ...(artistUri?[{label:'Sanatçıya Git',action:()=>openUri(artistUri)}]:[]),
       {label:'Şarkı Bağlantısını Kopyala',action:async()=>{
         const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
-        try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);S.showNotification('Bağlantı kopyalandı.');}
-        catch{S.showNotification('Bağlantı kopyalanamadı.');}
+        try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify('Bağlantı kopyalandı.');}
+        catch{notify('Bağlantı kopyalanamadı.');}
       }},
     ];
   }
@@ -565,7 +570,7 @@
   function spicyPage() { return document.getElementById('SpicyLyricsPage'); }
   function runSpicyControl(id) {
     const native=document.getElementById(id);
-    if(!native){S.showNotification('Spicy Lyrics henüz hazır değil. Eklenti yüklendiğinde tekrar dene.');return;}
+    if(!native){notify('Spicy Lyrics henüz hazır değil. Eklenti yüklendiğinde tekrar dene.');return;}
     // Invoke the installed extension's real controls, including its settings,
     // route history, pending page mount and fullscreen lifecycle.
     native.click();
@@ -580,7 +585,7 @@
   function toggleFullscreen() {
     if(document.getElementById('SpicyLyrics_FullscreenButton')){runSpicyControl('SpicyLyrics_FullscreenButton');return;}
     const native=document.querySelector('[data-testid="fullscreen-mode-button"]');
-    if(native)native.click();else S.showNotification('Tam ekran bu Spotify sürümünde kullanılamıyor.');
+    if(native)native.click();else notify('Tam ekran bu Spotify sürümünde kullanılamıyor.');
   }
   let friendPane=null;
   function syncNativePanels() {
@@ -790,7 +795,7 @@
     try{
       if(trackUri&&S.Platform.PlayerAPI?.play)return S.Platform.PlayerAPI.play({uri},{featureIdentifier:'artist'},{skipTo:{uri:trackUri}});
       return S.Player.playUri(trackUri||uri);
-    }catch{S.showNotification('Çalma başlatılamadı.');}
+    }catch{notify('Çalma başlatılamadı.');}
   }
   async function renderArtist(id) {
     const request=++artistRequest,uri='spotify:artist:'+id;
@@ -818,7 +823,7 @@
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
     const back=button('Geri','left',()=>H.goBack?.(),'am-artist-back');
     const shareLink='https://open.spotify.com/artist/'+id;
-    const copyLink=async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);S.showNotification('Bağlantı kopyalandı.');}catch{S.showNotification('Bağlantı kopyalanamadı.');}};
+    const copyLink=async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify('Bağlantı kopyalandı.');}catch{notify('Bağlantı kopyalanamadı.');}};
     const actions=el('div','am-artist-actions');
     const moreButton=button('Diğer seçenekler','more',()=>togglePopover(moreButton,()=>[
       {label:'Bağlantıyı Kopyala',action:copyLink},
@@ -839,7 +844,7 @@
     let saved=!!artist.saved;
     const follow=button('Takip et','star',async()=>{
       try{saved=await toggleSaved(uri,saved);follow.classList.toggle('am-active',saved);follow.title=saved?'Takibi bırak':'Takip et';}
-      catch{S.showNotification('Takip durumu değiştirilemedi.');}
+      catch{notify('Takip durumu değiştirilemedi.');}
     },'am-hero-follow');
     follow.classList.toggle('am-active',saved);follow.title=saved?'Takibi bırak':'Takip et';
     heroActions.append(playButton,follow);heroContent.append(heroActions);
@@ -862,7 +867,7 @@
         info.append(el('span','am-latest-date',releaseDate(latest.date)),el('span','am-latest-name',(latest.name||'')+(releaseLabel[latest.type]?' - '+releaseLabel[latest.type]:'')));
         const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+' şarkı'));
         let added=false;
-        const add=button('Arşive ekle','plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);S.showNotification(added?'Arşive eklendi.':'Arşivden çıkarıldı.');}catch{S.showNotification('Arşiv güncellenemedi.');}},'am-latest-add');
+        const add=button('Arşive ekle','plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);notify(added?'Arşive eklendi.':'Arşivden çıkarıldı.');}catch{notify('Arşiv güncellenemedi.');}},'am-latest-add');
         info.append(add);card.append(cover,info);block.append(card);track.append(block);
       }
       if(topTracks.length){
@@ -880,7 +885,7 @@
           playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
           const songMore=button('Diğer seçenekler','more',()=>togglePopover(songMore,()=>[
             ...(song.albumOfTrack?.uri?[{label:'Albüme Git',action:()=>openUri(song.albumOfTrack.uri)}]:[]),
-            {label:'Şarkı Bağlantısını Kopyala',action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);S.showNotification('Bağlantı kopyalandı.');}catch{S.showNotification('Bağlantı kopyalanamadı.');}}},
+            {label:'Şarkı Bağlantısını Kopyala',action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify('Bağlantı kopyalandı.');}catch{notify('Bağlantı kopyalanamadı.');}}},
           ]),'am-song-more');
           row.append(playSong,songMore);grid.append(row);
         }
