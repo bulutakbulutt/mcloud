@@ -409,9 +409,6 @@ body.am-liquid #am-player {background:none;backdrop-filter:url(#am-glass);-webki
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
 body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
-/* With the window in the background the glass turns diffuse, as macOS's glass does. */
-body.am-liquid.am-window-inactive #am-player {backdrop-filter:url(#am-glass-inactive);-webkit-backdrop-filter:url(#am-glass-inactive)}
-body.am-liquid.am-window-inactive .am-toast {backdrop-filter:url(#am-glass-toast-inactive);-webkit-backdrop-filter:url(#am-glass-toast-inactive)}
 /* Windows' "Transparency effects" off reports reduced transparency; glass then becomes solid, but keeps its depth. */
 @media(prefers-reduced-transparency:reduce){
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}

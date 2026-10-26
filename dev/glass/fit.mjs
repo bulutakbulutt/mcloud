@@ -37,10 +37,16 @@ window.build = p => {
   // Shift (pt, inward positive) by distance from the edge: piecewise linear through p.knots/p.shift.
   const K = p.knots, V = p.shift, shiftAt = d => { if (d >= K[K.length - 1]) return 0; let i = 0; while (d > K[i + 1]) i++; const t = (d - K[i]) / (K[i + 1] - K[i]); return V[i] + (V[i + 1] - V[i]) * t; };
   const max = Math.max(1e-3, ...V.map(Math.abs));
-  const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d');
-  const mx = x.createImageData(w, h), my = x.createImageData(w, h), mr = x.createImageData(w, h);
-  for (let y = 0; y < h; y++) for (let X = 0; X < w; X++) {
-    const dx = Math.min(w - r, Math.max(r, X + .5)) - (X + .5), dy = r - (y + .5), len = Math.hypot(dx, dy) || 1, edge = r - len, i = (y * w + X) * 4;
+  const k = p.mapScale || 1, W = w * k, H = h * k;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const mx = x.createImageData(W, H), my = x.createImageData(W, H), mr = x.createImageData(W, H), mh = x.createImageData(W, H);
+  // Highlight along the top and bottom edges: strength by distance from the edge (table every 0.5px), times the
+  // vertical part of the edge normal, so the round ends' middles get none.
+  const hiAt = d => { const t = p.hi || [], f = d / .5; if (!t.length || f >= t.length - 1) return 0; const i = Math.floor(f); return t[i] + (t[i + 1] - t[i]) * (f - i); };
+  for (let y = 0; y < H; y++) for (let X = 0; X < W; X++) {
+    const px = (X + .5) / k, py = (y + .5) / k;
+    const dx = Math.min(w - r, Math.max(r, px)) - px, dy = r - py, len = Math.hypot(dx, dy) || 1, edge = r - len, i = (y * W + X) * 4;
+    mh.data[i] = mh.data[i + 1] = mh.data[i + 2] = Math.round(255 * Math.min(1, hiAt(Math.max(0, edge)) / (p.hiMax || 1) * Math.abs(dy / len) ** (p.hiPow || 1.5))); mh.data[i + 3] = 255;
     const t = shiftAt(Math.max(0, edge)) / max / len;
     const facing = (-dx * .5 + dy * .866) / len, light = Math.min(1, .15 + Math.max(0, facing) ** 1.5 + .5 * Math.max(0, -facing) ** 1.5);
     const band = 1 - Math.min(1, Math.max(0, edge) / p.rimWidth) ** 2;
@@ -49,9 +55,10 @@ window.build = p => {
     mx.data[i + 3] = my.data[i + 3] = mr.data[i + 3] = 255;
   }
   const url = d => { x.putImageData(d, 0, 0); return c.toDataURL(); };
+  const hiImg = p.hi ? '<feImage result="mh" preserveAspectRatio="none" width="701" height="55" href="' + url(mh) + '"/>' : '';
   const lut = p.lut.map(v => (v / 255).toFixed(4)).join(' '), tf = 'type="table" tableValues="' + lut + '"';
   f.setAttribute('color-interpolation-filters', p.linear ? 'linearRGB' : 'sRGB');
-  f.innerHTML = '<feImage result="mx" preserveAspectRatio="none" width="701" height="55" href="' + url(mx) + '"/>'
+  f.innerHTML = hiImg + '<feImage result="mx" preserveAspectRatio="none" width="701" height="55" href="' + url(mx) + '"/>'
     + '<feImage result="my" preserveAspectRatio="none" width="701" height="55" href="' + url(my) + '"/>'
     + '<feImage result="mr" preserveAspectRatio="none" width="701" height="55" href="' + url(mr) + '"/>'
     + '<feColorMatrix in="mx" values="1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/><feColorMatrix in="my" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1" result="y"/>'
@@ -68,6 +75,7 @@ window.build = p => {
       ? '<feColorMatrix values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1" result="soft"/><feColorMatrix values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0"/>'
         + '<feComponentTransfer result="off">' + ['R','G','B'].map(c => '<feFunc' + c + ' type="table" tableValues="' + p.lut.map((t, k) => (((t / 255) - p.a * k / (p.lut.length - 1)) + 1) / 2).map(v => v.toFixed(4)).join(' ') + '"/>').join('') + '</feComponentTransfer>'
         + '<feComposite in="soft" in2="off" operator="arithmetic" k2="' + p.a + '" k3="2" k4="-1" result="glass"/>'
+        + (p.hi ? '<feComposite in="glass" in2="mh" operator="arithmetic" k1="' + (-p.hiMax) + '" k2="1" k3="' + (p.hiC * p.hiMax) + '" result="glass"/>' : '')
       : '<feComponentTransfer result="glass"><feFuncR ' + tf + '/><feFuncG ' + tf + '/><feFuncB ' + tf + '/></feComponentTransfer>')
     + '<feColorMatrix in="mr" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/>'
     + '<feFlood flood-color="' + p.rimColor + '"/><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/>';
