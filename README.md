@@ -153,7 +153,7 @@ Spotify 1.3.6.1921 ve Spicetify 2.46.2 ile macOS'ta hazırlandı. Kurulum betikl
 
 Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
 
-Özel Teşekkürler
+## Özel Teşekkürler
 
 Harika bir platform sundukları için Spicetify topluluğuna teşekkürler.
 Ayrıca emribilemir ve f0rknturkoglu'na katkılarından ötürü teşekkür ederim.
