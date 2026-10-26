@@ -150,10 +150,9 @@ Spicy Lyrics kurulu değil ya da henüz yüklenmedi. Eklentiyi Marketplace'ten k
 
 Spotify 1.3.6.1921 ve Spicetify 2.46.2 ile macOS'ta hazırlandı. Kurulum betikleri macOS, Linux ve Windows'ta çalışır, ancak tema en çok macOS'ta denendi. Spotify arayüz güncellemeleri uyarlama gerektirebilir; bir sorun görürseniz Spotify ve Spicetify sürümlerinizle birlikte [issue açın](https://github.com/bulutakbulutt/mcloud/issues).
 
-
-Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
-
 ## Özel Teşekkürler
 
 Harika bir platform sundukları için Spicetify topluluğuna teşekkürler.
 Ayrıca emribilemir ve f0rknturkoglu'na katkılarından ötürü teşekkür ederim.
+
+Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
