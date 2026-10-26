@@ -449,7 +449,7 @@
   },{passive:false});
   document.body.append(player);
   // Liquid Glass, fitted to macOS's own glass. Apple Music's player is an NSGlassView, a private subclass of
-  // NSGlassEffectView; a test app (dev/glass) put the same glass over test patterns and over the scene behind
+  // NSGlassEffectView; a test app (github.com/emribilemir/liquid-glass-research) put the same glass over test patterns and over the scene behind
   // Music's real player, and these parameters minimise the difference to it. macOS glass turns diffuse when its
   // window is in the background; the theme keeps the focused look throughout, which is the one that reads as
   // Liquid Glass. The filter:
