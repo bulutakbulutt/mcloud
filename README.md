@@ -149,24 +149,5 @@ Spicy Lyrics kurulu değil ya da henüz yüklenmedi. Eklentiyi Marketplace'ten k
 
 Spotify 1.3.6.1921 ve Spicetify 2.46.2 ile macOS'ta hazırlandı. Kurulum betikleri macOS, Linux ve Windows'ta çalışır, ancak tema en çok macOS'ta denendi. Spotify arayüz güncellemeleri uyarlama gerektirebilir; bir sorun görürseniz Spotify ve Spicetify sürümlerinizle birlikte [issue açın](https://github.com/bulutakbulutt/mcloud/issues).
 
-Bellek optimizasyonları temanın kendi işlerini azaltır. Spotify'ın toplam RAM kullanımı için ölçülmüş bir tasarruf oranı verilmez.
-
-## Geliştirme
-
-```sh
-git clone https://github.com/bulutakbulutt/mcloud && cd mcloud
-./install.sh            # klondaki dosyaları kurar (indirmez)
-```
-
-Spotify açmadan hızlı kontrol için `dev/preview.html` dosyasını tarayıcıda açın veya smoke testini çalıştırın:
-
-```sh
-npm i --no-save playwright && npx playwright install chromium
-node dev/smoke.mjs
-```
-
-Kod yapısı ve kurallar için [AGENTS.md](AGENTS.md) dosyasına bakın.
-
----
 
 Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
