@@ -470,7 +470,10 @@
   // (greys survive the conversion) recombined as R=G=x shift, B=y shift and the rim as alpha: red gains nothing
   // when green equals it, and blue only takes ~9% of the x shift, which glassLens() compensates on P3 screens.
   const glassFilter=id=>'<filter id="'+id+'" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="mx" preserveAspectRatio="none"/><feImage result="my" preserveAspectRatio="none"/><feImage result="mr" preserveAspectRatio="none"/><feColorMatrix in="mx" values="1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/><feColorMatrix in="my" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1" result="y"/><feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="B"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="mr" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
-  glass.innerHTML=glassFilter('am-glass')+glassFilter('am-glass-toast');
+  // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
+  // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
+  const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
+  glass.innerHTML=glassFilter('am-glass')+glassFilter('am-glass-toast')+`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`;
   document.body.append(glass);
   const bezel=16;
   // Shift by distance from the edge, tabulated once. Height h=√(1-(1-x)²) over the bezel; the ray bends by
