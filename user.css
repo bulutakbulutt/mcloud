@@ -30,8 +30,8 @@ body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .
    Spotify's bars bring their own top padding, and the full height left a wide gap under the toolbar. */
 /* Only the page's own viewport: OverlayScrollbars also wraps smaller scrollers inside pages (playlist action bars). */
 body.am-ready .am-native-main .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
-body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child,[data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]):first-child) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
-body.am-ready .am-native-main main > div > [style^="background-color"]:first-child {left:0!important;right:0!important;width:auto!important}
+body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]),[data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]):first-child) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
+body.am-ready .am-native-main main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]) {left:0!important;right:0!important;width:auto!important}
 /* Spotify paint-contains the playlist title bar, which would clip its glass at the toolbar. */
 body.am-ready .am-native-main .main-topBar-container {top:var(--am-page-top)!important;contain:layout style!important}
 body.am-ready .am-native-main {grid-area:global-nav / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
@@ -59,9 +59,11 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
 #am-sidebar *,#am-player * {box-sizing:border-box}
 #am-sidebar button,#am-player button {appearance:none;font:inherit;letter-spacing:inherit;border:0;color:inherit;cursor:pointer;background:none;text-align:left;padding:0;min-width:0}
 #am-sidebar button:focus-visible,#am-player button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:3px}
-/* Sidebar after Apple Music on macOS 26: a glass pane over the page, which shows through it darkened by about
-   15% (a little more towards its edge), with rows, insets and type in fixed points rather than window units. */
-#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:linear-gradient(90deg,#0000001f,#00000030);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 #ffffff0a;display:flex;flex-direction:column;padding:0 10px;font-size:13px}
+/* Sidebar after Apple Music on macOS 26: a dark material over the blurred page that lets about a quarter of it
+   through. Over a dark page that reads as nearly the page's colour; over colour (artist tints, playlist headers,
+   artwork) it stays a deep version of it instead of taking it on (macOS 26 screenshots: page (46,39,39) gives
+   sidebar (48,39,38); page (112,77,52) gives (65,49,39)). Rows, insets and type are in fixed points. */
+#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:color-mix(in srgb,#252525 76%,transparent);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 #ffffff0a;display:flex;flex-direction:column;padding:0 10px;font-size:13px}
 /* Edge glow under the sidebar glass: a heavily blurred backdrop reaching --am-glow past the sidebar, so the
    artwork beside the edge bleeds its colour in, as on Apple Music; masked to the sidebar, strongest at the edge;
    #am-glow-cap (theme.js) keeps big coloured areas from blowing out. */
