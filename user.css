@@ -32,6 +32,9 @@ body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .
 body.am-ready .am-native-main .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
 body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]),[data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]):first-child) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
 body.am-ready .am-native-main main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]) {left:0!important;right:0!important;width:auto!important}
+/* Image headers (Daily Mix, genre pages) are drawn outside the scroll viewport, at the header's height from the
+   window's top; the header itself starts --am-page-top lower, so the image ended short and left a hard band. */
+body.am-ready .am-native-main .before-scroll-node > :has(> [data-testid="background-image"]) {height:calc(var(--optimized-entity-header-height,40vh) + var(--am-page-top))!important;min-height:calc(var(--optimized-entity-header-min-height,var(--min-fluid-height,0px)) + var(--am-page-top))!important}
 /* Spotify paint-contains the playlist title bar, which would clip its glass at the toolbar. */
 body.am-ready .am-native-main .main-topBar-container {top:var(--am-page-top)!important;contain:layout style!important}
 body.am-ready .am-native-main {grid-area:global-nav / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
