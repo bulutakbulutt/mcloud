@@ -41,8 +41,9 @@ body.am-ready .am-native-main :is(:is([data-testid$="-page"],[data-testid="entit
 /* Spotify's scrolled top bars (the home chips row, playlist and album titles) fill with the page's colour; here they
    are the theme's glass instead, reaching under the sidebar. They are the colour layers that fade in by opacity. */
 body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {top:calc(-1 * var(--am-page-top))!important;left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;border-radius:0!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 #ffffff0f}
-/* Spotify darkens its coloured bar with a 60% black overlay, which turned the glass nearly black. */
-body.am-ready .am-native-main .main-topBar-overlay {background:none!important}
+/* Spotify darkens its coloured bars with a 60% black overlay (an element on playlist title bars, ::after on the
+   home chips bar), which turned the glass nearly black. */
+body.am-ready .am-native-main .main-topBar-overlay,body.am-ready .am-native-main [data-am-glass]::after {background:none!important}
 /* The track list's sticky column header joins the same glass. */
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8)}
 /* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
@@ -219,7 +220,7 @@ body.am-ready #global-nav-bar {
 }
 /* The page shows through the toolbar's row; a soft shade from the top keeps the controls readable over bright
    colours and artwork, and the controls sit on faint fills so they stay findable on any colour. */
-body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:linear-gradient(180deg,#00000047,#0000001f 60%,#0000);pointer-events:none;z-index:-1}
+body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:linear-gradient(180deg,#0000002b,#00000012 60%,#0000);pointer-events:none;z-index:-1}
 /* Notifications, Friend Activity and the account menu are in the sidebar's account row (#am-sidebar .am-account),
    whose buttons click these. They stay laid out, hidden, under that row, so the menus and panels Spotify anchors
    to them open there; the search field gets the freed width. */

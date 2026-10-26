@@ -10,7 +10,7 @@ Working notes for the next session (people and agents). Read after AGENTS.md. Wo
 4. Checked only partly; ask the user when they next test:
    - **Spicy Lyrics** works in the real client here (opens and closes from the player's lyrics button, page beside the sidebar, background under the glass). The stale-page guard (`body:not(.am-spicy-route)`) covers a restart race seen once. The user had said it "doesn't open" on their side.
    - **Marketplace/Home overlap** (asked again on macOS; their screenshot was from an older install, without the toolbar button fills): measured at 800–1800 CSS px with the current files, Marketplace stays in the leading group and nothing overlaps. Earlier: reproduced and fixed. In wide windows Spotify's centered layout makes the toolbar's centre group (Home + search) `position:absolute` across the whole bar; it is now forced back into the flex row. Checked at 900, 1047, 1440 and 1920 CSS px.
-   - The **home chips bar** is glass but looks dark when dark artwork scrolls under it; that is the glass working.
+   - The **home chips bar** looked nearly black when scrolled: Spotify lays a 60% black `::after` over that layer (the same overlay as `.main-topBar-overlay` on playlists). It is cleared now; the band measures ~40 instead of ~16 over dark rows.
 5. Known gaps, not started: Spotify's home carousels do not slide under the sidebar (only `#am-artist` rows do).
 
 ## Decisions and why
