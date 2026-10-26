@@ -120,6 +120,14 @@ device-resolution maps (p95 ~18ms with and without the glass).
   (`[13,15.6,14.1,14.7,14.25,10.9,8.5,3,0.75,0]`) and a wider darken blur (19px). The highlight table it found is
   noisy (negative entries): it needs a constrained shape (e.g. a*exp(-d/b)) before shipping. `params/fit-music.log`.
 
+### Fitting to lab patterns and Music's frames together
+
+Each change from the Music-frame fit was tried alone on both sets (lab: 18 patterns; music: 11 Music frames):
+the exponential highlight shape hurt the lab set (2.89 -> 4.11; the table's sharper falloff is right), while a wider
+darken blur (13.5px), gain 1.05 and a softer mirror peak (16.1 instead of 18.1px at 1px from the edge) each helped
+both. Combined and shipped: lab 2.83 (was 2.89), Music frames 5.97 (was 6.52). The remaining Music gap sits in the
+top band over bright content; frames there may also carry Music's hover and title-strip effects.
+
 ## Open questions
 
 - Synthetic scroll events scroll Music's home unreliably (up sometimes, down never), so motion against Music itself

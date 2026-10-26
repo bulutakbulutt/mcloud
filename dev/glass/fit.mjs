@@ -9,7 +9,7 @@ const require = createRequire(new URL('../../', import.meta.url));
 const { chromium } = require('playwright');
 const here = new URL('.', import.meta.url).pathname;
 const patterns = (process.env.PATTERNS || 'scene,vstripes,hstripes,grays,h1,h4,h8,h15,h27,v1,v4,v8,v15').split(',');
-const weights = { scene: 4, scene2: 4, grays: 2, grid: 3, checker: 3, vedge: 2, hedge: 2 };
+const weights = { scene: 4, scene2: 4, grays: 2, grid: 3, checker: 3, vedge: 2, hedge: 2, mf00: 3, mf03: 3, mf06: 3, mf09: 3, mf12: 3, mf15: 3, mf18: 3, mf21: 3, mf24: 3, mf27: 3, mf30: 3 };
 
 function png(buf) {
   let i = 8, idat = [], w, h, ct;
@@ -43,7 +43,8 @@ window.build = p => {
   const mx = x.createImageData(W, H), my = x.createImageData(W, H), mr = x.createImageData(W, H), mh = x.createImageData(W, H);
   // Highlight along the top and bottom edges: strength by distance from the edge (table every 0.5px), times the
   // vertical part of the edge normal, so the round ends' middles get none.
-  const hiAt = d => { const t = p.hi || [], f = d / .5; if (!t.length || f >= t.length - 1) return 0; const i = Math.floor(f); return t[i] + (t[i + 1] - t[i]) * (f - i); };
+  const hiAt = d => p.hiA !== undefined ? p.hiA * Math.exp(-d / Math.max(.05, p.hiB)) : hiTable(d);
+  const hiTable = d => { const t = p.hi || [], f = d / .5; if (!t.length || f >= t.length - 1) return 0; const i = Math.floor(f); return t[i] + (t[i + 1] - t[i]) * (f - i); };
   for (let y = 0; y < H; y++) for (let X = 0; X < W; X++) {
     const px = (X + .5) / k, py = (y + .5) / k;
     const dx = Math.min(w - r, Math.max(r, px)) - px, dy = r - py, len = Math.hypot(dx, dy) || 1, edge = r - len, i = (y * W + X) * 4;
@@ -90,6 +91,8 @@ await page.setContent(page_html);
 const bgs = Object.fromEntries(patterns.map(n => [n, 'data:image/png;base64,' + fs.readFileSync(`${here}bg/${n}.png`).toString('base64')]));
 
 async function render(p, name) {
+  // Music's own frames: its player sits at 40.5pt and is 54pt tall in those crops; the lab's is 40pt and 55pt.
+  p = name.startsWith('mf') ? { ...p, barTop: 40.5, barH: 54 } : { ...p, barTop: 40, barH: 55 };
   await page.evaluate(([src, p]) => new Promise(res => { const img = document.getElementById('bg'); img.onload = () => { window.build(p); requestAnimationFrame(() => requestAnimationFrame(res)); }; img.src = src; }), [bgs[name], p]);
   return png(await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: 781, height: apple[name].h / 2 } }));
 }

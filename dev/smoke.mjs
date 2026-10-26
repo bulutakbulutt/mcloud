@@ -173,11 +173,11 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale === 36.2);
+    assert.ok(first.href.startsWith('data:image/png') && first.scale === 32.2);
     assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
     // Fitted to macOS's own (focused) glass: a slight blur, a darken halo, and a tone by luminance.
-    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length, [...document.querySelectorAll('#am-glass feGaussianBlur')].map(b => b.getAttribute('stdDeviation'))]; }), ['R', 'B', 3, ['0.4', '9.5']]);
+    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length, [...document.querySelectorAll('#am-glass feGaussianBlur')].map(b => b.getAttribute('stdDeviation'))]; }), ['R', 'B', 3, ['0.4', '13.5']]);
     // A content-box change fires the ResizeObserver but must not redraw the map.
     await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);
