@@ -304,6 +304,11 @@ body.am-ready .am-native-panel-open .am-friends-fill {
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
 body.am-tinted .am-nav-heading {color:#ffffff73}
+/* Over an artist's colour Apple Music's sidebar is a dark material that lets ~15% of the page through: about half the
+   page's brightness and less saturated (measured on a macOS 26 screenshot: page (112,77,52), sidebar (65,49,39)).
+   The edge glow is off here: a page of one colour has nothing beside the sidebar to pick up, it only turned orange. */
+body.am-tinted #am-sidebar {background:color-mix(in srgb,color-mix(in srgb,var(--am-tint-top) 34%,#161616) 85%,transparent)}
+body.am-tinted #am-sidebar-glow {display:none}
 body:not(.am-artist-open) #am-artist {display:none!important}
 body.am-artist-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
 body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:none!important}

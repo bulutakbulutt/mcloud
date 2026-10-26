@@ -107,6 +107,9 @@ try {
 
   await check('sidebar resizes and resets', async () => {
     const side = () => page.evaluate(() => document.getElementById('am-sidebar').offsetWidth);
+    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it.
+    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex)]; });
+    assert.deepEqual(glow, [140, true, true]);
     const box = await page.locator('.am-sidebar-resizer').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + 300);
     await page.mouse.down();
@@ -191,6 +194,8 @@ try {
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
+    // Over the artist's colour the sidebar is Apple's dark material and the edge glow is off.
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);
     assert.equal(await page.locator('.am-song').count(), 9);
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     await page.click('.am-hero-follow');
@@ -230,9 +235,6 @@ try {
     const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].map(v => parseFloat(getComputedStyle(v).paddingTop))]);
     assert.deepEqual(top, [0, 56, 0]);
     assert.match(layout.blur, /blur/);
-    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it.
-    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex)]; });
-    assert.deepEqual(glow, [140, true, true]);
   });
 
   await check('artist page: wheel scrolls the page, Shift+wheel scrolls rows, overlay scrollbar, buttons clear of the drag strip', async () => {
