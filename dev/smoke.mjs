@@ -114,6 +114,14 @@ try {
     await page.mouse.up();
     assert.equal(await side(), 300);
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).sidebar, 300);
+    // At its narrowest the account row still fits: the profile chip shrinks before the bell and friends buttons spill out.
+    const wide = await page.locator('.am-sidebar-resizer').boundingBox();
+    await page.mouse.move(wide.x + wide.width / 2, wide.y + 300);
+    await page.mouse.down();
+    await page.mouse.move(40, box.y + 300, { steps: 5 });
+    await page.mouse.up();
+    assert.equal(await side(), 170);
+    assert.ok(await page.evaluate(() => document.querySelector('#am-sidebar [aria-label="Arkadaş etkinliği"]').getBoundingClientRect().right <= document.getElementById('am-sidebar').getBoundingClientRect().right));
     await page.dblclick('.am-sidebar-resizer');
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-side')), '');
   });
@@ -189,6 +197,9 @@ try {
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
     await page.waitForFunction(() => document.querySelector('.am-toast').classList.contains('am-toast-show'));
     assert.match(await page.textContent('.am-toast'), /^Bağlantı kopyala/);
+    // It is Liquid Glass with a lens of its own, drawn at the toast's size.
+    assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.am-toast')).backdropFilter), /url\(.*#am-glass-toast/);
+    await page.waitForFunction(() => document.querySelector('#am-glass-toast feImage').getAttribute('width') === String(document.querySelector('.am-toast').offsetWidth));
     await page.click('.am-artist-back');
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });

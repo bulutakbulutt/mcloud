@@ -2,6 +2,7 @@
 :root {
  color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
  --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
+ --am-glass-tint:linear-gradient(180deg,#ffffff29,#9a9a9a33 14% 83%,#ffffff33);
  --am-text:#dedede; --am-sub:#969696; --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
  --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;
  --encore-title-font-stack:var(--encore-body-font-stack);
@@ -79,7 +80,8 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-account-button svg {width:18px;height:18px}
 #am-sidebar .am-account-button:hover {background:#ffffff0d;color:#f2f2f2}
 #am-sidebar .am-account-button.am-active {color:var(--am-accent-focus)}
-#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;flex:1 1 auto;width:auto;margin:0;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2;flex-shrink:0}
+/* The chip gives way first (its name ellipsizes), so the two buttons stay inside a narrow sidebar. */
+#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;flex:1 1 auto;width:auto;min-width:0;margin:0;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2}
 #am-sidebar .am-profile[hidden] {display:none}
 #am-sidebar .am-profile:hover {background:#ffffff0d}
 .am-avatar {position:relative;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
@@ -121,7 +123,7 @@ body.am-ready .notistack-SnackbarContainer {bottom:84px!important}
 .am-title-row {display:flex;align-items:center;gap:6px;min-width:0}
 #am-player .am-star {width:auto;min-width:0;height:auto;min-height:0;color:#9a9a9a;opacity:0;transition:opacity .15s,color .15s}
 /* The star spans the title's cap height, but its arms sit above its middle; half a pixel down centres it optically. */
-#am-player .am-star svg {width:13px;height:13px;transform:translateY(.5px)}
+#am-player .am-star svg {width:13px;height:13px;transform:translateY(-.5px)}
 #am-player .am-star.am-active {color:var(--am-accent);opacity:1}
 #am-player .am-star.am-active svg path {fill:currentColor}
 #am-player .am-lcd:hover .am-star,#am-player .am-star:focus-visible {opacity:1}
@@ -393,12 +395,15 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 /* Liquid Glass player: clear glass with refraction and a rim light along the edge (#am-glass in theme.js),
    tinted like Apple Music's: a little lighter at the top and bottom, no drop shadow, no saturation boost.
    Browsers without SVG backdrop filters drop this declaration and keep the frosted blur above. */
-body.am-liquid #am-player {background:linear-gradient(180deg,#ffffff24,#8c8c8c33 14% 83%,#ffffff2e);backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
+body.am-liquid #am-player {background:var(--am-glass-tint);backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
+/* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
+body.am-liquid .am-toast {background:var(--am-glass-tint);backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
 /* Windows' "Transparency effects" off reports reduced transparency; glass then becomes solid, but keeps its depth. */
 @media(prefers-reduced-transparency:reduce){
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
  #am-sidebar{background:#1a1a1a;backdrop-filter:none;-webkit-backdrop-filter:none}
+ .am-toast,body.am-liquid .am-toast{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
  body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"]{background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
  body.am-ready .am-native-panel-open{background:#262626!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 }

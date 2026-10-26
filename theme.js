@@ -452,17 +452,19 @@
   // gathers the page and the band inside it magnifies. It is made as strong as it can be (thicker glass)
   // while the mapping never folds back, since folds broke cards and round avatars into slivers and swirls
   // on 1x screens (Apple's 2x glass mirrors its outer ~7px). A 0.7px blur smooths Chromium's per-pixel sampling and softens text
-  // behind the glass, and a curve brings white down to about half, so the player's white text stays
+  // behind the glass, and a curve brings white down to about 0.6, so the player's white text stays
   // readable over bright artwork and busy pages, as in Apple Music. Blue holds the specular rim, after kube.io's
   // player (opacity ~0.4, saturation ~6): a soft ~1.5px band whose strength follows the angle between the edge's
   // normal and a light from -60° (the far side catches half), lit with a saturated, brightened copy of the
   // refracted page, so the rim takes the colours under it instead of painting white.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
-  const curve='tableValues=".02 .2 .36 .47 .54"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  const curve='tableValues=".03 .24 .41 .53 .61"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
+  // One filter per glass element (the player, the toast): each needs a displacement map drawn at its own size.
+  const glassFilter=id=>'<filter id="'+id+'" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  glass.innerHTML=glassFilter('am-glass')+glassFilter('am-glass-toast');
   document.body.append(glass);
-  const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=16;let glassSize='';
+  const bezel=16;
   // Shift by distance from the edge, tabulated once. Height h=√(1-(1-x)²) over the bezel; the ray bends by
   // a-asin(sin a/1.5) at slope angle a and travels h deep. A circular arc ends with a sloped shift, which
   // would leave a seam where the magnification jumps, so (1-x⁴) eases it to 0 with zero slope. The table is
@@ -477,25 +479,29 @@
   })();
   const bezelPeak=Math.max(...bezelTable);
   const bezelShift=edge=>{const f=Math.min(1,Math.max(0,edge)/bezel)*256,i=Math.min(255,Math.floor(f));return bezelTable[i]+(bezelTable[i+1]-bezelTable[i])*(f-i);};
-  function drawGlassMap() {
-    // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
-    // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
-    const w=player.offsetWidth,h=player.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
-    const r=h/2,max=bezelPeak,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-    const context=canvas.getContext('2d'),image=context.createImageData(w,h),data=image.data;
-    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-      // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
-      const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
-      // Outward normal (-dx,-dy)/length against the light (cos -60°, sin -60°) in screen axes.
-      const t=edge<bezel?bezelShift(edge)/max/length:0,facing=(-dx*.5+dy*.866)/length,i=(y*w+x)*4;
-      const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/1.5)**2;
-      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(120*light*band);data[i+3]=255;
-    }
-    context.putImageData(image,0,0);
-    glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
-    glassShift.setAttribute('scale',(2*max).toFixed(2));
+  function glassLens(filterId,node) {
+    const filter=glass.querySelector('#'+filterId),glassMap=filter.querySelector('feImage'),glassShift=filter.querySelector('feDisplacementMap');let glassSize='';
+    const draw=()=>{
+      // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
+      // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
+      const w=node.offsetWidth,h=node.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
+      const r=h/2,max=bezelPeak,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+      const context=canvas.getContext('2d'),image=context.createImageData(w,h),data=image.data;
+      for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+        // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
+        const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
+        // Outward normal (-dx,-dy)/length against the light (cos -60°, sin -60°) in screen axes.
+        const t=edge<bezel?bezelShift(edge)/max/length:0,facing=(-dx*.5+dy*.866)/length,i=(y*w+x)*4;
+        const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/1.5)**2;
+        data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(120*light*band);data[i+3]=255;
+      }
+      context.putImageData(image,0,0);
+      glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
+      glassShift.setAttribute('scale',(2*max).toFixed(2));
+    };
+    if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
   }
-  if(typeof ResizeObserver==='function')new ResizeObserver(drawGlassMap).observe(player);drawGlassMap();
+  glassLens('am-glass',player);glassLens('am-glass-toast',toast);
   // One shared popover serves the "…" track menu and the profile menu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
   let popoverAnchor=null;
