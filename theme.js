@@ -37,7 +37,11 @@
     expand:'<path d="M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5"/>',
     left:'<path d="m15 4-8 8 8 8"/>',
     share:'<path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M6 11H5v10h14V11h-1"/>',
-    plus:'<path d="M12 5v14M5 12h14"/>'
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 21h4"/>',
+    friends:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17.2" cy="9" r="2.6"/><path d="M16 14.1a5.5 5.5 0 0 1 5.4 5.9"/>',
+    devices:'<path d="M7 17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="m12 15 5 6H7z" fill="currentColor"/>',
+    popup:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><rect x="11.5" y="11" width="7" height="6" rx="1.2" fill="currentColor" stroke="none"/>'
   };
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.music}</svg>`;
   function el(tag, cls, text) { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; }
@@ -139,20 +143,32 @@
     const step={ArrowLeft:-10,ArrowRight:10}[event.key];if(!step)return;
     event.preventDefault();setSidebarWidth(sidebar.offsetWidth+step,true);
   });
-  // Apple Music keeps the account in the sidebar's bottom-left corner.
+  // Apple Music keeps the account in the sidebar's bottom-left corner. Notifications and Friend Activity sit beside
+  // it; all three click Spotify's own toolbar buttons, which user.css keeps laid out (invisible) under this row, so
+  // Spotify's account menu (with Spicetify's entries) and panels open here and work as they do natively.
+  const account=el('div','am-account');
   const profile=el('button','am-profile');profile.type='button';profile.hidden=true;profile.setAttribute('aria-haspopup','menu');
-  const avatar=el('span','am-avatar'),profileName=el('span','am-profile-name');profile.append(avatar,profileName);sidebar.append(profile);
+  const avatar=el('span','am-avatar'),profileName=el('span','am-profile-name');profile.append(avatar,profileName);
+  const nativeToolbarButton=selector=>document.querySelector('#global-nav-bar .am-toolbar-trailing '+selector);
+  const nativeNews=()=>[...document.querySelectorAll('#global-nav-bar .am-toolbar-trailing button')].find(b=>!b.matches('[data-restore-focus-key],[data-testid="user-widget-link"]'));
+  const newsButton=button('Yenilikler','bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
+  const friendsButton=button('Arkadaş etkinliği','friends',()=>{
+    const native=nativeToolbarButton('[data-restore-focus-key="buddy_feed"]');
+    if(native)native.click();else S.showNotification('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');
+  },'am-account-button');
+  account.append(profile,newsButton,friendsButton);sidebar.append(account);
   (async()=>{
     try{
       const user=await S.Platform.UserAPI?.getUser?.();const name=user?.displayName||user?.username||'';if(!name)return;
       profileName.textContent=name;avatar.textContent=name.split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toLocaleUpperCase('tr');
       const image=spotifyImage(user.images?.[0]?.url||user.avatar?.sources?.[0]?.url||'');
       if(image){const img=el('img','');img.alt='';img.decoding='async';img.onerror=()=>img.remove();img.src=image;avatar.append(img);}
-      profile.onclick=()=>togglePopover(profile,()=>[
+      profile.onclick=()=>{const native=nativeToolbarButton('[data-testid="user-widget-link"]');if(native){closePopover();native.click();}else togglePopover(profile,menu);};
+      const menu=()=>[
         ...(user.username?[{label:'Profil',action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
         {label:'Ayarlar',action:()=>go('/preferences')},
         '-',{swatches:true},
-      ]);
+      ];
       profile.hidden=false;
     }catch(e){console.warn('[AppleMusicMac] Profile',e);}
   })();
@@ -162,7 +178,7 @@
       const selected = currentMode === 'library' ? key === libraryKeys[libraryKind] : path === key;
       b.classList.toggle('am-selected', selected);
       if(selected) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
-    }
+    }    newsButton.classList.toggle('am-active',path==='/content-feed');
   }
   const libraryView = el('section', ''); libraryView.id='am-library'; libraryView.setAttribute('aria-label','Arşiv');document.body.append(libraryView);
   let libraryKind='', libraryRequest=0;
@@ -383,7 +399,13 @@
   const extras=el('div','am-player-extras');player.append(extras);
   const lyricsButton=button('Spicy Lyrics sözlerini aç / kapat','lyrics',toggleSpicyLyrics);
   lyricsButton.id='am-lyrics-toggle';
-  extras.append(lyricsButton,button('Çalma sırası','queue',()=>{
+  const popupLyricsButton=button('Spicy Lyrics açılır pencere','popup',()=>runSpicyControl('SpicyLyrics_PopupLyricsButton'));popupLyricsButton.hidden=true;
+  // Spotify Connect opens its device list in the right panel, shown as the same glass sheet as the queue.
+  const connectButton=button('Bir cihaza bağlan','devices',()=>{
+    const native=nativeConnect();
+    if(native)native.click();else S.showNotification('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.');
+  });
+  extras.append(popupLyricsButton,lyricsButton,connectButton,button('Çalma sırası','queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
     else S.showNotification('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
@@ -427,13 +449,13 @@
   // on 1x screens (Apple's 2x glass mirrors its outer ~7px). A 0.7px blur smooths Chromium's per-pixel sampling and softens text
   // behind the glass, and a curve brings white down to about half, so the player's white text stays
   // readable over bright artwork and busy pages, as in Apple Music. Blue holds the specular rim, after kube.io's
-  // player (opacity ~0.4, saturation ~6): a soft ~3px band whose strength follows the angle between the edge's
+  // player (opacity ~0.4, saturation ~6): a soft ~1.5px band whose strength follows the angle between the edge's
   // normal and a light from -60° (the far side catches half), lit with a saturated, brightened copy of the
   // refracted page, so the rim takes the colours under it instead of painting white.
   const glass=document.createElementNS('http://www.w3.org/2000/svg','svg');
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
   const curve='tableValues=".02 .2 .36 .47 .54"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
-  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="5"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  glass.innerHTML='<filter id="am-glass" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   document.body.append(glass);
   const glassMap=glass.querySelector('feImage'),glassShift=glass.querySelector('feDisplacementMap'),bezel=16;let glassSize='';
   // Shift by distance from the edge, tabulated once. Height h=√(1-(1-x)²) over the bezel; the ray bends by
@@ -461,8 +483,8 @@
       const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
       // Outward normal (-dx,-dy)/length against the light (cos -60°, sin -60°) in screen axes.
       const t=edge<bezel?bezelShift(edge)/max/length:0,facing=(-dx*.5+dy*.866)/length,i=(y*w+x)*4;
-      const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/3)**2;
-      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(155*light*band);data[i+3]=255;
+      const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/1.5)**2;
+      data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(120*light*band);data[i+3]=255;
     }
     context.putImageData(image,0,0);
     glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
@@ -549,6 +571,11 @@
     native.click();
   }
   function toggleSpicyLyrics() { runSpicyControl('SpicyLyrics_PageButton'); }
+  // Spotify's Connect button has no test id and a translated label; it follows the queue button.
+  function nativeConnect() {
+    const buttons=[...document.querySelectorAll('.am-native-player button')];
+    return document.querySelector('.am-native-player button[aria-describedby*="connect"]')||buttons[buttons.findIndex(b=>b.matches('[data-testid="control-button-queue"]'))+1]||null;
+  }
   // Artwork opens Spicy Lyrics' fullscreen view, or Spotify's own when it is absent.
   function toggleFullscreen() {
     if(document.getElementById('SpicyLyrics_FullscreenButton')){runSpicyControl('SpicyLyrics_FullscreenButton');return;}
@@ -560,8 +587,11 @@
     // Spotify 1.3 opens Friend Activity and the queue in the right panel as an <aside> labelled like the button
     // that opens it (data-restore-focus-key "buddy_feed" / "queue"); the panel otherwise holds the hidden Now
     // Playing view. Reading the open state from the panel itself means any close button closes the sheet.
-    const panelFor=key=>{const label=document.querySelector(`[data-restore-focus-key="${key}"]`)?.getAttribute('aria-label');return label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`);};
-    const feed=panelFor('buddy_feed')||panelFor('queue')
+    const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`);};
+    const panelFor=key=>panelOf(document.querySelector(`[data-restore-focus-key="${key}"]`));
+    const friends=panelFor('buddy_feed'),devices=panelOf(nativeConnect());
+    for(const [node,open] of [[friendsButton,friends],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
+    const feed=friends||panelFor('queue')||devices
       ||document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement;
     document.body.classList.toggle('am-panel-open',!!feed);
@@ -593,6 +623,7 @@
     const lyricsOpen=routePath()==='/SpicyLyrics';
     document.body.classList.toggle('am-spicy-route',lyricsOpen);
     const available=!!document.getElementById('SpicyLyrics_PageButton');
+    popupLyricsButton.hidden=!document.getElementById('SpicyLyrics_PopupLyricsButton');
     lyricsButton.classList.toggle('am-active',lyricsOpen);
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));
     setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?'Spicy Lyrics sözlerini kapat':'Spicy Lyrics sözlerini aç'):'Spicy Lyrics yükleniyor…');
@@ -933,7 +964,7 @@
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
-  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
+  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
   let reconciliation=null;
   function scheduleReconcile(records) {
     if(document.hidden||reconciliation!==null)return;

@@ -26,10 +26,10 @@
   <div id="global-nav-bar" style="grid-area:global-nav;display:flex">
     <div><button aria-label="Geri">‹</button><button aria-label="İleri">›</button></div>
     <div><div role="search"><input placeholder="Ne çalmak istiyorsun?"></div></div>
-    <div><button aria-label="Dinleme etkinliği" data-restore-focus-key="buddy_feed" onclick="mockPanel(this)">F</button><button aria-label="Profil">E</button></div>
+    <div><button aria-label="Yenilikler" onclick="Spicetify.Platform.History.push('/content-feed')">N</button><button aria-label="Dinleme etkinliği" data-restore-focus-key="buddy_feed" onclick="mockPanel(this)">F</button><button data-testid="user-widget-link" aria-label="Profil" onclick="window.__mockState.accountMenu=(window.__mockState.accountMenu||0)+1">E</button></div>
   </div>
   <div class="left"></div>
-  <div class="view BPRPH_jrStQIw2m2qfDl"><div class="main-view-container"><div class="main-view-container__scroll-node"><div class="main-view-container__scroll-node-child"><main>
+  <div class="view BPRPH_jrStQIw2m2qfDl"><div class="main-view-container"><div class="main-view-container__scroll-node" data-overlayscrollbars-viewport><div class="main-view-container__scroll-node-child"><main>
     <section class="mock-page" data-testid="playlist-page">
       <div class="mock-header" style="background-color:rgb(80,56,160)"></div>
       <h1>Ana Sayfa</h1><p>Spotify içerik alanı (mock)</p>
@@ -37,7 +37,7 @@
     </section>
   </main></div></div></div></div>
   <div class="right"></div>
-  <div class="bar"><button data-testid="control-button-queue" data-restore-focus-key="queue" aria-label="Sıraya Ekle" onclick="mockPanel(this)">Sıra</button></div>
+  <div class="bar"><button data-testid="control-button-queue" data-restore-focus-key="queue" aria-label="Sıraya Ekle" onclick="mockPanel(this)">Sıra</button><button aria-label="Bir cihaza bağlan" aria-describedby="connect-message-nudge" onclick="mockPanel(this)">C</button></div>
 </div></div></div>
 <script>
   // Spotify shows one panel at a time in the right sidebar, as an <aside> labelled like the button that opened it.

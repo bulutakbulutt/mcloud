@@ -1,7 +1,7 @@
 /* AppleMusicMac 2.7 — reference-proportioned layout for Spotify 1.3.x. */
 :root {
  color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
- --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
+ --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
  --am-text:#dedede; --am-sub:#969696; --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
  --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;
  --encore-title-font-stack:var(--encore-body-font-stack);
@@ -16,24 +16,39 @@ body.am-ready .am-layout {
   display:grid!important;
   grid-template:"top-banner top-banner top-banner" 0 "global-nav global-nav global-nav" var(--am-header) "left-sidebar main-view right-sidebar" minmax(0,1fr) "now-playing-bar now-playing-bar now-playing-bar" 0 / var(--am-side) minmax(0,1fr) 0!important;
   width:100%!important;height:100%!important;padding:0!important;gap:0!important;
+  /* Shows above the library and artist views, whose main view is hidden: match the page, not Spotify's grey. */
+  background:var(--am-bg)!important;
 }
 body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .am-native-right {display:none!important}
-/* The page runs under the glass sidebar, as in Apple Music: the main view spans the sidebar's column, Spotify's
-   content keeps clear of it (the size container moves along so its layouts see the visible width), and the
-   full-width colour layers of playlist headers reach the window's edge. */
-body.am-ready .am-native-main {grid-area:main-view / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
+/* The page runs under the glass sidebar and the toolbar, as in Apple Music: the main view spans the sidebar's
+   column and the toolbar's row, Spotify's content keeps clear of both (the size container moves along so its
+   layouts see the visible width), and the full-width colour layers of playlist headers reach the window's edge.
+   The toolbar's row is padding on the scroll viewport, so Spotify's sticky bars (home chips, track list header)
+   stop below it without moving them; the top colour layers reach up into it, so the toolbar takes the page's
+   colour (the home page's follows the hovered shortcut). --am-page-top is shorter than the sidebar's header:
+   Spotify's bars bring their own top padding, and the full height left a wide gap under the toolbar. */
+body.am-ready .am-native-main [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
+body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child,[data-testid="entity-header"] > [style*="background-color"]) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
+body.am-ready .am-native-main main > div > [style^="background-color"]:first-child {left:0!important;right:0!important;width:auto!important}
+/* Spotify paint-contains the playlist title bar, which would clip its glass at the toolbar. */
+body.am-ready .am-native-main .main-topBar-container {top:var(--am-page-top)!important;contain:layout style!important}
+body.am-ready .am-native-main {grid-area:global-nav / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
 body.am-ready .am-native-main .main-view-container__scroll-node-child {padding-left:var(--am-side)!important;box-sizing:border-box;container:main-view-grid-area / inline-size;position:relative;overflow-x:clip}
 body.am-ready .am-native-main .main-topBar-container {padding-left:var(--am-side)!important;box-sizing:border-box}
 body.am-ready .am-native-main :is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"] {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
 /* Spotify's scrolled top bars (the home chips row, playlist and album titles) fill with the page's colour; here they
    are the theme's glass instead, reaching under the sidebar. They are the colour layers that fade in by opacity. */
-body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 #ffffff0f}
+body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {top:calc(-1 * var(--am-page-top))!important;left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;border-radius:0!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 #ffffff0f}
 /* Spotify darkens its coloured bar with a 60% black overlay, which turned the glass nearly black. */
 body.am-ready .am-native-main .main-topBar-overlay {background:none!important}
 /* The track list's sticky column header joins the same glass. */
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8)}
 /* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
 body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main,.main-topBar-container) {--content-spacing:var(--am-pad)!important}
+/* Rows snap to a card only near one, so Shift+wheel and trackpad swipes move freely back and forth; mandatory
+   snapping jumped a whole card per wheel notch and fought quick reversals. Spotify's carousels are the scrollers
+   among a shelf's presentation nodes (the property does nothing on the others). */
+body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-type:x proximity!important}
 body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!important;padding-inline:calc(var(--am-side) + 16px) 16px!important;box-sizing:border-box}
 
 #am-sidebar,#am-player {box-sizing:border-box;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;color:var(--am-text);font-size:var(--am-font);letter-spacing:-.02em}
@@ -56,7 +71,12 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-nav-row:hover{background:#ffffff0d}
 #am-sidebar .am-nav-row.am-selected{background:#ffffff1f;font-weight:650}
 /* Account chip in the bottom-left corner, as in Apple Music. */
-#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;width:100%;margin:0 0 12px;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2;flex-shrink:0}
+#am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;flex-shrink:0}
+#am-sidebar .am-account-button {display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:#a9a9a9;flex-shrink:0;transition:background-color .15s,color .15s}
+#am-sidebar .am-account-button svg {width:18px;height:18px}
+#am-sidebar .am-account-button:hover {background:#ffffff0d;color:#f2f2f2}
+#am-sidebar .am-account-button.am-active {color:var(--am-accent-focus)}
+#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;flex:1 1 auto;width:auto;margin:0;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2;flex-shrink:0}
 #am-sidebar .am-profile[hidden] {display:none}
 #am-sidebar .am-profile:hover {background:#ffffff0d}
 .am-avatar {position:relative;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
@@ -67,6 +87,7 @@ body.am-resizing * {transition:none!important}
 #am-player {position:fixed;z-index:60;bottom:16px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);width:min(calc(100vw - var(--am-side) - 64px),700px);height:54px;border-radius:999px;border:1px solid #ffffff24;background:#ffffff17;backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px #ffffff26,0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
 #am-player button {display:grid;place-items:center;width:28px;height:32px;color:#e8e8e8;transition:color .15s,transform .12s}
+#am-player button[hidden] {display:none}
 #am-player button:hover {color:white}
 #am-player button:active {transform:scale(.92)}
 /* Icons are swapped in place; letting the button own the pointer keeps hover and leave events reliable. */
@@ -166,7 +187,7 @@ body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 
 body:not(.am-library-open) #am-library {display:none!important}
 body.am-library-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
-#am-library {box-sizing:border-box;position:fixed;inset:var(--am-header) 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:24px var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
+#am-library {box-sizing:border-box;position:fixed;inset:var(--am-page-top) 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:24px var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
 .am-library-title {font-size:28px;letter-spacing:-.04em;margin:0 0 8px;font-weight:650}
 .am-library-status {font-size:13px;color:var(--am-sub);margin:0 0 24px}
 .am-library-tools {display:flex;align-items:center;gap:10px;margin:14px 0 10px}
@@ -194,6 +215,13 @@ body.am-ready #global-nav-bar {
  box-shadow:none!important;z-index:50!important;
  font-family:var(--encore-body-font-stack)!important;
 }
+/* The page shows through the toolbar's row; a soft shade from the top keeps the controls readable over bright
+   colours and artwork, and the controls sit on faint fills so they stay findable on any colour. */
+body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:linear-gradient(180deg,#00000047,#0000001f 60%,#0000);pointer-events:none;z-index:-1}
+/* Notifications, Friend Activity and the account menu are in the sidebar's account row (#am-sidebar .am-account),
+   whose buttons click these. They stay laid out, hidden, under that row, so the menus and panels Spotify anchors
+   to them open there; the search field gets the freed width. */
+body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;left:10px;right:auto;top:auto;bottom:16px;width:calc(var(--am-side) - 20px);visibility:hidden!important;pointer-events:none!important}
 #global-nav-bar .am-toolbar-leading,#global-nav-bar .am-toolbar-trailing {display:flex!important;align-items:center;gap:6px;flex:0 0 auto;min-width:0}
 /* In wide windows Spotify's centered layout makes this group position:absolute across the whole bar, where it
    covered the back/forward and Marketplace buttons. Keep it in the flex row between the other two groups. */
@@ -203,14 +231,21 @@ body.am-ready #global-nav-bar {
 #global-nav-bar .main-globalNav-historyButtonsWrapper {flex:0 0 auto!important;margin-left:0!important}
 #global-nav-bar .custom-navlinks-scrollable_container {flex:0 0 auto!important;margin-left:6px!important}
 #global-nav-bar .am-toolbar-center > div {width:min(100%,620px);min-width:0;gap:8px}
-#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:transparent!important;color:#b4b4b4;box-shadow:none!important;transform:none!important}
-#global-nav-bar button:hover {background:#ffffff0c!important;color:#f5f5f5}
+#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:#0000001f!important;color:#c8c8c8;box-shadow:inset 0 0 0 .5px #ffffff14!important;transform:none!important}
+#global-nav-bar button:hover {background:#ffffff1a!important;color:#f5f5f5}
 #global-nav-bar button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
 #global-nav-bar button:disabled {opacity:.35}
 #global-nav-bar button svg {width:18px!important;height:18px!important}
 #global-nav-bar button img {width:28px!important;height:28px!important;border-radius:7px}
-#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:#ffffff07!important;outline-color:var(--am-accent-focus)!important}
+#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:#0000001f!important;box-shadow:inset 0 0 0 .5px #ffffff14!important;outline-color:var(--am-accent-focus)!important}
 #global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
+#global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important}
+/* Spotify folds the search field into a 48px icon when the toolbar's centre gets narrow (.searchInputCollapsed on
+   the toolbar). Keep it a field that narrows with the toolbar instead. */
+#global-nav-bar.searchInputCollapsed form {width:100%!important}
+#global-nav-bar.searchInputCollapsed form > :last-child {opacity:1!important;visibility:visible!important}
+#global-nav-bar.searchInputCollapsed input {color:var(--text-base)!important;padding-inline-end:96px!important}
+#global-nav-bar.searchInputCollapsed input::placeholder {color:var(--text-subdued)!important}
 #global-nav-bar .am-toolbar-leading div:empty {display:none!important}
 #global-nav-bar .am-toolbar-trailing div:empty {display:none!important}
 /* Spicy Lyrics owns its fullscreen page, including playback and exit controls. */
@@ -296,7 +331,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-shelf {position:relative}
 #am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}
 #am-artist button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:#ffffffa0}
-.am-shelf-track {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-padding:0 32px;padding:0 32px 4px;scrollbar-width:none}
+.am-shelf-track {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 32px;padding:0 32px 4px;scrollbar-width:none}
 .am-shelf-track::-webkit-scrollbar {display:none}
 /* Rows reach under the sidebar, so cards slide behind the glass as they scroll. */
 #am-artist .am-shelf-track {margin-left:calc(-1 * var(--am-side));padding-left:calc(var(--am-side) + 32px);scroll-padding-left:calc(var(--am-side) + 32px)}

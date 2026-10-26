@@ -52,12 +52,14 @@ try {
     await page.keyboard.press('Escape');
   });
 
-  await check('Friend Activity opens as a sheet', async () => {
-    await page.click('[data-restore-focus-key="buddy_feed"]');
+  await check('Friend Activity opens as a sheet from the sidebar\'s account row', async () => {
+    const friends = '#am-sidebar [aria-label="Arkadaş etkinliği"]';
+    await page.click(friends);
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
     const box = await page.locator('.am-native-right').boundingBox();
     assert.ok(box.width > 200 && box.height > 200);
-    await page.click('[data-restore-focus-key="buddy_feed"]');
+    assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
+    await page.click(friends);
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
@@ -82,9 +84,25 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
     assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
     assert.equal(await page.textContent('.am-avatar'), 'EB');
+    // The corner opens Spotify's own account menu; the toolbar's account buttons are hidden under it.
     await page.click('.am-profile');
-    assert.equal(await page.locator('#am-popover .am-swatch').count(), 9);
-    await page.keyboard.press('Escape');
+    assert.equal(await page.evaluate(() => window.__mockState.accountMenu), 1);
+    assert.ok(await page.locator('#am-popover').isHidden());
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#global-nav-bar .am-toolbar-trailing')).visibility), 'hidden');
+  });
+
+  await check('notifications, Connect and Spicy popup buttons drive Spotify\'s own', async () => {
+    await page.click('#am-sidebar [aria-label="Yenilikler"]');
+    await page.waitForFunction(() => document.querySelector('#am-sidebar [aria-label="Yenilikler"]').classList.contains('am-active'));
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    const connect = '#am-player button[aria-label="Bir cihaza bağlan"]';
+    await page.click(connect);
+    await page.waitForFunction(() => document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    assert.equal(await page.getAttribute(connect, 'aria-pressed'), 'true');
+    await page.click(connect);
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    // Without Spicy Lyrics there is no popup lyrics window to open.
+    assert.ok(await page.locator('#am-player button[aria-label="Spicy Lyrics açılır pencere"]').isHidden());
   });
 
   await check('sidebar resizes and resets', async () => {
@@ -190,6 +208,9 @@ try {
         blur: getComputedStyle(document.getElementById('am-sidebar')).backdropFilter };
     });
     assert.deepEqual([layout.main, Math.round(layout.pad), layout.header, layout.artist, layout.gutter], [0, Math.round(layout.side), 0, 0, 0]);
+    // ...and under the toolbar: the main view starts at the window's top and its scroll viewport keeps the toolbar's height clear.
+    const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, parseFloat(getComputedStyle(document.querySelector('[data-overlayscrollbars-viewport]')).paddingTop)]);
+    assert.deepEqual(top, [0, 56]);
     assert.match(layout.blur, /blur/);
   });
 
@@ -205,11 +226,11 @@ try {
     await page.mouse.wheel(0, 200);
     await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);
     assert.equal(await rowLeft(), 0);
-    // ...and Shift+wheel scrolls the row sideways (the browser's own behaviour).
+    // ...and Shift+wheel scrolls the row sideways (the browser's own behaviour). macOS turns Shift+wheel into a
+    // horizontal wheel before Chromium sees it, so a synthetic Shift+deltaY does nothing there; send what it sends.
     await row.hover();
-    await page.keyboard.down('Shift');
-    await page.mouse.wheel(0, 300);
-    await page.keyboard.up('Shift');
+    if (process.platform === 'darwin') await page.mouse.wheel(300, 0);
+    else { await page.keyboard.down('Shift'); await page.mouse.wheel(0, 300); await page.keyboard.up('Shift'); }
     await page.waitForFunction(i => document.querySelectorAll('#am-artist .am-shelf-track')[i].scrollLeft > 0, index);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-artist-actions')).getPropertyValue('-webkit-app-region') || getComputedStyle(document.querySelector('.am-artist-actions')).appRegion), 'no-drag');
     await page.evaluate(() => { document.getElementById('am-artist').scrollTop = 0; });
