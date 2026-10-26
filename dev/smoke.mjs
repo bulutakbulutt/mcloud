@@ -172,6 +172,8 @@ try {
     assert.equal(first.size, '700x54');
     assert.ok(first.href.startsWith('data:image/png') && first.scale > 10 && first.scale < 30);
     assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
+    // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
+    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length]; }), ['R', 'B', 3]);
     // A content-box change fires the ResizeObserver but must not redraw the map.
     await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);

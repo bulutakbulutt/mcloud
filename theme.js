@@ -449,11 +449,11 @@
   // as lensing: the edge bends and concentrates light rather than blurring it. The rim is a circular-arc
   // bezel refracted with Snell's law (n=1.5), as in kube.io's "Liquid Glass in the Browser": the shift is 0
   // at the very edge, peaks just inside it and eases to 0 where the glass turns flat, so a thin outer band
-  // gathers the page and the band inside it magnifies. It is made as strong as it can be (thicker glass)
-  // while the mapping never folds back, since folds broke cards and round avatars into slivers and swirls
-  // on 1x screens (Apple's 2x glass mirrors its outer ~7px). A 0.7px blur smooths Chromium's per-pixel sampling and softens text
+  // gathers the page and the band inside it magnifies. On 1x screens it is made as strong as it can be
+  // (thicker glass) while the mapping never folds back, since folds broke cards and round avatars into slivers
+  // and swirls there; 2x screens get twice the shift and fold like Apple's glass, which mirrors its outer ~7px. A 0.7px blur smooths Chromium's per-pixel sampling and softens text
   // behind the glass, and a curve brings white down to about 0.6, so the player's white text stays
-  // readable over bright artwork and busy pages, as in Apple Music. Blue holds the specular rim, after kube.io's
+  // readable over bright artwork and busy pages, as in Apple Music. A third map holds the specular rim, after kube.io's
   // player (opacity ~0.4, saturation ~6): a soft ~1.5px band whose strength follows the angle between the edge's
   // normal and a light from -60° (the far side catches half), lit with a saturated, brightened copy of the
   // refracted page, so the rim takes the colours under it instead of painting white.
@@ -461,7 +461,12 @@
   glass.setAttribute('aria-hidden','true');glass.setAttribute('width','0');glass.setAttribute('height','0');glass.style.position='absolute';
   const curve='tableValues=".03 .24 .41 .53 .61"',highlights=`<feFuncR type="table" ${curve}/><feFuncG type="table" ${curve}/><feFuncB type="table" ${curve}/>`;
   // One filter per glass element (the player, the toast): each needs a displacement map drawn at its own size.
-  const glassFilter=id=>'<filter id="'+id+'" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="map" preserveAspectRatio="none"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="map" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
+  // On wide-gamut (P3) Macs Chromium converts the recombined map from sRGB to P3 before displacing, and that
+  // mixes channels: red took ~18% of green, so wherever the rim shifted vertically it also shifted up to ~2.7px
+  // sideways and the page slid left along the player's top. The map therefore arrives as three grey images
+  // (greys survive the conversion) recombined as R=G=x shift, B=y shift and the rim as alpha: red gains nothing
+  // when green equals it, and blue only takes ~9% of the x shift, which glassLens() compensates on P3 screens.
+  const glassFilter=id=>'<filter id="'+id+'" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feImage result="mx" preserveAspectRatio="none"/><feImage result="my" preserveAspectRatio="none"/><feImage result="mr" preserveAspectRatio="none"/><feColorMatrix in="mx" values="1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="x"/><feColorMatrix in="my" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1" result="y"/><feComposite in="x" in2="y" operator="arithmetic" k2="1" k3="1" result="map"/><feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="B"/><feGaussianBlur stdDeviation=".7" edgeMode="duplicate"/><feComponentTransfer result="glass">'+highlights+'</feComponentTransfer><feColorMatrix in="mr" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0" result="rim"/><feColorMatrix in="glass" type="saturate" values="4"/><feComponentTransfer><feFuncR type="linear" slope="1.5" intercept=".14"/><feFuncG type="linear" slope="1.5" intercept=".14"/><feFuncB type="linear" slope="1.5" intercept=".14"/></feComponentTransfer><feComposite in2="rim" operator="in"/><feComposite in2="glass" operator="over"/></filter>';
   glass.innerHTML=glassFilter('am-glass')+glassFilter('am-glass-toast');
   document.body.append(glass);
   const bezel=16;
@@ -478,28 +483,36 @@
     return table;
   })();
   const bezelPeak=Math.max(...bezelTable);
+  // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
+  const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
+  const wideGamut=matchMedia('(color-gamut: p3)').matches;
   const bezelShift=edge=>{const f=Math.min(1,Math.max(0,edge)/bezel)*256,i=Math.min(255,Math.floor(f));return bezelTable[i]+(bezelTable[i+1]-bezelTable[i])*(f-i);};
   function glassLens(filterId,node) {
-    const filter=glass.querySelector('#'+filterId),glassMap=filter.querySelector('feImage'),glassShift=filter.querySelector('feDisplacementMap');let glassSize='';
+    const filter=glass.querySelector('#'+filterId),maps=filter.querySelectorAll('feImage'),glassShift=filter.querySelector('feDisplacementMap');let glassSize='';
     const draw=()=>{
       // Drawn at CSS size and redrawn only on resize. A device-resolution map looks the same once Chromium
       // filters it bilinearly, but makes every backdrop frame rescale it, which costs ~25% while scrolling.
-      const w=node.offsetWidth,h=node.offsetHeight;if(!w||!h||glassSize===w+'x'+h)return;glassSize=w+'x'+h;
+      const w=node.offsetWidth,h=node.offsetHeight,dpr=devicePixelRatio||1;if(!w||!h||glassSize===w+'x'+h+'@'+dpr)return;glassSize=w+'x'+h+'@'+dpr;
       const r=h/2,max=bezelPeak,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-      const context=canvas.getContext('2d'),image=context.createImageData(w,h),data=image.data;
+      const context=canvas.getContext('2d'),images=[0,1,2].map(()=>context.createImageData(w,h)),[mx,my,mr]=images.map(image=>image.data);
       for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-        // The vector to the pill's centre line is the bezel's inward normal; red/green hold its x/y shift.
+        // The vector to the pill's centre line is the bezel's inward normal; the first two maps hold its x/y shift.
         const dx=Math.min(w-r,Math.max(r,x+.5))-(x+.5),dy=r-(y+.5),length=Math.hypot(dx,dy)||1,edge=r-length;
         // Outward normal (-dx,-dy)/length against the light (cos -60°, sin -60°) in screen axes.
         const t=edge<bezel?bezelShift(edge)/max/length:0,facing=(-dx*.5+dy*.866)/length,i=(y*w+x)*4;
         const light=Math.min(1,.15+Math.max(0,facing)**1.5+.5*Math.max(0,-facing)**1.5),band=1-Math.min(1,Math.max(0,edge)/1.5)**2;
-        data[i]=Math.round(128+127*t*dx);data[i+1]=Math.round(128+127*t*dy);data[i+2]=Math.round(120*light*band);data[i+3]=255;
+        const xv=Math.round(128+127*t*dx),yv=(128+127*t*dy)/255;
+        mx[i]=mx[i+1]=mx[i+2]=xv;my[i]=my[i+1]=my[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));mr[i]=mr[i+1]=mr[i+2]=Math.round(120*light*band);mx[i+3]=my[i+3]=mr[i+3]=255;
       }
-      context.putImageData(image,0,0);
-      glassMap.setAttribute('href',canvas.toDataURL());glassMap.setAttribute('width',w);glassMap.setAttribute('height',h);
-      glassShift.setAttribute('scale',(2*max).toFixed(2));
+      images.forEach((image,n)=>{context.putImageData(image,0,0);maps[n].setAttribute('href',canvas.toDataURL());maps[n].setAttribute('width',w);maps[n].setAttribute('height',h);});
+      // On 2x screens the lens bends twice as far, so the outer band folds back and mirrors the page just outside
+      // the rim, as Apple's glass does (compared against a macOS 26 screenshot over coloured cards). 1x screens keep
+      // the fold-free strength: there the fold broke cards and round avatars into slivers.
+      glassShift.setAttribute('scale',(2*max*(dpr>=1.5?2:1)).toFixed(2));
     };
     if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
+    // Moving the window to a screen with another pixel ratio redraws the map at that strength.
+    const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
   glassLens('am-glass',player);glassLens('am-glass-toast',toast);
   // One shared popover serves the "…" track menu and the profile menu.
