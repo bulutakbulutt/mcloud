@@ -167,27 +167,34 @@ try {
 
   await check('liquid glass map follows the player size', async () => {
     const map = () => page.evaluate(() => {
-      const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
+      const image = document.querySelector('#am-glass-bend feImage'), shift = document.querySelector('#am-glass-bend feDisplacementMap');
       return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), scale: Number(shift.getAttribute('scale')) };
     });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => document.querySelector('#am-glass-bend feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale === 32.2);
-    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
+    // QuartzCore's lens curve: the outermost pixel shows the page A = 1.01 r further in.
+    assert.ok(first.href.startsWith('data:image/png') && Math.abs(first.scale - 2 * 1.01 * 27) < 1e-9);
+    // Two layers under the controls: ::before bends the page, ::after does the rest on that result.
+    assert.deepEqual(await page.evaluate(() => ['', '::before', '::after'].map(p => getComputedStyle(document.getElementById('am-player'), p || null).backdropFilter)), ['none', 'url("#am-glass-bend")', 'url("#am-glass")']);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    // Fitted to macOS's own (focused) glass: a slight blur, a darken halo, and a tone by luminance.
-    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length, [...document.querySelectorAll('#am-glass feGaussianBlur')].map(b => b.getAttribute('stdDeviation'))]; }), ['R', 'B', 3, ['0.4', '13.5']]);
+    // Fitted to macOS's own (focused) glass: a slight blur and the bend in one filter; in the other, a blur along the
+    // edge normal where the bend magnifies, a darken halo, a tone by luminance, the highlight and the edge line.
+    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass-bend feDisplacementMap'), blurs = id => [...document.querySelectorAll(id + ' feGaussianBlur')].map(b => b.getAttribute('stdDeviation'));
+      return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass-bend feImage').length, document.querySelectorAll('#am-glass feImage').length, document.querySelectorAll('#am-glass feDisplacementMap').length, blurs('#am-glass-bend'), blurs('#am-glass')]; }),
+      ['R', 'B', 2, 5, 0, ['0.4'], ['0 1', '1 0', '13.5']]);
+    // Every mask is drawn, at the same size.
+    assert.ok(await page.evaluate(() => [...document.querySelectorAll('#am-glass feImage')].every(i => i.getAttribute('href')?.startsWith('data:image/png') && i.getAttribute('width') === '700')));
     // A content-box change fires the ResizeObserver but must not redraw the map.
-    await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
+    await page.evaluate(() => { document.querySelector('#am-glass-bend feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);
     assert.equal((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === String(document.getElementById('am-player').offsetWidth));
+    await page.waitForFunction(() => [...document.querySelectorAll('#am-glass-bend feImage, #am-glass feImage')].every(i => i.getAttribute('width') === String(document.getElementById('am-player').offsetWidth)));
     assert.notEqual((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => document.querySelector('#am-glass-bend feImage').getAttribute('width') === '700');
   });
 
   await check('artist page', async () => {
