@@ -422,7 +422,7 @@
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
   const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
   const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label','Ses seviyesi');
-  let unmutedVolume=.5,volumeIcon='volume',volumeTimer=0;
+  let unmutedVolume=.5,volumeIcon='volume',volumeTimer=0,wheelAccum=0,wheelTimer=0;
   const volumeButton=button('Sesi kapat / aç','volume',safe(()=>setVolume(S.Player.getVolume()>0?0:unmutedVolume)),'am-volume-button');
   function renderVolume(level) {
     volume.style.setProperty('--am-level',(level*100).toFixed(1)+'%');
@@ -442,10 +442,22 @@
   volumeWrap.addEventListener('focusout',event=>{if(!volumeWrap.contains(event.relatedTarget)&&!volumeWrap.matches(':hover'))openVolume(false,0);});
   volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);
   try{renderVolume(S.Player.getVolume());volume.value=String(S.Player.getVolume());}catch{}
-  // Scrolling over the volume control opens it and nudges the level in 5% steps.
+  // Scrolling over the volume control opens it and nudges the level along an audio-taper (perceptual) curve.
   volumeWrap.addEventListener('wheel',event=>{
     if(!event.deltaY)return;event.preventDefault();openVolume(true,0);
-    try{setVolume(S.Player.getVolume()-Math.sign(event.deltaY)*.05);}catch{}
+    clearTimeout(wheelTimer);wheelTimer=setTimeout(()=>{wheelAccum=0;},150);
+    const dy=event.deltaMode===1?event.deltaY*40:event.deltaMode===2?event.deltaY*800:event.deltaY;
+    if(wheelAccum&&Math.sign(dy)!==Math.sign(wheelAccum))wheelAccum=0;
+    wheelAccum+=dy;
+    if(Math.abs(wheelAccum)<60)return;
+    const dir=-Math.sign(wheelAccum);
+    wheelAccum=0;
+    try{
+      const v=S.Player.getVolume();
+      if((dir>0&&v>=1)||(dir<0&&v<=0))return;
+      const next=Math.round(Math.min(1,Math.max(0,Math.sqrt(v)+dir*.05))**2*100)/100;
+      setVolume(dir>0?Math.max(v+.01,next):Math.min(v-.01,next));
+    }catch{}
   },{passive:false});
   document.body.append(player);
   // Liquid Glass, fitted to macOS's own glass. Apple Music's player is an NSGlassView, a private subclass of
