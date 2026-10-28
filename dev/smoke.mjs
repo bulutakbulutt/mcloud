@@ -173,16 +173,18 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-glass-bend feImage').getAttribute('width') === '700');
     const first = await map();
     assert.equal(first.size, '700x54');
-    // QuartzCore's lens curve: the outermost pixel shows the page A = 1.01 r further in.
-    assert.ok(first.href.startsWith('data:image/png') && Math.abs(first.scale - 2 * 1.01 * 27) < 1e-9);
+    // QuartzCore's lens curve (the outermost pixel shows the page A = 1.01 r further in), sampled bilinearly: four
+    // displacements share one scale that reaches past A by a pixel.
+    const scales = await page.evaluate(() => [...document.querySelectorAll('#am-glass-bend feDisplacementMap')].map(d => Number(d.getAttribute('scale'))));
+    assert.ok(first.href.startsWith('data:image/png') && scales.length === 4 && scales.every(s => s === first.scale) && first.scale > 2 * 1.01 * 27 && first.scale < 2 * (1.01 * 27 + 3));
     // Two layers under the controls: ::before bends the page, ::after does the rest on that result.
     assert.deepEqual(await page.evaluate(() => ['', '::before', '::after'].map(p => getComputedStyle(document.getElementById('am-player'), p || null).backdropFilter)), ['none', 'url("#am-glass-bend")', 'url("#am-glass")']);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    // Fitted to macOS's own (focused) glass: a slight blur and the bend in one filter; in the other, a blur along the
-    // edge normal where the bend magnifies, a darken halo, a tone by luminance, the highlight and the edge line.
+    // Fitted to macOS's own (focused) glass: a slight blur and the bend (4 taps, 2 weight masks) in one filter; in
+    // the other, a narrow darken for thin lines, a darken halo, a tone by luminance, the highlight and the edge line.
     assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass-bend feDisplacementMap'), blurs = id => [...document.querySelectorAll(id + ' feGaussianBlur')].map(b => b.getAttribute('stdDeviation'));
       return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass-bend feImage').length, document.querySelectorAll('#am-glass feImage').length, document.querySelectorAll('#am-glass feDisplacementMap').length, blurs('#am-glass-bend'), blurs('#am-glass')]; }),
-      ['R', 'B', 2, 5, 0, ['0.4'], ['0 1', '1 0', '13.5']]);
+      ['R', 'B', 10, 3, 0, ['0.4'], ['1', '13.5']]);
     // Every mask is drawn, at the same size.
     assert.ok(await page.evaluate(() => [...document.querySelectorAll('#am-glass feImage')].every(i => i.getAttribute('href')?.startsWith('data:image/png') && i.getAttribute('width') === '700')));
     // A content-box change fires the ResizeObserver but must not redraw the map.
