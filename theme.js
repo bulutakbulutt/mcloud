@@ -804,7 +804,7 @@
       img.src=url;
     });
   }
-  let headerImage='',headerHost=null;
+  let headerImage='',headerHost=null,headerFrame=null;
   function syncHeaderColor() {
     const image=main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
     if(url===headerImage)return;headerImage=url;
@@ -816,11 +816,17 @@
     });
   }
   // The photo is portalled into .before-scroll-node; its container's style also changes every scroll frame (--scroll),
-  // so the callback only looks further when the photo itself or the portal's children changed.
-  const headerObserver=new MutationObserver(records=>{if(records.some(r=>r.type==='childList'||r.target.dataset?.testid==='background-image'))syncHeaderColor();});
+  // so the callback only looks further when the photo itself or the portal's children changed. Spotify swaps
+  // .before-scroll-node for a new one after History fires, so its stable parent is watched (children only) as well;
+  // otherwise the observer stays on the old node and the next page's photo is never sampled.
+  const headerObserver=new MutationObserver(records=>{if(records.some(r=>r.type==='childList'||r.target.dataset?.testid==='background-image'))watchHeader();});
   function watchHeader() {
-    const host=main?.querySelector('.before-scroll-node');
-    if(host!==headerHost){headerObserver.disconnect();headerHost=host;if(host)headerObserver.observe(host,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});}
+    const frame=main?.querySelector('.main-view-container'),host=frame?.querySelector(':scope > .before-scroll-node')||main?.querySelector('.before-scroll-node');
+    if(frame!==headerFrame||host!==headerHost){
+      headerObserver.disconnect();headerFrame=frame;headerHost=host;
+      if(frame)headerObserver.observe(frame,{childList:true});
+      if(host)headerObserver.observe(host,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
+    }
     syncHeaderColor();
   }
   const smallImage=visual=>spotifyImage([...(visual?.sources||[])].sort((a,b)=>(a.width||0)-(b.width||0))[0]?.url||'');
@@ -1065,7 +1071,7 @@
   const observer=new MutationObserver(scheduleReconcile);
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=null;clearTimeout(reconciliation);reconciliation=null;}
+    if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
     else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
