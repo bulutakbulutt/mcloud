@@ -42,6 +42,18 @@ try {
     assert.match(color[1], /gradient/);
   });
 
+  await check('photo header is sampled again when Spotify swaps the header node', async () => {
+    // Spotify replaces .before-scroll-node after navigating and fills the new one later.
+    await page.evaluate(() => {
+      const old = document.querySelector('.before-scroll-node'), photo = old.firstElementChild;
+      const next = document.createElement('div'); next.className = 'before-scroll-node';
+      old.replaceWith(next); window.__photo = photo;
+    });
+    await page.waitForFunction(() => !document.body.classList.contains('am-image-header'));
+    await page.evaluate(() => document.querySelector('.before-scroll-node').append(window.__photo));
+    await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+  });
+
   await check('scrubber: hover shows times, click seeks', async () => {
     await page.hover('.am-seek');
     await page.waitForFunction(() => document.querySelector('.am-player-track').classList.contains('am-scrubbing'));
