@@ -59,8 +59,12 @@ try {
     const box = await page.locator('.am-native-right').boundingBox();
     assert.ok(box.width > 200 && box.height > 200);
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
+    // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
     await page.click(friends);
-    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    // Closing hides the sheet at once, while the outgoing feed is still mounted.
+    assert.equal(await page.evaluate(() => [!!document.querySelector('.right aside[aria-label="Dinleme etkinliği"]'), getComputedStyle(document.querySelector('.am-native-right')).display].join()), 'true,none');
+    await page.waitForTimeout(700);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
@@ -277,6 +281,14 @@ try {
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
   });
   await shot('library');
+
+  await check('a sheet over the library opens without a grey fade', async () => {
+    // Spotify fades .Root's background; #main is lifted over the library while a sheet is open.
+    await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.Root')).backgroundColor), 'rgba(0, 0, 0, 0)');
+    await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+  });
 
   await check('settings menu', async () => {
     const names = await page.evaluate(() => window.__menus[0].items.map(i => i.name));

@@ -291,10 +291,13 @@ body.am-ready .am-native-panel-open {
  transition:opacity .25s ease,transform .4s cubic-bezier(.2,.9,.3,1);
 }
 @starting-style {body.am-ready .am-native-panel-open {opacity:0;transform:translateX(28px) scale(.98)}}
+/* While panels cross-fade the outgoing one (often the hidden Now Playing view) is still mounted; show only the current. */
+body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
 /* Native panels share Spotify's stacking context; lift it over the custom views. */
 body.am-panel-open #main {z-index:30!important}
-body.am-panel-open #main,body.am-panel-open .Root,body.am-panel-open .am-layout {background:transparent!important}
+/* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
+body.am-panel-open #main,body.am-panel-open .Root,body.am-panel-open .am-layout {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. */
 body.am-ready .am-friends-sheet {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
