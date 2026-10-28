@@ -34,6 +34,14 @@ try {
   });
   await shot('home');
 
+  await check('photo header takes its colour from the bottom edge and fades into it', async () => {
+    await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+    const color = await page.evaluate(() => [document.documentElement.style.getPropertyValue('--am-header-base'),
+      getComputedStyle(document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])'), '::after').backgroundImage]);
+    assert.equal(color[0], 'hsl(285 50% 19%)');
+    assert.match(color[1], /gradient/);
+  });
+
   await check('scrubber: hover shows times, click seeks', async () => {
     await page.hover('.am-seek');
     await page.waitForFunction(() => document.querySelector('.am-player-track').classList.contains('am-scrubbing'));
@@ -235,6 +243,9 @@ try {
     // Scrollers nested in a page (playlist action bars) keep their own padding.
     const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].map(v => parseFloat(getComputedStyle(v).paddingTop))]);
     assert.deepEqual(top, [0, 56, 0]);
+    // Image headers live outside the scroll viewport; they grow by the toolbar's row so they still end with the header.
+    const image = await page.evaluate(() => { const r = document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])').getBoundingClientRect(); return [r.y, r.height]; });
+    assert.deepEqual(image, [0, 256]);
     assert.match(layout.blur, /blur/);
   });
 

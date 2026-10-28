@@ -31,6 +31,14 @@ body.am-ready .am-native-sidebar,body.am-ready .am-native-player,body.am-ready .
 body.am-ready .am-native-main .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {padding-top:var(--am-page-top)!important}
 body.am-ready .am-native-main :is(main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]),[data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]):first-child) {top:calc(-1 * var(--am-page-top))!important;padding-top:var(--am-page-top);box-sizing:content-box!important}
 body.am-ready .am-native-main main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]) {left:0!important;right:0!important;width:auto!important}
+/* Image headers (Daily Mix, genre pages) are drawn outside the scroll viewport, at the header's height from the
+   window's top; the header itself starts --am-page-top lower, so the image ended short and left a hard band. */
+body.am-ready .am-native-main .before-scroll-node > :has(> [data-testid="background-image"]) {height:calc(var(--optimized-entity-header-height,40vh) + var(--am-page-top))!important;min-height:calc(var(--optimized-entity-header-min-height,var(--min-fluid-height,0px)) + var(--am-page-top))!important}
+/* theme.js takes their page colour from the photo's bottom edge (--am-header-base) and the photo fades into it, so
+   the header ends without a seam. !important beats the colour variables Spotify sets inline on its layers. */
+body.am-image-header .am-native-main,body.am-image-header .am-native-main [style*="--background-base"] {--background-base:var(--am-header-base)!important;--background-base-70:var(--am-header-base)!important;--background-base-20:var(--am-header-base)!important}
+body.am-image-header .am-native-main .before-scroll-node > :has(> [data-testid="background-image"])::after {content:"";position:absolute;inset:auto 0 0;height:38%;background:linear-gradient(in oklab to bottom,transparent,color-mix(in oklab,var(--am-header-base) 60%,transparent) 55%,var(--am-header-base));pointer-events:none}
+body.am-image-header .am-native-main [data-testid="overscroll-background"] {background-color:var(--am-header-base)!important}
 /* Spotify paint-contains the playlist title bar, which would clip its glass at the toolbar. */
 body.am-ready .am-native-main .main-topBar-container {top:var(--am-page-top)!important;contain:layout style!important}
 body.am-ready .am-native-main {grid-area:global-nav / left-sidebar / main-view / main-view!important;container-type:normal!important;min-height:0!important;min-width:0!important;width:100%!important;height:100%!important;border:0!important;border-radius:0!important;background:var(--am-bg)!important}
@@ -233,7 +241,7 @@ body.am-ready #global-nav-bar {
  font-family:var(--encore-body-font-stack)!important;
 }
 /* The page shows through the toolbar's row; a soft shade from the top keeps the controls readable over bright
-   colours and artwork, and the controls sit on faint fills so they stay findable on any colour. */
+   colours and artwork; the controls themselves are dark glass (below). */
 body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:linear-gradient(180deg,#0000002b,#00000012 60%,#0000);pointer-events:none;z-index:-1}
 /* Notifications, Friend Activity and the account menu are in the sidebar's account row (#am-sidebar .am-account),
    whose buttons click these. They stay laid out, hidden, under that row, so the menus and panels Spotify anchors
@@ -248,21 +256,26 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar .main-globalNav-historyButtonsWrapper {flex:0 0 auto!important;margin-left:0!important}
 #global-nav-bar .custom-navlinks-scrollable_container {flex:0 0 auto!important;margin-left:6px!important}
 #global-nav-bar .am-toolbar-center > div {width:min(100%,620px);min-width:0;gap:8px}
-#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:#0000001f!important;color:#c8c8c8;box-shadow:inset 0 0 0 .5px #ffffff14!important;transform:none!important}
-#global-nav-bar button:hover {background:#ffffff1a!important;color:#f5f5f5}
+/* The controls are small dark glass, as on macOS 26: over a bright photo (Daily Mix headers) a faint fill left grey
+   icons on light grey; the dark fill and blur keep them readable on any colour. */
+#global-nav-bar :is(button,input) {--am-toolbar-fill:color-mix(in srgb,#1e1e1e 58%,transparent);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
+#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;color:#e6e6e6;box-shadow:inset 0 0 0 .5px #ffffff1f!important;transform:none!important}
+#global-nav-bar button:hover {background:color-mix(in srgb,#3a3a3a 70%,transparent)!important;color:#fff}
 #global-nav-bar button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
-#global-nav-bar button:disabled {opacity:.35}
+#global-nav-bar button:disabled {color:#ffffff4d}
 #global-nav-bar button svg {width:18px!important;height:18px!important}
 #global-nav-bar button img {width:28px!important;height:28px!important;border-radius:7px}
-#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:#0000001f!important;box-shadow:inset 0 0 0 .5px #ffffff14!important;outline-color:var(--am-accent-focus)!important}
+#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;box-shadow:inset 0 0 0 .5px #ffffff1f!important;outline-color:var(--am-accent-focus)!important}
 #global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
-#global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important}
+#global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+#global-nav-bar input::placeholder {color:#ffffffa6!important}
+@media(prefers-reduced-transparency:reduce){#global-nav-bar :is(button,input){--am-toolbar-fill:#2c2c2e;backdrop-filter:none;-webkit-backdrop-filter:none}}
 /* Spotify folds the search field into a 48px icon when the toolbar's centre gets narrow (.searchInputCollapsed on
    the toolbar). Keep it a field that narrows with the toolbar instead. */
 #global-nav-bar.searchInputCollapsed form {width:100%!important}
 #global-nav-bar.searchInputCollapsed form > :last-child {opacity:1!important;visibility:visible!important}
 #global-nav-bar.searchInputCollapsed input {color:var(--text-base)!important;padding-inline-end:96px!important}
-#global-nav-bar.searchInputCollapsed input::placeholder {color:var(--text-subdued)!important}
+#global-nav-bar.searchInputCollapsed input::placeholder {color:#ffffffa6!important}
 #global-nav-bar .am-toolbar-leading div:empty {display:none!important}
 #global-nav-bar .am-toolbar-trailing div:empty {display:none!important}
 /* Spicy Lyrics owns its fullscreen page, including playback and exit controls. */
