@@ -2,18 +2,21 @@
 
 # mcloud
 
-**Spotify'ı Apple Music gibi gösteren bir [Spicetify](https://spicetify.app) teması.**
+**A [Spicetify](https://spicetify.app) theme that makes Spotify look like Apple Music.**
 
-Kalıcı yan menü, yüzen oynatıcı, kapaklı kitaplık görünümü ve Spicy Lyrics entegrasyonu.
+A persistent sidebar, a floating player, a cover-art library view and Spicy Lyrics integration.
 
 <img width="1254" height="1254" alt="Unknown" src="https://github.com/user-attachments/assets/5dfe8c2c-c5fa-4b0d-8bb3-d43596734af8" />
 
 
 </div>
 
-## Kurulum
+> [!NOTE]
+> The theme's own menus and messages are in Turkish. The labels the theme shows are quoted below in *italics*.
 
-[Spicetify](https://spicetify.app/docs/getting-started) önceden kurulu olmalı. Kurulum komutu Spicetify'ı kurmaz, yalnızca temayı yükler.
+## Installation
+
+[Spicetify](https://spicetify.app/docs/getting-started) must already be installed. The install command does not install Spicetify; it only installs the theme.
 
 **macOS / Linux**
 
@@ -21,66 +24,66 @@ Kalıcı yan menü, yüzen oynatıcı, kapaklı kitaplık görünümü ve Spicy 
 curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.sh | sh
 ```
 
-**Windows** (PowerShell, yönetici olarak *açmadan*)
+**Windows** (PowerShell, *not* run as administrator)
 
 ```powershell
 iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1 | iex
 ```
 
-Betik şunları yapar:
+The script:
 
-1. Spicetify'ın kurulu olduğunu kontrol eder. Kurulu değilse ne yapmanız gerektiğini söyleyip durur.
-2. `theme.js`, `user.css` ve `color.ini` dosyalarını Spicetify'ın `Themes/AppleMusicMac` klasörüne indirir.
-3. Temayı seçer (`inject_css`, `inject_theme_js` açık) ve `spicetify apply` çalıştırır. Gerekirse önce yedek alır.
+1. Checks that Spicetify is installed. If it isn't, it tells you what to do and stops.
+2. Downloads `theme.js`, `user.css` and `color.ini` into Spicetify's `Themes/AppleMusicMac` folder.
+3. Selects the theme (with `inject_css` and `inject_theme_js` on) and runs `spicetify apply`, taking a backup first if needed.
 
 > [!TIP]
-> Söz düğmeleri [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) eklentisiyle çalışır. Eklentiyi Spicetify Marketplace'ten kurabilirsiniz.
+> The lyrics buttons work with the [Spicy Lyrics](https://github.com/Spikerko/spicy-lyrics) extension, which you can install from the Spicetify Marketplace.
 
-## Özellikler
+## Features
 
-- **Apple Music yerleşimi:** Kırmızı simgeli kalıcı sol menü, sol alt köşede profil ve Ana Sayfa ile açılış.
-- **Apple Music oynatıcısı:** Pencereyle birlikte en fazla 700 piksele kadar genişler, sonra içeriğin ortasında kalır. Cam görünümü alttaki sayfanın rengini alır. Ortada albüm kapağı, şarkı adı ve kayan "Sanatçı — Albüm" satırı yer alır.
-  - Alttaki ince ilerleme çizgisi her zaman tıklanabilir. Üzerine gelince kalınlaşır, geçen ve kalan süre görünür, rakamlar Apple Music gibi kayarak değişir.
-  - Kapağın üzerine gelince tam ekran düğmesi çıkar.
-  - ☆ ile şarkıyı Beğenilen Şarkılar'a ekleyebilirsiniz. "…" menüsünde albüme veya sanatçıya gitme ve bağlantı kopyalama seçenekleri var.
-- **Sanatçı sayfaları:** Apple Music tarzında yeniden çizilir.
-  - Tam genişlikte sanatçı görseli, büyük isim, oynat ve takip et düğmeleri var.
-  - Son Çıkan ve Popüler Şarkılar yan yana; ardından Albümler, Single'lar ve EP'ler, Yaklaşan Konserler, Yer Aldığı ve Benzer Sanatçılar rafları geliyor.
-  - Tüm pencere sanatçının rengine bürünür.
-  - Spotify'ın görünümüne geçmek için sağ üstteki "…" menüsünden **Spotify Sayfasında Aç**'ı seçin.
-- **Kitaplık:** Hesabınızdaki listeler, albümler ve sanatçılar kapaklarıyla listelenir. İsme göre filtrelenebilir, kitaplık sırasına ya da A–Z'ye göre sıralanabilir.
-- **Spicy Lyrics:** Oynatıcıdan sözleri açıp kapatabilir, tam ekrana geçebilirsiniz.
-- **Vurgu rengi:** Kırmızı, pembe, turuncu, sarı, yeşil, turkuaz, mavi, mor veya Spotify yeşili.
-- **Yazı tipi:** macOS'ta Apple'ın kendi fontu SF Pro kullanılır. Windows ve Linux'ta temaya gömülü Inter kullanılır; internetten bir şey indirilmez ve tüm Türkçe harfleri içerir.
-- **Hafif:** Yalnızca ekrandaki kapaklar yüklenir. Görünmeyen kapakların kaynakları bırakılır, pencere gizliyken arka plan işleri durur.
+- **Apple Music layout:** A persistent left sidebar with red icons, your profile in the bottom-left corner, and Home as the start page.
+- **Apple Music player:** Grows with the window up to 700 pixels, then stays centred over the content. The glass picks up the colour of the page underneath. The centre shows the album artwork, the song title and a scrolling "Artist — Album" line.
+  - The thin progress bar along the bottom is always clickable. On hover it thickens, shows elapsed and remaining time, and the digits roll as they change, just like Apple Music.
+  - Hovering the artwork reveals a full-screen button.
+  - ☆ adds the song to Liked Songs. The "…" menu lets you go to the album or artist and copy a link.
+- **Artist pages:** Redrawn in the Apple Music style.
+  - Full-width artist image, a large name, and play and follow buttons.
+  - Latest Release and Top Songs side by side, followed by shelves for Albums, Singles & EPs, Upcoming Concerts, Appears On and Similar Artists.
+  - The whole window takes on the artist's colour.
+  - To switch to Spotify's own page, choose *Spotify Sayfasında Aç* (Open in Spotify) from the "…" menu in the top right.
+- **Library:** Your playlists, albums and artists, shown with their artwork. Filter by name, and sort by library order or A–Z.
+- **Spicy Lyrics:** Toggle lyrics and go full screen right from the player.
+- **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
+- **Typeface:** On macOS the theme uses Apple's own SF Pro. On Windows and Linux it uses Inter, embedded in the theme, so nothing is downloaded from the internet.
+- **Lightweight:** Only the artwork on screen is loaded. Off-screen artwork is released, and background work pauses while the window is hidden.
 
-## Ayarlar
+## Settings
 
-Sol alt köşedeki **profilinize** tıklayınca vurgu rengini seçebilir, Spotify profilinizi ve ayarlarınızı açabilirsiniz. Spotify'ın sağ üstteki **profil menüsü → mcloud** altında da şu ayarlar var:
+Click **your profile** in the bottom-left corner to pick an accent colour or open your Spotify profile and settings. More settings live under Spotify's **profile menu (top right) → mcloud**:
 
-| Ayar | Açıklama |
+| Setting | Description |
 | --- | --- |
-| Oynatıcıda albüm kapağı | Oynatıcıda çalan parçanın kapağını gösterir. |
-| Liquid Glass oynatıcı | macOS 26 tarzı cam efekti: oynatıcının kenarlarında arkadaki sayfa kırılır. Kapatınca klasik buzlu cama döner. |
-| Renk: … | Vurgu rengini değiştirir. |
+| *Oynatıcıda albüm kapağı* (Album artwork in player) | Shows the current track's artwork in the player. |
+| *Liquid Glass oynatıcı* (Liquid Glass player) | A macOS 26-style glass effect: the page behind refracts along the player's edges. Turn it off to go back to classic frosted glass. |
+| *Renk: …* (Colour: …) | Changes the accent colour. |
 
-Ayarlar bu bilgisayarda saklanır ve Spotify yeniden başlasa da korunur.
+Settings are stored on this computer and survive Spotify restarts.
 
-## Kısayollar
+## Shortcuts
 
-| Kısayol | İşlev |
+| Shortcut | Action |
 | --- | --- |
-| İlerleme çizgisine tıklama / sürükleme | Şarkıda o noktaya gider. |
-| Kenar çubuğunun sağ kenarını sürükleme | Kenar çubuğunu genişletir veya daraltır. Çift tıklama varsayılana döndürür. |
-| Ses simgesi üzerinde fare tekerleği | Sesi insan kulağına uygun algısal (üstel / audio-taper) adımlarla değiştirir. |
-| <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>F</kbd> (kitaplıkta) | Filtre kutusuna odaklanır. |
-| <kbd>Esc</kbd> (filtre kutusunda) | Filtreyi temizler. |
+| Click / drag the progress bar | Seeks to that point in the song. |
+| Drag the sidebar's right edge | Widens or narrows the sidebar. Double-click to reset it. |
+| Scroll wheel over the volume icon | Changes volume in perceptual (exponential / audio-taper) steps that match how we hear. |
+| <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + <kbd>F</kbd> (in the library) | Focuses the filter box. |
+| <kbd>Esc</kbd> (in the filter box) | Clears the filter. |
 
-## Güncelleme ve kaldırma
+## Updating and uninstalling
 
-Güncellemek için kurulum komutunu tekrar çalıştırın. Spotify güncellendikten sonra tema kaybolursa yine aynı komutu çalıştırmanız yeterli.
+To update, run the install command again. If the theme disappears after a Spotify update, running the same command is all you need.
 
-Kaldırmak için:
+To uninstall:
 
 ```sh
 # macOS / Linux
@@ -92,19 +95,19 @@ curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.s
 & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1))) -Uninstall
 ```
 
-Belirli bir sürümü kurmak için `--ref <etiket>` (Windows'ta `-Ref <etiket>`) kullanın.
+To install a specific version, use `--ref <tag>` (`-Ref <tag>` on Windows).
 
 <details>
-<summary><b>Elle kurulum</b></summary>
+<summary><b>Manual installation</b></summary>
 
-`theme.js`, `user.css` ve `color.ini` dosyalarını Spicetify'ın tema klasörüne kopyalayın:
+Copy `theme.js`, `user.css` and `color.ini` into Spicetify's theme folder:
 
-| Sistem | Klasör |
+| System | Folder |
 | --- | --- |
 | macOS / Linux | `~/.config/spicetify/Themes/AppleMusicMac/` |
 | Windows | `%APPDATA%\spicetify\Themes\AppleMusicMac\` |
 
-Ardından şunları çalıştırın:
+Then run:
 
 ```sh
 spicetify config current_theme AppleMusicMac color_scheme Dark inject_css 1 inject_theme_js 1
@@ -113,46 +116,46 @@ spicetify apply
 
 </details>
 
-## Sorun giderme
+## Troubleshooting
 
 <details>
-<summary><b>Spotify güncellendi, tema gitti</b></summary>
+<summary><b>Spotify updated and the theme is gone</b></summary>
 
-Kurulum komutunu tekrar çalıştırın. Betik gerekirse `spicetify backup apply` veya `spicetify restore backup apply` da dener.
+Run the install command again. If needed, the script also tries `spicetify backup apply` or `spicetify restore backup apply`.
 </details>
 
 <details>
-<summary><b>Linux'ta "permission denied" hatası</b></summary>
+<summary><b>"Permission denied" on Linux</b></summary>
 
-Spicetify'ın Spotify klasörüne yazma izni olmalı. Betik bu durumu algılarsa gereken komutları yazar. Genelde şöyledir:
+Spicetify needs write access to Spotify's folder. The script detects this and prints the commands you need, usually:
 
 ```sh
 sudo chmod a+wr /usr/share/spotify
 sudo chmod a+wr -R /usr/share/spotify/Apps
 ```
 
-Snap ile kurulmuş Spotify Spicetify ile çalışmaz. Flatpak, AUR veya spotify.com paketini kullanın.
+Spotify installed through Snap does not work with Spicetify. Use the Flatpak, AUR or spotify.com package instead.
 </details>
 
 <details>
-<summary><b>Windows'ta Spicetify çalışmıyor</b></summary>
+<summary><b>Spicetify doesn't work on Windows</b></summary>
 
-Microsoft Store'daki Spotify desteklenmez; [spotify.com](https://www.spotify.com/download/windows/) sürümünü kurun. PowerShell'i yönetici olarak açmayın.
+The Microsoft Store version of Spotify is not supported; install the one from [spotify.com](https://www.spotify.com/download/windows/). Don't run PowerShell as administrator.
 </details>
 
 <details>
-<summary><b>"Spicy Lyrics henüz hazır değil" uyarısı</b></summary>
+<summary><b>"Spicy Lyrics henüz hazır değil" (Spicy Lyrics isn't ready yet)</b></summary>
 
-Spicy Lyrics kurulu değil ya da henüz yüklenmedi. Eklentiyi Marketplace'ten kurun ve Spotify'ın tamamen açılmasını bekleyin.
+Spicy Lyrics is either not installed or hasn't loaded yet. Install the extension from the Marketplace and wait for Spotify to finish loading.
 </details>
 
-## Uyumluluk
+## Compatibility
 
-Spotify 1.3.6.1921 ve Spicetify 2.46.2 ile macOS'ta hazırlandı. Kurulum betikleri macOS, Linux ve Windows'ta çalışır, ancak tema en çok macOS'ta denendi. Spotify arayüz güncellemeleri uyarlama gerektirebilir; bir sorun görürseniz Spotify ve Spicetify sürümlerinizle birlikte [issue açın](https://github.com/bulutakbulutt/mcloud/issues).
+Built on macOS with Spotify 1.3.6.1921 and Spicetify 2.46.2. The install scripts work on macOS, Linux and Windows, but the theme has been tested most on macOS. Spotify UI updates may require adjustments; if you run into a problem, please [open an issue](https://github.com/bulutakbulutt/mcloud/issues) with your Spotify and Spicetify versions.
 
-## Özel Teşekkürler
+## Special thanks
 
-Harika bir platform sundukları için Spicetify topluluğuna teşekkürler.
-Ayrıca emribilemir ve f0rknturkoglu'na katkılarından ötürü teşekkür ederim.
+Thanks to the Spicetify community for providing such a great platform.
+Thanks also to emribilemir and f0rknturkoglu for their contributions.
 
-Apple veya Spotify ile bağlantılı resmî bir proje değildir. Tema Spotify içeriğini kullanır.
+This is not an official project and is not affiliated with Apple or Spotify. The theme uses Spotify content.
