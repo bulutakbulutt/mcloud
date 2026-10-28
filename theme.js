@@ -310,6 +310,7 @@
     }catch(e){if(request!==libraryRequest)return;status.textContent='Kitaplık yüklenemedi. Yeniden dene.';const retry=el('button','am-library-retry','Yeniden dene');retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label','Oynatıcı');
+  player.append(el('div','am-glass-rim'));
   const controls=el('div','am-transport');player.append(controls);
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify('Bu işlem şu anda kullanılamıyor.')); } catch { notify('Oynatıcı henüz hazır değil.'); } };
   const shuffle=button('Karıştır','shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
@@ -461,7 +462,8 @@
   //    fixed and the backdrop is whole device pixels, so for each pixel the 4 page pixels around its source point
   //    and their weights are fixed: 4 displacements aimed at them, blended by weight masks. Where the bar may not sit
   //    on whole device pixels (a fractional screen scale such as 125%) it takes one displacement and a 1px blur
-  //    along the edge normal where the bend magnifies instead;
+  //    along the edge normal where the bend magnifies instead. The outermost two device pixels also show the page
+  //    right under them (half at the edge, as Apple's glass does: a light halo where the edge lies on bright content);
   //  - thin bright detail dimmed a little (a min with a 1px blur, mixed in at 30%);
   //  - a "darken" halo: bright detail is pulled toward its darker surroundings (a min with a 13.5px blur,
   //    mixed in at 70%, more near the rim) while dark detail stays, so fine bright lines dim and edges shade into
@@ -470,7 +472,9 @@
   //    to ~130, white comes down to 185;
   //  - a highlight along the top and bottom edges (none at the round ends' middles): the outermost device pixel
   //    mixes 13% toward ~2x white, fading over ~5px;
-  //  - a dark edge line, strongest at the round ends (invisible over black, -34 over flat red as in Music);
+  //  - at the round ends, a dark hairline: Apple's glass halves the page in the one device pixel just outside its
+  //    ends (flat pages from black to white alike) and leaves the glass inside it as is. The player draws it outside
+  //    the glass in CSS (.am-glass-rim), where it is antialiased along the curve; the toast keeps it inside its glass;
   //  - no saturation boost at the user's Liquid Glass setting it was fitted at (the leftmost).
   // An SVG filter recomputes a result for every primitive that reads it, so the player's glass is two layers
   // (user.css): ::before only bends (#am-glass-bend), ::after does the rest (#am-glass) on that result as its
@@ -482,10 +486,13 @@
       // Highlight along the top and bottom edges, every 0.5px from the edge, mixed toward 2x white (fitted to Apple
       // Music's own frames: stronger and it overshoots over bright artwork).
       highlight:[.13,.085,.032,.019,.014,.011,.009,.007,.005,.004,.003,.002,.001,.0005,0],highlightTo:2,highlightPow:3.5,
-      // Edge line: the glass times 1 - line*(1 - smoothstep(0, lineW, d))*|n_x|; the top and bottom edges' highlight
-      // table already absorbs it there. Rim smoothing: blur (px) mixed in by (1/compression - 1)/smoothDiv where the
-      // bend magnifies; rim darkening: the darken result mixed in by rimDark, fading out by rimDarkW (px).
-      line:.4,lineW:1,smooth:1,smoothDiv:2,rimDark:.6,rimDarkW:12,thin:1,thinMix:.3,
+      // Edge line inside the glass (the toast): the glass times 1 - line*(1 - smoothstep(0, lineW, d))*|n_x|, d in
+      // device pixels. Music's ends also darken gradually where the page beside the bar is dark: its blur reaches
+      // outside the bar, which a backdrop-filter cannot. Page mix: the outermost pixels show the page right under
+      // them by pageMix*(1 - d/pageMixW) (d in device pixels; a light halo where the bar's edge lies on bright
+      // content). Rim smoothing: blur (px) mixed in by (1/compression - 1)/smoothDiv where the bend
+      // magnifies; rim darkening: the darken result mixed in by rimDark, fading out by rimDarkW (px).
+      line:.9,lineW:1,pageMix:.65,pageMixW:2.2,smooth:1,smoothDiv:2,rimDark:.6,rimDarkW:12,thin:1,thinMix:.3,
       tone:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]},
   };
   // On wide-gamut (P3) Macs Chromium converts the recombined map from sRGB to P3 before displacing, and that
@@ -517,7 +524,7 @@
   // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
   // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
   const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
-  const exactGlass=()=>Number.isInteger(devicePixelRatio||1),playerGlass=()=>{for(const id of ['am-glass-bend','am-glass'])glass.querySelector('#'+id)?.remove();
+  const exactGlass=()=>Number.isInteger(devicePixelRatio||1),playerGlass=()=>{for(const id of ['am-glass-bend','am-glass'])glass.querySelector('#'+id)?.remove();player.style.setProperty('--am-hair',1/(devicePixelRatio||1)+'px');
     glass.insertAdjacentHTML('afterbegin',glassFilter('am-glass-bend',glassStates.focused,'bend',exactGlass())+glassFilter('am-glass',glassStates.focused,'face',exactGlass()));};
   glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused,'all')
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`;
@@ -548,12 +555,14 @@
         if(mx){const t=shiftAt(edge)/A/length,xv=Math.round(128+127*t*dx),yv=(128+127*t*dy)/255;
           mx[i]=mx[i+1]=mx[i+2]=xv;my[i]=my[i+1]=my[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));mx[i+3]=my[i+3]=255;}
         if(mh){mh[i]=mh[i+1]=mh[i+2]=Math.round(255*highlightAt(edge)*Math.sqrt(ny2)**state.highlightPow);mh[i+3]=255;}
-        if(ml){ml[i]=ml[i+1]=ml[i+2]=Math.round(255*(1-state.line*fade(Math.min(1,edge/state.lineW))*Math.sqrt(1-ny2)));ml[i+3]=255;}
+        if(ml){ml[i]=ml[i+1]=ml[i+2]=Math.round(255*(1-state.line*fade(Math.min(1,edge*k/state.lineW))*Math.sqrt(1-ny2)));ml[i+3]=255;}
         if(mv){const m=Math.min(1,Math.max(0,(1/Math.max(squeeze(edge),.05)-1)/state.smoothDiv));mv[i]=mv[i+1]=mv[i+2]=mz[i]=mz[i+1]=mz[i+2]=255;mv[i+3]=Math.round(255*m*ny2);mz[i+3]=Math.round(255*m*(1-ny2));}
         if(md){md[i]=md[i+1]=md[i+2]=255;md[i+3]=Math.round(255*state.rimDark*fade(Math.min(1,edge/state.rimDarkW)));}
-        if(taps){const s=shiftAt(edge),sx=(px+s*dx/length)*k-.5,sy=(py+s*dy/length)*k-.5,ix=Math.floor(sx),iy=Math.floor(sy),q=(y*W+x)*8;
-          fx[i]=fx[i+1]=fx[i+2]=fy[i]=fy[i+1]=fy[i+2]=255;fx[i+3]=Math.round(255*(sx-ix));fy[i+3]=Math.round(255*(sy-iy));
-          for(let j=0;j<4;j++){const ox=(ix+j%2-x)/k,oy=(iy+(j>>1)-y)/k;offsets[q+2*j]=ox;offsets[q+2*j+1]=oy;reach=Math.max(reach,Math.abs(ox),Math.abs(oy));}}
+        if(taps){const s=shiftAt(edge),sx=(px+s*dx/length)*k-.5,sy=(py+s*dy/length)*k-.5,ix=Math.floor(sx),iy=Math.floor(sy),q=(y*W+x)*8,
+            u=state.pageMix*(1-edge*k/state.pageMixW);
+          fx[i]=fx[i+1]=fx[i+2]=fy[i]=fy[i+1]=fy[i+2]=255;fx[i+3]=Math.round(255*(u>0?1-u:sx-ix));fy[i+3]=u>0?0:Math.round(255*(sy-iy));
+          // Where the page mixes in, taps 0 and 2 read the pixel itself and taps 1 and 3 the nearest bent one.
+          for(let j=0;j<4;j++){const ox=u>0?j%2&&(Math.round(sx)-x)/k:(ix+j%2-x)/k,oy=u>0?j%2&&(Math.round(sy)-y)/k:(iy+(j>>1)-y)/k;offsets[q+2*j]=ox;offsets[q+2*j+1]=oy;reach=Math.max(reach,Math.abs(ox),Math.abs(oy));}}
       }
       // Each tap's offset in its own pair of grey maps, aimed at the target pixel's centre: Chromium takes the pixel
       // nearest to the displaced point, and the 8-bit step (scale/255) stays under a device pixel.
@@ -567,7 +576,7 @@
     if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
-  playerGlass();glassLens(player,glassStates.focused,['am-glass-bend','am-glass'],playerGlass);glassLens(toast,glassStates.focused,['am-glass-toast']);
+  playerGlass();glassLens(player,{...glassStates.focused,line:0},['am-glass-bend','am-glass'],playerGlass);glassLens(toast,glassStates.focused,['am-glass-toast']);
   // One shared popover serves the "…" track menu and the profile menu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
   let popoverAnchor=null;

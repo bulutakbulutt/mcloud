@@ -179,6 +179,10 @@ try {
     assert.ok(first.href.startsWith('data:image/png') && scales.length === 4 && scales.every(s => s === first.scale) && first.scale > 2 * 1.01 * 27 && first.scale < 2 * (1.01 * 27 + 3));
     // Two layers under the controls: ::before bends the page, ::after does the rest on that result.
     assert.deepEqual(await page.evaluate(() => ['', '::before', '::after'].map(p => getComputedStyle(document.getElementById('am-player'), p || null).backdropFilter)), ['none', 'url("#am-glass-bend")', 'url("#am-glass")']);
+    // Apple's hairline outside the round ends: one device pixel just outside the glass, masked to the ends.
+    assert.deepEqual(await page.evaluate(() => { const p = document.getElementById('am-player').getBoundingClientRect(), rim = document.querySelector('#am-player > .am-glass-rim'), r = rim.getBoundingClientRect(), s = getComputedStyle(rim);
+      return [s.display, s.borderTopWidth === 1 / devicePixelRatio + 'px', Math.round((p.left - r.left) * devicePixelRatio), Math.round((r.right - p.right) * devicePixelRatio), /gradient/.test(s.maskImage || s.webkitMaskImage)]; }),
+      ['block', true, 1, 1, true]);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
     // Fitted to macOS's own (focused) glass: a slight blur and the bend (4 taps, 2 weight masks) in one filter; in
     // the other, a narrow darken for thin lines, a darken halo, a tone by luminance, the highlight and the edge line.

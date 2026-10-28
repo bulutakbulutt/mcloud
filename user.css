@@ -413,13 +413,17 @@ body.am-liquid #am-player {background:none;backdrop-filter:none;-webkit-backdrop
 body.am-liquid #am-player::before,body.am-liquid #am-player::after {content:'';position:absolute;inset:-1px;z-index:-1;border-radius:inherit;pointer-events:none}
 body.am-liquid #am-player::before {backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);backdrop-filter:url(#am-glass-bend);-webkit-backdrop-filter:url(#am-glass-bend)}
 body.am-liquid #am-player::after {backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass)}
+/* Apple's hairline outside the round ends: the page at 45% in the device pixel (--am-hair, set by theme.js) around
+   the glass, fading by |n_x|^3 along the curve (mask stops at quarters of the radius), gone at the top and bottom. */
+.am-glass-rim {display:none}
+body.am-liquid .am-glass-rim {display:block;position:absolute;inset:calc(-1px - var(--am-hair,.5px));z-index:-1;border-radius:999px;border:var(--am-hair,.5px) solid #0000008c;pointer-events:none;-webkit-mask-image:linear-gradient(90deg,#000,#0000006c 6.9px,#00000020 13.75px,#00000004 20.6px,#0000 27.5px,#0000 calc(100% - 27.5px),#00000004 calc(100% - 20.6px),#00000020 calc(100% - 13.75px),#0000006c calc(100% - 6.9px),#000);mask-image:linear-gradient(90deg,#000,#0000006c 6.9px,#00000020 13.75px,#00000004 20.6px,#0000 27.5px,#0000 calc(100% - 27.5px),#00000004 calc(100% - 20.6px),#00000020 calc(100% - 13.75px),#0000006c calc(100% - 6.9px),#000)}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
 body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
 /* Windows' "Transparency effects" off reports reduced transparency; glass then becomes solid, but keeps its depth. */
 @media(prefers-reduced-transparency:reduce){
  #am-player,body.am-liquid #am-player,body.am-tinted #am-player{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
- body.am-liquid #am-player::before,body.am-liquid #am-player::after{display:none}
+ body.am-liquid #am-player::before,body.am-liquid #am-player::after,body.am-liquid .am-glass-rim{display:none}
  #am-sidebar{background:#1a1a1a;backdrop-filter:none;-webkit-backdrop-filter:none}
  #am-sidebar-glow{display:none}
  .am-toast,body.am-liquid .am-toast{background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
