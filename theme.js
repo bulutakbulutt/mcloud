@@ -825,14 +825,27 @@
       img.src=url;
     });
   }
+  // Sampled colours by photo URL, so a page seen before gets its colour at once instead of after the photo loads;
+  // a new photo waits on the neutral page colour, not the previous page's. The newest 100 survive restarts.
+  const headerColors=new Map();
+  try{for(const [url,color] of JSON.parse(localStorage.getItem('mcloud:header-colors')||'[]'))if(typeof color==='string')headerColors.set(url,color);}catch{}
+  function rememberHeaderColor(url,color) {
+    headerColors.delete(url);headerColors.set(url,color);
+    while(headerColors.size>100)headerColors.delete(headerColors.keys().next().value);
+    try{localStorage.setItem('mcloud:header-colors',JSON.stringify([...headerColors]));}catch{}
+  }
   let headerImage='',headerHost=null,headerFrame=null;
   function syncHeaderColor() {
     const image=main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
     if(url===headerImage)return;headerImage=url;
     if(!url){document.body.classList.remove('am-image-header');return;}
+    const known=headerColors.get(url);
+    document.documentElement.style.setProperty('--am-header-base',known||'var(--am-bg)');
+    document.body.classList.add('am-image-header');
+    if(known)return;
     headerEdgeColor(url,image.parentElement).then(color=>{
       if(headerImage!==url)return;
-      if(color)document.documentElement.style.setProperty('--am-header-base',color);
+      if(color){rememberHeaderColor(url,color);document.documentElement.style.setProperty('--am-header-base',color);}
       document.body.classList.toggle('am-image-header',!!color);
     });
   }
