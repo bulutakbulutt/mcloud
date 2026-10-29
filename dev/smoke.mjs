@@ -34,6 +34,15 @@ try {
   });
   await shot('home');
 
+  await check('Spotify\'s green play buttons take the accent', async () => {
+    const bg = await page.evaluate(() => {
+      const b = document.body.appendChild(document.createElement('span'));
+      b.className = 'encore-bright-accent-set'; b.style.background = 'var(--background-base)';
+      const value = getComputedStyle(b).backgroundColor; b.remove(); return value;
+    });
+    assert.equal(bg, 'rgb(250, 45, 72)');
+  });
+
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {
     await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl'));
     const color = await page.evaluate(() => [document.documentElement.style.getPropertyValue('--am-header-base'),
