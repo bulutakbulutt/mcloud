@@ -297,6 +297,9 @@ body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {di
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
 /* Native panels share Spotify's stacking context; lift it over the custom views. */
 body.am-panel-open #main {z-index:30!important}
+/* Lifted, Spotify's transparent layout covers the library and artist views; let clicks through to them. */
+body.am-panel-open:is(.am-library-open,.am-artist-open) #main {pointer-events:none}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
 body.am-panel-open #main,body.am-panel-open .Root,body.am-panel-open .am-layout {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. */
