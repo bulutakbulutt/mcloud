@@ -428,6 +428,22 @@ try {
     await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
+  await check('watch feed sits between the sidebar and the player', async () => {
+    // Spotify's Explore overlay: a dimmed layer over .Root that centres the feed, sized from the window (styles inlined).
+    const box = await page.evaluate(() => {
+      document.querySelector('.Root').insertAdjacentHTML('beforeend', `<div id="mock-feed" style="position:absolute;left:0;top:0;width:100%;height:100%;box-sizing:border-box;display:flex;justify-content:center;align-items:center;background:#000000e6;z-index:6">
+        <div data-testid="watch-feed-view" style="--aspect-ratio:16 / 10;position:relative;width:min(85%,min(1680px,85vh * (var(--aspect-ratio))));max-width:1680px;aspect-ratio:var(--aspect-ratio)"></div></div>`);
+      const r = el => document.querySelector(el).getBoundingClientRect();
+      return { feed: r('[data-testid="watch-feed-view"]').toJSON(), layer: r('#mock-feed').toJSON(), side: r('#am-sidebar').right, player: r('#am-player').top };
+    });
+    assert.ok(box.feed.left >= box.side, 'the feed clears the sidebar');
+    assert.ok(box.feed.bottom <= box.player, 'the feed clears the player');
+    assert.ok(box.feed.width > 300, 'the feed keeps a usable size');
+    assert.equal(box.layer.left, 0, 'the dimmed layer still covers the window');
+    await shot('watch-feed');
+    await page.evaluate(() => document.getElementById('mock-feed').remove());
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();
