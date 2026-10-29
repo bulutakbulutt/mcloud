@@ -62,7 +62,8 @@ try {
     // for this check (a longer page lets later clicks scroll the outer layout).
     await page.$eval(viewport, e => { e.style.height = '600px'; document.querySelector('.mock-rows').style.height = '1600px'; e.scrollTop = e.scrollHeight; });
     await page.waitForFunction(h => document.querySelector(h).hasAttribute('data-am-stuck'), header);
-    assert.notEqual(await page.$eval(header, e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
+    assert.match(await page.$eval(header, e => getComputedStyle(e).transitionProperty), /backdrop-filter/);
+    await page.waitForFunction(h => getComputedStyle(document.querySelector(h)).backgroundColor === 'color(srgb 0.164706 0.164706 0.164706 / 0.62)', header);
     await page.$eval(viewport, e => { e.scrollTop = 0; });
     await page.waitForFunction(h => !document.querySelector(h).hasAttribute('data-am-stuck'), header);
     await page.$eval(viewport, e => { e.style.height = ''; document.querySelector('.mock-rows').style.height = ''; });
