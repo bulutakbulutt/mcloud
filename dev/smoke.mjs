@@ -35,7 +35,7 @@ try {
   await shot('home');
 
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {
-    await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl'));
     const color = await page.evaluate(() => [document.documentElement.style.getPropertyValue('--am-header-base'),
       getComputedStyle(document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])'), '::after').backgroundImage]);
     assert.equal(color[0], 'hsl(285 50% 19%)');
@@ -52,6 +52,22 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-image-header'));
     await page.evaluate(() => document.querySelector('.before-scroll-node').append(window.__photo));
     await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+  });
+
+  await check('a photo seen before gets its colour at once, a new one waits on the neutral colour', async () => {
+    const image = '.before-scroll-node [data-testid="background-image"]';
+    // Swaps the photo and reads the colour right after the theme's MutationObserver ran (its microtask comes first).
+    const show = url => page.$eval(image, (e, url) => {
+      e.style.backgroundImage = url;
+      return new Promise(r => queueMicrotask(() => r(document.documentElement.style.getPropertyValue('--am-header-base'))));
+    }, url);
+    const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:header-colors')));
+    assert.ok(saved.some(([, color]) => color === 'hsl(285 50% 19%)'));
+    const known = await page.$eval(image, e => e.style.backgroundImage);
+    assert.equal(await show('url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGOQq7ABIgYIBQAWjgNJBxYE+AAAAABJRU5ErkJggg==")'), 'var(--am-bg)');
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl(140'));
+    assert.equal(await show(known), 'hsl(285 50% 19%)');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-image-header')));
   });
 
   await check('scrubber: hover shows times, click seeks', async () => {
