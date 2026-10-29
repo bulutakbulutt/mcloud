@@ -328,6 +328,8 @@ try {
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.Root')).backgroundColor), 'rgba(0, 0, 0, 0)');
+    // #main is lifted over the library while a sheet is open; the library must still take clicks.
+    assert.equal(await page.evaluate(() => { const card = document.querySelector('.am-library-card'), b = card.getBoundingClientRect(); return card.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), true, 'library cards are covered while a sheet is open');
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
   });
