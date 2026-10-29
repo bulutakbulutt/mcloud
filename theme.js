@@ -160,9 +160,15 @@
   const nativeToolbarButton=selector=>document.querySelector('#global-nav-bar .am-toolbar-trailing '+selector);
   const nativeNews=()=>[...document.querySelectorAll('#global-nav-bar .am-toolbar-trailing button')].find(b=>!b.matches('[data-restore-focus-key],[data-testid="user-widget-link"]'));
   const newsButton=button('Yenilikler','bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
+  // Spotify mounts the feed only after fetching it (~0.5s on the first open), so press the button at once and let
+  // syncNativePanels confirm it; a feed that never arrives releases it after 3s.
+  let friendsPending=0;
   const friendsButton=button('Arkadaş etkinliği','friends',()=>{
     const native=nativeToolbarButton('[data-restore-focus-key="buddy_feed"]');
-    if(native)native.click();else notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');
+    if(!native){notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');return;}
+    const open=!friendsButton.classList.contains('am-active');friendsPending=open?performance.now():0;
+    friendsButton.classList.toggle('am-active',open);friendsButton.setAttribute('aria-pressed',String(open));
+    native.click();if(open)setTimeout(syncNativePanels,3100);
   },'am-account-button');
   account.append(profile,newsButton,friendsButton);sidebar.append(account);
   (async()=>{
@@ -637,7 +643,8 @@
     const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&current?.getAttribute('aria-label')===label?current:null;};
     const panelFor=key=>panelOf(document.querySelector(`[data-restore-focus-key="${key}"]`));
     const friends=panelFor('buddy_feed'),devices=panelOf(nativeConnect());
-    for(const [node,open] of [[friendsButton,friends],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
+    if(friends||performance.now()-friendsPending>3000)friendsPending=0;
+    for(const [node,open] of [[friendsButton,friends||friendsPending],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
     // Older clients without labelled panels: find the feed itself. With labels, the outgoing feed must not count.
     const feed=friends||panelFor('queue')||devices||(asides.length?null:
       document.querySelector('.fkgR9mQfUbjSxQi0FXd4')

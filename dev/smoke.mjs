@@ -89,9 +89,13 @@ try {
   await check('Friend Activity opens as a sheet from the sidebar\'s account row', async () => {
     const friends = '#am-sidebar [aria-label="Arkadaş etkinliği"]';
     await page.click(friends);
+    // The button presses at once, before Spotify has fetched and mounted the feed.
+    assert.equal(await page.evaluate(() => [document.querySelector('#am-sidebar [aria-label="Arkadaş etkinliği"]').getAttribute('aria-pressed'), !!document.querySelector('.right aside[aria-label="Dinleme etkinliği"]')].join()), 'true,false');
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
     const box = await page.locator('.am-native-right').boundingBox();
     assert.ok(box.width > 200 && box.height > 200);
+    // It fades in where it ends up; a sliding edge on fractional pixels shimmers.
+    assert.equal(box.x, 1440 - 16 - box.width, 'sheet moves while opening');
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
     // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
@@ -322,6 +326,7 @@ try {
   await check('a sheet over the library opens without a grey fade', async () => {
     // Spotify fades .Root's background; #main is lifted over the library while a sheet is open.
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
+    await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.Root')).backgroundColor), 'rgba(0, 0, 0, 0)');
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));

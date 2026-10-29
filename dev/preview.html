@@ -54,9 +54,11 @@
     right.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
     setTimeout(() => outgoing?.parentElement.remove(), 600);
   }
+  // Friend Activity mounts only once its feed has been fetched.
   function mockPanel(button) {
     const label = button.getAttribute('aria-label'), open = [...document.querySelectorAll('.right aside')].pop();
-    swapPanel(open?.getAttribute('aria-label') === label ? npv : `<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></aside>`);
+    if (open?.getAttribute('aria-label') === label) { swapPanel(npv); return; }
+    setTimeout(() => swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
   }
 </script>
 <script>swapPanel(npv)</script>
