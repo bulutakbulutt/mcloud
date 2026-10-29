@@ -1065,11 +1065,13 @@
   // re-checking at most once a second while it is missing (Spotify replaces it when the chips change). React
   // rewrites this node's className as it scrolls, so the tag is an attribute it leaves alone.
   // Playlist and album title bar: hidden at the page top, shown once the play controls pass under it (user.css).
-  let entityFrame=0;
+  // A page that has not rendered its controls yet counts as top: a slow load used to drop the class 600ms after
+  // the route change, and the title showed on the unscrolled page once it arrived.
+  let entityFrame=0,entityTimer=0;
   function syncEntityBar() {
     entityFrame=0;
     const row=main?.querySelector('[data-testid="action-bar-row"]'),bar=main?.querySelector('.main-topBar-container');
-    const top=!!row&&!!bar&&row.getBoundingClientRect().bottom>bar.getBoundingClientRect().bottom;
+    const top=!row||!bar||row.getBoundingClientRect().bottom>bar.getBoundingClientRect().bottom;
     if(document.body.classList.contains('am-entity-top')!==top)document.body.classList.toggle('am-entity-top',top);
   }
   document.addEventListener('scroll',event=>{if(currentMode==='native'&&!entityFrame&&main?.contains(event.target))entityFrame=requestAnimationFrame(syncEntityBar);},{capture:true,passive:true});
@@ -1100,7 +1102,7 @@
   H.listen(() => {
     syncSpicyControls();syncEntityPlaying();
     // A new page renders after the route change; mark its top before the title bar can show.
-    document.body.classList.add('am-entity-top');setTimeout(syncEntityBar,600);
+    document.body.classList.add('am-entity-top');clearTimeout(entityTimer);entityTimer=setTimeout(syncEntityBar,600);
     document.body.classList.add('am-ready');
     document.body.classList.remove('am-account-open');
     const query=new URLSearchParams(H.location.search);
