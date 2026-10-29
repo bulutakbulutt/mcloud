@@ -16,6 +16,7 @@
   .view {grid-area:main-view;position:relative;container:main-view-grid-area / inline-size;background:#121212;color:#fff;font:14px sans-serif}
   .main-view-container,.main-view-container__scroll-node,.main-view-container__scroll-node > [data-overlayscrollbars-viewport] {height:100%}
   .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {overflow:auto}
+  .mock-tracklist > [role="presentation"] {position:sticky;height:36px}
   .mock-page {position:relative;padding:20px var(--content-spacing,16px)}
   .mock-header {position:absolute;left:0;right:0;top:0;height:200px;z-index:-1}
   .mock-shelf {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:16px;overflow-x:auto;scroll-snap-type:inline mandatory}
@@ -37,6 +38,8 @@
       <!-- Spotify wraps small scrollers inside pages (the playlist action bar) in OverlayScrollbars too. -->
       <div class="mock-action-bar"><div data-overlayscrollbars-viewport><button>Çal</button></div></div>
       <div data-testid="component-shelf"><div class="mock-shelf"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+      <!-- Spotify's track list: a sticky column header (top from its props) over the rows. -->
+      <div role="grid" class="mock-tracklist"><div role="presentation" class="main-trackList-trackListHeader" style="top: 64px;">#&nbsp; Başlık</div><div class="mock-rows"></div></div>
     </section>
   </main></div></div></div></div></div>
   <div class="right"></div>

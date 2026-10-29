@@ -1060,6 +1060,23 @@
     for(const layer of main.querySelectorAll('.main-view-container__scroll-node-child [style*="opacity"]'))
       if(layer.parentElement&&getComputedStyle(layer).position==='absolute'&&getComputedStyle(layer.parentElement).position==='sticky'){layer.setAttribute('data-am-glass','');glassBar=layer;break;}
   },{capture:true,passive:true});
+  // The track list's column header turns to glass only while it sticks. Spotify marks that with an IntersectionObserver
+  // whose margin ignores the viewport's --am-page-top padding, so its stuck class never comes; the theme measures it
+  // once per frame while scrolling and writes only when the state flips.
+  let listHeader=null,listHeaderLimit=0,listHeaderFrame=0;
+  document.addEventListener('scroll',event=>{
+    if(currentMode!=='native'||listHeaderFrame||!main?.contains(event.target))return;
+    listHeaderFrame=requestAnimationFrame(()=>{
+      listHeaderFrame=0;
+      if(!listHeader?.isConnected){
+        listHeader=main.querySelector('[role="grid"] > [role="presentation"][style*="top"]');
+        const viewport=listHeader?.closest('[data-overlayscrollbars-viewport]');if(!viewport){listHeader=null;return;}
+        listHeaderLimit=viewport.getBoundingClientRect().top+parseFloat(getComputedStyle(viewport).paddingTop)+parseFloat(listHeader.style.top||0)+1;
+      }
+      const stuck=listHeader.getBoundingClientRect().top<=listHeaderLimit;
+      if(stuck!==listHeader.hasAttribute('data-am-stuck'))listHeader.toggleAttribute('data-am-stuck',stuck);
+    });
+  },{capture:true,passive:true});
   H.listen(() => {
     syncSpicyControls();syncEntityPlaying();
     // A new page renders after the route change; mark its top before the title bar can show.
