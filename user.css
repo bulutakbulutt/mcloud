@@ -39,6 +39,9 @@ body.am-ready .am-native-main .before-scroll-node > :has(> [data-testid="backgro
 body.am-image-header .am-native-main,body.am-image-header .am-native-main [style*="--background-base"] {--background-base:var(--am-header-base)!important;--background-base-70:var(--am-header-base)!important;--background-base-20:var(--am-header-base)!important}
 body.am-image-header .am-native-main .before-scroll-node > :has(> [data-testid="background-image"])::after {content:"";position:absolute;inset:auto 0 0;height:38%;background:linear-gradient(in oklab to bottom,transparent,color-mix(in oklab,var(--am-header-base) 60%,transparent) 55%,var(--am-header-base));pointer-events:none}
 body.am-image-header .am-native-main [data-testid="overscroll-background"] {background-color:var(--am-header-base)!important}
+/* The page colour fills the content column only; under the glass sidebar the photo's overscroll layer showed it until
+   Spotify fades that layer out on scroll, and the sidebar then turned grey at once. The main view carries it too. */
+body.am-ready.am-image-header .am-native-main {background:var(--am-header-base)!important}
 /* Genre pages start their content with a layer fading from 60% black to the page colour, which matched Spotify's own
    darkened photo; under the theme's fade it left a dark band below the photo. */
 body.am-image-header .am-native-main main > div > [style^="background-color"]:first-child {background:var(--am-header-base)!important}

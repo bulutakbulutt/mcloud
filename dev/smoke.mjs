@@ -68,6 +68,8 @@ try {
     await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl(140'));
     assert.equal(await show(known), 'hsl(285 50% 19%)');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-image-header')));
+    // Under the glass sidebar the main view carries the page colour, so the sidebar does not turn grey on scroll.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-main')).backgroundColor), 'rgb(61, 24, 73)');
   });
 
   await check('track list header turns to glass only while it sticks', async () => {
