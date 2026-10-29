@@ -58,13 +58,14 @@ try {
     const header = '[role="grid"] > .main-trackList-trackListHeader';
     const viewport = '.main-view-container__scroll-node > [data-overlayscrollbars-viewport]';
     assert.equal(await page.$eval(header, e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
-    // The preview's viewport grows with its content; give it a height so it scrolls.
-    await page.$eval(viewport, e => { e.style.height = '600px'; e.scrollTop = e.scrollHeight; });
+    // The preview's viewport grows with its content; give it a height and the rows some length so it scrolls, only
+    // for this check (a longer page lets later clicks scroll the outer layout).
+    await page.$eval(viewport, e => { e.style.height = '600px'; document.querySelector('.mock-rows').style.height = '1600px'; e.scrollTop = e.scrollHeight; });
     await page.waitForFunction(h => document.querySelector(h).hasAttribute('data-am-stuck'), header);
     assert.notEqual(await page.$eval(header, e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
     await page.$eval(viewport, e => { e.scrollTop = 0; });
     await page.waitForFunction(h => !document.querySelector(h).hasAttribute('data-am-stuck'), header);
-    await page.$eval(viewport, e => { e.style.height = ''; });
+    await page.$eval(viewport, e => { e.style.height = ''; document.querySelector('.mock-rows').style.height = ''; });
   });
 
   await check('scrubber: hover shows times, click seeks', async () => {
