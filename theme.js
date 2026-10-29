@@ -789,6 +789,53 @@
       img.src=url;
     });
   }
+  // Photo headers (Daily Mix, genre pages): Spotify colours the page below with the photo's overall colour, which
+  // often clashes with the photo's bottom edge (a dark purple edge over bright green) and leaves a hard seam. The
+  // colour is taken from the bottom tenth of the visible photo instead (cover, positioned 50% 15%), kept deep so
+  // white text stays readable, and user.css fades the photo into it.
+  function headerEdgeColor(url,box) {
+    return new Promise(resolve=>{
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
+      img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const w=box.offsetWidth||img.width,h=box.offsetHeight||img.height,scale=Math.max(w/img.width,h/img.height);
+        const top=(h-img.height*scale)*.15,left=(w-img.width*scale)/2,bottom=Math.min(img.height,(h-top)/scale),strip=h*.1/scale;
+        const canvas=document.createElement('canvas');canvas.width=32;canvas.height=4;
+        const context=canvas.getContext('2d',{willReadFrequently:true});
+        context.drawImage(img,Math.max(0,-left/scale),Math.max(0,bottom-strip),Math.min(img.width,w/scale),strip,0,0,32,4);
+        const data=context.getImageData(0,0,32,4).data,sum=[0,0,0];
+        for(let i=0;i<data.length;i+=4){sum[0]+=data[i];sum[1]+=data[i+1];sum[2]+=data[i+2];}
+        const [hue,sat,light]=hexToHsl('#'+sum.map(v=>Math.round(v/(data.length/4)).toString(16).padStart(2,'0')).join(''));
+        resolve(`hsl(${Math.round(hue)} ${Math.round(Math.min(.6,sat)*100)}% ${Math.round(Math.min(.24,Math.max(.1,light*.6))*100)}%)`);
+      }catch{resolve(null);}};
+      img.src=url;
+    });
+  }
+  let headerImage='',headerHost=null,headerFrame=null;
+  function syncHeaderColor() {
+    const image=main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
+    if(url===headerImage)return;headerImage=url;
+    if(!url){document.body.classList.remove('am-image-header');return;}
+    headerEdgeColor(url,image.parentElement).then(color=>{
+      if(headerImage!==url)return;
+      if(color)document.documentElement.style.setProperty('--am-header-base',color);
+      document.body.classList.toggle('am-image-header',!!color);
+    });
+  }
+  // The photo is portalled into .before-scroll-node; its container's style also changes every scroll frame (--scroll),
+  // so the callback only looks further when the photo itself or the portal's children changed. Spotify swaps
+  // .before-scroll-node for a new one after History fires, so its stable parent is watched (children only) as well;
+  // otherwise the observer stays on the old node and the next page's photo is never sampled.
+  const headerObserver=new MutationObserver(records=>{if(records.some(r=>r.type==='childList'||r.target.dataset?.testid==='background-image'))watchHeader();});
+  function watchHeader() {
+    const frame=main?.querySelector('.main-view-container'),host=frame?.querySelector(':scope > .before-scroll-node')||main?.querySelector('.before-scroll-node');
+    if(frame!==headerFrame||host!==headerHost){
+      headerObserver.disconnect();headerFrame=frame;headerHost=host;
+      if(frame)headerObserver.observe(frame,{childList:true});
+      if(host)headerObserver.observe(host,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
+    }
+    syncHeaderColor();
+  }
   const smallImage=visual=>spotifyImage([...(visual?.sources||[])].sort((a,b)=>(a.width||0)-(b.width||0))[0]?.url||'');
   function closeArtist() {
     if(!document.body.classList.contains('am-artist-open')&&!artistView.hasChildNodes())return;
@@ -1019,7 +1066,7 @@
     if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
     closeArtist();
     currentMode='native';++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');
-    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();
+    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
@@ -1037,13 +1084,13 @@
       return false;
     });
     if(!relevant)return;
-    reconciliation=setTimeout(()=>{reconciliation=null;if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();},150);
+    reconciliation=setTimeout(()=>{reconciliation=null;if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();},150);
   }
   const observer=new MutationObserver(scheduleReconcile);
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){observer.disconnect();clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();observer.observe(root,{childList:true,subtree:true});}
+    if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
+    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
