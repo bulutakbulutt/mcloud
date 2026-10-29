@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.7. Local theme UI; no remote scripts or credentials. */
+/* AppleMusicMac 2.8. Local theme UI; no remote scripts or credentials. */
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
@@ -160,9 +160,15 @@
   const nativeToolbarButton=selector=>document.querySelector('#global-nav-bar .am-toolbar-trailing '+selector);
   const nativeNews=()=>[...document.querySelectorAll('#global-nav-bar .am-toolbar-trailing button')].find(b=>!b.matches('[data-restore-focus-key],[data-testid="user-widget-link"]'));
   const newsButton=button('Yenilikler','bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
+  // Spotify mounts the feed only after fetching it (~0.5s on the first open), so press the button at once and let
+  // syncNativePanels confirm it; a feed that never arrives releases it after 3s.
+  let friendsPending=0;
   const friendsButton=button('Arkadaş etkinliği','friends',()=>{
     const native=nativeToolbarButton('[data-restore-focus-key="buddy_feed"]');
-    if(native)native.click();else notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');
+    if(!native){notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');return;}
+    const open=!friendsButton.classList.contains('am-active');friendsPending=open?performance.now():0;
+    friendsButton.classList.toggle('am-active',open);friendsButton.setAttribute('aria-pressed',String(open));
+    native.click();if(open)setTimeout(syncNativePanels,3100);
   },'am-account-button');
   account.append(profile,newsButton,friendsButton);sidebar.append(account);
   (async()=>{
@@ -623,18 +629,26 @@
     const native=document.querySelector('[data-testid="fullscreen-mode-button"]');
     if(native)native.click();else notify('Tam ekran bu Spotify sürümünde kullanılamıyor.');
   }
-  let friendPane=null;
+  let friendPane=null,asideSeq=0;const asideSeen=new WeakMap();
   function syncNativePanels() {
     // Spotify 1.3 opens Friend Activity and the queue in the right panel as an <aside> labelled like the button
     // that opens it (data-restore-focus-key "buddy_feed" / "queue"); the panel otherwise holds the hidden Now
     // Playing view. Reading the open state from the panel itself means any close button closes the sheet.
-    const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`);};
+    // Panels cross-fade: the outgoing <aside> stays mounted beside the incoming one for a few hundred ms, so the
+    // newest one is current. The outgoing one is hidden by a data attribute, which survives React rewriting class.
+    const asides=[...document.querySelectorAll('.am-native-right aside[aria-label]')];
+    for(const a of asides)if(!asideSeen.has(a))asideSeen.set(a,++asideSeq);
+    const current=asides.reduce((a,b)=>!a||asideSeen.get(b)>asideSeen.get(a)?b:a,null);
+    for(const a of asides)if(a.hasAttribute('data-am-current')!==(a===current))a.toggleAttribute('data-am-current',a===current);
+    const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&current?.getAttribute('aria-label')===label?current:null;};
     const panelFor=key=>panelOf(document.querySelector(`[data-restore-focus-key="${key}"]`));
     const friends=panelFor('buddy_feed'),devices=panelOf(nativeConnect());
-    for(const [node,open] of [[friendsButton,friends],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
-    const feed=friends||panelFor('queue')||devices
-      ||document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
-      ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement;
+    if(friends||performance.now()-friendsPending>3000)friendsPending=0;
+    for(const [node,open] of [[friendsButton,friends||friendsPending],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
+    // Older clients without labelled panels: find the feed itself. With labels, the outgoing feed must not count.
+    const feed=friends||panelFor('queue')||devices||(asides.length?null:
+      document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
+      ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement);
     document.body.classList.toggle('am-panel-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
     feed.classList.add('am-friends-sheet');
@@ -672,9 +686,16 @@
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
     setAttributeIfChanged(fullscreenButton,'title',fullscreen?'Tam ekrandan çık':'Tam ekran');
   }
+  // Playlist and album pages label Spotify's play button "Çal"/"Duraklat" in CSS; this says whether that page is the one playing.
+  function syncEntityPlaying() {
+    const [,kind,id]=/^\/(playlist|album)\/([A-Za-z0-9]+)/.exec(routePath())||[];
+    const playing=!!kind&&S.Player.data?.context?.uri===`spotify:${kind}:${id}`&&!!S.Player.isPlaying?.();
+    document.body.classList.toggle('am-entity-playing',playing);
+  }
   let previousTrack='',previousPlaying=null;
   function syncPlayer() {
     if(document.hidden||!S.Player.origin?._state) return;
+    syncEntityPlaying();
     const playing=S.Player.isPlaying();
     if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?'Duraklat':'Çal');play.title=playing?'Duraklat':'Çal';}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
@@ -804,14 +825,27 @@
       img.src=url;
     });
   }
+  // Sampled colours by photo URL, so a page seen before gets its colour at once instead of after the photo loads;
+  // a new photo waits on the neutral page colour, not the previous page's. The newest 100 survive restarts.
+  const headerColors=new Map();
+  try{for(const [url,color] of JSON.parse(localStorage.getItem('mcloud:header-colors')||'[]'))if(typeof color==='string')headerColors.set(url,color);}catch{}
+  function rememberHeaderColor(url,color) {
+    headerColors.delete(url);headerColors.set(url,color);
+    while(headerColors.size>100)headerColors.delete(headerColors.keys().next().value);
+    try{localStorage.setItem('mcloud:header-colors',JSON.stringify([...headerColors]));}catch{}
+  }
   let headerImage='',headerHost=null,headerFrame=null;
   function syncHeaderColor() {
     const image=main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
     if(url===headerImage)return;headerImage=url;
     if(!url){document.body.classList.remove('am-image-header');return;}
+    const known=headerColors.get(url);
+    document.documentElement.style.setProperty('--am-header-base',known||'var(--am-bg)');
+    document.body.classList.add('am-image-header');
+    if(known)return;
     headerEdgeColor(url,image.parentElement).then(color=>{
       if(headerImage!==url)return;
-      if(color)document.documentElement.style.setProperty('--am-header-base',color);
+      if(color){rememberHeaderColor(url,color);document.documentElement.style.setProperty('--am-header-base',color);}
       document.body.classList.toggle('am-image-header',!!color);
     });
   }
@@ -1030,6 +1064,15 @@
   // an inline opacity, nothing user.css could select. The first scroll that may show it tags it as glass,
   // re-checking at most once a second while it is missing (Spotify replaces it when the chips change). React
   // rewrites this node's className as it scrolls, so the tag is an attribute it leaves alone.
+  // Playlist and album title bar: hidden at the page top, shown once the play controls pass under it (user.css).
+  let entityFrame=0;
+  function syncEntityBar() {
+    entityFrame=0;
+    const row=main?.querySelector('[data-testid="action-bar-row"]'),bar=main?.querySelector('.main-topBar-container');
+    const top=!!row&&!!bar&&row.getBoundingClientRect().bottom>bar.getBoundingClientRect().bottom;
+    if(document.body.classList.contains('am-entity-top')!==top)document.body.classList.toggle('am-entity-top',top);
+  }
+  document.addEventListener('scroll',event=>{if(currentMode==='native'&&!entityFrame&&main?.contains(event.target))entityFrame=requestAnimationFrame(syncEntityBar);},{capture:true,passive:true});
   let glassBar=null,glassBarCheck=0;
   document.addEventListener('scroll',event=>{
     if(currentMode!=='native'||glassBar?.isConnected&&glassBar.hasAttribute('data-am-glass')||event.timeStamp-glassBarCheck<1000||!main?.contains(event.target))return;
@@ -1037,8 +1080,27 @@
     for(const layer of main.querySelectorAll('.main-view-container__scroll-node-child [style*="opacity"]'))
       if(layer.parentElement&&getComputedStyle(layer).position==='absolute'&&getComputedStyle(layer.parentElement).position==='sticky'){layer.setAttribute('data-am-glass','');glassBar=layer;break;}
   },{capture:true,passive:true});
+  // The track list's column header turns to glass only while it sticks. Spotify marks that with an IntersectionObserver
+  // whose margin ignores the viewport's --am-page-top padding, so its stuck class never comes; the theme measures it
+  // once per frame while scrolling and writes only when the state flips.
+  let listHeader=null,listHeaderLimit=0,listHeaderFrame=0;
+  document.addEventListener('scroll',event=>{
+    if(currentMode!=='native'||listHeaderFrame||!main?.contains(event.target))return;
+    listHeaderFrame=requestAnimationFrame(()=>{
+      listHeaderFrame=0;
+      if(!listHeader?.isConnected){
+        listHeader=main.querySelector('[role="grid"] > [role="presentation"][style*="top"]');
+        const viewport=listHeader?.closest('[data-overlayscrollbars-viewport]');if(!viewport){listHeader=null;return;}
+        listHeaderLimit=viewport.getBoundingClientRect().top+parseFloat(getComputedStyle(viewport).paddingTop)+parseFloat(listHeader.style.top||0)+1;
+      }
+      const stuck=listHeader.getBoundingClientRect().top<=listHeaderLimit;
+      if(stuck!==listHeader.hasAttribute('data-am-stuck'))listHeader.toggleAttribute('data-am-stuck',stuck);
+    });
+  },{capture:true,passive:true});
   H.listen(() => {
-    syncSpicyControls();
+    syncSpicyControls();syncEntityPlaying();
+    // A new page renders after the route change; mark its top before the title bar can show.
+    document.body.classList.add('am-entity-top');setTimeout(syncEntityBar,600);
     document.body.classList.add('am-ready');
     document.body.classList.remove('am-account-open');
     const query=new URLSearchParams(H.location.search);
@@ -1055,7 +1117,11 @@
   const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
   let reconciliation=null;
   function scheduleReconcile(records) {
-    if(document.hidden||reconciliation!==null)return;
+    if(document.hidden)return;
+    // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
+    const right=document.querySelector('.am-native-right');
+    if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
+    if(reconciliation!==null)return;
     const relevant=!main.isConnected||!nativeNav?.isConnected||records.some(record=>{
       if(record.target===nativeNav)return true;
       // Lyrics line churn cannot replace the outer hosts watched here.

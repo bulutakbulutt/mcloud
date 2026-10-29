@@ -8,13 +8,16 @@
 <link rel="stylesheet" href="../user.css">
 <style>
   body {margin:0}
+  #main {position:relative}
   .layout {display:grid;height:100vh;grid-template-areas:"global-nav global-nav global-nav" "left-sidebar main-view right-sidebar" "now-playing-bar now-playing-bar now-playing-bar";grid-template-columns:280px 1fr 0;grid-template-rows:64px 1fr 90px}
+  .Root {background:#121212;transition:background .5s cubic-bezier(.3,0,.4,1)}
   .left {grid-area:left-sidebar;background:#111}
   .right {grid-area:right-sidebar}
   .bar {grid-area:now-playing-bar;background:#000}
   .view {grid-area:main-view;position:relative;container:main-view-grid-area / inline-size;background:#121212;color:#fff;font:14px sans-serif}
   .main-view-container,.main-view-container__scroll-node,.main-view-container__scroll-node > [data-overlayscrollbars-viewport] {height:100%}
   .main-view-container__scroll-node > [data-overlayscrollbars-viewport] {overflow:auto}
+  .mock-tracklist > [role="presentation"] {position:sticky;height:36px}
   .mock-page {position:relative;padding:20px var(--content-spacing,16px)}
   .mock-header {position:absolute;left:0;right:0;top:0;height:200px;z-index:-1}
   .mock-shelf {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:16px;overflow-x:auto;scroll-snap-type:inline mandatory}
@@ -36,19 +39,30 @@
       <!-- Spotify wraps small scrollers inside pages (the playlist action bar) in OverlayScrollbars too. -->
       <div class="mock-action-bar"><div data-overlayscrollbars-viewport><button>Çal</button></div></div>
       <div data-testid="component-shelf"><div class="mock-shelf"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div></div>
+      <!-- Spotify's track list: a sticky column header (top from its props) over the rows. -->
+      <div role="grid" class="mock-tracklist"><div role="presentation" class="main-trackList-trackListHeader" style="top: 64px;">#&nbsp; Başlık</div><div class="mock-rows"></div></div>
     </section>
   </main></div></div></div></div></div>
   <div class="right"></div>
   <div class="bar"><button data-testid="control-button-queue" data-restore-focus-key="queue" aria-label="Sıraya Ekle" onclick="mockPanel(this)">Sıra</button><button aria-label="Bir cihaza bağlan" aria-describedby="connect-message-nudge" onclick="mockPanel(this)">C</button></div>
 </div></div></div>
 <script>
-  // Spotify shows one panel at a time in the right sidebar, as an <aside> labelled like the button that opened it.
+  // Spotify shows one panel at a time in the right sidebar, as an <aside> labelled like the button that opened it;
+  // otherwise it holds the Now Playing view. Panels cross-fade: the outgoing aside stays mounted for a moment.
+  const npv = '<aside aria-label="Şu an çalan" data-testid="mock-npv"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="300" height="300"></aside>';
+  function swapPanel(html) {
+    const right = document.querySelector('.right'), outgoing = right.querySelector('aside');
+    right.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
+    setTimeout(() => outgoing?.parentElement.remove(), 600);
+  }
+  // Friend Activity mounts only once its feed has been fetched.
   function mockPanel(button) {
-    const right = document.querySelector('.right'), label = button.getAttribute('aria-label'), open = right.querySelector('aside');
-    open?.remove();
-    if (open?.getAttribute('aria-label') !== label) right.insertAdjacentHTML('beforeend', `<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="this.closest('aside').remove()">×</button></aside>`);
+    const label = button.getAttribute('aria-label'), open = [...document.querySelectorAll('.right aside')].pop();
+    if (open?.getAttribute('aria-label') === label) { swapPanel(npv); return; }
+    setTimeout(() => swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
   }
 </script>
+<script>swapPanel(npv)</script>
 <script src="spicetify-mock.js"></script>
 <script src="../theme.js"></script>
 </body>

@@ -35,7 +35,7 @@ try {
   await shot('home');
 
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {
-    await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl'));
     const color = await page.evaluate(() => [document.documentElement.style.getPropertyValue('--am-header-base'),
       getComputedStyle(document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])'), '::after').backgroundImage]);
     assert.equal(color[0], 'hsl(285 50% 19%)');
@@ -52,6 +52,39 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-image-header'));
     await page.evaluate(() => document.querySelector('.before-scroll-node').append(window.__photo));
     await page.waitForFunction(() => document.body.classList.contains('am-image-header'));
+  });
+
+  await check('a photo seen before gets its colour at once, a new one waits on the neutral colour', async () => {
+    const image = '.before-scroll-node [data-testid="background-image"]';
+    // Swaps the photo and reads the colour right after the theme's MutationObserver ran (its microtask comes first).
+    const show = url => page.$eval(image, (e, url) => {
+      e.style.backgroundImage = url;
+      return new Promise(r => queueMicrotask(() => r(document.documentElement.style.getPropertyValue('--am-header-base'))));
+    }, url);
+    const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:header-colors')));
+    assert.ok(saved.some(([, color]) => color === 'hsl(285 50% 19%)'));
+    const known = await page.$eval(image, e => e.style.backgroundImage);
+    assert.equal(await show('url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAEElEQVR4nGOQq7ABIgYIBQAWjgNJBxYE+AAAAABJRU5ErkJggg==")'), 'var(--am-bg)');
+    await page.waitForFunction(() => document.documentElement.style.getPropertyValue('--am-header-base').startsWith('hsl(140'));
+    assert.equal(await show(known), 'hsl(285 50% 19%)');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-image-header')));
+    // Under the glass sidebar the main view carries the page colour, so the sidebar does not turn grey on scroll.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-main')).backgroundColor), 'rgb(61, 24, 73)');
+  });
+
+  await check('track list header turns to glass only while it sticks', async () => {
+    const header = '[role="grid"] > .main-trackList-trackListHeader';
+    const viewport = '.main-view-container__scroll-node > [data-overlayscrollbars-viewport]';
+    assert.equal(await page.$eval(header, e => getComputedStyle(e).backgroundColor), 'rgba(0, 0, 0, 0)');
+    // The preview's viewport grows with its content; give it a height and the rows some length so it scrolls, only
+    // for this check (a longer page lets later clicks scroll the outer layout).
+    await page.$eval(viewport, e => { e.style.height = '600px'; document.querySelector('.mock-rows').style.height = '1600px'; e.scrollTop = e.scrollHeight; });
+    await page.waitForFunction(h => document.querySelector(h).hasAttribute('data-am-stuck'), header);
+    assert.match(await page.$eval(header, e => getComputedStyle(e).transitionProperty), /backdrop-filter/);
+    await page.waitForFunction(h => getComputedStyle(document.querySelector(h)).backgroundColor === 'color(srgb 0.164706 0.164706 0.164706 / 0.62)', header);
+    await page.$eval(viewport, e => { e.scrollTop = 0; });
+    await page.waitForFunction(h => !document.querySelector(h).hasAttribute('data-am-stuck'), header);
+    await page.$eval(viewport, e => { e.style.height = ''; document.querySelector('.mock-rows').style.height = ''; });
   });
 
   await check('scrubber: hover shows times, click seeks', async () => {
@@ -75,12 +108,20 @@ try {
   await check('Friend Activity opens as a sheet from the sidebar\'s account row', async () => {
     const friends = '#am-sidebar [aria-label="Arkadaş etkinliği"]';
     await page.click(friends);
+    // The button presses at once, before Spotify has fetched and mounted the feed.
+    assert.equal(await page.evaluate(() => [document.querySelector('#am-sidebar [aria-label="Arkadaş etkinliği"]').getAttribute('aria-pressed'), !!document.querySelector('.right aside[aria-label="Dinleme etkinliği"]')].join()), 'true,false');
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open') && document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
     const box = await page.locator('.am-native-right').boundingBox();
     assert.ok(box.width > 200 && box.height > 200);
+    // It fades in where it ends up; a sliding edge on fractional pixels shimmers.
+    assert.equal(box.x, 1440 - 16 - box.width, 'sheet moves while opening');
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
+    // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
     await page.click(friends);
-    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    // Closing hides the sheet at once, while the outgoing feed is still mounted.
+    assert.equal(await page.evaluate(() => [!!document.querySelector('.right aside[aria-label="Dinleme etkinliği"]'), getComputedStyle(document.querySelector('.am-native-right')).display].join()), 'true,none');
+    await page.waitForTimeout(700);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
@@ -301,6 +342,17 @@ try {
   });
   await shot('library');
 
+  await check('a sheet over the library opens without a grey fade', async () => {
+    // Spotify fades .Root's background; #main is lifted over the library while a sheet is open.
+    await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
+    await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.Root')).backgroundColor), 'rgba(0, 0, 0, 0)');
+    // #main is lifted over the library while a sheet is open; the library must still take clicks.
+    assert.equal(await page.evaluate(() => { const card = document.querySelector('.am-library-card'), b = card.getBoundingClientRect(); return card.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), true, 'library cards are covered while a sheet is open');
+    await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+  });
+
   await check('settings menu', async () => {
     const names = await page.evaluate(() => window.__menus[0].items.map(i => i.name));
     assert.equal(names[0], 'Oynatıcıda albüm kapağı');
@@ -310,6 +362,52 @@ try {
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-artwork')));
     const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings')));
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
+  });
+
+  await check('album page: artwork, title column and play controls laid out like Apple Music', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
+    // The shape of Spotify's album page: header, then the action bar inside an OverlayScrollbars host. Spotify's
+    // .contentSpacing padding and button resets are inlined.
+    await page.evaluate(() => {
+      document.querySelector('.mock-page').hidden = true;
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<header class="main-topBar-container" style="position:sticky;top:0;height:64px;z-index:2"><div class="main-topBar-topbarContentWrapper"><div class="main-topBar-topbarContent">Blonde</div></div></header>
+        <section data-testid="album-page" id="mock-album"><div data-testid="entity-header" style="height:340px"><div style="--background-base:#335"></div>
+          <div class="main-entityHeader-contentWrapper contentSpacing" style="display:flex;height:300px;padding-inline:var(--content-spacing)"><div></div>
+            <button class="main-entityHeader-imageContainer" style="width:232px;height:232px"><img src="${Spicetify.Player.data.item.images[0].url}"></button>
+            <div class="main-entityHeader-headerText" style="display:flex;flex-direction:column"><span class="encore-text-body-small">Album</span><span><span class="main-entityHeader-title"><h1 style="font-size:6rem;white-space:nowrap">Blonde</h1></span></span>
+              <div><div class="main-entityHeader-creatorWrapper"><figure></figure><span><a data-testid="creator-link">Frank Ocean</a></span></div><span>•</span><span>2016</span></div></div></div></div>
+          <div style="--background-base:#335"></div>
+          <div><div style="overflow:hidden"><style>#mock-album button{padding:0;border:0;background:none;color:inherit}</style><div class="main-actionBar-ActionBar contentSpacing" data-testid="action-bar" style="padding:32px"><div data-testid="action-bar-row" style="display:flex;gap:32px">
+            <div role="div"><button data-encore-id="buttonPrimary" aria-label="Play"><span style="width:56px;height:56px;display:flex"><svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg></span></button></div>
+            <div data-testid="action-bar-row-actions"><button data-encore-id="buttonTertiary" class="e-1-button-tertiary--condensed-all" aria-label="Shuffle"><svg viewBox="0 0 16 16"></svg></button><button data-encore-id="buttonTertiary" aria-label="Download"><svg viewBox="0 0 16 16"></svg></button></div>
+            <button data-encore-id="buttonTertiary" aria-label="More"><svg viewBox="0 0 16 16"></svg></button><div data-testid="action-bar-row-trailing"></div></div></div></div></div>
+          <div class="contentSpacing" data-testid="playlist-toolbar"><div><div style="margin-right:-60px"><div><button data-encore-id="buttonPrimary"><span>Add<span class="e-1-button__icon-wrapper"><svg viewBox="0 0 16 16"></svg></span></span></button><button data-encore-id="buttonPrimary" aria-label="Mix"><span>Mix<span class="e-1-button__icon-wrapper"><svg viewBox="0 0 16 16"></svg></span></span></button></div></div></div></div></section>`);
+    });
+    const box = sel => page.locator(sel).boundingBox();
+    const art = await box('#mock-album .main-entityHeader-imageContainer'), row = await box('#mock-album [data-testid="action-bar-row"]');
+    const title = await box('#mock-album h1'), play = await box('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"]');
+    const shuffle = await box('#mock-album [aria-label="Shuffle"]');
+    assert.ok(Math.abs(art.width - art.height) < 1, 'artwork stays square');
+    assert.ok(Math.abs(row.y + row.height - (art.y + art.height)) <= 1, 'controls line up with the artwork bottom');
+    assert.ok(row.x >= art.x + art.width && title.x >= art.x + art.width, 'title and controls sit beside the artwork');
+    assert.ok(shuffle.x < play.x, 'shuffle leads the play button');
+    assert.ok(play.width > 90 && play.height <= 40, 'play is a pill');
+    // Spotify's editing row sits in a capsule at the header's top right instead of its own row.
+    const tools = await box('#mock-album [data-testid="playlist-toolbar"] > div > div > div'), header = await box('#mock-album [data-testid="entity-header"]');
+    assert.ok(Math.abs(tools.y - art.y) <= 4 && header.x + header.width - (tools.x + tools.width) < 60, 'editing buttons sit at the top right');
+    assert.ok((await box('#mock-album [data-testid="playlist-toolbar"] button >> nth=0')).height <= 36, 'editing buttons are icons');
+    const label = () => page.evaluate(() => getComputedStyle(document.querySelector('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span'), '::after').content);
+    assert.equal(await label(), '"Duraklat"');
+    const pill = () => page.$eval('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span', e => [e.getBoundingClientRect().width, e.scrollWidth <= e.clientWidth]);
+    const playingPill = await pill();
+    await page.evaluate(() => { window.__mockState.playing = false; Spicetify.Platform.History.push('/album/0'); });
+    assert.equal(await label(), '"Çal"');
+    assert.deepEqual(await pill(), playingPill, 'the pill keeps its width when the label changes');
+    assert.ok(playingPill[1], '"Duraklat" fits the pill');
+    await page.waitForFunction(() => document.body.classList.contains('am-entity-top'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.main-topBar-topbarContentWrapper')).visibility), 'hidden');
+    await shot('album');
+    await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
