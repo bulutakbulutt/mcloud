@@ -60,6 +60,8 @@ body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"]
 body.am-ready .am-native-main .main-topBar-overlay,body.am-ready .am-native-main [data-am-glass]::after {background:none!important}
 /* The track list's sticky column header joins the same glass once it sticks (theme.js sets data-am-stuck), as on
    Apple Music; at rest it stays on the page's colour. */
+/* The glass fades in over 0.2s instead of switching on in one frame as the header reaches the title bar. */
+body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {transition:background-color .2s ease-out,backdrop-filter .2s ease-out,-webkit-backdrop-filter .2s ease-out}
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"][data-am-stuck] {background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8)}
 /* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
 body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main,.main-topBar-container) {--content-spacing:var(--am-pad)!important}
