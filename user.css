@@ -11,6 +11,10 @@ html,body,#main,.Root {background:var(--am-bg)!important;font-family:var(--encor
    !important that no :root rule here could beat. Declared on body, the stack reaches everything below it. */
 body {--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif!important;--encore-title-font-stack:var(--encore-body-font-stack)!important}
 .encore-dark-theme,.encore-base-set {--background-base:#1f1f1f;--background-elevated-base:#292929;--background-highlight:#383838;--text-base:#dedede;--text-subdued:#969696;--text-bright-accent:var(--am-accent);--essential-bright-accent:var(--am-accent);--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;--encore-title-font-stack:var(--encore-body-font-stack)}
+/* Spotify's green play buttons (card and shortcut hover, playlist header) come from this colour set, with literal
+   colours that the theme's --essential-bright-accent above does not reach. */
+.encore-bright-accent-set {color-scheme:dark;--background-base:var(--am-accent);--background-highlight:var(--am-accent-focus);--background-press:var(--am-accent);--background-elevated-base:var(--am-accent-focus);--background-elevated-highlight:var(--am-accent-focus);--background-elevated-press:var(--am-accent);--background-tinted-base:var(--am-accent);--background-tinted-highlight:var(--am-accent-focus);--background-tinted-press:var(--am-accent);--text-base:#fff;--text-subdued:#fff;--text-bright-accent:#fff;--essential-base:#fff;--essential-subdued:#fff;--essential-bright-accent:#fff;--decorative-subdued:var(--am-accent)}
+.encore-bright-accent-set > * {--parents-essential-base:#fff}
 /* The theme shell persists across Spotify router transitions. */
 body.am-ready .am-layout {
   display:grid!important;
