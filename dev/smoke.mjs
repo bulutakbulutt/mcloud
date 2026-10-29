@@ -397,8 +397,12 @@ try {
     assert.ok((await box('#mock-album [data-testid="playlist-toolbar"] button >> nth=0')).height <= 36, 'editing buttons are icons');
     const label = () => page.evaluate(() => getComputedStyle(document.querySelector('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span'), '::after').content);
     assert.equal(await label(), '"Duraklat"');
+    const pill = () => page.$eval('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span', e => [e.getBoundingClientRect().width, e.scrollWidth <= e.clientWidth]);
+    const playingPill = await pill();
     await page.evaluate(() => { window.__mockState.playing = false; Spicetify.Platform.History.push('/album/0'); });
     assert.equal(await label(), '"Çal"');
+    assert.deepEqual(await pill(), playingPill, 'the pill keeps its width when the label changes');
+    assert.ok(playingPill[1], '"Duraklat" fits the pill');
     await page.waitForFunction(() => document.body.classList.contains('am-entity-top'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.main-topBar-topbarContentWrapper')).visibility), 'hidden');
     await shot('album');
