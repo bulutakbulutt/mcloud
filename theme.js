@@ -623,18 +623,25 @@
     const native=document.querySelector('[data-testid="fullscreen-mode-button"]');
     if(native)native.click();else notify('Tam ekran bu Spotify sürümünde kullanılamıyor.');
   }
-  let friendPane=null;
+  let friendPane=null,asideSeq=0;const asideSeen=new WeakMap();
   function syncNativePanels() {
     // Spotify 1.3 opens Friend Activity and the queue in the right panel as an <aside> labelled like the button
     // that opens it (data-restore-focus-key "buddy_feed" / "queue"); the panel otherwise holds the hidden Now
     // Playing view. Reading the open state from the panel itself means any close button closes the sheet.
-    const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&document.querySelector(`.am-native-right aside[aria-label="${CSS.escape(label)}"]`);};
+    // Panels cross-fade: the outgoing <aside> stays mounted beside the incoming one for a few hundred ms, so the
+    // newest one is current. The outgoing one is hidden by a data attribute, which survives React rewriting class.
+    const asides=[...document.querySelectorAll('.am-native-right aside[aria-label]')];
+    for(const a of asides)if(!asideSeen.has(a))asideSeen.set(a,++asideSeq);
+    const current=asides.reduce((a,b)=>!a||asideSeen.get(b)>asideSeen.get(a)?b:a,null);
+    for(const a of asides)if(a.hasAttribute('data-am-current')!==(a===current))a.toggleAttribute('data-am-current',a===current);
+    const panelOf=native=>{const label=native?.getAttribute('aria-label');return label&&current?.getAttribute('aria-label')===label?current:null;};
     const panelFor=key=>panelOf(document.querySelector(`[data-restore-focus-key="${key}"]`));
     const friends=panelFor('buddy_feed'),devices=panelOf(nativeConnect());
     for(const [node,open] of [[friendsButton,friends],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
-    const feed=friends||panelFor('queue')||devices
-      ||document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
-      ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement;
+    // Older clients without labelled panels: find the feed itself. With labels, the outgoing feed must not count.
+    const feed=friends||panelFor('queue')||devices||(asides.length?null:
+      document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
+      ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement);
     document.body.classList.toggle('am-panel-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
     feed.classList.add('am-friends-sheet');
@@ -1073,7 +1080,11 @@
   const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
   let reconciliation=null;
   function scheduleReconcile(records) {
-    if(document.hidden||reconciliation!==null)return;
+    if(document.hidden)return;
+    // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
+    const right=document.querySelector('.am-native-right');
+    if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
+    if(reconciliation!==null)return;
     const relevant=!main.isConnected||!nativeNav?.isConnected||records.some(record=>{
       if(record.target===nativeNav)return true;
       // Lyrics line churn cannot replace the outer hosts watched here.
