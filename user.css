@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.7 — reference-proportioned layout for Spotify 1.3.x. */
+/* AppleMusicMac 2.8 — reference-proportioned layout for Spotify 1.3.x. */
 :root {
  color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
  --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);

@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.7. Local theme UI; no remote scripts or credentials. */
+/* AppleMusicMac 2.8. Local theme UI; no remote scripts or credentials. */
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
