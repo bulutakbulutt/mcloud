@@ -289,6 +289,48 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('album page: artwork, title column and play controls laid out like Apple Music', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
+    // The shape of Spotify's album page: header, then the action bar inside an OverlayScrollbars host. Spotify's
+    // .contentSpacing padding and button resets are inlined.
+    await page.evaluate(() => {
+      document.querySelector('.mock-page').hidden = true;
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<header class="main-topBar-container" style="position:sticky;top:0;height:64px;z-index:2"><div class="main-topBar-topbarContentWrapper"><div class="main-topBar-topbarContent">Blonde</div></div></header>
+        <section data-testid="album-page" id="mock-album"><div data-testid="entity-header" style="height:340px"><div style="--background-base:#335"></div>
+          <div class="main-entityHeader-contentWrapper contentSpacing" style="display:flex;height:300px;padding-inline:var(--content-spacing)"><div></div>
+            <button class="main-entityHeader-imageContainer" style="width:232px;height:232px"><img src="${Spicetify.Player.data.item.images[0].url}"></button>
+            <div class="main-entityHeader-headerText" style="display:flex;flex-direction:column"><span class="encore-text-body-small">Album</span><span><span class="main-entityHeader-title"><h1 style="font-size:6rem;white-space:nowrap">Blonde</h1></span></span>
+              <div><div class="main-entityHeader-creatorWrapper"><figure></figure><span><a data-testid="creator-link">Frank Ocean</a></span></div><span>•</span><span>2016</span></div></div></div></div>
+          <div style="--background-base:#335"></div>
+          <div><div style="overflow:hidden"><style>#mock-album button{padding:0;border:0;background:none;color:inherit}</style><div class="main-actionBar-ActionBar contentSpacing" data-testid="action-bar" style="padding:32px"><div data-testid="action-bar-row" style="display:flex;gap:32px">
+            <div role="div"><button data-encore-id="buttonPrimary" aria-label="Play"><span style="width:56px;height:56px;display:flex"><svg viewBox="0 0 16 16"><path d="M3 2l11 6-11 6z"/></svg></span></button></div>
+            <div data-testid="action-bar-row-actions"><button data-encore-id="buttonTertiary" class="e-1-button-tertiary--condensed-all" aria-label="Shuffle"><svg viewBox="0 0 16 16"></svg></button><button data-encore-id="buttonTertiary" aria-label="Download"><svg viewBox="0 0 16 16"></svg></button></div>
+            <button data-encore-id="buttonTertiary" aria-label="More"><svg viewBox="0 0 16 16"></svg></button><div data-testid="action-bar-row-trailing"></div></div></div></div></div>
+          <div class="contentSpacing" data-testid="playlist-toolbar"><div><div style="margin-right:-60px"><div><button data-encore-id="buttonPrimary"><span>Add<span class="e-1-button__icon-wrapper"><svg viewBox="0 0 16 16"></svg></span></span></button><button data-encore-id="buttonPrimary" aria-label="Mix"><span>Mix<span class="e-1-button__icon-wrapper"><svg viewBox="0 0 16 16"></svg></span></span></button></div></div></div></div></section>`);
+    });
+    const box = sel => page.locator(sel).boundingBox();
+    const art = await box('#mock-album .main-entityHeader-imageContainer'), row = await box('#mock-album [data-testid="action-bar-row"]');
+    const title = await box('#mock-album h1'), play = await box('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"]');
+    const shuffle = await box('#mock-album [aria-label="Shuffle"]');
+    assert.ok(Math.abs(art.width - art.height) < 1, 'artwork stays square');
+    assert.ok(Math.abs(row.y + row.height - (art.y + art.height)) <= 1, 'controls line up with the artwork bottom');
+    assert.ok(row.x >= art.x + art.width && title.x >= art.x + art.width, 'title and controls sit beside the artwork');
+    assert.ok(shuffle.x < play.x, 'shuffle leads the play button');
+    assert.ok(play.width > 90 && play.height <= 40, 'play is a pill');
+    // Spotify's editing row sits in a capsule at the header's top right instead of its own row.
+    const tools = await box('#mock-album [data-testid="playlist-toolbar"] > div > div > div'), header = await box('#mock-album [data-testid="entity-header"]');
+    assert.ok(Math.abs(tools.y - art.y) <= 4 && header.x + header.width - (tools.x + tools.width) < 60, 'editing buttons sit at the top right');
+    assert.ok((await box('#mock-album [data-testid="playlist-toolbar"] button >> nth=0')).height <= 36, 'editing buttons are icons');
+    const label = () => page.evaluate(() => getComputedStyle(document.querySelector('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span'), '::after').content);
+    assert.equal(await label(), '"Duraklat"');
+    await page.evaluate(() => { window.__mockState.playing = false; Spicetify.Platform.History.push('/album/0'); });
+    assert.equal(await label(), '"Çal"');
+    await page.waitForFunction(() => document.body.classList.contains('am-entity-top'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.main-topBar-topbarContentWrapper')).visibility), 'hidden');
+    await shot('album');
+    await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();
