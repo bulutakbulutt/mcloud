@@ -417,6 +417,13 @@ try {
     assert.ok(playingPill[1], '"Duraklat" fits the pill');
     await page.waitForFunction(() => document.body.classList.contains('am-entity-top'));
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.main-topBar-topbarContentWrapper')).visibility), 'hidden');
+    // A slow page renders its controls after the 600ms check; the title bar must stay hidden at its top.
+    assert.ok(await page.evaluate(async () => {
+      const row = document.querySelector('#mock-album [data-testid="action-bar-row"]'), host = row.parentElement;
+      row.remove(); Spicetify.Platform.History.push('/album/0');
+      await new Promise(r => setTimeout(r, 700)); host.append(row);
+      return document.body.classList.contains('am-entity-top');
+    }), 'a slow page keeps the title bar hidden');
     await shot('album');
     await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
