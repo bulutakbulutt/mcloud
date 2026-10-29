@@ -281,16 +281,17 @@ body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-ev
 @media(max-width:900px){body.am-ready #global-nav-bar{left:calc(var(--am-side) + 10px)!important;right:10px!important;gap:5px!important}#global-nav-bar .am-toolbar-center > div{gap:3px}}
 
 /* Friend Activity opens in Spotify's right panel. The theme shows that pane (not a copy) as a glass sheet that
-   slides in from the right edge; the queue uses the same sheet. */
+   fades in at the right edge; the queue uses the same sheet. It does not slide: moving, its edge lands on
+   fractional pixels and the anti-aliased column shimmers against the page. */
 body.am-ready .am-native-panel-open {
  display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
  position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:min(340px,calc(100vw - var(--am-side) - 40px))!important;
  min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;overflow:hidden;color:var(--am-text);
  border-radius:18px;background:color-mix(in srgb,#262626 74%,transparent)!important;backdrop-filter:blur(40px) saturate(1.6);-webkit-backdrop-filter:blur(40px) saturate(1.6);
  box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 18px 50px #0007;
- transition:opacity .25s ease,transform .4s cubic-bezier(.2,.9,.3,1);
+ transition:opacity .25s ease;
 }
-@starting-style {body.am-ready .am-native-panel-open {opacity:0;transform:translateX(28px) scale(.98)}}
+@starting-style {body.am-ready .am-native-panel-open {opacity:0}}
 /* While panels cross-fade the outgoing one (often the hidden Now Playing view) is still mounted; show only the current. */
 body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
