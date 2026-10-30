@@ -548,10 +548,14 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none;filter:none}}
 
-/* Liquid Glass player: #am-glass in theme.js, fitted to macOS's own glass, already carries its blur, lens and tone,
-   so there is no tint, border or shadow on top. Browsers without SVG backdrop filters drop this declaration and keep
-   the frosted blur above. */
-body.am-liquid #am-player {background:none;backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
+/* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
+   frames, already carries its blur, lens and tone, so there is no tint, border or shadow on top. */
+body.am-liquid #am-player {background:none;border-color:transparent;box-shadow:none}
+/* With the glass on, the player draws none itself: the face (12pt larger, for the page past its edge) and the hairline
+   sit under its content. The face covers the border box plus the margin; the hairline's box is the border box + 1px. */
+#am-player.am-player-glass {backdrop-filter:none;-webkit-backdrop-filter:none}
+#am-player > .am-player-face {position:absolute;inset:-13px;z-index:-1;pointer-events:none}
+#am-player > .am-tglass-rim {inset:-2px;z-index:-1}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
 body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}

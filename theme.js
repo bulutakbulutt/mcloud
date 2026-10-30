@@ -507,7 +507,9 @@
   // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
   // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
   const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
-  glass.innerHTML=glassFilter('am-glass',glassStates.focused)+glassFilter('am-glass-toast',glassStates.focused)
+  // The player's glass is toolbarLens (below); the toast keeps this filter: it fades in with opacity, and an element
+  // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
+  glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`;
   document.body.append(glass);
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
@@ -538,7 +540,7 @@
     if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
-  glassLens('am-glass',player,glassStates.focused);glassLens('am-glass-toast',toast,glassStates.focused);
+  glassLens('am-glass-toast',toast,glassStates.focused);
   // One shared popover serves the "…" track menu and the profile menu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
   let popoverAnchor=null;
@@ -659,7 +661,7 @@
         // glass leaves its brightness unchanged) and only where that colour differs from the page under it (on a flat
         // colour Apple's glass adds nothing): the chroma (R-L, G-L, B-L) of a wide blur minus that of the bent page,
         // added at washMix (washLocal scales the subtracted part: 0 is the plain chroma of the blur).
-        +`<feGaussianBlur in="SourceGraphic" stdDeviation="${state.washBlur}" edgeMode="none" result="wb"/><feColorMatrix in="wb" values=".7874 -.7152 -.0722 0 .5 -.2126 .2848 -.0722 0 .5 -.2126 -.7152 .9278 0 .5 0 0 0 1 0" result="wc"/><feColorMatrix in="core" values=".7874 -.7152 -.0722 0 .5 -.2126 .2848 -.0722 0 .5 -.2126 -.7152 .9278 0 .5 0 0 0 1 0" result="cc"/><feComposite in="wc" in2="cc" operator="arithmetic" k2="1" k3="${-(state.washLocal??1)}" k4="${((state.washLocal??1)/2).toFixed(4)}" result="wd"/><feComposite in="glass" in2="wd" operator="arithmetic" k2="1" k3="${state.washMix}" k4="${(-state.washMix/2).toFixed(4)}" result="glass"/>`:'';
+        +(state.washMix?`<feGaussianBlur in="SourceGraphic" stdDeviation="${state.washBlur}" edgeMode="none" result="wb"/><feColorMatrix in="wb" values=".7874 -.7152 -.0722 0 .5 -.2126 .2848 -.0722 0 .5 -.2126 -.7152 .9278 0 .5 0 0 0 1 0" result="wc"/><feColorMatrix in="core" values=".7874 -.7152 -.0722 0 .5 -.2126 .2848 -.0722 0 .5 -.2126 -.7152 .9278 0 .5 0 0 0 1 0" result="cc"/><feComposite in="wc" in2="cc" operator="arithmetic" k2="1" k3="${-(state.washLocal??1)}" k4="${((state.washLocal??1)/2).toFixed(4)}" result="wd"/><feComposite in="glass" in2="wd" operator="arithmetic" k2="1" k3="${state.washMix}" k4="${(-state.washMix/2).toFixed(4)}" result="glass"/>`:''):'';
       // Rim smoothing along the edge normal: a vertical and a sideways blur, each mixed in through its mask's alpha.
       const smooth=`${img('mv')}${img('mz')}<feGaussianBlur in="SourceGraphic" stdDeviation="0 ${state.smooth}" edgeMode="duplicate" result="bv"/><feGaussianBlur in="SourceGraphic" stdDeviation="${state.smooth} 0" edgeMode="duplicate" result="bz"/><feComposite in="bv" in2="mv" operator="in" result="sv"/><feComposite in="bz" in2="mz" operator="in" result="sz"/><feComposite in="sv" in2="SourceGraphic" operator="over" result="s1"/><feComposite in="sz" in2="s1" operator="over" result="core"/>`;
       // Thin bright detail dims (a min with a 1px blur, mixed in): Apple's 1pt lines carry ~75% of ours, flat colour is equal.
@@ -778,8 +780,26 @@
       glassLens(layers[0],{...state,line:0},parts.map(p=>`${id}-${p}`));
       return id;
     };
+    // The player: its own fitted look (tone, bend, highlight) with what the buttons showed macOS's glass does, as
+    // measured against Music's own player frames (research repo buttons/player.mjs: inside 4.75 -> 2.85, outer 3pt
+    // 8.53 -> 4.40, 2pt outside 4.78 -> 3.47): colour gain by luminance, hue-keeping highlight, the page read past the
+    // edge. The colour wash fitted on the buttons hurt the player and stays off.
+    glassStates.player={...glassStates.focused,hlHue:true,gainL:glassStates.button.gainL,margin:12,outerDist:11.5,outerBlur:3,outerMix:.72,outerEnd:.75,outerW:2.09,washMix:0,pageMix:0};
     return {lens,rimF,states:glassStates};
   })();
+  // The player's Liquid Glass: three layers in a face 12pt larger than the player (the page past its edge), under its
+  // content (z-index -1 in its stacking context), and the hairline in the page's colour (weight 0.8, lighter than at
+  // button size). Off with the setting or reduced transparency (user.css keeps the frosted or solid player then).
+  let playerFace=null;
+  function syncPlayerGlass() {
+    const live=document.body.classList.contains('am-liquid')&&!matchMedia('(prefers-reduced-transparency: reduce)').matches;
+    player.classList.toggle('am-player-glass',live);
+    if(!live){playerFace?.remove();player.querySelector(':scope > .am-tglass-rim')?.remove();playerFace=null;return;}
+    if(playerFace)return;
+    playerFace=el('div','am-player-face');player.prepend(playerFace);
+    toolbarLens.lens(playerFace,{state:'player'});toolbarLens.rimF(player,{w:.8,s:.8});
+  }
+  syncPlayerGlass();document.addEventListener('am-settings',syncPlayerGlass);
   // Spotify's toolbar controls keep their nodes, handlers and icons; the glass is ours, in #am-toolbar-glass under
   // the toolbar, one shape per group laid on the controls' rects: back + forward and the extension icons
   // (Marketplace) as capsules lit per segment, Home a circle, the search field a capsule. Hover and press come from

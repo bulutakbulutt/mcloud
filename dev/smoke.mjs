@@ -243,6 +243,8 @@ try {
       layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer').length, rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
     assert.deepEqual(info, { host: 'main', shapes: 2, layers: 6, rims: 2, on: true });
     const back = await page.$('#global-nav-bar .am-toolbar-leading button'), r = await back.boundingBox();
+    // Placed on resize and settings changes, a frame after the layout moves (the previous check resized the window).
+    await page.waitForFunction(x => Math.round(document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect().left) === x, Math.round(r.x));
     const shape = await page.evaluate(() => { const g = document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect(); return [g.left, g.top, g.height]; });
     assert.deepEqual(shape, [Math.round(r.x), Math.round(r.y), 36]);
     await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
@@ -254,28 +256,33 @@ try {
   });
 
   await check('liquid glass map follows the player size', async () => {
+    // The player's glass is toolbarLens (state 'player'): three backdrop-filter layers in a face 12pt larger than the
+    // player's border box (the page past its edge; 724x78 from its 698x52 padding box), maps drawn at the face's size;
+    // the player itself filters nothing.
     const map = () => page.evaluate(() => {
-      const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
-      return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), scale: Number(shift.getAttribute('scale')) };
+      const face = document.querySelector('#am-player > .am-player-face'), id = getComputedStyle(face.querySelector('.am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1];
+      const image = document.getElementById(id).querySelector('feImage'), shift = document.getElementById(id).querySelector('feDisplacementMap');
+      return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
     });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => document.querySelector('#am-player > .am-player-face .am-tglass-layer'));
+    // The player's own bend filter (the toolbar's shapes have theirs too).
+    await page.evaluate(() => { window.__playerBend = () => document.getElementById(getComputedStyle(document.querySelector('#am-player > .am-player-face .am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage'); });
+    await page.waitForFunction(() => __playerBend()?.getAttribute('width') === '724');
     const first = await map();
-    assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale === 32.2);
-    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    // Fitted to macOS's own (focused) glass: a slight blur, a darken halo, and a tone by luminance.
-    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length, [...document.querySelectorAll('#am-glass feGaussianBlur')].map(b => b.getAttribute('stdDeviation'))]; }), ['R', 'B', 3, ['0.4', '13.5']]);
-    // A content-box change fires the ResizeObserver but must not redraw the map.
-    await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
+    assert.deepEqual([first.size, first.layers, first.x, first.y], ['724x78', 3, 'R', 'B']);
+    assert.ok(first.href.startsWith('data:image/png'));
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-player')).backdropFilter, !!document.querySelector('#am-player > .am-tglass-rim')]), ['none', true]);
+    // A content-box change must not redraw the map.
+    await page.evaluate(() => { __playerBend().setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);
     assert.equal((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === String(document.getElementById('am-player').offsetWidth));
+    await page.waitForFunction(() => __playerBend().getAttribute('width') === String(document.getElementById('am-player').offsetWidth + 24));
     assert.notEqual((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => __playerBend().getAttribute('width') === '724');
   });
 
   await check('artist page', async () => {
