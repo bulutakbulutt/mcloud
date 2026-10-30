@@ -712,16 +712,27 @@
       for(const image of images){const p=image.dataset.part,u=urls[image.dataset.map][p],d=inset(image);if(u)image.setAttribute('href',u);else image.removeAttribute('href');
         image.setAttribute('x',box[p][0]-d);image.setAttribute('y',-d);image.setAttribute('width',box[p][1]);image.setAttribute('height',h);}
     }
+    // The images as setMaps placed them (rest: the drawn box and them), and the same stretched to a box of w x h: a pressed
+    // shape's maps stretch with it instead of being drawn again on every frame of the spring (pixel loops, PNG encodes).
+    // The box grows by the glass alone (m, its margin, stays), so the maps scale about the centre by the glass's growth.
+    // Held pressed in Spotify, stretched and redrawn glass differed by 0.7-2% of what the press changes (mean <0.25/255).
+    const placed=(w,h,images,inset=()=>0)=>({w,h,k:devicePixelRatio||1,images:images.map(e=>[e,...['x','y','width','height'].map(a=>+e.getAttribute(a)),inset(e)])});
+    const stretch=(rest,w,h,m)=>{const sx=(w-2*m)/(rest.w-2*m),sy=(h-2*m)/(rest.h-2*m),set=(e,a,v)=>{v=String(+v.toFixed(4));if(e.getAttribute(a)!==v)e.setAttribute(a,v);};
+      for(const [e,x,y,iw,ih,d] of rest.images){set(e,'x',w/2+(x+d-rest.w/2)*sx-d);set(e,'y',h/2+(y+d-rest.h/2)*sy-d);set(e,'width',iw*sx);set(e,'height',ih*sy);}};
     // build (optional) rebuilds the filters before each redraw: the player's change with the screen scale. drawn
     // (optional) runs after each drawing. state.scaleOf (shared()) turns the displacement scale this shape needs into
-    // the one every shape of its filter uses. inset: passed to setMaps. Returns a function that draws again.
+    // the one every shape of its filter uses. state.stretch (ToolbarGlass): true while the shape is pressed. inset: passed
+    // to setMaps. Returns a function that draws again.
     function glassLens(node,state,filterIds,build,drawn,inset) {
-      let glassSize='';
+      let glassSize='',rest=null;
       const hl=state.highlight,highlightAt=edge=>{const f=edge/.5;if(f>=hl.length-1)return 0;const i=Math.floor(f);return (hl[i]+(hl[i+1]-hl[i])*(f-i))/hl[0];},fade=u=>1-u*u*(3-2*u);
       const draw=force=>{
         // Drawn at device resolution and redrawn only on resize or a change of screen: the bend and the highlight
         // live in the outermost few pixels. Scrolling frame times were measured unchanged against a CSS-size map.
-        const {width:w,height:h}=node.getBoundingClientRect(),k=devicePixelRatio||1;if(!w||!h||(!force&&glassSize===w+'x'+h+'@'+k))return;glassSize=w+'x'+h+'@'+k;
+        const {width:w,height:h}=node.getBoundingClientRect(),k=devicePixelRatio||1;if(!w||!h)return;
+        // Pressed, or back at the drawn size: the drawn maps, stretched to the box.
+        if(!force&&rest?.k===k&&(glassSize===w+'x'+h+'@'+k||state.stretch?.())){stretch(rest,w,h,state.margin||0);drawn?.();return;}
+        glassSize=w+'x'+h+'@'+k;
         build?.();const maps=filterIds.flatMap(id=>[...glass.querySelectorAll(`#${id} feImage`)]),shifts=filterIds.flatMap(id=>[...glass.querySelectorAll(`#${id} feDisplacementMap`)]);
         // margin: the glass is the box inset by M on every side; the rest is page the filter may read (clipped away).
         const M=state.margin||0,gw=w-2*M,gh=h-2*M,W=Math.round(w*k),H=Math.round(h*k),r=gh/2,A=state.lensA*r,L=state.lensH*r;
@@ -756,7 +767,7 @@
         if(moves)for(let p=0;p<CW*H;p++)offset(mm,p*4,moves[p*2],moves[p*2+1]);
         if(outs)for(let p=0;p<CW*H;p++)offset(data.om.data,p*4,outs[p*2],outs[p*2+1]);
         if(taps)for(let p=0;p<CW*H;p++)for(let j=0;j<4;j++)offset(taps[j],p*4,offsets[p*8+2*j],offsets[p*8+2*j+1]);
-        setMaps(maps,data,{w,h,k,W,H,split},inset);
+        setMaps(maps,data,{w,h,k,W,H,split},inset);rest=placed(w,h,maps,inset);
         for(const shift of shifts)shift.setAttribute('scale',scale);
         drawn?.();
       };
@@ -779,18 +790,19 @@
     // The map is drawn for each end only (setMaps): the line fades out within r of either end. drawn (shared()): the
     // element only sizes the map, which runs after each drawing; the shared hairline draws it. The element is the glass
     // grown by 1px, or by its data-grow (px) where the toolbar keeps it on device pixels.
-    const rimF=(box,{w=1,s=.8}={},drawn)=>{
+    const rimF=(box,{w=1,s=.8,stretch:pressed}={},drawn)=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';el.dataset.filter=id;box.append(el);
       glass.insertAdjacentHTML('beforeend',rimFilter(id,s));
       if(!glass.isConnected)document.body.append(glass);
       if(!drawn)el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
-      const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='';
-      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw||size===bw+'x'+bh+'@'+k)return;size=bw+'x'+bh+'@'+k;
+      const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='',rest=null;
+      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw)return;
+        if(rest?.k===k&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
         const g=+el.dataset.grow||1,W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2*g,gh=bh-2*g,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+g)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
           for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-g,py=(y+(sy+.5)/4)/k-g,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
           const px=(x+.5)/k-g,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
-        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});drawn?.();};
+        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);drawn?.();};
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
     // Only mid reads the page past the glass's edge (the edge read, the halo, the wash); bend and tone take the glass's
@@ -849,8 +861,8 @@
         for(const e of shifts)set(e,'scale',scale);
       };
       return {update,
-        add(node,host){const m={face:node};members.push(m);
-          ({id:m.id,redraw:m.redraw}=lens(node,{...over,scaleOf:need=>scaleOf(need,m)},update));m.rim=rimF(host,rim,update);return m;},
+        add(node,host,pressed){const m={face:node};members.push(m);
+          ({id:m.id,redraw:m.redraw}=lens(node,{...over,scaleOf:need=>scaleOf(need,m),stretch:pressed},update));m.rim=rimF(host,{...rim,stretch:pressed},update);return m;},
         build(){
           glass.querySelectorAll(`[id^="${id}-"]`).forEach(f=>f.remove());
           glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact,members.length)).join('')+rimFilter(`${id}-rim`,rim.s,members.length));
@@ -901,7 +913,8 @@
       this.el=el('div','am-tglass'+(this.group?' am-tglass-group':''));this.face=el('div','am-tglass-face');
       this.lights=controls.map(()=>el('div','am-tglass-light'));this.el.append(this.face,...this.lights);root.append(this.el);
       this.pane=pane;this.margin=toolbarLens.states.button.margin;
-      if(pane)this.rim=pane.add(this.face,this.el).rim;else{toolbarLens.lens(this.face,{state:'button'});this.rim=toolbarLens.rimF(this.el,TG.rim);}
+      const pressed=()=>Math.abs(this.scale.x-1)>1e-4;
+      if(pane)this.rim=pane.add(this.face,this.el,pressed).rim;else{toolbarLens.lens(this.face,{state:'button',stretch:pressed});this.rim=toolbarLens.rimF(this.el,{...TG.rim,stretch:pressed});}
       this.scale=new Spring(1);this.glow=new Spring(0);this.light=controls.map(()=>new Spring(0));this.push=controls.map(()=>new Spring(0));
       this.down=-1;this.over=-1;this.p=null;this.place();
       if(!interactive)return;
@@ -917,7 +930,9 @@
     // The shape covers the controls' union, on whole CSS pixels (a filtered layer snaps to them, its clip does not), on a
     // fractional screen scale on whole device pixels (the shared glass draws each shape's maps on them).
     place(){
-      const k=devicePixelRatio||1,u=Number.isInteger(k)?1:1/k,snap=v=>Math.round(v/u)*u,rs=this.controls.map(c=>c.getBoundingClientRect()),l=snap(Math.min(...rs.map(r=>r.left))),t=snap(Math.min(...rs.map(r=>r.top))),
+      // The controls are scaled with a press (--am-tg-scale), and Spotify's colour transitions call this mid-press
+      // (transitionend): measure them as at rest, or the shape kept the pressed size (Home 36.8 for 36 at 125%).
+      const k=devicePixelRatio||1,u=Number.isInteger(k)?1:1/k,snap=v=>Math.round(v/u)*u,ps=this.scale?.x||1,rs=this.controls.map(c=>{const r=c.getBoundingClientRect(),cx=(r.left+r.right)/2,cy=(r.top+r.bottom)/2,w=r.width/ps,h=r.height/ps;return {left:cx-w/2,right:cx+w/2,top:cy-h/2,bottom:cy+h/2,width:w,height:h};}),l=snap(Math.min(...rs.map(r=>r.left))),t=snap(Math.min(...rs.map(r=>r.top))),
         w=snap(Math.max(...rs.map(r=>r.right)))-l,h=snap(Math.max(...rs.map(r=>r.bottom)))-t;
       this.box={left:l,top:t,width:w,height:h,right:l+w,bottom:t+h};Object.assign(this.el.style,{left:l+'px',top:t+'px',width:w+'px',height:h+'px'});
       rs.forEach((r,i)=>Object.assign(this.lights[i].style,{left:r.left-l+'px',top:'0',width:r.width+'px',height:h+'px',transformOrigin:`${w/2-(r.left-l)}px 50%`}));
