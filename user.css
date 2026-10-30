@@ -387,9 +387,10 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 .am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
 body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
 body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
-/* The search field: the magnifier centred in the capsule's round end; Spotify's fade behind the ⌘L hint is the input's
+/* The search field: the magnifier halfway between the capsule's edge and the text (48px in), not at the round end's
+   centre, which left 9px before it and 21px after; Spotify's fade behind the ⌘L hint is the input's
    own grey, a patch over the glass once the input is clear. */
-body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:0!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:6px!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
 body.am-tglass-on #global-nav-bar form[role="search"] > :first-child button {width:36px!important;height:36px!important;padding:0!important;display:grid!important;place-items:center}
 body.am-tglass-on #global-nav-bar form[role="search"] span:has(> kbd) {background:none!important}
 /* The artist page's back and share + more: the same glass behind them (theme.js syncArtistGlass). */
