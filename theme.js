@@ -713,8 +713,8 @@
         image.setAttribute('x',box[p][0]-d);image.setAttribute('y',-d);image.setAttribute('width',box[p][1]);image.setAttribute('height',h);}
     }
     // build (optional) rebuilds the filters before each redraw: the player's change with the screen scale. drawn
-    // (optional) runs after each drawing. state.scaleOf (shared(), whole-pixel screens: the 4-tap bend) turns the
-    // displacement scale this shape needs into the one every shape of its filter uses. inset: passed to setMaps. Returns a function that draws again.
+    // (optional) runs after each drawing. state.scaleOf (shared()) turns the displacement scale this shape needs into
+    // the one every shape of its filter uses. inset: passed to setMaps. Returns a function that draws again.
     function glassLens(node,state,filterIds,build,drawn,inset) {
       let glassSize='';
       const hl=state.highlight,highlightAt=edge=>{const f=edge/.5;if(f>=hl.length-1)return 0;const i=Math.floor(f);return (hl[i]+(hl[i+1]-hl[i])*(f-i))/hl[0];},fade=u=>1-u*u*(3-2*u);
@@ -732,14 +732,14 @@
         // A shift map pixel: x (a byte) in red and green, y (0-1) in blue, compensated for P3's blue row.
         const put=(m,i,xv,yv)=>{m[i]=m[i+1]=xv;m[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));m[i+3]=255;};
         // Bilinear taps: per pixel, offsets (px) to the 4 page pixels around its source point; one scale for all four.
-        const taps=fx?[0,1,2,3].map(j=>data['bm'+j].data):null,offsets=taps&&new Float32Array(CW*H*8),outs=me&&new Float32Array(CW*H*2);let reach=me?state.outerDist:1;
+        const taps=fx?[0,1,2,3].map(j=>data['bm'+j].data):null,offsets=taps&&new Float32Array(CW*H*8),outs=me&&new Float32Array(CW*H*2),moves=mm&&state.scaleOf&&new Float32Array(CW*H*2);let reach=me?state.outerDist:1;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){
           // The vector to the pill's centre line is the rim's inward normal; the maps hold its x/y shift. Masks are
           // white with their weight in alpha (alpha survives the P3 conversion of feImage; greys survive it too).
           const x=cols[c],px=(x+.5)/k-M,py=(y+.5)/k-M,dx=Math.min(gw-r,Math.max(r,px))-px,dy=r-py,length=Math.hypot(dx,dy)||1,edge=Math.max(0,r-length),ny2=(dy/length)**2,i=(y*CW+c)*4;
           if(me){const u=length>r+1/k?0:state.outerMix*(ny2+(1-ny2)*(state.outerEnd??1))*Math.max(0,1-edge*k/state.outerW);me[i]=me[i+1]=me[i+2]=255;me[i+3]=Math.round(255*u);
             outs[(y*CW+c)*2]=-state.outerDist*dx/length;outs[(y*CW+c)*2+1]=-state.outerDist*dy/length;}
-          if(mm){const t=length>r+1/k?0:shiftAt(edge)/A/length;put(mm,i,Math.round(128+127*t*dx),(128+127*t*dy)/255);}
+          if(mm){const t=length>r+1/k?0:shiftAt(edge)/A/length;if(moves){moves[(y*CW+c)*2]=t*A*dx;moves[(y*CW+c)*2+1]=t*A*dy;}else put(mm,i,Math.round(128+127*t*dx),(128+127*t*dy)/255);}
           if(mh){mh[i]=mh[i+1]=mh[i+2]=Math.round(255*highlightAt(edge)*Math.sqrt(ny2)**state.highlightPow);mh[i+3]=255;}
           if(ml){ml[i]=ml[i+1]=ml[i+2]=Math.round(255*(1-state.line*fade(Math.min(1,edge*k/state.lineW))*Math.sqrt(1-ny2)));ml[i+3]=255;}
           if(mv){const m=Math.min(1,Math.max(0,(1/Math.max(squeeze(edge),.05)-1)/state.smoothDiv));mv[i]=mv[i+1]=mv[i+2]=mz[i]=mz[i+1]=mz[i+2]=255;mv[i+3]=Math.round(255*m*ny2);mz[i+3]=Math.round(255*m*(1-ny2));}
@@ -753,6 +753,7 @@
         // Each tap's offset in its own map, aimed at the target pixel's centre: Chromium takes the pixel nearest to the
         // displaced point, and the 8-bit step (scale/255) stays under a device pixel.
         const own=taps?2*(reach+1):2*A,scale=state.scaleOf?.(own)??own,offset=(m,i,ox,oy)=>put(m,i,Math.round(255*(ox/scale+.5)),oy/scale+.5);
+        if(moves)for(let p=0;p<CW*H;p++)offset(mm,p*4,moves[p*2],moves[p*2+1]);
         if(outs)for(let p=0;p<CW*H;p++)offset(data.om.data,p*4,outs[p*2],outs[p*2+1]);
         if(taps)for(let p=0;p<CW*H;p++)for(let j=0;j<4;j++)offset(taps[j],p*4,offsets[p*8+2*j],offsets[p*8+2*j+1]);
         setMaps(maps,data,{w,h,k,W,H,split},inset);
@@ -776,7 +777,8 @@
     const rimFilter=(id,s,n=1)=>{const tt=`type="table" tableValues="${rimT.join(' ')}"`;
       return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
     // The map is drawn for each end only (setMaps): the line fades out within r of either end. drawn (shared()): the
-    // element only sizes the map, which runs after each drawing; the shared hairline draws it.
+    // element only sizes the map, which runs after each drawing; the shared hairline draws it. The element is the glass
+    // grown by 1px, or by its data-grow (px) where the toolbar keeps it on device pixels.
     const rimF=(box,{w=1,s=.8}={},drawn)=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';el.dataset.filter=id;box.append(el);
       glass.insertAdjacentHTML('beforeend',rimFilter(id,s));
@@ -784,10 +786,10 @@
       if(!drawn)el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
       const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='';
       const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw||size===bw+'x'+bh+'@'+k)return;size=bw+'x'+bh+'@'+k;
-        const W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2,gh=bh-2,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+1)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
+        const g=+el.dataset.grow||1,W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2*g,gh=bh-2*g,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+g)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
-          for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-1,py=(y+(sy+.5)/4)/k-1,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
-          const px=(x+.5)/k-1,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
+          for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-g,py=(y+(sy+.5)/4)/k-g,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
+          const px=(x+.5)/k-g,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
         setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});drawn?.();};
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
@@ -819,12 +821,13 @@
     // larger than all four together, ~2.7ms). add(face, box) takes a shape's face (its glass grown by the margin, as
     // for lens()) and the element its hairline is laid in; each shape's maps are drawn at its own size into filters
     // that nothing applies, and the shared filters merge every shape's pieces at its place, clipped to the shapes'
-    // union. build() after the adds; update() follows the shapes' places and sizes. On a fractional screen scale
-    // (Windows at 125%) the shapes' edges moved by up to a pixel against their own layers' (each layer lands on the
-    // device pixels in its own way), so there it returns null and each shape keeps lens() and rimF().
+    // union. build() after the adds; update() follows the shapes' places and sizes. A shape's maps are drawn on the
+    // device pixels of its own box, so every box here starts on one (ToolbarGlass places the shapes so; at 125% a shape
+    // between them had its edge moved by up to a pixel): where the margin does not fall on device pixels it returns
+    // null and each shape keeps lens() and rimF().
     const shared=(root,over,rim)=>{
-      if(!Number.isInteger(devicePixelRatio||1))return null;
-      const state={...glassStates[over?.state||'focused'],...over,line:0},id='am-tglass-'+(++n),exact=true,M=state.margin||0;
+      const k=devicePixelRatio||1,state={...glassStates[over?.state||'focused'],...over,line:0},M=state.margin||0;if(Math.abs(M*k-Math.round(M*k))>1e-6)return null;
+      const id='am-tglass-'+(++n),exact=Number.isInteger(k);
       const box=cls=>{const e=document.createElement('div');e.className=cls;Object.assign(e.style,{position:'fixed',pointerEvents:'none'});return e;};
       const face=box('am-tglass-pane'),line=box('am-tglass-pane-rim'),layers=parts.map(p=>layer(p,id,inner(p,M,exact),''));face.append(...layers);
       line.style.backdropFilter=line.style.webkitBackdropFilter=`url(#${id}-rim)`;root.prepend(face);root.append(line);
@@ -836,8 +839,8 @@
       const pill=(x,y,w,h)=>{const r=Math.min(w,h)/2,f=v=>+v.toFixed(2);return `M${f(x+r)} ${f(y)}H${f(x+w-r)}A${f(r)} ${f(r)} 0 0 1 ${f(x+w-r)} ${f(y+h)}H${f(x+r)}A${f(r)} ${f(r)} 0 0 1 ${f(x+r)} ${f(y)}Z`;};
       const update=()=>{
         if(!pairs.length)return;
-        const bounds=(e,rs)=>{const l=Math.floor(Math.min(...rs.map(r=>r.left))),t=Math.floor(Math.min(...rs.map(r=>r.top)));
-          Object.assign(e.style,{left:l+'px',top:t+'px',width:Math.ceil(Math.max(...rs.map(r=>r.right)))-l+'px',height:Math.ceil(Math.max(...rs.map(r=>r.bottom)))-t+'px'});return rs.map(r=>[r.left-l,r.top-t]);};
+        const k=devicePixelRatio||1,down=v=>Math.floor(v*k+1e-4)/k,up=v=>Math.ceil(v*k-1e-4)/k,bounds=(e,rs)=>{const l=down(Math.min(...rs.map(r=>r.left))),t=down(Math.min(...rs.map(r=>r.top)));
+          Object.assign(e.style,{left:l+'px',top:t+'px',width:up(Math.max(...rs.map(r=>r.right)))-l+'px',height:up(Math.max(...rs.map(r=>r.bottom)))-t+'px'});return rs.map(r=>[r.left-l,r.top-t]);};
         const rs=members.map(m=>m.face.getBoundingClientRect()),fo=bounds(face,rs),lo=bounds(line,members.map(m=>m.rim.getBoundingClientRect()));
         const union=fo.map(([x,y],i)=>pill(x,y,rs[i].width-2*M,rs[i].height-2*M)).join('');if(union!==clip){clip=union;layers.forEach((e,j)=>{const d=M-inner(parts[j],M,exact);e.style.clipPath=`path('${fo.map(([x,y],i)=>pill(x+d,y+d,rs[i].width-2*M,rs[i].height-2*M)).join('')}')`;});}
         // Offsets of each shape's face in each layer's box (its parts index) and of its hairline in the shared one.
@@ -911,10 +914,11 @@
       });
     }
     destroy(){this.off?.abort();this.el.remove();tgLive.delete(this);}
-    // The shape covers the controls' union, on whole CSS pixels (a filtered layer snaps to them, its clip does not).
+    // The shape covers the controls' union, on whole CSS pixels (a filtered layer snaps to them, its clip does not), on a
+    // fractional screen scale on whole device pixels (the shared glass draws each shape's maps on them).
     place(){
-      const rs=this.controls.map(c=>c.getBoundingClientRect()),l=Math.round(Math.min(...rs.map(r=>r.left))),t=Math.round(Math.min(...rs.map(r=>r.top))),
-        w=Math.round(Math.max(...rs.map(r=>r.right)))-l,h=Math.round(Math.max(...rs.map(r=>r.bottom)))-t;
+      const k=devicePixelRatio||1,u=Number.isInteger(k)?1:1/k,snap=v=>Math.round(v/u)*u,rs=this.controls.map(c=>c.getBoundingClientRect()),l=snap(Math.min(...rs.map(r=>r.left))),t=snap(Math.min(...rs.map(r=>r.top))),
+        w=snap(Math.max(...rs.map(r=>r.right)))-l,h=snap(Math.max(...rs.map(r=>r.bottom)))-t;
       this.box={left:l,top:t,width:w,height:h,right:l+w,bottom:t+h};Object.assign(this.el.style,{left:l+'px',top:t+'px',width:w+'px',height:h+'px'});
       rs.forEach((r,i)=>Object.assign(this.lights[i].style,{left:r.left-l+'px',top:'0',width:r.width+'px',height:h+'px',transformOrigin:`${w/2-(r.left-l)}px 50%`}));
       this.render();
@@ -931,8 +935,9 @@
     get idle(){return [this.scale,this.glow,...this.light,...this.push].every(s=>s.idle);}
     step(dt){for(const s of [this.scale,this.glow,...this.light,...this.push])s.step(dt);this.render();}
     render(){
-      const b=this.box,k=this.scale.x,gx=(k-1)*b.width/2,gy=(k-1)*b.height/2,m=this.margin;
-      this.face.style.inset=`${(-gy-m).toFixed(2)}px ${(-gx-m).toFixed(2)}px`;if(this.rim)this.rim.style.inset=`${(-gy-1).toFixed(2)}px ${(-gx-1).toFixed(2)}px`;
+      // The hairline's box: the glass grown by the fewest whole device pixels that make at least 1px.
+      const b=this.box,k=this.scale.x,gx=(k-1)*b.width/2,gy=(k-1)*b.height/2,m=this.margin,dpr=devicePixelRatio||1,g=Math.ceil(dpr)/dpr;
+      this.face.style.inset=`${(-gy-m).toFixed(4)}px ${(-gx-m).toFixed(4)}px`;if(this.rim){this.rim.dataset.grow=g;this.rim.style.inset=`${(-gy-g).toFixed(4)}px ${(-gx-g).toFixed(4)}px`;}
       this.el.style.setProperty('--am-tg-scale',k.toFixed(4));
       if(this.p){this.face.style.setProperty('--am-tg-px',(this.p[0]+gx+m).toFixed(1)+'px');this.face.style.setProperty('--am-tg-py',(this.p[1]+gy+m).toFixed(1)+'px');}
       this.face.style.setProperty('--am-tg-glow',(this.glow.x*TG.glow).toFixed(4));
