@@ -254,7 +254,12 @@ try {
     assert.deepEqual(shape, [Math.round(r.x), Math.round(r.y), 36]);
     await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
     await page.waitForFunction(() => Number(document.querySelector('#am-toolbar-glass .am-tglass-light').style.getPropertyValue('--am-tg-light')) > .05);
+    // A press stretches the maps drawn at rest instead of drawing them again: same images, larger boxes.
+    const map = () => page.evaluate(() => { const l = document.querySelector('#am-toolbar-glass > .am-tglass-pane > .am-tglass-layer'), i = document.getElementById(l.style.backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage[data-member="0"][data-part="l"]'); return [i.getAttribute('href'), +i.getAttribute('height')]; });
+    const restMap = await map();
     await page.mouse.down(); await page.waitForTimeout(300);
+    const pressedMap = await map();
+    assert.equal(pressedMap[0], restMap[0]); assert.ok(pressedMap[1] > restMap[1]);
     assert.ok(Number(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale'))) > 1.02);
     await page.mouse.move(5, 600); await page.mouse.up(); await page.waitForTimeout(500);
     assert.equal(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale')), '1.0000');
