@@ -179,9 +179,10 @@ try {
 
   await check('sidebar resizes and resets', async () => {
     const side = () => page.evaluate(() => document.getElementById('am-sidebar').offsetWidth);
-    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it.
-    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex)]; });
-    assert.deepEqual(glow, [140, true, true]);
+    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it; it draws only
+    // over the sidebar (clip-path), so the player's glass redrawing beside it does not re-run it.
+    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex), s.clipPath]; });
+    assert.deepEqual(glow, [140, true, true, 'inset(0px 140px 0px 0px)']);
     const box = await page.locator('.am-sidebar-resizer').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + 300);
     await page.mouse.down();
@@ -237,29 +238,58 @@ try {
     await page.setViewportSize({ width: 1440, height: 900 });
   });
 
+  await check('toolbar glass: shapes under the controls, lit on hover, grown on press', async () => {
+    // In #main (Spotify's isolated root), after .Root: in <body> it covered the toolbar's icons.
+    const info = await page.evaluate(() => ({ host: document.getElementById('am-toolbar-glass')?.parentElement?.id, shapes: document.querySelectorAll('#am-toolbar-glass .am-tglass').length,
+      layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer').length, rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
+    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 3, rims: 2, on: true });
+    // One set of layers and one hairline for every shape: each filter merges the shapes' map pieces, clipped to them.
+    const pane = await page.evaluate(() => { const l = document.querySelector('#am-toolbar-glass > .am-tglass-pane > .am-tglass-layer'), id = l.style.backdropFilter.match(/#([\w-]+)/)[1];
+      return { members: new Set([...document.getElementById(id).querySelectorAll('feImage[href]')].map(i => i.dataset.member)).size, pills: (l.style.clipPath.match(/M/g) || []).length, line: !!document.querySelector('#am-toolbar-glass > .am-tglass-pane-rim') }; });
+    assert.deepEqual(pane, { members: 2, pills: 2, line: true });
+    const back = await page.$('#global-nav-bar .am-toolbar-leading button'), r = await back.boundingBox();
+    // Placed on resize and settings changes, a frame after the layout moves (the previous check resized the window).
+    await page.waitForFunction(x => Math.round(document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect().left) === x, Math.round(r.x));
+    const shape = await page.evaluate(() => { const g = document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect(); return [g.left, g.top, g.height]; });
+    assert.deepEqual(shape, [Math.round(r.x), Math.round(r.y), 36]);
+    await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+    await page.waitForFunction(() => Number(document.querySelector('#am-toolbar-glass .am-tglass-light').style.getPropertyValue('--am-tg-light')) > .05);
+    await page.mouse.down(); await page.waitForTimeout(300);
+    assert.ok(Number(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale'))) > 1.02);
+    await page.mouse.move(5, 600); await page.mouse.up(); await page.waitForTimeout(500);
+    assert.equal(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale')), '1.0000');
+  });
+
   await check('liquid glass map follows the player size', async () => {
-    const map = () => page.evaluate(() => {
-      const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
-      return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), scale: Number(shift.getAttribute('scale')) };
+    // The player's glass is toolbarLens (state 'player'): three backdrop-filter layers in a face 12pt larger than the
+    // player's border box (the page past its edge; 724x78 from its 698x52 padding box), each map drawn as its two ends
+    // at device resolution and one column stretched between them (the face's size in all); the player itself filters
+    // nothing. The bend layer is the glass's own box, so its maps start 12pt before it (-12 to 712).
+    const map = () => page.evaluate(async () => {
+      const face = document.querySelector('#am-player > .am-player-face'), id = getComputedStyle(face.querySelector('.am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1];
+      const part = p => document.getElementById(id).querySelector(`feImage[data-part="${p}"]`), [l, m, r] = ['l', 'm', 'r'].map(part), shift = document.getElementById(id).querySelector('feDisplacementMap'), n = a => Number(m.getAttribute(a));
+      const span = [l.getAttribute('x'), +r.getAttribute('x') + +r.getAttribute('width')].join('-'), joined = Math.abs(+l.getAttribute('x') + +l.getAttribute('width') - n('x')) < 1e-6 && Math.abs(n('x') + n('width') - r.getAttribute('x')) < 1e-6;
+      return { size: span + 'x' + l.getAttribute('height'), joined, column: await new Promise(res => { const i = new Image(); i.onload = () => res(i.width); i.src = m.getAttribute('href'); }), href: l.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
     });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => document.querySelector('#am-player > .am-player-face .am-tglass-layer'));
+    // The player's own bend filter (the toolbar's shapes have theirs too).
+    await page.evaluate(() => { window.__playerBend = () => document.getElementById(getComputedStyle(document.querySelector('#am-player > .am-player-face .am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage[data-part="l"]'); window.__playerExtent = () => { const r = __playerBend().parentNode.querySelector('feImage[data-part="r"]'); return String(+r.getAttribute('x') + +r.getAttribute('width')); }; });
+    await page.waitForFunction(() => __playerBend()?.getAttribute('href') && __playerExtent() === '712');
     const first = await map();
-    assert.equal(first.size, '700x54');
-    assert.ok(first.href.startsWith('data:image/png') && first.scale === 32.2);
-    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backdropFilter), /url\(.*#am-glass/);
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    // Fitted to macOS's own (focused) glass: a slight blur, a darken halo, and a tone by luminance.
-    assert.deepEqual(await page.evaluate(() => { const d = document.querySelector('#am-glass feDisplacementMap'); return [d.getAttribute('xChannelSelector'), d.getAttribute('yChannelSelector'), document.querySelectorAll('#am-glass feImage').length, [...document.querySelectorAll('#am-glass feGaussianBlur')].map(b => b.getAttribute('stdDeviation'))]; }), ['R', 'B', 3, ['0.4', '13.5']]);
-    // A content-box change fires the ResizeObserver but must not redraw the map.
-    await page.evaluate(() => { document.querySelector('#am-glass feImage').setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
+    assert.deepEqual([first.size, first.joined, first.column, first.layers, first.x, first.y], ['-12-712x78', true, 1, 3, 'R', 'B']);
+    assert.ok(first.href.startsWith('data:image/png'));
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-player')).backdropFilter, !!document.querySelector('#am-player > .am-tglass-rim')]), ['none', true]);
+    // A content-box change must not redraw the map.
+    await page.evaluate(() => { __playerBend().setAttribute('href', 'data:image/png;base64,kept'); document.getElementById('am-player').style.paddingLeft = '17px'; });
     await page.waitForTimeout(100);
     assert.equal((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === String(document.getElementById('am-player').offsetWidth));
+    await page.waitForFunction(() => __playerExtent() === String(document.getElementById('am-player').offsetWidth + 12));
     assert.notEqual((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
-    await page.waitForFunction(() => document.querySelector('#am-glass feImage').getAttribute('width') === '700');
+    await page.waitForFunction(() => __playerExtent() === '712');
   });
 
   await check('artist page', async () => {
@@ -273,6 +303,9 @@ try {
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     await page.click('.am-hero-follow');
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
+    // Back and share + more float on the toolbar glass, in the artist view's own layer, one shape each on their rects.
+    assert.deepEqual(await page.evaluate(() => { const g = [...document.querySelectorAll('#am-artist .am-tglass-root .am-tglass')].map(e => e.getBoundingClientRect()), b = document.querySelector('.am-artist-back').getBoundingClientRect();
+      return [document.getElementById('am-artist').classList.contains('am-tglass-on'), g.length, Math.round(g[0].left) === Math.round(b.left), g[1].height]; }), [true, 2, true, 36]);
     // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
     await page.waitForFunction(() => document.querySelector('.am-toast').classList.contains('am-toast-show'));

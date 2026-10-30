@@ -168,7 +168,10 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
 /* Edge glow under the sidebar glass: a heavily blurred backdrop reaching --am-glow past the sidebar, so the
    artwork beside the edge bleeds its colour in, as on Apple Music; masked to the sidebar, strongest at the edge;
    #am-glow-cap (theme.js) keeps big coloured areas from blowing out. */
-#am-sidebar-glow {--am-glow:140px;position:fixed;inset:0 auto 0 0;width:calc(var(--am-side) + var(--am-glow));z-index:39;pointer-events:none;backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side));mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side))}
+/* The box reaches --am-glow past the sidebar to read the page there; clip-path keeps that read but cuts its draw to
+   the sidebar, where the mask already ends. Unclipped, the box overlapped the player's left end: every frame the
+   player's glass redrew (progress, marquee) re-ran this blur and the toolbar glass under it (55fps, 80% of a core). */
+#am-sidebar-glow {--am-glow:140px;position:fixed;inset:0 auto 0 0;width:calc(var(--am-side) + var(--am-glow));clip-path:inset(0 var(--am-glow) 0 0);z-index:39;pointer-events:none;backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side));mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side))}
 /* Same height as the toolbar row, so the first item lines up with the page content. */
 .am-drag {height:var(--am-header);flex-shrink:0;-webkit-app-region:drag}
 .am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
@@ -369,6 +372,32 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 #global-nav-bar input::placeholder {color:#ffffffa6!important}
 @media(prefers-reduced-transparency:reduce){#global-nav-bar :is(button,input){--am-toolbar-fill:#2c2c2e;backdrop-filter:none;-webkit-backdrop-filter:none}}
+/* Liquid Glass toolbar (theme.js "Toolbar glass"): the glass is ours, in #am-toolbar-glass under the toolbar, laid on
+   Spotify's controls, which keep their icons and handlers but lose their own fill: back + forward, the extension icons
+   and Home become 36px circles side by side (the glass groups them into capsules), the search field a 36px capsule.
+   The controls scale with the glass while pressed (--am-tg-scale). */
+#am-toolbar-glass {position:fixed;inset:0;z-index:49;pointer-events:none}
+.am-tglass {position:fixed;isolation:isolate}
+#am-artist .am-tglass-root {position:fixed;inset:0;z-index:2;pointer-events:none}
+.am-tglass-face {position:absolute;inset:0;pointer-events:none}
+.am-tglass-face::after {content:"";position:absolute;inset:0;pointer-events:none;clip-path:inset(var(--am-tg-m,0px) round 999px);background:radial-gradient(circle 55px at var(--am-tg-px,50%) var(--am-tg-py,50%),rgb(255 255 255/var(--am-tg-glow,0)) 17px,rgb(255 255 255/calc(var(--am-tg-glow,0)*.5)) 35px,rgb(255 255 255/calc(var(--am-tg-glow,0)*.3)) 55px)}
+.am-tglass-light {position:absolute;pointer-events:none;border-radius:999px;background:rgb(255 255 255/var(--am-tg-light,0));transform:scale(var(--am-tg-scale,1))}
+.am-tglass-group .am-tglass-light {background:none}
+.am-tglass-group .am-tglass-light::before {content:"";position:absolute;inset:3px;border-radius:50%;background:rgb(255 255 255/var(--am-tg-light,0))}
+.am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
+body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
+body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
+/* The search field: the magnifier halfway between the capsule's edge and the text (48px in), not at the round end's
+   centre, which left 9px before it and 21px after; Spotify's fade behind the ⌘L hint is the input's
+   own grey, a patch over the glass once the input is clear. */
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:6px!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child button {width:36px!important;height:36px!important;padding:0!important;display:grid!important;place-items:center}
+body.am-tglass-on #global-nav-bar form[role="search"] span:has(> kbd) {background:none!important}
+/* The artist page's back and share + more: the same glass behind them (theme.js syncArtistGlass). */
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions) {background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;gap:0}
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions button) {width:36px;height:36px;transform:scale(var(--am-tg-scale,1))}
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions button):hover {background:transparent}
+body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!important;border:0!important;border-radius:18px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 /* Spotify folds the search field into a 48px icon when the toolbar's centre gets narrow (.searchInputCollapsed on
    the toolbar). Keep it a field that narrows with the toolbar instead. */
 #global-nav-bar.searchInputCollapsed form {width:100%!important}
@@ -523,10 +552,14 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none;filter:none}}
 
-/* Liquid Glass player: #am-glass in theme.js, fitted to macOS's own glass, already carries its blur, lens and tone,
-   so there is no tint, border or shadow on top. Browsers without SVG backdrop filters drop this declaration and keep
-   the frosted blur above. */
-body.am-liquid #am-player {background:none;backdrop-filter:url(#am-glass);-webkit-backdrop-filter:url(#am-glass);border-color:transparent;box-shadow:none}
+/* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
+   frames, already carries its blur, lens and tone, so there is no tint, border or shadow on top. */
+body.am-liquid #am-player {background:none;border-color:transparent;box-shadow:none}
+/* With the glass on, the player draws none itself: the face (12pt larger, for the page past its edge) and the hairline
+   sit under its content. The face covers the border box plus the margin; the hairline's box is the border box + 1px. */
+#am-player.am-player-glass {backdrop-filter:none;-webkit-backdrop-filter:none}
+#am-player > .am-player-face {position:absolute;inset:-13px;z-index:-1;pointer-events:none}
+#am-player > .am-tglass-rim {inset:-2px;z-index:-1}
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
 body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
