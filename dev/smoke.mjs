@@ -477,6 +477,22 @@ try {
     await page.evaluate(() => document.getElementById('mock-feed').remove());
   });
 
+  await check('toolbar glass at 125%: shared, its shapes and hairlines on device pixels', async () => {
+    // The shared glass draws each shape's maps on the device pixels of its own box, so on a fractional scale the shapes
+    // (and the hairlines, the glass grown by 2 device px) are placed on them.
+    const scaled = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.25 }), scaledErrors = [];
+    scaled.on('pageerror', e => scaledErrors.push(e.message));
+    try {
+      await scaled.goto(pathToFileURL(path.join(here, 'preview.html')).href);
+      await scaled.waitForSelector('body.am-ready #am-toolbar-glass > .am-tglass-pane > .am-tglass-layer');
+      await scaled.waitForFunction(() => document.querySelector('#am-toolbar-glass > .am-tglass-pane').style.width);
+      const info = await scaled.evaluate(() => { const off = v => Math.abs(v * 1.25 - Math.round(v * 1.25)), boxes = [...document.querySelectorAll('#am-toolbar-glass .am-tglass, #am-toolbar-glass .am-tglass-rim, #am-toolbar-glass > .am-tglass-pane')].map(e => e.getBoundingClientRect());
+        return { panes: document.querySelectorAll('#am-toolbar-glass > .am-tglass-pane').length, grow: document.querySelector('#am-toolbar-glass .am-tglass-rim').dataset.grow, aligned: boxes.every(r => [r.left, r.top, r.width, r.height].every(v => off(v) < .05)) }; });
+      assert.deepEqual(info, { panes: 1, grow: '1.6', aligned: true });
+      assert.deepEqual(scaledErrors, []);
+    } finally { await scaled.close(); }
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();
