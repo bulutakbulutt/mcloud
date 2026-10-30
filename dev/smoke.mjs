@@ -237,6 +237,22 @@ try {
     await page.setViewportSize({ width: 1440, height: 900 });
   });
 
+  await check('toolbar glass: shapes under the controls, lit on hover, grown on press', async () => {
+    // In #main (Spotify's isolated root), after .Root: in <body> it covered the toolbar's icons.
+    const info = await page.evaluate(() => ({ host: document.getElementById('am-toolbar-glass')?.parentElement?.id, shapes: document.querySelectorAll('#am-toolbar-glass .am-tglass').length,
+      layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer').length, rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
+    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 6, rims: 2, on: true });
+    const back = await page.$('#global-nav-bar .am-toolbar-leading button'), r = await back.boundingBox();
+    const shape = await page.evaluate(() => { const g = document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect(); return [g.left, g.top, g.height]; });
+    assert.deepEqual(shape, [Math.round(r.x), Math.round(r.y), 36]);
+    await page.mouse.move(r.x + r.width / 2, r.y + r.height / 2);
+    await page.waitForFunction(() => Number(document.querySelector('#am-toolbar-glass .am-tglass-light').style.getPropertyValue('--am-tg-light')) > .05);
+    await page.mouse.down(); await page.waitForTimeout(300);
+    assert.ok(Number(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale'))) > 1.02);
+    await page.mouse.move(5, 600); await page.mouse.up(); await page.waitForTimeout(500);
+    assert.equal(await page.evaluate(() => document.querySelector('#am-toolbar-glass .am-tglass').style.getPropertyValue('--am-tg-scale')), '1.0000');
+  });
+
   await check('liquid glass map follows the player size', async () => {
     const map = () => page.evaluate(() => {
       const image = document.querySelector('#am-glass feImage'), shift = document.querySelector('#am-glass feDisplacementMap');
@@ -273,6 +289,9 @@ try {
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     await page.click('.am-hero-follow');
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
+    // Back and share + more float on the toolbar glass, in the artist view's own layer, one shape each on their rects.
+    assert.deepEqual(await page.evaluate(() => { const g = [...document.querySelectorAll('#am-artist .am-tglass-root .am-tglass')].map(e => e.getBoundingClientRect()), b = document.querySelector('.am-artist-back').getBoundingClientRect();
+      return [document.getElementById('am-artist').classList.contains('am-tglass-on'), g.length, Math.round(g[0].left) === Math.round(b.left), g[1].height]; }), [true, 2, true, 36]);
     // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
     await page.waitForFunction(() => document.querySelector('.am-toast').classList.contains('am-toast-show'));

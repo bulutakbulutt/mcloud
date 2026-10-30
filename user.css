@@ -369,6 +369,31 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 #global-nav-bar input::placeholder {color:#ffffffa6!important}
 @media(prefers-reduced-transparency:reduce){#global-nav-bar :is(button,input){--am-toolbar-fill:#2c2c2e;backdrop-filter:none;-webkit-backdrop-filter:none}}
+/* Liquid Glass toolbar (theme.js "Toolbar glass"): the glass is ours, in #am-toolbar-glass under the toolbar, laid on
+   Spotify's controls, which keep their icons and handlers but lose their own fill: back + forward, the extension icons
+   and Home become 36px circles side by side (the glass groups them into capsules), the search field a 36px capsule.
+   The controls scale with the glass while pressed (--am-tg-scale). */
+#am-toolbar-glass {position:fixed;inset:0;z-index:49;pointer-events:none}
+.am-tglass {position:fixed;isolation:isolate}
+#am-artist .am-tglass-root {position:fixed;inset:0;z-index:2;pointer-events:none}
+.am-tglass-face {position:absolute;inset:0;pointer-events:none}
+.am-tglass-face::after {content:"";position:absolute;inset:0;pointer-events:none;clip-path:inset(var(--am-tg-m,0px) round 999px);background:radial-gradient(circle 55px at var(--am-tg-px,50%) var(--am-tg-py,50%),rgb(255 255 255/var(--am-tg-glow,0)) 17px,rgb(255 255 255/calc(var(--am-tg-glow,0)*.5)) 35px,rgb(255 255 255/calc(var(--am-tg-glow,0)*.3)) 55px)}
+.am-tglass-light {position:absolute;pointer-events:none;border-radius:999px;background:rgb(255 255 255/var(--am-tg-light,0));transform:scale(var(--am-tg-scale,1))}
+.am-tglass-group .am-tglass-light {background:none}
+.am-tglass-group .am-tglass-light::before {content:"";position:absolute;inset:3px;border-radius:50%;background:rgb(255 255 255/var(--am-tg-light,0))}
+.am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
+body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
+body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
+/* The search field: the magnifier centred in the capsule's round end; Spotify's fade behind the ⌘L hint is the input's
+   own grey, a patch over the glass once the input is clear. */
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:0!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child button {width:36px!important;height:36px!important;padding:0!important;display:grid!important;place-items:center}
+body.am-tglass-on #global-nav-bar form[role="search"] span:has(> kbd) {background:none!important}
+/* The artist page's back and share + more: the same glass behind them (theme.js syncArtistGlass). */
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions) {background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;gap:0}
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions button) {width:36px;height:36px;transform:scale(var(--am-tg-scale,1))}
+#am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions button):hover {background:transparent}
+body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!important;border:0!important;border-radius:18px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 /* Spotify folds the search field into a 48px icon when the toolbar's centre gets narrow (.searchInputCollapsed on
    the toolbar). Keep it a field that narrows with the toolbar instead. */
 #global-nav-bar.searchInputCollapsed form {width:100%!important}
