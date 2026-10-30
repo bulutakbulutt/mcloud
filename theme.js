@@ -645,7 +645,7 @@
     // several times: as a filter's own backdrop that input is a texture, not a chain recomputed per reader). exact: the
     // bend samples bilinearly (4 taps); otherwise one tap, and the face blurs where the bend magnifies.
     const glassFilter=(id,state,part,exact)=>{
-      const tone=`type="table" tableValues="${state.tone.map((t,k)=>((t/255-state.gain*k/32+1)/2).toFixed(4)).join(' ')}"`,img=name=>`<feImage result="${name}" preserveAspectRatio="none"/>`;
+      const tone=`type="table" tableValues="${state.tone.map((t,k)=>((t/255-state.gain*k/32+1)/2).toFixed(4)).join(' ')}"`,img=mapImage;
       const map=(x,y,result)=>`${img(x)}${img(y)}<feColorMatrix in="${x}" values="1 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 1" result="${x}c"/><feColorMatrix in="${y}" values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 1" result="${y}c"/><feComposite in="${x}c" in2="${y}c" operator="arithmetic" k2="1" k3="1" result="${result}"/>`;
       const shift=(m,result)=>`<feDisplacementMap in="soft" in2="${m}" xChannelSelector="R" yChannelSelector="B" result="${result}"/>`,soft=`<feGaussianBlur in="SourceGraphic" stdDeviation="${state.pre}" edgeMode="duplicate" result="soft"/>`;
       // Taps 0-3 hit the page pixels left/right (fx) and above/below (fy) the source point; each reads only its own map.
@@ -680,13 +680,30 @@
       const hlCap=16,hlRatio=`type="table" tableValues="${Array.from({length:65},(_,k)=>{const L=Math.max(k/64,1e-3);return Math.min(1,(state.highlightTo-L)/L/hlCap).toFixed(4);}).join(' ')}"`;
       const highlight=state.hlHue?`<feMerge result="tn"><feMergeNode/></feMerge><feColorMatrix in="tn" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="hll"/><feComponentTransfer in="hll" result="hlt"><feFuncR ${hlRatio}/><feFuncG ${hlRatio}/><feFuncB ${hlRatio}/></feComponentTransfer><feComposite in="hlt" in2="mh" operator="arithmetic" k1="1" result="hlf"/><feComposite in="tn" in2="hlf" operator="arithmetic" k1="${(hlCap*peakHighlight).toFixed(4)}" k2="1"/>`
         :`<feComposite in2="mh" operator="arithmetic" k1="${state.hlK1??-peakHighlight}" k2="1" k3="${state.hlK3??(state.highlightTo*peakHighlight).toFixed(4)}"/>`;
-      const face=`${img('mh')}${img('ml')}${colour}${highlight}<feBlend in2="ml" mode="multiply"/>`;
+      const face=`${img('mh')}${state.line?img('ml'):''}${colour}${highlight}${state.line?'<feBlend in2="ml" mode="multiply"/>':''}`;
       return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">${part==='bend'?bend:part==='face'?(exact?thin('SourceGraphic'):smooth+thin('core'))+darken+outer+face:part==='mid'?(exact?thin('SourceGraphic'):smooth+thin('core'))+darken+outer+'<feMerge><feMergeNode in="glass"/></feMerge>':part==='tone'?'<feMerge result="glass"><feMergeNode in="SourceGraphic"/></feMerge>'+face:bend+darken+outer+face}</filter>`;
     };
     // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
     // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
     const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
     const wideGamut=matchMedia('(color-gamut: p3)').matches;
+    // Chromium sends a filter's images again with every frame drawn under it, so their bytes are what anything moving
+    // over the glass costs (the player's 16 full maps, ~14MB a frame, held its marquee at ~33fps). A map varies along
+    // x only in the columns at either end (margin and round end); between them every column is the same. So each map
+    // is three images merged: both ends at device resolution and one column stretched across the middle (~1/9 of the
+    // bytes at player size, the same pixels).
+    const mapImage=name=>['m','l','r'].map(p=>`<feImage data-map="${name}" data-part="${p}" result="${name}-${p}" preserveAspectRatio="none"/>`).join('')+`<feMerge result="${name}">${['m','l','r'].map(p=>`<feMergeNode in="${name}-${p}"/>`).join('')}</feMerge>`;
+    // The device columns to draw: cap columns at each end and the middle one, or all of them where the ends meet.
+    const mapColumns=(W,cap)=>{const split=2*cap+1<W?cap:0;return {split,cols:split?[...Array(cap).keys(),W>>1,...Array.from({length:cap},(_,i)=>W-cap+i)]:[...Array(W).keys()]};};
+    // data: map name -> ImageData of those columns. Without a split the whole map is the left piece.
+    function setMaps(images,data,{w,h,k,W,H,split}){
+      const canvas=document.createElement('canvas'),context=canvas.getContext('2d'),urls={};
+      const url=(image,from,width)=>{canvas.width=width;canvas.height=H;context.putImageData(image,-from,0,from,0,width,H);return canvas.toDataURL();};
+      for(const [n,image] of Object.entries(data))urls[n]=split?{l:url(image,0,split),m:url(image,split,1),r:url(image,split+1,split)}:{l:url(image,0,W)};
+      const box=split?{l:[0,split/k],m:[split/k,w-2*split/k],r:[w-split/k,split/k]}:{l:[0,w],m:[0,w],r:[0,w]};
+      for(const image of images){const p=image.dataset.part,u=urls[image.dataset.map][p];if(u)image.setAttribute('href',u);else image.removeAttribute('href');
+        image.setAttribute('x',box[p][0]);image.setAttribute('y',0);image.setAttribute('width',box[p][1]);image.setAttribute('height',h);}
+    }
     // build (optional) rebuilds the filters before each redraw: the player's change with the screen scale.
     function glassLens(node,state,filterIds,build) {
       let glassSize='';
@@ -697,26 +714,26 @@
         const {width:w,height:h}=node.getBoundingClientRect(),k=devicePixelRatio||1;if(!w||!h||glassSize===w+'x'+h+'@'+k)return;glassSize=w+'x'+h+'@'+k;
         build?.();const maps=filterIds.flatMap(id=>[...glass.querySelectorAll(`#${id} feImage`)]),shifts=filterIds.flatMap(id=>[...glass.querySelectorAll(`#${id} feDisplacementMap`)]);
         // margin: the glass is the box inset by M on every side; the rest is page the filter may read (clipped away).
-        const M=state.margin||0,gw=w-2*M,gh=h-2*M,W=Math.round(w*k),H=Math.round(h*k),r=gh/2,A=state.lensA*r,L=state.lensH*r,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+        const M=state.margin||0,gw=w-2*M,gh=h-2*M,W=Math.round(w*k),H=Math.round(h*k),r=gh/2,A=state.lensA*r,L=state.lensH*r;
         // Inward shift (px) by distance from the edge, and how much the bend squeezes (> 1) or magnifies (< 1) the page.
         const shiftAt=d=>{const t=Math.min(1,d/L);return A*(1-Math.sqrt((2-t)*t));},squeeze=d=>{const t=d/L;return t>=1?1:Math.abs(1-A/L*(1-t)/Math.sqrt(Math.max(1e-4,t*(2-t))));};
-        const context=canvas.getContext('2d'),data={};for(const map of maps)data[map.getAttribute('result')]??=context.createImageData(W,H);
+        const {cols,split}=mapColumns(W,Math.ceil((M+r)*k)+1),CW=cols.length,data={};for(const map of maps)data[map.dataset.map]??=new ImageData(CW,H);
         const {mx,my,mh,ml,mv,mz,md,fx,fy,me}=Object.fromEntries(Object.entries(data).map(([n,image])=>[n,image.data]));
         // Bilinear taps: per pixel, offsets (px) to the 4 page pixels around its source point; one scale for all four.
-        const taps=fx?[0,1,2,3].map(j=>[data['bx'+j].data,data['by'+j].data]):null,offsets=taps&&new Float32Array(W*H*8),outs=me&&new Float32Array(W*H*2);let reach=me?state.outerDist:1;
-        for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+        const taps=fx?[0,1,2,3].map(j=>[data['bx'+j].data,data['by'+j].data]):null,offsets=taps&&new Float32Array(CW*H*8),outs=me&&new Float32Array(CW*H*2);let reach=me?state.outerDist:1;
+        for(let y=0;y<H;y++)for(let c=0;c<CW;c++){
           // The vector to the pill's centre line is the rim's inward normal; the maps hold its x/y shift. Masks are
           // white with their weight in alpha (alpha survives the P3 conversion of feImage; greys survive it too).
-          const px=(x+.5)/k-M,py=(y+.5)/k-M,dx=Math.min(gw-r,Math.max(r,px))-px,dy=r-py,length=Math.hypot(dx,dy)||1,edge=Math.max(0,r-length),ny2=(dy/length)**2,i=(y*W+x)*4;
+          const x=cols[c],px=(x+.5)/k-M,py=(y+.5)/k-M,dx=Math.min(gw-r,Math.max(r,px))-px,dy=r-py,length=Math.hypot(dx,dy)||1,edge=Math.max(0,r-length),ny2=(dy/length)**2,i=(y*CW+c)*4;
           if(me){const u=length>r+1/k?0:state.outerMix*(ny2+(1-ny2)*(state.outerEnd??1))*Math.max(0,1-edge*k/state.outerW);me[i]=me[i+1]=me[i+2]=255;me[i+3]=Math.round(255*u);
-            outs[(y*W+x)*2]=-state.outerDist*dx/length;outs[(y*W+x)*2+1]=-state.outerDist*dy/length;}
+            outs[(y*CW+c)*2]=-state.outerDist*dx/length;outs[(y*CW+c)*2+1]=-state.outerDist*dy/length;}
           if(mx){const t=shiftAt(edge)/A/length,xv=Math.round(128+127*t*dx),yv=(128+127*t*dy)/255;
             mx[i]=mx[i+1]=mx[i+2]=xv;my[i]=my[i+1]=my[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));mx[i+3]=my[i+3]=255;}
           if(mh){mh[i]=mh[i+1]=mh[i+2]=Math.round(255*highlightAt(edge)*Math.sqrt(ny2)**state.highlightPow);mh[i+3]=255;}
           if(ml){ml[i]=ml[i+1]=ml[i+2]=Math.round(255*(1-state.line*fade(Math.min(1,edge*k/state.lineW))*Math.sqrt(1-ny2)));ml[i+3]=255;}
           if(mv){const m=Math.min(1,Math.max(0,(1/Math.max(squeeze(edge),.05)-1)/state.smoothDiv));mv[i]=mv[i+1]=mv[i+2]=mz[i]=mz[i+1]=mz[i+2]=255;mv[i+3]=Math.round(255*m*ny2);mz[i+3]=Math.round(255*m*(1-ny2));}
           if(md){md[i]=md[i+1]=md[i+2]=255;md[i+3]=Math.round(255*state.rimDark*fade(Math.min(1,edge/state.rimDarkW)));}
-          if(taps){const s=shiftAt(edge),sx=(px+M+s*dx/length)*k-.5,sy=(py+M+s*dy/length)*k-.5,ix=Math.floor(sx),iy=Math.floor(sy),q=(y*W+x)*8,
+          if(taps){const s=shiftAt(edge),sx=(px+M+s*dx/length)*k-.5,sy=(py+M+s*dy/length)*k-.5,ix=Math.floor(sx),iy=Math.floor(sy),q=(y*CW+c)*8,
               u=state.pageMix*(1-edge*k/state.pageMixW);
             fx[i]=fx[i+1]=fx[i+2]=fy[i]=fy[i+1]=fy[i+2]=255;fx[i+3]=Math.round(255*(u>0?1-u:sx-ix));fy[i+3]=u>0?0:Math.round(255*(sy-iy));
             // Where the page mixes in, taps 0 and 2 read the pixel itself and taps 1 and 3 the nearest bent one.
@@ -726,11 +743,10 @@
         // nearest to the displaced point, and the 8-bit step (scale/255) stays under a device pixel.
         const scale=taps?2*(reach+1):2*A;
         const grey=(tx,ty,i,ox,oy)=>{const xv=Math.round(255*(ox/scale+.5)),yv=oy/scale+.5;tx[i]=tx[i+1]=tx[i+2]=xv;ty[i]=ty[i+1]=ty[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));tx[i+3]=ty[i+3]=255;};
-        if(outs)for(let p=0;p<W*H;p++)grey(data.ox.data,data.oy.data,p*4,outs[p*2],outs[p*2+1]);
-        if(taps)for(let p=0;p<W*H;p++)for(let j=0;j<4;j++){const i=p*4,[tx,ty]=taps[j],xv=Math.round(255*(offsets[p*8+2*j]/scale+.5)),yv=offsets[p*8+2*j+1]/scale+.5;
+        if(outs)for(let p=0;p<CW*H;p++)grey(data.ox.data,data.oy.data,p*4,outs[p*2],outs[p*2+1]);
+        if(taps)for(let p=0;p<CW*H;p++)for(let j=0;j<4;j++){const i=p*4,[tx,ty]=taps[j],xv=Math.round(255*(offsets[p*8+2*j]/scale+.5)),yv=offsets[p*8+2*j+1]/scale+.5;
           tx[i]=tx[i+1]=tx[i+2]=xv;ty[i]=ty[i+1]=ty[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));tx[i+3]=ty[i+3]=255;}
-        const urls={};for(const [n,image] of Object.entries(data)){context.putImageData(image,0,0);urls[n]=canvas.toDataURL();}
-        for(const map of maps){map.setAttribute('href',urls[map.getAttribute('result')]);map.setAttribute('width',w);map.setAttribute('height',h);}
+        setMaps(maps,data,{w,h,k,W,H,split});
         for(const shift of shifts)shift.setAttribute('scale',scale);
       };
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
@@ -746,20 +762,20 @@
     // its weight a map of the 1-device-pixel band outside the glass (4x4 samples per pixel) fading as (1 - x/r)^3 from
     // each end; over the glass. w: the line's strength (1 at 36pt, lighter on the player).
     const rimT=[0.0, 0.0098, 0.0208, 0.0326, 0.0453, 0.0591, 0.0743, 0.0904, 0.1069, 0.1238, 0.1412, 0.1595, 0.1787, 0.1996, 0.2221, 0.245, 0.2669, 0.288, 0.3089, 0.3286, 0.3462, 0.3612, 0.3747, 0.3873, 0.3996, 0.412, 0.4242, 0.4359, 0.4467, 0.4567, 0.4662, 0.475, 0.4831];let rimN=0;
+    // The map is drawn for each end only (setMaps): the line fades out within r of either end.
     const rimF=(box,{w=1,s=.8}={})=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';box.append(el);
       const tt=`type="table" tableValues="${rimT.join(' ')}"`;
-      glass.insertAdjacentHTML('beforeend',`<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/><feImage result="rm" preserveAspectRatio="none"/><feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`);
+      glass.insertAdjacentHTML('beforeend',`<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm')}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`);
       if(!glass.isConnected)document.body.append(glass);
       el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
-      const map=glass.querySelector(`#${id} feImage`);let size='';
+      const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='';
       const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw||size===bw+'x'+bh+'@'+k)return;size=bw+'x'+bh+'@'+k;
-        const W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2,gh=bh-2,r=gh/2,c=document.createElement('canvas');c.width=W;c.height=H;
-        const ctx=c.getContext('2d'),img=ctx.createImageData(W,H),dd=img.data;
-        for(let y=0;y<H;y++)for(let x=0;x<W;x++){let cov=0;
+        const W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2,gh=bh-2,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+1)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
+        for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
           for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-1,py=(y+(sy+.5)/4)/k-1,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
-          const px=(x+.5)/k-1,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*W+x)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
-        ctx.putImageData(img,0,0);map.setAttribute('href',c.toDataURL());map.setAttribute('width',bw);map.setAttribute('height',bh);};
+          const px=(x+.5)/k-1,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
+        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});};
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
     let n=0;
@@ -768,7 +784,8 @@
     // (bend, mid, tone), as siblings so each reads the one before as a texture. The node itself must not clip or filter
     // (that would make it the layers' backdrop root).
     const lens=(node,over)=>{
-      const state={...glassStates[over?.state||'focused'],...over},id='am-tglass-'+(++n),exact=Number.isInteger(devicePixelRatio||1),parts=['bend','mid','tone'];
+      // No edge line in the layered glass (the toast's): its map would be all white.
+      const state={...glassStates[over?.state||'focused'],...over,line:0},id='am-tglass-'+(++n),exact=Number.isInteger(devicePixelRatio||1),parts=['bend','mid','tone'];
       glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact)).join(''));
       if(!glass.isConnected)document.body.append(glass);
       node.style.setProperty('--am-tg-hair',1/(devicePixelRatio||1)+'px');node.style.setProperty('--am-tg-m',(state.margin||0)+'px');
@@ -777,7 +794,7 @@
         Object.assign(l.style,{position:'absolute',inset:'0',pointerEvents:'none',clipPath:`inset(${state.margin||0}px round 999px)`});
         l.style.backdropFilter=l.style.webkitBackdropFilter=`url(#${id}-${p})`;return l;});
       node.prepend(...layers);
-      glassLens(layers[0],{...state,line:0},parts.map(p=>`${id}-${p}`));
+      glassLens(layers[0],state,parts.map(p=>`${id}-${p}`));
       return id;
     };
     // The player: its own fitted look (tone, bend, highlight) with what the buttons showed macOS's glass does, as

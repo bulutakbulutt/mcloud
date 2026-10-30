@@ -179,9 +179,10 @@ try {
 
   await check('sidebar resizes and resets', async () => {
     const side = () => page.evaluate(() => document.getElementById('am-sidebar').offsetWidth);
-    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it.
-    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex)]; });
-    assert.deepEqual(glow, [140, true, true]);
+    // The edge glow reaches past the sidebar (so the artwork beside it bleeds in) and sits just under it; it draws only
+    // over the sidebar (clip-path), so the player's glass redrawing beside it does not re-run it.
+    const glow = await page.evaluate(() => { const g = document.getElementById('am-sidebar-glow'), s = getComputedStyle(g); return [g.offsetWidth - document.getElementById('am-sidebar').offsetWidth, /blur/.test(s.backdropFilter), Number(s.zIndex) < Number(getComputedStyle(document.getElementById('am-sidebar')).zIndex), s.clipPath]; });
+    assert.deepEqual(glow, [140, true, true, 'inset(0px 140px 0px 0px)']);
     const box = await page.locator('.am-sidebar-resizer').boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + 300);
     await page.mouse.down();
@@ -257,20 +258,21 @@ try {
 
   await check('liquid glass map follows the player size', async () => {
     // The player's glass is toolbarLens (state 'player'): three backdrop-filter layers in a face 12pt larger than the
-    // player's border box (the page past its edge; 724x78 from its 698x52 padding box), maps drawn at the face's size;
-    // the player itself filters nothing.
-    const map = () => page.evaluate(() => {
+    // player's border box (the page past its edge; 724x78 from its 698x52 padding box), each map drawn as its two ends
+    // at device resolution and one column stretched between them (the face's size in all); the player itself filters nothing.
+    const map = () => page.evaluate(async () => {
       const face = document.querySelector('#am-player > .am-player-face'), id = getComputedStyle(face.querySelector('.am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1];
-      const image = document.getElementById(id).querySelector('feImage'), shift = document.getElementById(id).querySelector('feDisplacementMap');
-      return { size: image.getAttribute('width') + 'x' + image.getAttribute('height'), href: image.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
+      const part = p => document.getElementById(id).querySelector(`feImage[data-part="${p}"]`), [l, m, r] = ['l', 'm', 'r'].map(part), shift = document.getElementById(id).querySelector('feDisplacementMap'), n = a => Number(m.getAttribute(a));
+      const span = [l.getAttribute('x'), +r.getAttribute('x') + +r.getAttribute('width')].join('-'), joined = Math.abs(+l.getAttribute('width') - n('x')) < 1e-6 && Math.abs(n('x') + n('width') - r.getAttribute('x')) < 1e-6;
+      return { size: span + 'x' + l.getAttribute('height'), joined, column: await new Promise(res => { const i = new Image(); i.onload = () => res(i.width); i.src = m.getAttribute('href'); }), href: l.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
     });
     await page.waitForFunction(() => document.querySelector('#am-player > .am-player-face .am-tglass-layer'));
     // The player's own bend filter (the toolbar's shapes have theirs too).
-    await page.evaluate(() => { window.__playerBend = () => document.getElementById(getComputedStyle(document.querySelector('#am-player > .am-player-face .am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage'); });
-    await page.waitForFunction(() => __playerBend()?.getAttribute('width') === '724');
+    await page.evaluate(() => { window.__playerBend = () => document.getElementById(getComputedStyle(document.querySelector('#am-player > .am-player-face .am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage[data-part="l"]'); window.__playerExtent = () => { const r = __playerBend().parentNode.querySelector('feImage[data-part="r"]'); return String(+r.getAttribute('x') + +r.getAttribute('width')); }; });
+    await page.waitForFunction(() => __playerBend()?.getAttribute('href') && __playerExtent() === '724');
     const first = await map();
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    assert.deepEqual([first.size, first.layers, first.x, first.y], ['724x78', 3, 'R', 'B']);
+    assert.deepEqual([first.size, first.joined, first.column, first.layers, first.x, first.y], ['0-724x78', true, 1, 3, 'R', 'B']);
     assert.ok(first.href.startsWith('data:image/png'));
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-player')).backdropFilter, !!document.querySelector('#am-player > .am-tglass-rim')]), ['none', true]);
     // A content-box change must not redraw the map.
@@ -278,11 +280,11 @@ try {
     await page.waitForTimeout(100);
     assert.equal((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.waitForFunction(() => __playerBend().getAttribute('width') === String(document.getElementById('am-player').offsetWidth + 24));
+    await page.waitForFunction(() => __playerExtent() === String(document.getElementById('am-player').offsetWidth + 24));
     assert.notEqual((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
-    await page.waitForFunction(() => __playerBend().getAttribute('width') === '724');
+    await page.waitForFunction(() => __playerExtent() === '724');
   });
 
   await check('artist page', async () => {
