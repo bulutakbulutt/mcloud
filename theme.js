@@ -646,7 +646,12 @@
     // several times: as a filter's own backdrop that input is a texture, not a chain recomputed per reader). exact: the
     // bend samples bilinearly (4 taps); otherwise one tap, and the face blurs where the bend magnifies.
     const glassFilter=(id,state,part,exact,n=1)=>{
-      const tone=`type="table" tableValues="${state.tone.map((t,k)=>((t/255-state.gain*k/32+1)/2).toFixed(4)).join(' ')}"`,img=name=>mapImage(name,n);
+      // A table of offsets (may be negative) stored over its own range, lo + s*value: Chromium keeps filter results in 8 bits,
+      // and the former (x+1)/2 doubled every step when decoded (dark coloured gradients behind the glass banded in steps of
+      // 2-4 levels). Stored values are truncated: the old form came out ~1 level darker on average, this one s/2 of one,
+      // and the fits (fitlens, player.mjs) were made with the former, so lo keeps that 1 - s/2 levels.
+      const offsets=vs=>{const lo=Math.min(...vs),s=Math.max(...vs)-lo||1;return {lo:+(lo-(1-s/2)/255).toFixed(5),s:+s.toFixed(4),table:`type="table" tableValues="${vs.map(v=>((v-lo)/s).toFixed(4)).join(' ')}"`};};
+      const tone=offsets(state.tone.map((t,k)=>t/255-state.gain*k/32)),img=name=>mapImage(name,n);
       const shift=(m,result)=>`<feDisplacementMap in="soft" in2="${m}" xChannelSelector="R" yChannelSelector="B" result="${result}"/>`,soft=`<feGaussianBlur in="SourceGraphic" stdDeviation="${state.pre}" edgeMode="duplicate" result="soft"/>`;
       // Taps 0-3 hit the page pixels left/right (fx) and above/below (fy) the source point; each reads only its own map.
       const bend=exact?soft+[0,1,2,3].map(j=>img('bm'+j)+shift('bm'+j,'tp'+j)).join('')+`${img('fx')}${img('fy')}<feComposite in="tp1" in2="fx" operator="in" result="t1"/><feComposite in="t1" in2="tp0" operator="over" result="row0"/><feComposite in="tp3" in2="fx" operator="in" result="t3"/><feComposite in="t3" in2="tp2" operator="over" result="row1"/><feComposite in="row1" in2="fy" operator="in" result="row1f"/><feComposite in="row1f" in2="row0" operator="over" result="core"/>`
@@ -675,11 +680,11 @@
       const peakHighlight=state.highlight[0];
       // gainL (buttons): the colour gain by luminance, a table like tone (macOS's glass boosts dark colours more: purple
       // 1.25, red 1.17, orange 1.04): out = tone(L) + (in - L) * gainL(L), as (in + 2*tone1 - 1) + chroma*(gainL - 1).
-      const tone1=state.gainL&&`type="table" tableValues="${state.tone.map((t,k)=>((t/255-k/32+1)/2).toFixed(4)).join(' ')}"`,gl=state.gainL&&`type="table" tableValues="${state.gainL.map(g=>Math.min(1,Math.max(0,(g-1)*2)).toFixed(4)).join(' ')}"`;
+      const tone1=state.gainL&&offsets(state.tone.map((t,k)=>t/255-k/32)),gl=state.gainL&&`type="table" tableValues="${state.gainL.map(g=>Math.min(1,Math.max(0,(g-1)*2)).toFixed(4)).join(' ')}"`;
       // The tone layer reads its backdrop (a texture) directly: an alias (feMerge) is redrawn for each of its readers.
       const g=part==='tone'?'SourceGraphic':'glass';
-      const colour=state.gainL?`<feColorMatrix in="${g}" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="lum"/><feComponentTransfer in="lum" result="tone"><feFuncR ${tone1}/><feFuncG ${tone1}/><feFuncB ${tone1}/></feComponentTransfer><feComponentTransfer in="lum" result="gl"><feFuncR ${gl}/><feFuncG ${gl}/><feFuncB ${gl}/></feComponentTransfer><feComposite in="${g}" in2="lum" operator="arithmetic" k2="1" k3="-1" k4=".5" result="chroma"/><feComposite in="chroma" in2="gl" operator="arithmetic" k1=".5" k3="-.25" k4=".5" result="boost"/><feComposite in="${g}" in2="tone" operator="arithmetic" k2="1" k3="2" k4="-1" result="toned"/><feComposite in="toned" in2="boost" operator="arithmetic" k2="1" k3="1" k4="-.5" result="tn"/>`
-        :`<feColorMatrix in="${g}" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0"/><feComponentTransfer result="tone"><feFuncR ${tone}/><feFuncG ${tone}/><feFuncB ${tone}/></feComponentTransfer><feComposite in="${g}" in2="tone" operator="arithmetic" k2="${state.gain}" k3="2" k4="-1" result="tn"/>`;
+      const colour=state.gainL?`<feColorMatrix in="${g}" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="lum"/><feComponentTransfer in="lum" result="tone"><feFuncR ${tone1.table}/><feFuncG ${tone1.table}/><feFuncB ${tone1.table}/></feComponentTransfer><feComponentTransfer in="lum" result="gl"><feFuncR ${gl}/><feFuncG ${gl}/><feFuncB ${gl}/></feComponentTransfer><feComposite in="${g}" in2="lum" operator="arithmetic" k2="1" k3="-1" k4=".5" result="chroma"/><feComposite in="chroma" in2="gl" operator="arithmetic" k1=".5" k3="-.25" k4=".5" result="boost"/><feComposite in="${g}" in2="tone" operator="arithmetic" k2="1" k3="${tone1.s}" k4="${tone1.lo}" result="toned"/><feComposite in="toned" in2="boost" operator="arithmetic" k2="1" k3="1" k4="-.5" result="tn"/>`
+        :`<feColorMatrix in="${g}" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0"/><feComponentTransfer result="tone"><feFuncR ${tone.table}/><feFuncG ${tone.table}/><feFuncB ${tone.table}/></feComponentTransfer><feComposite in="${g}" in2="tone" operator="arithmetic" k2="${state.gain}" k3="${tone.s}" k4="${tone.lo}" result="tn"/>`;
       // hlHue: the highlight raises the luminance as it does on grey (L + peak*mh*(highlightTo - L)) but keeps the hue,
       // scaling the three channels alike (Music's player: orange edge 255,176,65 where mixing toward white gave
       // 255,180,99): out = c * (1 + peak*mh*(highlightTo - L)/L), the ratio from a table on L capped at hlCap.
