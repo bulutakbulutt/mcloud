@@ -242,7 +242,11 @@ try {
     // In #main (Spotify's isolated root), after .Root: in <body> it covered the toolbar's icons.
     const info = await page.evaluate(() => ({ host: document.getElementById('am-toolbar-glass')?.parentElement?.id, shapes: document.querySelectorAll('#am-toolbar-glass .am-tglass').length,
       layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer').length, rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
-    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 6, rims: 2, on: true });
+    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 3, rims: 2, on: true });
+    // One set of layers and one hairline for every shape: each filter merges the shapes' map pieces, clipped to them.
+    const pane = await page.evaluate(() => { const l = document.querySelector('#am-toolbar-glass > .am-tglass-pane > .am-tglass-layer'), id = l.style.backdropFilter.match(/#([\w-]+)/)[1];
+      return { members: new Set([...document.getElementById(id).querySelectorAll('feImage[href]')].map(i => i.dataset.member)).size, pills: (l.style.clipPath.match(/M/g) || []).length, line: !!document.querySelector('#am-toolbar-glass > .am-tglass-pane-rim') }; });
+    assert.deepEqual(pane, { members: 2, pills: 2, line: true });
     const back = await page.$('#global-nav-bar .am-toolbar-leading button'), r = await back.boundingBox();
     // Placed on resize and settings changes, a frame after the layout moves (the previous check resized the window).
     await page.waitForFunction(x => Math.round(document.querySelector('#am-toolbar-glass .am-tglass').getBoundingClientRect().left) === x, Math.round(r.x));
@@ -259,20 +263,21 @@ try {
   await check('liquid glass map follows the player size', async () => {
     // The player's glass is toolbarLens (state 'player'): three backdrop-filter layers in a face 12pt larger than the
     // player's border box (the page past its edge; 724x78 from its 698x52 padding box), each map drawn as its two ends
-    // at device resolution and one column stretched between them (the face's size in all); the player itself filters nothing.
+    // at device resolution and one column stretched between them (the face's size in all); the player itself filters
+    // nothing. The bend layer is the glass's own box, so its maps start 12pt before it (-12 to 712).
     const map = () => page.evaluate(async () => {
       const face = document.querySelector('#am-player > .am-player-face'), id = getComputedStyle(face.querySelector('.am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1];
       const part = p => document.getElementById(id).querySelector(`feImage[data-part="${p}"]`), [l, m, r] = ['l', 'm', 'r'].map(part), shift = document.getElementById(id).querySelector('feDisplacementMap'), n = a => Number(m.getAttribute(a));
-      const span = [l.getAttribute('x'), +r.getAttribute('x') + +r.getAttribute('width')].join('-'), joined = Math.abs(+l.getAttribute('width') - n('x')) < 1e-6 && Math.abs(n('x') + n('width') - r.getAttribute('x')) < 1e-6;
+      const span = [l.getAttribute('x'), +r.getAttribute('x') + +r.getAttribute('width')].join('-'), joined = Math.abs(+l.getAttribute('x') + +l.getAttribute('width') - n('x')) < 1e-6 && Math.abs(n('x') + n('width') - r.getAttribute('x')) < 1e-6;
       return { size: span + 'x' + l.getAttribute('height'), joined, column: await new Promise(res => { const i = new Image(); i.onload = () => res(i.width); i.src = m.getAttribute('href'); }), href: l.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
     });
     await page.waitForFunction(() => document.querySelector('#am-player > .am-player-face .am-tglass-layer'));
     // The player's own bend filter (the toolbar's shapes have theirs too).
     await page.evaluate(() => { window.__playerBend = () => document.getElementById(getComputedStyle(document.querySelector('#am-player > .am-player-face .am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1]).querySelector('feImage[data-part="l"]'); window.__playerExtent = () => { const r = __playerBend().parentNode.querySelector('feImage[data-part="r"]'); return String(+r.getAttribute('x') + +r.getAttribute('width')); }; });
-    await page.waitForFunction(() => __playerBend()?.getAttribute('href') && __playerExtent() === '724');
+    await page.waitForFunction(() => __playerBend()?.getAttribute('href') && __playerExtent() === '712');
     const first = await map();
     // x shift in R (with G equal to it) and y shift in B: P3 colour conversion mixes green into red, never blue.
-    assert.deepEqual([first.size, first.joined, first.column, first.layers, first.x, first.y], ['0-724x78', true, 1, 3, 'R', 'B']);
+    assert.deepEqual([first.size, first.joined, first.column, first.layers, first.x, first.y], ['-12-712x78', true, 1, 3, 'R', 'B']);
     assert.ok(first.href.startsWith('data:image/png'));
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-player')).backdropFilter, !!document.querySelector('#am-player > .am-tglass-rim')]), ['none', true]);
     // A content-box change must not redraw the map.
@@ -280,11 +285,11 @@ try {
     await page.waitForTimeout(100);
     assert.equal((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 900, height: 900 });
-    await page.waitForFunction(() => __playerExtent() === String(document.getElementById('am-player').offsetWidth + 24));
+    await page.waitForFunction(() => __playerExtent() === String(document.getElementById('am-player').offsetWidth + 12));
     assert.notEqual((await map()).href, 'data:image/png;base64,kept');
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.evaluate(() => { document.getElementById('am-player').style.paddingLeft = ''; });
-    await page.waitForFunction(() => __playerExtent() === '724');
+    await page.waitForFunction(() => __playerExtent() === '712');
   });
 
   await check('artist page', async () => {
