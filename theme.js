@@ -1272,8 +1272,11 @@
     const friends=panelFor('buddy_feed'),devices=panelOf(nativeConnect());
     if(friends||performance.now()-friendsPending>3000)friendsPending=0;
     for(const [node,open] of [[friendsButton,friends||friendsPending],[connectButton,devices]]){node.classList.toggle('am-active',!!open);setAttributeIfChanged(node,'aria-pressed',String(!!open));}
+    // A playlist's Add (Spotify's "assisted curation") opens "Add to playlist" there too; its button carries no label
+    // to match, so being pressed names the current panel as its own.
+    const adding=current&&document.querySelector('[data-restore-focus-key="assisted_curation"][aria-pressed="true"]')?current:null;
     // Older clients without labelled panels: find the feed itself. With labels, the outgoing feed must not count.
-    const feed=friends||panelFor('queue')||devices||(asides.length?null:
+    const feed=friends||panelFor('queue')||devices||adding||(asides.length?null:
       document.querySelector('.fkgR9mQfUbjSxQi0FXd4')
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement);
     document.body.classList.toggle('am-panel-open',!!feed);

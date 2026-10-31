@@ -150,6 +150,33 @@ try {
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
+  await check('a playlist\'s Add and Mix work in the header capsule', async () => {
+    // A playlist page with an image header and Spotify's editing row: Add (unlabelled, pressed while "Add to
+    // playlist" is open in the right panel) and Mix, whose glowing pill is stacked over its real button.
+    await page.evaluate(() => {
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<section class="mock-capsule" data-testid="playlist-page"><style>.mock-mix{position:relative}.mock-mix > .mock-pill{position:absolute;inset:0;pointer-events:none}</style>
+        <div data-testid="entity-header"><div class="main-entityHeader-imageContainer"></div></div>
+        <div class="contentSpacing" data-testid="playlist-toolbar"><div data-overlayscrollbars="host"><div data-overlayscrollbars-viewport><div>
+          <button class="mock-add" data-restore-focus-key="assisted_curation" aria-pressed="false" data-encore-id="buttonPrimary"><span><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Ekle</span></button>
+          <div class="mock-mix"><div><button class="mock-mix-button" aria-label="Mix" data-encore-id="buttonPrimary"><span><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Mix</span></button></div>
+            <div class="mock-pill"><div><button data-encore-id="buttonSecondary"><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Mix</button></div></div></div>
+        </div></div></div></div></section>`);
+      const add = document.querySelector('.mock-add'), label = 'Çalma listesine ekle';
+      const close = () => { add.setAttribute('aria-pressed', 'false'); swapPanel(npv); };
+      window.__mockAddClose = close;
+      add.addEventListener('click', () => { if (add.getAttribute('aria-pressed') === 'true') return close(); add.setAttribute('aria-pressed', 'true'); swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="__mockAddClose()">×</button></aside>`); });
+    });
+    // The pill sits on the real Mix button, so a click on it reaches the button.
+    await page.evaluate(() => { const vp = document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]'); vp.scrollTop = vp.scrollHeight; });
+    assert.equal(await page.evaluate(() => { const pill = document.querySelector('.mock-pill button').getBoundingClientRect(), hit = document.elementFromPoint(pill.left + pill.width / 2, pill.top + pill.height / 2); return hit.closest('button')?.className; }), 'mock-mix-button');
+    await page.click('.mock-add');
+    await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
+    assert.ok(await page.evaluate(() => { const a = document.querySelector('.am-native-right aside[aria-label="Çalma listesine ekle"]'); return a.classList.contains('am-friends-sheet') && a.getBoundingClientRect().width > 0; }), 'Add to playlist shows as the sheet');
+    await page.click('.am-native-right aside[aria-label="Çalma listesine ekle"] button[aria-label="Kapat"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    await page.evaluate(() => { document.querySelector('.mock-capsule').remove(); delete window.__mockAddClose; document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').scrollTop = 0; });
+  });
+
   await check('star toggles Liked Songs', async () => {
     await page.click('.am-star');
     await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
