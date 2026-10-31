@@ -238,8 +238,20 @@ try {
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).lists, true);
     assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:6"] .am-list-art svg').count(), 'a playlist without artwork gets an icon');
     await shot('sidebar-lists-open');
-    await page.click('#am-sidebar .am-list-more');
+    // Open, the heading sticks to the top of the sidebar with its own Show Less; closing from deep in the list leaves
+    // the heading at the top with the short list under it, and focus on Show All.
+    const heading = () => page.locator('#am-sidebar .am-nav-heading:has(.am-nav-add)');
+    await page.setViewportSize({ width: 1440, height: 560 });
+    await page.$eval('#am-sidebar .am-navigation', n => { n.scrollTop = n.scrollHeight; });
+    await page.waitForFunction(() => document.querySelector('#am-sidebar .am-nav-heading.am-lists-open')?.classList.contains('am-stuck'));
+    assert.equal(await heading().evaluate(h => Math.round(h.getBoundingClientRect().top - h.parentElement.getBoundingClientRect().top)), 10);
+    await shot('sidebar-lists-stuck');
+    await page.click('#am-sidebar .am-nav-less');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
+    assert.ok(await page.evaluate(() => document.activeElement?.classList.contains('am-list-more')), 'focus stays on Show All');
+    assert.equal(await page.locator('#am-sidebar .am-nav-less').isVisible(), false);
+    await page.setViewportSize({ width: 1440, height: 900 });
     // Rows open their playlist, folders the library's folder view; the open one is selected.
     await page.click(rows + '[data-uri="spotify:playlist:1"]');
     assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/1');
@@ -252,6 +264,20 @@ try {
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:playlist:2'; window.__firePlayer('songchange'); });
     assert.equal(await page.$eval(rows + '[data-uri="spotify:playlist:2"]', e => e.classList.contains('am-playing') && getComputedStyle(e, '::after').width), '14px');
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    // A refresh that reorders waits while the pointer is on the list, then moves the same row (its artwork stays
+    // loaded) instead of rebuilding it.
+    const moveBefore = (uri, before) => page.evaluate(([u, b]) => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === u), 1); l.splice(l.findIndex(x => x.uri === b), 0, item); window.__libraryUpdate(); }, [uri, before]);
+    const third = () => page.evaluate(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent);
+    await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => { b.__kept = true; });
+    await page.hover(rows + '[data-uri="spotify:playlist:1"]');
+    await moveBefore('spotify:playlist:4', 'spotify:playlist:1');
+    await page.waitForTimeout(900);
+    assert.equal(await third(), 'Koşu', 'nothing moves under the pointer');
+    await page.mouse.move(900, 450);
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Gece Sürüşü');
+    assert.ok(await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => b.__kept === true), 'the row was moved, not rebuilt');
+    await moveBefore('spotify:playlist:4', 'spotify:playlist:5');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
     // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
     const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
     await recent(3);

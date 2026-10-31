@@ -229,6 +229,22 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}
 #am-sidebar .am-list-more[aria-expanded="true"] svg {transform:rotate(90deg)}
 #am-sidebar .am-list-more:hover {color:#f2f2f2}
+/* Rows pushed out of the list fade where they were (theme.js renderLists), which also keeps the scroll position when
+   rows move; the browser's own scroll anchoring would correct it a second time. */
+#am-sidebar .am-navigation {overflow-anchor:none}
+.am-list-body {position:relative}
+#am-sidebar .am-list-ghost {position:absolute;left:0;right:0;pointer-events:none}
+/* While the list is open the heading sticks to the top of the sidebar with "Show Less" (the chevron). It takes a
+   material only while stuck, so at rest it looks like the other headings. */
+#am-sidebar .am-nav-heading.am-lists-open {position:sticky;top:10px;z-index:2}
+#am-sidebar .am-nav-heading.am-lists-open::before {content:"";position:absolute;inset:-10px -6px -6px;z-index:-1;opacity:0;transition:opacity .15s;background:color-mix(in srgb,#262626 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 1px #ffffff0d}
+#am-sidebar .am-nav-heading.am-stuck::before {opacity:1}
+body.am-solid #am-sidebar .am-nav-heading.am-lists-open::before {background:#1a1a1a;-webkit-backdrop-filter:none;backdrop-filter:none}
+#am-sidebar .am-nav-less {display:grid;place-items:center;width:22px;height:22px;margin:-5px 0 -7px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-less[hidden] {display:none}
+#am-sidebar .am-nav-less svg {width:12px;height:12px;transform:rotate(90deg)}
+#am-sidebar .am-nav-less:hover {background:#ffffff14;color:#f2f2f2}
+#am-sidebar .am-nav-less:not([hidden]) + .am-nav-add {margin-left:0}
 .am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:#1c1c1e;color:#f2f2f2;font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
 /* Spotify's own toasts sit under the floating player; lift them above it (they stay under the artist view, so the

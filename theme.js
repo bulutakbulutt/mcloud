@@ -151,6 +151,7 @@
   row(T('Parçalar','Songs'), 'music', () => go('/collection/tracks'), '/collection/tracks');
   const listsHeading = heading(T('Listeler','Playlists'));
   row(T('Tüm Listeler','All Playlists'), 'grid', () => openLibrary('playlists'), '/collection/playlists');
+  const allLists = navItems[navItems.length - 1].b;
   // The user's playlists under "All Playlists", in the order of Spotify's own sidebar sorted by Recents: pinned
   // playlists and folders first, then the most recently played. A few show (settings.recent, picked under mcloud);
   // "Show All" lists the rest. Liked Songs is "Songs" above. "+" on the heading makes a playlist or folder, named in
@@ -160,7 +161,26 @@
   const Rootlist = S.Platform.RootlistAPI, listPeeks = [0, 3, 5, 10, 20];
   if (!listPeeks.includes(settings.recent)) settings.recent = 5;
   let listItems = [], listComplete = false, listShown = '', listNav = [], listRequest = 0, listTimer = 0, listStale = false, listContext = '', naming = null;
-  const listArt = lazyObserver(nav, '200px 0px');
+  let listPending = false, listFlush = 0, stuckFrame = 0;
+  const listArt = lazyObserver(nav, '200px 0px'), listRows = new Map();
+  // "Show All" / "Show Less" ends the list. While the list is open the heading sticks to the top of the sidebar with
+  // a "Show Less" chevron of its own, so a long list can be closed from anywhere in it (VS Code's sticky headers;
+  // Apple's HIG keeps actions off the bottom of a sidebar).
+  const listMore = button(T('Tümünü Göster','Show All'), 'chevron', () => toggleLists(listMore), 'am-nav-row am-list-more'); listMore.append(el('span', ''));
+  const listLess = button(T('Daha Az Göster','Show Less'), 'chevron', () => toggleLists(listLess), 'am-nav-less'); listLess.hidden = true; listsHeading.append(listLess);
+  function toggleLists(from) {
+    const closing = settings.lists, stuck = allLists.getBoundingClientRect().top < listsHeading.getBoundingClientRect().bottom;
+    settings.lists = !settings.lists; saveSettings();
+    if (settings.lists && !listComplete) refreshLists(true); else renderLists(true);
+    // Closed from deep in the list: the heading stays at the top with the short list under it.
+    if (closing && stuck) nav.scrollTop += allLists.getBoundingClientRect().top - listsHeading.getBoundingClientRect().bottom - 4;
+    (from.hidden ? listMore : from).focus({ preventScroll: true });
+  }
+  function syncStuck() {
+    stuckFrame = 0;
+    listsHeading.classList.toggle('am-stuck', listsHeading.classList.contains('am-lists-open') && listsHeading.getBoundingClientRect().top - nav.getBoundingClientRect().top < 10.5);
+  }
+  nav.addEventListener('scroll', () => { if (!stuckFrame && listsHeading.classList.contains('am-lists-open')) stuckFrame = requestAnimationFrame(syncStuck); }, { passive: true });
   function listImage(item) {
     const sizes = [...(item.images?.items || item.images || item.image?.sources || [])].filter(i => i?.url).sort((a, b) => (a.width || 0) - (b.width || 0));
     // Rows show 22px artwork: the smallest size that stays sharp at 2x (mosaics come in 60, 300 and 640).
@@ -181,52 +201,87 @@
     }
     return { complete: offset >= total, items: [...items.filter(i => i.pinned), ...items.filter(i => !i.pinned)] };
   }
-  function renderLists() {
+  // Rows are kept by URI and moved rather than rebuilt, so their artwork stays loaded.
+  function listRow(item) {
+    const sig = JSON.stringify(item), kept = listRows.get(item.uri);
+    if (kept?.sig === sig) return kept;
+    const b = el('button', 'am-nav-row am-list-row'); b.type = 'button'; b.title = item.name; b.dataset.uri = item.uri;
+    const art = el('span', 'am-list-art'), icon = item.type === 'folder' ? 'folder' : 'playlist';
+    if (item.image) {
+      const img = el('img', ''); img.alt = ''; img.decoding = 'async'; img.dataset.src = item.image;
+      img.onerror = () => { if (img.hasAttribute('src')) { listArt?.unobserve(img); img.remove(); art.innerHTML = svg(icon); } };
+      art.append(img);
+    } else art.innerHTML = svg(icon);
+    b.append(art, el('span', 'am-list-name', item.name || T('Adsız','Untitled')));
+    if (item.pinned) { const pin = el('span', 'am-list-pin'); pin.innerHTML = svg('pin'); b.append(pin); b.setAttribute('aria-description', T('Sabitlendi','Pinned')); }
+    const id = item.uri.split(':').slice(1).join('/');
+    b.addEventListener('click', () => item.type === 'folder' ? openLibrary('playlists', item.uri) : go('/' + id));
+    const row = { b, sig, key: item.type === 'folder' ? 'folder:' + item.uri : '/' + id };
+    listRows.set(item.uri, row); return row;
+  }
+  // A row must not move under the pointer just before a click: a refresh waits while the pointer or keyboard focus
+  // is in the playlists or the "+" menu is open, and lands ~0.4s after they leave.
+  const listBusy = () => !!naming || [listsHeading, lists].some(e => e.matches(':hover') || !!e.querySelector(':focus-visible')) || !!listsHeading.querySelector('.am-nav-add[aria-expanded="true"]');
+  function flushLists() { clearTimeout(listFlush); if (listPending) listFlush = setTimeout(() => listBusy() ? flushLists() : renderLists(), 400); }
+  // user: the change answers a click here (Show All, the count, a new playlist) and shows at once, without motion.
+  function renderLists(user = false) {
     const open = settings.lists, pinned = listItems.filter(i => i.pinned), rest = listItems.filter(i => !i.pinned);
     const shown = open ? listItems : [...pinned, ...rest.slice(0, settings.recent)];
     const more = rest.length > settings.recent || !listComplete;
     const key = JSON.stringify([open, more, shown]);
-    if (key === listShown) return;
-    listShown = key; listArt?.disconnect(); listNav = [];
-    const rows = shown.map(item => {
-      const b = el('button', 'am-nav-row am-list-row'); b.type = 'button'; b.title = item.name; b.dataset.uri = item.uri;
-      const art = el('span', 'am-list-art'), icon = item.type === 'folder' ? 'folder' : 'playlist';
-      if (item.image) {
-        const img = el('img', ''); img.alt = ''; img.decoding = 'async'; img.dataset.src = item.image;
-        img.onerror = () => { if (img.hasAttribute('src')) { listArt?.unobserve(img); img.remove(); art.innerHTML = svg(icon); } };
-        art.append(img);
-      } else art.innerHTML = svg(icon);
-      b.append(art, el('span', 'am-list-name', item.name || T('Adsız','Untitled')));
-      if (item.pinned) { const pin = el('span', 'am-list-pin'); pin.innerHTML = svg('pin'); b.append(pin); b.setAttribute('aria-description', T('Sabitlendi','Pinned')); }
-      const id = item.uri.split(':').slice(1).join('/');
-      b.addEventListener('click', () => item.type === 'folder' ? openLibrary('playlists', item.uri) : go('/' + id));
-      listNav.push({ b, key: item.type === 'folder' ? 'folder:' + item.uri : '/' + id });
-      return b;
-    });
-    if (more) {
-      const toggle = button(open ? T('Daha Az Göster','Show Less') : T('Tümünü Göster','Show All'), 'chevron', () => {
-        settings.lists = !settings.lists; saveSettings();
-        if (settings.lists && !listComplete) refreshLists(); else renderLists();
-      }, 'am-nav-row am-list-more');
-      toggle.setAttribute('aria-expanded', String(open)); toggle.append(el('span', '', toggle.title)); rows.push(toggle);
-    }
+    if (key === listShown) { listPending = false; return; }
+    if (!user && listShown && listBusy()) { listPending = true; flushLists(); return; }
+    // Moves slide (FLIP, 300ms, as in Messages); a row from outside the view or the list fades in with a small drop
+    // and the one pushed out fades away. Off screen, in the background or with reduced motion, rows just swap.
+    const animate = !user && !!listShown && !document.hidden && !reducedMotion.matches;
+    listShown = key; listPending = false;
+    const old = [...listBody.children].filter(b => !b.classList.contains('am-list-ghost')), before = new Map();
+    if (animate) for (const b of old) { before.set(b, b.getBoundingClientRect()); for (const a of b.getAnimations()) a.cancel(); }
+    const kept = shown.map(listRow), rows = kept.map(r => r.b);
+    for (const [uri, r] of listRows) if (!rows.includes(r.b)) listRows.delete(uri);
+    const label = open ? T('Daha Az Göster','Show Less') : T('Tümünü Göster','Show All');
+    listMore.title = label; listMore.setAttribute('aria-label', label); listMore.setAttribute('aria-expanded', String(open)); listMore.lastChild.textContent = label;
+    listLess.hidden = !(open && more); listsHeading.classList.toggle('am-lists-open', open && more);
+    if (more) rows.push(listMore);
+    // In a scrolled list the first steady row in view keeps its place, so rows added or removed above don't jump it.
+    const view = nav.getBoundingClientRect(), inView = r => r.bottom > view.top && r.top < view.bottom;
+    const anchor = nav.scrollTop > 0 && old.find((b, i) => rows.includes(b) && Math.abs(rows.indexOf(b) - i) <= 1 && b.getBoundingClientRect().top >= view.top);
+    const anchorTop = anchor && anchor.getBoundingClientRect().top;
+    const gone = old.filter(b => !rows.includes(b) && b !== listMore), focused = document.activeElement;
     listBody.replaceChildren(...rows);
-    for (const img of listBody.querySelectorAll('img[data-src]')) observeLazy(listArt, img);
-    updateNav(); syncListPlaying();
+    if (focused !== document.activeElement && listBody.contains(focused)) focused.focus({ preventScroll: true });
+    if (anchor) nav.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
+    for (const b of gone) for (const img of b.querySelectorAll('img')) { listArt?.unobserve(img); img.removeAttribute('src'); }
+    for (const img of listBody.querySelectorAll('img[data-src]:not([src])')) observeLazy(listArt, img);
+    if (animate) {
+      const ease = 'cubic-bezier(.2,0,0,1)', body = listBody.getBoundingClientRect();
+      for (const b of rows) {
+        const was = before.get(b), now = b.getBoundingClientRect();
+        if (was && inView(was)) { const dy = was.top - now.top; if (Math.abs(dy) >= 1) b.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 300, easing: ease }); }
+        else if (inView(now)) b.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: ease });
+      }
+      for (const b of gone) {
+        const was = before.get(b); if (!was || !inView(was)) continue;
+        b.classList.add('am-list-ghost'); b.inert = true; b.style.top = was.top - body.top + 'px'; listBody.append(b);
+        b.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'linear' }).onfinish = () => b.remove();
+      }
+    }
+    listNav = kept.map(({ b, key }) => ({ b, key }));
+    updateNav(); syncListPlaying(); syncStuck();
   }
-  async function refreshLists() {
+  async function refreshLists(user = false) {
     const request = ++listRequest;
-    try { const result = await fetchLists(); if (request === listRequest) { ({ items: listItems, complete: listComplete } = result); renderLists(); } }
+    try { const result = await fetchLists(); if (request === listRequest) { ({ items: listItems, complete: listComplete } = result); renderLists(user); } }
     catch (e) { console.warn('[AppleMusicMac] Sidebar playlists', e); }
   }
-  function scheduleLists(delay = 250) {
+  function scheduleLists(delay = 250, user = false) {
     clearTimeout(listTimer);
     if (document.hidden) { listStale = true; return; }
-    listTimer = setTimeout(refreshLists, delay);
+    listTimer = setTimeout(() => refreshLists(user), delay);
   }
   // Apple Music marks the playing playlist with a speaker.
   function syncListPlaying() {
-    const uri = S.Player.isPlaying?.() ? S.Player.data?.context?.uri || '' : '';
+    const uri = S.Player.origin?._state && S.Player.isPlaying?.() ? S.Player.data?.context?.uri || '' : '';
     for (const { b } of listNav) b.classList.toggle('am-playing', b.dataset.uri === uri);
   }
   if (S.Platform.LibraryAPI?.getContents) {
@@ -254,7 +309,7 @@
         const created = await Rootlist.createPlaylist(name, { before: 'start' }), uri = typeof created === 'string' ? created : created?.uri;
         if (/^spotify:playlist:/.test(uri || '')) go('/playlist/' + uri.split(':')[2]);
       }
-      scheduleLists(0);
+      scheduleLists(0, true);
     } catch (e) {
       notify(kind === 'folder' ? T('Klasör oluşturulamadı.','Couldn\'t create the folder.') : T('Çalma listesi oluşturulamadı.','Couldn\'t create the playlist.'));
       console.warn('[AppleMusicMac] Create ' + kind, e);
@@ -1759,7 +1814,7 @@
     reducedTransparency.addEventListener?.('change',syncGlass);
     // How many recent playlists the sidebar lists under the pinned ones: fewer for a calmer sidebar, more for fewer clicks.
     const recents=listPeeks.map(n=>new S.Menu.Item(T('Son listeler: ','Recent playlists: ')+(n||T('Yok','None')),settings.recent===n,()=>{
-      settings.recent=n;saveSettings();recents.forEach((item,i)=>item.setState(listPeeks[i]===n));renderLists();
+      settings.recent=n;saveSettings();recents.forEach((item,i)=>item.setState(listPeeks[i]===n));renderLists(true);
     }));
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
