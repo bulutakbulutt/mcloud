@@ -228,6 +228,9 @@ try {
     // The names line up with the rows above.
     const left = sel => page.$eval(sel, e => Math.round(e.getBoundingClientRect().left));
     assert.equal(await left(rows + ' .am-list-name'), await left('#am-sidebar .am-navigation > .am-nav-row span'));
+    // "+" on the heading sits over the pin column.
+    const centre = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return Math.round(r.left + r.width / 2); });
+    assert.equal(await centre('#am-sidebar .am-nav-add svg'), await centre(rows + ' .am-list-pin svg'));
     await shot('sidebar-lists');
     await page.click('#am-sidebar .am-list-more');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);

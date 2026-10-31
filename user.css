@@ -199,9 +199,10 @@ body.am-resizing * {transition:none!important}
 .am-profile-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:#ffffff5c;margin:16px 6px 4px}
 /* Playlists under "All Playlists" (theme.js): 22px artwork in the icon column, the name lined up with the rows above.
-   "+" on the heading keeps the heading's height (negative margins). */
+   "+" on the heading keeps the heading's height (negative margins). It is centred on the pin column below, and 1px
+   below the line box's centre: between the heading's cap-height and x-height centres. */
 .am-nav-heading {display:flex;align-items:center;min-height:13px}
-#am-sidebar .am-nav-add {display:grid;place-items:center;width:22px;height:22px;margin:-6px 10px -6px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-add {display:grid;place-items:center;width:22px;height:22px;margin:-5px 5px -7px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
 #am-sidebar .am-nav-add svg {width:15px;height:15px}
 #am-sidebar .am-nav-add:hover,#am-sidebar .am-nav-add[aria-expanded="true"] {background:#ffffff14;color:#f2f2f2}
 #am-sidebar .am-list-row {gap:8px;padding:0 16px 0 14px}
