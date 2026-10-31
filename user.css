@@ -465,11 +465,14 @@ body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:#2c2c2e;backd
 .am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
 body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
 body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
-/* The search field: the magnifier halfway between the capsule's edge and the text (48px in), not at the round end's
-   centre, which left 9px before it and 21px after; Spotify's fade behind the ⌘L hint is the input's
-   own grey, a patch over the glass once the input is clear. */
-body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:6px!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
+/* The search field: the magnifier's lens on the round end's centre line and 2px right of its centre (Spotify's lens is
+   centred at 10.53,10.56 of its 24-unit box, 1.1px up and left of the box's centre at 18px; concentric, it read as
+   pushed left), the text 7.5px after the handle, and the ⌘L hint's row moves with the text. Spotify's fade behind the
+   hint is the input's own grey, a patch over the glass once the input is clear. */
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child {top:0!important;left:0!important;width:36px!important;height:36px!important;transform:none!important;translate:none!important;display:flex!important;align-items:center;justify-content:center}
 body.am-tglass-on #global-nav-bar form[role="search"] > :first-child button {width:36px!important;height:36px!important;padding:0!important;display:grid!important;place-items:center}
+body.am-tglass-on #global-nav-bar form[role="search"] > :first-child svg {translate:3.1px 1.08px}
+body.am-tglass-on #global-nav-bar form[role="search"] :is(input,div:has(> span > kbd)) {padding-inline-start:36px!important}
 body.am-tglass-on #global-nav-bar form[role="search"] span:has(> kbd) {background:none!important}
 /* The artist page's back and share + more: the same glass behind them (theme.js syncArtistGlass). */
 #am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions) {background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;gap:0}
