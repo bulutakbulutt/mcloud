@@ -288,8 +288,9 @@
     for (const api of [S.Platform.LibraryAPI, Rootlist]) {
       try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => scheduleLists(), {}); } catch {}
     }
-    // Playing a playlist moves it to the top of Recents, but Spotify reorders a while after playback starts and sends
-    // no library event for it: look again at growing intervals until the playlist leads the list.
+    // Playing a playlist moves it to the top of Recents within ~0.15s (Spotify's own sidebar follows ~0.05s later), but
+    // no library event says so: look 0.1s after the context changes, and again at 0.4, 1.5, 5 and 15s while it does
+    // not lead yet.
     let recentsTimer = 0;
     const watchRecents = (uri, step = 0) => {
       clearTimeout(recentsTimer);
@@ -298,8 +299,8 @@
         if (document.hidden) { listStale = true; return; }
         await refreshLists();
         const leads = listItems.find(i => !i.pinned)?.uri === uri || listItems.some(i => i.pinned && i.uri === uri);
-        if (!leads && /^spotify:playlist:/.test(uri) && step < 3) watchRecents(uri, step + 1);
-      }, [1500, 3500, 10000, 15000][step]);
+        if (!leads && /^spotify:playlist:/.test(uri) && step < 4) watchRecents(uri, step + 1);
+      }, [100, 300, 1100, 3500, 10000][step]);
     };
     const onPlayer = () => {
       syncListPlaying();
