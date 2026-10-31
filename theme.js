@@ -417,11 +417,12 @@
     const row = event.target.closest?.('.am-list-row');
     if (!row || !listBody.contains(row)) return;
     event.preventDefault();
-    const uri = row.dataset.uri; if (!uri) return;
+    // Folders have no playable context or public link.
+    const uri = row.dataset.uri; if (!uri || /:folder:/.test(uri)) return;
     const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/');
     togglePopover({ x: event.clientX, y: event.clientY }, () => [
       { label: T('Çal','Play'), action: () => { if (S.Player.playUri) S.Player.playUri(uri); else go('/' + uri.split(':').slice(1).join('/')); } },
-      { label: T('Sıraya Ekle','Add to Queue'), action: () => enqueueTrack(uri) },
+      ...(canQueue(uri) ? [{ label: T('Sıraya Ekle','Add to Queue'), action: () => enqueueTrack(uri) }] : []),
       '-',
       { label: T('Bağlantıyı Kopyala','Copy Link'), action: async () => {
         try { if (S.Platform.ClipboardAPI?.copy) await S.Platform.ClipboardAPI.copy(shareLink); else await navigator.clipboard.writeText(shareLink); notify(T('Bağlantı kopyalandı.','Link copied.')); }
@@ -551,7 +552,7 @@
       ];
       return [
         {label:T('Çal','Play'),action:()=>{if(S.Player.playUri)S.Player.playUri(uri);else go('/'+uri.split(':').slice(1).join('/'));}},
-        {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(uri)},
+        ...(canQueue(uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(uri)}]:[]),
         '-',
         {label:T('Aç','Open'),action:()=>go('/'+uri.split(':').slice(1).join('/'))},
         {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
@@ -972,15 +973,23 @@
   },true);
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'){
-      if(!subPopover.hidden){closeSubPopover();subAnchor?.focus();return;}
+      if(!subPopover.hidden){const item=subAnchor;closeSubPopover();item?.focus();return;}
       if(!popover.hidden){const anchor=popoverAnchor;closePopover();anchor?.focus?.();}
     }
   });
   const openUri=uri=>{if(uri)go('/'+uri.split(':').slice(1).join('/'));};
+  // Spotify's queue takes tracks only (an album or playlist URI adds nothing), so those are expanded first.
+  async function queueUris(uri) {
+    if(/^spotify:playlist:/.test(uri))return (await S.Platform.PlaylistAPI.getContents(uri,{limit:500})).items.map(i=>i.uri);
+    if(/^spotify:album:/.test(uri))return ((await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri,locale:'',offset:0,limit:300}))?.data?.albumUnion?.tracksV2?.items||[]).map(i=>i.track?.uri);
+    return [uri];
+  }
+  const canQueue=uri=>/^spotify:(track|episode|album|playlist):/.test(uri||'');
   const enqueueTrack=async uri=>{
     try{
-      if(S.addToQueue)await S.addToQueue([{uri}]);
-      else if(S.Platform.PlayerAPI?.addToQueue)await S.Platform.PlayerAPI.addToQueue([{uri}]);
+      const items=(await queueUris(uri)).filter(u=>/^spotify:(track|episode):/.test(u||'')).map(uri=>({uri}));
+      if(!items.length)throw new Error('Nothing to queue');
+      if(S.addToQueue)await S.addToQueue(items);else await S.Platform.PlayerAPI.addToQueue(items);
       notify(T('Sıraya eklendi.','Added to queue.'));
     }catch{notify(T('Sıraya eklenemedi.','Couldn\'t add to queue.'));}
   };
@@ -990,13 +999,22 @@
       notify(T('Çalma listesine eklendi.','Added to playlist.'));
     }catch{notify(T('Çalma listesine eklenemedi.','Couldn\'t add to playlist.'));}
   };
+  // The same playlists Spotify's own "Add to playlist" offers: every one you can add to, folders flattened, in rootlist
+  // order. The sidebar's list can't stand in: it holds only the loaded rows, Mixes and other people's playlists among them.
+  let addTargets=null,addLoading=null;
+  const loadAddTargets=()=>addLoading||=Promise.resolve(Rootlist?.getContents?.({flatten:true}))
+    .then(r=>{addTargets=(r?.items||[]).filter(i=>i.type==='playlist'&&i.canAdd);}).catch(()=>{addTargets=[];}).finally(()=>{addLoading=null;});
+  try{const events=Rootlist?.getEvents?.();(events?._emitter||events)?.addListener?.('update',()=>{addTargets=null;},{});}catch{}
   function playlistSubmenu(trackUri) {
+    if(!addTargets)loadAddTargets();
     return () => {
-      const lists=listItems.filter(i=>i.type==='playlist');
+      // Still loading: show that, then redraw the open submenu once the list arrives.
+      if(!addTargets)loadAddTargets().then(()=>{if(subAnchor&&!subPopover.hidden){const item=subAnchor;closeSubPopover();openSubPopover(item,playlistSubmenu(trackUri));}});
+      const lists=addTargets||[];
       return [
         ...(Rootlist?.createPlaylist?[{label:T('+ Yeni Çalma Listesi','+ New Playlist'),action:()=>nameNewItem('playlist',trackUri)},'-']:[]),
         ...lists.map(list=>({label:list.name||T('Adsız Liste','Untitled Playlist'),action:()=>addTrackToPlaylist(list.uri,trackUri)})),
-        ...(!lists.length&&!Rootlist?.createPlaylist?[{label:T('Kullanılabilir liste yok','No playlists available'),action:()=>{}}]:[]),
+        ...(!addTargets?[{label:T('Yükleniyor…','Loading…'),action:()=>{}}]:!lists.length&&!Rootlist?.createPlaylist?[{label:T('Kullanılabilir liste yok','No playlists available'),action:()=>{}}]:[]),
       ];
     };
   }
