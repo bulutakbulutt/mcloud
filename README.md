@@ -52,7 +52,7 @@ The script:
   - The whole window takes on the artist's colour.
   - To switch to Spotify's own page, choose *Open Spotify's Page* (*Spotify Sayfasında Aç*) from the "…" menu in the top right.
 - **Library:** Your playlists, albums and artists, shown with their artwork. Filter by name, and sort by library order or A–Z.
-- **Playlists in the sidebar:** Your pinned playlists and folders, then the five you played most recently (pick how many under *mcloud*), as in Spotify's own sidebar sorted by Recents. *Show All* lists the rest; a speaker marks the one playing. The **+** next to *Playlists* makes a new playlist or folder: name it in place and press <kbd>Enter</kbd>. When a playlist you play moves up, its row slides into place; with the list open, the *Playlists* heading stays at the top with a *Show Less* arrow.
+- **Playlists in the sidebar:** Your pinned playlists and folders, then the five you played most recently (pick how many under *mcloud*), as in Spotify's own sidebar sorted by Recents. A speaker marks the one playing. The **+** next to *Playlists* makes a new playlist or folder: name it in place and press <kbd>Enter</kbd>. When a playlist you play moves up, its row slides into place. *Show All* at the end opens the full list; while it is open, *Show Less* sits on the *Playlists* heading, which stays at the top of the sidebar.
 - **Track numbers:** Hide the numbers beside songs in playlists and albums from Spotify's own *Columns* menu above the track list (*Track number*) or under *mcloud*. Titles move into their place, and the play button shows over the artwork.
 - **Spicy Lyrics:** Toggle lyrics and go full screen right from the player.
 - **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
