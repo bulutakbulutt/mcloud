@@ -364,11 +364,15 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-#am-popover {position:fixed;z-index:70;min-width:200px;max-width:280px;padding:5px;border-radius:12px;border:1px solid #ffffff1f;background:#2c2c2ef0;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 12px 32px #0007;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
-#am-popover[hidden] {display:none}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;border-radius:12px;border:1px solid #ffffff1f;background:#2c2c2ef0;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 12px 32px #0007;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
+:is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
+:is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
+:is(#am-popover,#am-popover-sub)[hidden] {display:none}
 @keyframes am-pop {from{opacity:0;transform:translateY(4px) scale(.98)}}
-.am-popover-item {display:block;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
-.am-popover-item:hover,.am-popover-item:focus-visible {background:var(--am-accent);color:white;outline:0}
+.am-popover-item {display:block;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-popover-item:hover,.am-popover-item:focus-visible,.am-popover-item.am-active {background:var(--am-accent);color:white;outline:0}
+.am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
+.am-popover-item.am-has-submenu::after {content:'›';font-size:15px;line-height:1;opacity:.6;margin-left:8px}
 .am-popover-separator {height:1px;margin:5px 8px;background:#ffffff1a}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
@@ -376,8 +380,8 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
-body.am-solid #am-popover {background:#2c2c2e;backdrop-filter:none}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,#am-popover{animation:none}}
+body.am-solid :is(#am-popover,#am-popover-sub) {background:#2c2c2e;backdrop-filter:none}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub){animation:none}}
 
 
 body:not(.am-library-open) #am-library {display:none!important}

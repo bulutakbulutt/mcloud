@@ -18,7 +18,7 @@
     music:'<path d="M10 17V5l10-3v12M10 7l10-3"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
     browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
-    play:'<path d="m7 3 15 9-15 9z" fill="currentColor" stroke="none"/>',
+    play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
@@ -176,8 +176,8 @@
     const closing = settings.lists;
     settings.lists = !settings.lists; saveSettings();
     const focusAfter = () => {
-      const next = settings.lists ? listRows.get(listItems.filter(i => !i.pinned)[settings.recent]?.uri)?.b || listLess : listMore;
-      next.focus({ preventScroll: true });
+      const focus = () => (settings.lists ? listRows.get(listItems.filter(i => !i.pinned)[settings.recent]?.uri)?.b || listLess : listMore)?.focus({ preventScroll: true });
+      focus(); requestAnimationFrame(focus); setTimeout(focus, 50);
     };
     if (!closing) { if (listComplete) { renderLists(true, true); focusAfter(); } else refreshLists(true, true, focusAfter); return; }
     // Closing mirrors opening: the rows that go fade out in place and Show All comes back (renderLists). From deep in
@@ -374,11 +374,15 @@
     });
     scheduleLists(0);
   }
-  async function createItem(kind, name) {
+  async function createItem(kind, name, initialTrack) {
     try {
       if (kind === 'folder') { await Rootlist.createFolder(name, { before: 'start' }); notify(T('Klasör oluşturuldu: ','Folder created: ') + name); }
       else {
         const created = await Rootlist.createPlaylist(name, { before: 'start' }), uri = typeof created === 'string' ? created : created?.uri;
+        if (initialTrack && uri && S.Platform.PlaylistAPI?.add) {
+          await S.Platform.PlaylistAPI.add(uri, [initialTrack], {});
+          notify(T('Çalma listesine eklendi.','Added to playlist.'));
+        }
         if (/^spotify:playlist:/.test(uri || '')) go('/playlist/' + uri.split(':')[2]);
       }
       scheduleLists(0, true);
@@ -388,7 +392,7 @@
     }
   }
   // The new item gets a name field at the top of the list: Enter or leaving the field creates it, Escape cancels.
-  function nameNewItem(kind) {
+  function nameNewItem(kind, initialTrack) {
     naming?.querySelector('input')?.blur();
     const field = el('div', 'am-nav-row am-list-row am-list-new'), art = el('span', 'am-list-art'); art.innerHTML = svg(kind === 'folder' ? 'folder' : 'playlist');
     const input = el('input', 'am-list-input'); input.type = 'text'; input.maxLength = 100; input.spellcheck = false;
@@ -398,7 +402,7 @@
     let done = false;
     const finish = create => {
       if (done) return; done = true; if (naming === field) naming = null; field.remove();
-      if (create) createItem(kind, input.value.trim() || input.defaultValue);
+      if (create) createItem(kind, input.value.trim() || input.defaultValue, initialTrack);
     };
     input.addEventListener('keydown', event => {
       event.stopPropagation();
@@ -411,6 +415,22 @@
     if (box.top < view.top || box.bottom > view.bottom) nav.scrollTop += box.top - view.top - 40;
     input.focus({ preventScroll: true }); input.select();
   }
+  nav.addEventListener('contextmenu', event => {
+    const row = event.target.closest?.('.am-list-row');
+    if (!row || !listBody.contains(row)) return;
+    event.preventDefault();
+    const uri = row.dataset.uri; if (!uri) return;
+    const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/');
+    togglePopover({ x: event.clientX, y: event.clientY }, () => [
+      { label: T('Çal','Play'), action: () => { if (S.Player.playUri) S.Player.playUri(uri); else go('/' + uri.split(':').slice(1).join('/')); } },
+      { label: T('Sıraya Ekle','Add to Queue'), action: () => enqueueTrack(uri) },
+      '-',
+      { label: T('Bağlantıyı Kopyala','Copy Link'), action: async () => {
+        try { if (S.Platform.ClipboardAPI?.copy) await S.Platform.ClipboardAPI.copy(shareLink); else await navigator.clipboard.writeText(shareLink); notify(T('Bağlantı kopyalandı.','Link copied.')); }
+        catch { notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.')); }
+      }},
+    ]);
+  });
   if (Rootlist?.createPlaylist) {
     const add = button(T('Yeni çalma listesi veya klasör','New playlist or folder'), 'plus', () => togglePopover(add, () => [
       { label: T('Yeni Çalma Listesi','New Playlist'), action: () => nameNewItem('playlist') },
@@ -520,6 +540,26 @@
     if(folder==='true')openLibrary(kind,uri);
     else go('/'+uri.split(':').slice(1).join('/'));
   });
+  libraryView.addEventListener('contextmenu',event=>{
+    const card=event.target.closest?.('.am-library-card');
+    if(!card||!libraryView.contains(card))return;
+    event.preventDefault();
+    const {uri,kind,folder}=card.dataset;if(!uri)return;
+    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/');
+    togglePopover({x:event.clientX,y:event.clientY},()=>{
+      if(folder==='true')return [
+        {label:T('Klasörü Aç','Open Folder'),action:()=>openLibrary(kind,uri)},
+        ...(Rootlist?.createPlaylist?[{label:T('Yeni Çalma Listesi','New Playlist'),action:()=>nameNewItem('playlist')}]:[]),
+      ];
+      return [
+        {label:T('Çal','Play'),action:()=>{if(S.Player.playUri)S.Player.playUri(uri);else go('/'+uri.split(':').slice(1).join('/'));}},
+        {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(uri)},
+        '-',
+        {label:T('Aç','Open'),action:()=>go('/'+uri.split(':').slice(1).join('/'))},
+        {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+      ];
+    });
+  });
   libraryView.addEventListener('error',event=>{
     const img=event.target;
     if(img.tagName!=='IMG')return;
@@ -612,6 +652,12 @@
     }catch(e){if(request!==libraryRequest)return;status.textContent=T('Kitaplık yüklenemedi. Yeniden dene.','Couldn\'t load your library. Try again.');const retry=el('button','am-library-retry',T('Yeniden dene','Try Again'));retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label',T('Oynatıcı','Player'));
+  player.addEventListener('contextmenu',event=>{
+    if(popover.contains(event.target))return;
+    event.preventDefault();
+    if(!S.Player.data?.item?.uri)return;
+    togglePopover({x:event.clientX,y:event.clientY},trackMenu);
+  });
   const controls=el('div','am-transport');player.append(controls);
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
   const shuffle=button(T('Karıştır','Shuffle'),'shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
@@ -839,14 +885,44 @@
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
   glassLens('am-glass-toast',toast,glassStates.focused);
-  // One shared popover serves the "…" track menu and the profile menu.
-  const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.hidden=true;document.body.append(popover);
-  let popoverAnchor=null;
-  function closePopover(){if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popoverAnchor?.setAttribute('aria-expanded','false');popoverAnchor=null;}
-  function togglePopover(anchor,build) {
-    if(popoverAnchor===anchor){closePopover();return;}
-    closePopover();
-    const entries=build();if(!entries.length)return;
+  // One shared popover serves the "…" track menu and the profile menu, with an optional flyout submenu.
+  const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.tabIndex=-1;popover.hidden=true;
+  const subPopover=el('div','am-popover am-popover-sub');subPopover.id='am-popover-sub';subPopover.setAttribute('role','menu');subPopover.tabIndex=-1;subPopover.hidden=true;
+  document.body.append(popover,subPopover);
+  for(const p of [popover,subPopover]){
+    p.addEventListener('keydown',event=>{
+      const items=[...p.querySelectorAll('.am-popover-item')];const index=items.indexOf(document.activeElement);
+      if(event.key==='ArrowDown'){event.preventDefault();(items[index+1]||items[0])?.focus();}
+      else if(event.key==='ArrowUp'){event.preventDefault();(items[index-1]||items[items.length-1])?.focus();}
+    });
+  }
+  let popoverAnchor=null,subAnchor=null,subTimer=null;
+  function closeSubPopover(){clearTimeout(subTimer);subTimer=null;if(subPopover.hidden)return;subPopover.hidden=true;subPopover.replaceChildren();subAnchor?.classList.remove('am-active');subAnchor=null;}
+  function closePopover(){closeSubPopover();if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popoverAnchor?.setAttribute?.('aria-expanded','false');popoverAnchor=null;}
+  function openSubPopover(item,buildSub) {
+    clearTimeout(subTimer);
+    if(subAnchor===item&&!subPopover.hidden)return;
+    subAnchor?.classList.remove('am-active');
+    subAnchor=item;item.classList.add('am-active');
+    subPopover.replaceChildren();
+    const entries=typeof buildSub==='function'?buildSub():buildSub;
+    for(const entry of entries){
+      if(entry==='-'){subPopover.append(el('div','am-popover-separator'));continue;}
+      const btn=el('button','am-popover-item',entry.label);btn.type='button';btn.setAttribute('role','menuitem');
+      btn.onclick=()=>{closePopover();entry.action?.();};
+      subPopover.append(btn);
+    }
+    subPopover.hidden=false;
+    const itemRect=item.getBoundingClientRect(),subW=subPopover.offsetWidth,subH=subPopover.offsetHeight;
+    const placeRight=innerWidth-itemRect.right>=subW+12||itemRect.left<subW+12;
+    subPopover.style.left=Math.round(placeRight?itemRect.right+4:itemRect.left-subW-4)+'px';
+    const top=Math.max(8,Math.min(itemRect.top-4,innerHeight-subH-8));
+    subPopover.style.top=Math.round(top)+'px';subPopover.style.bottom='';
+  }
+  subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);});
+  subPopover.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
+  function renderPopoverEntries(entries) {
+    popover.replaceChildren();
     for(const entry of entries){
       if(entry==='-'){popover.append(el('div','am-popover-separator'));continue;}
       if(entry.swatches){
@@ -859,28 +935,83 @@
         }
         popover.append(row);continue;
       }
-      const item=el('button','am-popover-item',entry.label);item.type='button';item.setAttribute('role','menuitem');
-      item.onclick=()=>{closePopover();entry.action();};popover.append(item);
+      const item=el('button','am-popover-item'+(entry.submenu?' am-has-submenu':''),entry.label);item.type='button';item.setAttribute('role','menuitem');
+      if(entry.submenu){
+        item.addEventListener('pointerenter',()=>{clearTimeout(subTimer);openSubPopover(item,entry.submenu);});
+        item.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
+        item.onclick=e=>{e.stopPropagation();openSubPopover(item,entry.submenu);};
+      } else {
+        item.addEventListener('pointerenter',()=>{subTimer=setTimeout(closeSubPopover,60);});
+        item.onclick=()=>{closePopover();entry.action?.();};
+      }
+      popover.append(item);
     }
-    popoverAnchor=anchor;anchor.setAttribute('aria-expanded','true');popover.hidden=false;
-    const rect=anchor.getBoundingClientRect(),width=popover.offsetWidth;
-    const left=anchor===more?rect.left+rect.width/2-width/2:rect.left;
-    popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,left)))+'px';
-    // Open upwards from the player and profile, downwards from controls near the top.
-    const below=rect.top<innerHeight/2;
-    popover.style.top=below?Math.round(rect.bottom+8)+'px':'';
-    popover.style.bottom=below?'':Math.round(innerHeight-rect.top+10)+'px';
-    popover.querySelector('button')?.focus({preventScroll:true});
   }
-  document.addEventListener('pointerdown',event=>{if(!popover.hidden&&!popover.contains(event.target)&&!popoverAnchor?.contains(event.target))closePopover();},true);
-  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!popover.hidden){const anchor=popoverAnchor;closePopover();anchor?.focus();}});
+  function togglePopover(anchor,build) {
+    if(popoverAnchor===anchor){closePopover();return;}
+    closePopover();
+    const entries=typeof build==='function'?build():build;if(!entries?.length)return;
+    renderPopoverEntries(entries);
+    popoverAnchor=anchor;anchor.setAttribute?.('aria-expanded','true');popover.hidden=false;
+    const width=popover.offsetWidth,height=popover.offsetHeight;
+    if(typeof anchor.x==='number'){
+      popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,anchor.x)))+'px';
+      const below=anchor.y+height+16<innerHeight;
+      popover.style.top=below?Math.round(anchor.y+4)+'px':'';
+      popover.style.bottom=below?'':Math.round(innerHeight-anchor.y+4)+'px';
+    } else {
+      const rect=anchor.getBoundingClientRect();
+      const left=anchor===more?rect.left+rect.width/2-width/2:rect.left;
+      popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,left)))+'px';
+      const below=rect.top<innerHeight/2;
+      popover.style.top=below?Math.round(rect.bottom+8)+'px':'';
+      popover.style.bottom=below?'':Math.round(innerHeight-rect.top+10)+'px';
+    }
+    popover.focus({preventScroll:true});
+  }
+  document.addEventListener('pointerdown',event=>{
+    if(!popover.hidden&&!popover.contains(event.target)&&!subPopover.contains(event.target)&&(!popoverAnchor?.contains||!popoverAnchor.contains(event.target)))closePopover();
+  },true);
+  document.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){
+      if(!subPopover.hidden){closeSubPopover();subAnchor?.focus();return;}
+      if(!popover.hidden){const anchor=popoverAnchor;closePopover();anchor?.focus?.();}
+    }
+  });
   const openUri=uri=>{if(uri)go('/'+uri.split(':').slice(1).join('/'));};
+  const enqueueTrack=async uri=>{
+    try{
+      if(S.addToQueue)await S.addToQueue([{uri}]);
+      else if(S.Platform.PlayerAPI?.addToQueue)await S.Platform.PlayerAPI.addToQueue([{uri}]);
+      notify(T('Sıraya eklendi.','Added to queue.'));
+    }catch{notify(T('Sıraya eklenemedi.','Couldn\'t add to queue.'));}
+  };
+  const addTrackToPlaylist=async(playlistUri,trackUri)=>{
+    try{
+      if(S.Platform.PlaylistAPI?.add)await S.Platform.PlaylistAPI.add(playlistUri,[trackUri],{});
+      notify(T('Çalma listesine eklendi.','Added to playlist.'));
+    }catch{notify(T('Çalma listesine eklenemedi.','Couldn\'t add to playlist.'));}
+  };
+  function playlistSubmenu(trackUri) {
+    return () => {
+      const lists=listItems.filter(i=>i.type==='playlist');
+      return [
+        ...(Rootlist?.createPlaylist?[{label:T('+ Yeni Çalma Listesi','+ New Playlist'),action:()=>nameNewItem('playlist',trackUri)},'-']:[]),
+        ...lists.map(list=>({label:list.name||T('Adsız Liste','Untitled Playlist'),action:()=>addTrackToPlaylist(list.uri,trackUri)})),
+        ...(!lists.length&&!Rootlist?.createPlaylist?[{label:T('Kullanılabilir liste yok','No playlists available'),action:()=>{}}]:[]),
+      ];
+    };
+  }
   function trackMenu() {
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artistUri=item.artists?.[0]?.uri||meta.artist_uri;
     return [
+      {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(item.uri)},
+      {label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(item.uri)},
+      '-',
       ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
       ...(artistUri?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artistUri)}]:[]),
+      '-',
       {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{
         const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
         try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}
@@ -1431,6 +1562,17 @@
   // Artist pages are redrawn after Apple Music from Spotify's own artist query.
   // Any missing API or failed request falls back to Spotify's native page.
   const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label',T('Sanatçı','Artist'));document.body.append(artistView);
+  artistView.addEventListener('contextmenu',event=>{
+    if(event.defaultPrevented||popover.contains(event.target))return;
+    event.preventDefault();
+    const id=routePath().replace(/^\/artist\//,'');if(!id)return;
+    const shareLink='https://open.spotify.com/artist/'+id;
+    togglePopover({x:event.clientX,y:event.clientY},()=>[
+      {label:T('Sanatçıyı Çal','Play Artist'),action:()=>playArtist('spotify:artist:'+id)},
+      '-',
+      {label:T('Sanatçı Bağlantısını Kopyala','Copy Artist Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+    ]);
+  });
   // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
   // overlay thumb, as on macOS, shows while scrolling or hovered and can be dragged.
   function overlayScrollbar(view,cls) {
@@ -1605,6 +1747,16 @@
     card.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
     if(subtitle)card.append(el('span','am-card-sub',subtitle));
     card.addEventListener('click',()=>openUri(release.uri));
+    card.addEventListener('contextmenu',event=>{
+      event.preventDefault();event.stopPropagation();
+      const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
+      togglePopover({x:event.clientX,y:event.clientY},()=>[
+        {label:T('Çal','Play'),action:()=>openUri(release.uri)},
+        {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)},
+        '-',
+        {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+      ]);
+    });
     return card;
   }
   async function toggleSaved(uri,saved) {
@@ -1691,6 +1843,16 @@
         block.append(el('h2','am-shelf-title',T('Son Çıkan','Latest Release')));
         const card=el('div','am-latest-card');
         const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
+        cover.addEventListener('contextmenu',event=>{
+          event.preventDefault();event.stopPropagation();
+          const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
+          togglePopover({x:event.clientX,y:event.clientY},()=>[
+            {label:T('Çal','Play'),action:()=>openUri(latest.uri)},
+            {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(latest.uri)},
+            '-',
+            {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+          ]);
+        });
         const info=el('div','am-latest-info');
         info.append(el('span','am-latest-date',releaseDate(latest.date)),el('span','am-latest-name',(latest.name||'')+(releaseLabel[latest.type]?' - '+releaseLabel[latest.type]:'')));
         const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+T(' şarkı',count===1?' song':' songs')));
@@ -1711,11 +1873,22 @@
           const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
           text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
           playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
-          const songMore=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(songMore,()=>[
+          const songItems=()=>[
+            {label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},
+            {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)},
+            {label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)},
+            '-',
             ...(song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[]),
+            '-',
             {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-          ]),'am-song-more');
-          row.append(playSong,songMore);grid.append(row);
+          ];
+          const songMore=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(songMore,songItems),'am-song-more');
+          row.append(playSong,songMore);
+          row.addEventListener('contextmenu',event=>{
+            event.preventDefault();event.stopPropagation();
+            togglePopover({x:event.clientX,y:event.clientY},songItems);
+          });
+          grid.append(row);
         }
         block.append(grid);track.append(block);
       }
