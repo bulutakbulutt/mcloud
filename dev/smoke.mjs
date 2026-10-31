@@ -314,8 +314,18 @@ try {
     assert.ok(await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => b.__kept === true), 'the row was moved, not rebuilt');
     await moveBefore('spotify:playlist:4', 'spotify:playlist:5');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
-    // Spotify moves a playlist you play to the top of Recents a while after it starts, with no library event; the
-    // sidebar looks again until it leads.
+    // Spotify moves a playlist you play to the top of Recents within ~0.15s, with no library event; the sidebar
+    // follows within a second.
+    const started = await page.evaluate(() => {
+      const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === 'spotify:playlist:3'), 1); l.splice(l.findIndex(x => !x.pinned && ['playlist', 'folder'].includes(x.type)), 0, item);
+      Spicetify.Player.data.context.uri = 'spotify:playlist:3'; window.__firePlayer('songchange'); return performance.now();
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Yol Şarkıları');
+    assert.ok(await page.evaluate(t => performance.now() - t, started) < 900, 'the sidebar follows within a second');
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    await moveBefore('spotify:playlist:3', 'spotify:playlist:4');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
+    // When Spotify is slower to reorder, the sidebar keeps looking until the playlist leads.
     await page.evaluate(() => {
       Spicetify.Player.data.context.uri = 'spotify:playlist:5'; window.__firePlayer('songchange');
       setTimeout(() => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === 'spotify:playlist:5'), 1); l.splice(l.findIndex(x => !x.pinned && ['playlist', 'folder'].includes(x.type)), 0, item); }, 2500);
