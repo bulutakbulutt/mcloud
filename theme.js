@@ -659,7 +659,10 @@
     // 'face' further: 'mid' (thin lines, darken halo, edge read) and 'tone' (colour and highlight, which read their input
     // several times: as a filter's own backdrop that input is a texture, not a chain recomputed per reader). exact: the
     // bend samples bilinearly (4 taps); otherwise one tap, and the face blurs where the bend magnifies.
+    // 'lite' (Balanced mode on the Spicy Lyrics page, whose background redraws every frame and reruns every pass over
+    // it): the bend as one tap, then the plain tone and highlight; no thin lines, halo, edge read, wash or hairline.
     const glassFilter=(id,state,part,exact,n=1)=>{
+      if(part==='lite')state={...state,gainL:0,hlHue:false};
       // A table of offsets (may be negative) stored over its own range, lo + s*value: Chromium keeps filter results in 8 bits,
       // and the former (x+1)/2 doubled every step when decoded (dark coloured gradients behind the glass banded in steps of
       // 2-4 levels). Stored values are truncated: the old form came out ~1 level darker on average, this one s/2 of one,
@@ -706,7 +709,7 @@
       const highlight=state.hlHue?`<feColorMatrix in="tn" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="hll"/><feComponentTransfer in="hll" result="hlt"><feFuncR ${hlRatio}/><feFuncG ${hlRatio}/><feFuncB ${hlRatio}/></feComponentTransfer><feComposite in="hlt" in2="mh" operator="arithmetic" k1="1" result="hlf"/><feComposite in="tn" in2="hlf" operator="arithmetic" k1="${(hlCap*peakHighlight).toFixed(4)}" k2="1"/>`
         :`<feComposite in2="mh" operator="arithmetic" k1="${state.hlK1??-peakHighlight}" k2="1" k3="${state.hlK3??(state.highlightTo*peakHighlight).toFixed(4)}"/>`;
       const face=`${img('mh')}${state.line?img('ml'):''}${colour}${highlight}${state.line?'<feBlend in2="ml" mode="multiply"/>':''}`;
-      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">${part==='bend'?bend+(exact?'':smooth('core')):part==='face'?(exact?thin('SourceGraphic'):smooth('SourceGraphic')+thin('core'))+darken+outer+face:part==='mid'?thin('SourceGraphic')+darken+outer:part==='tone'?face:bend+darken+outer+face}</filter>`;
+      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">${part==='bend'?bend+(exact?'':smooth('core')):part==='face'?(exact?thin('SourceGraphic'):smooth('SourceGraphic')+thin('core'))+darken+outer+face:part==='mid'?thin('SourceGraphic')+darken+outer:part==='tone'?face:part==='lite'?img('map')+'<feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="B" result="glass"/>'+face:bend+darken+outer+face}</filter>`;
     };
     // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
     // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
@@ -762,7 +765,7 @@
         // A shift map pixel: x (a byte) in red and green, y (0-1) in blue, compensated for P3's blue row.
         const put=(m,i,xv,yv)=>{m[i]=m[i+1]=xv;m[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));m[i+3]=255;};
         // Bilinear taps: per pixel, offsets (px) to the 4 page pixels around its source point; one scale for all four.
-        const taps=fx?[0,1,2,3].map(j=>data['bm'+j].data):null,offsets=taps&&new Float32Array(CW*H*8),outs=me&&new Float32Array(CW*H*2),moves=mm&&state.scaleOf&&new Float32Array(CW*H*2);let reach=me?state.outerDist:1;
+        const taps=fx?[0,1,2,3].map(j=>data['bm'+j].data):null,offsets=taps&&new Float32Array(CW*H*8),outs=me&&new Float32Array(CW*H*2),moves=mm&&(state.scaleOf||fx)&&new Float32Array(CW*H*2);let reach=me?state.outerDist:1;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){
           // The vector to the pill's centre line is the rim's inward normal; the maps hold its x/y shift. Masks are
           // white with their weight in alpha (alpha survives the P3 conversion of feImage; greys survive it too).
@@ -829,7 +832,7 @@
     // margin added half again to the player's, two thirds to the toolbar's; ~1.8ms of a scrolling frame). On a
     // fractional screen scale (Windows at 125%) a layer of another size lands on the device pixels differently and the
     // page under the bend moved by up to a pixel, so there every layer keeps the margin's box.
-    let n=0;const parts=['bend','mid','tone'],inner=(p,M,exact)=>p==='mid'||!exact?0:M,layer=(p,id,inset,clip)=>{const l=document.createElement('div');l.className='am-tglass-layer';
+    let n=0;const parts=['bend','mid','tone','lite'],inner=(p,M,exact)=>p==='mid'||!exact?0:M,layer=(p,id,inset,clip)=>{const l=document.createElement('div');l.className='am-tglass-layer am-tglass-'+p;
       Object.assign(l.style,{position:'absolute',inset:inset+'px',pointerEvents:'none',clipPath:clip});l.style.backdropFilter=l.style.webkitBackdropFilter=`url(#${id}-${p})`;return l;};
     // over: overrides of glassStates.focused (fitlens.mjs fits them at button sizes).
     // node: the glass's box grown by state.margin; it gets three layers, each a backdrop-filter clipped to the glass

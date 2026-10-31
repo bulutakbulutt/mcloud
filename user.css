@@ -419,13 +419,17 @@ body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy
 body.am-ready #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:calc(var(--am-page-top) + 8px)!important;bottom:auto!important}
 body.am-ready #SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls,
 body.am-ready .Root:not(.global-nav) #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:auto!important;bottom:84px!important}
-/* Balanced glass (the default): Spicy redraws its background every frame, and every backdrop filter over it re-ran on
-   each one (GPU 96-98% at 144Hz on a 2x Mac). Its background is already a soft blur, so on its page the glass is drawn
-   without them: a light fill, a top highlight and a hairline, the sidebar letting a little more of the page through.
-   GPU 72% (dev/client/fps.mjs); the rest is Spicy's own animation. Glass: Full keeps the real glass here. */
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) :is(#am-toolbar-glass :is(.am-tglass-pane,.am-tglass-pane-rim,.am-tglass-layer,.am-tglass-rim),#am-player > :is(.am-player-face,.am-tglass-rim),#am-sidebar-glow) {display:none!important}
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-toolbar-glass .am-tglass-face::before {content:"";position:absolute;inset:var(--am-tg-m,0px);border-radius:999px;background:linear-gradient(180deg,rgb(255 255 255/.17),rgb(255 255 255/.08));box-shadow:inset 0 1px 0 rgb(255 255 255/.32),inset 0 0 0 .5px rgb(255 255 255/.2),0 4px 14px rgb(0 0 0/.16)}
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player {background:linear-gradient(180deg,rgb(255 255 255/.17),rgb(255 255 255/.08));backdrop-filter:none;-webkit-backdrop-filter:none;border-color:rgb(255 255 255/.18);box-shadow:inset 0 1px 0 rgb(255 255 255/.3),0 8px 24px rgb(0 0 0/.22)}
+/* Balanced glass (the default): Spicy redraws its background every frame, and every pass of every backdrop filter over
+   it reruns on each one (GPU 96-98% at 144Hz on a 2x Mac). On its page the glass is the lite layer (theme.js
+   toolbarLens: the bend in one tap, tone and highlight) with a CSS hairline instead of the three layers and the
+   hairline filter; its background is already a soft blur, so the halo and thin-line passes showed little there. The
+   frosted player and toolbar (Liquid Glass player off) get a plain fill. Glass: Full keeps the real glass here. */
+.am-tglass-layer.am-tglass-lite {display:none}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) :is(#am-toolbar-glass :is(.am-tglass-pane-rim,.am-tglass-layer,.am-tglass-rim),#am-player > .am-tglass-rim,.am-player-face > .am-tglass-layer,#am-sidebar-glow) {display:none!important}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) :is(#am-toolbar-glass,.am-player-face) .am-tglass-layer.am-tglass-lite {display:block!important}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-toolbar-glass .am-tglass-face::before {content:"";position:absolute;inset:var(--am-tg-m,0px);border-radius:999px;box-shadow:inset 0 0 0 .5px rgb(255 255 255/.24)}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player.am-player-glass {box-shadow:inset 0 0 0 .5px rgb(255 255 255/.24)}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player:not(.am-player-glass) {background:linear-gradient(180deg,rgb(255 255 255/.17),rgb(255 255 255/.08));backdrop-filter:none;-webkit-backdrop-filter:none;border-color:rgb(255 255 255/.18);box-shadow:inset 0 1px 0 rgb(255 255 255/.3),0 8px 24px rgb(0 0 0/.22)}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-sidebar {background:color-mix(in srgb,#252525 62%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) .am-native-panel-open {background:color-mix(in srgb,#262626 92%,transparent)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #global-nav-bar :is(button,input) {--am-toolbar-fill:color-mix(in srgb,#ffffff 14%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
