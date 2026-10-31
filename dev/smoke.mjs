@@ -605,15 +605,21 @@ try {
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);
     assert.equal(await page.locator('.am-song').count(), 9);
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
+    // Following answers at once: the star fills and a toast names the artist; a second click unfollows.
     await page.click('.am-hero-follow');
+    assert.deepEqual(await page.evaluate(() => { const f = document.querySelector('.am-hero-follow'); return [f.classList.contains('am-active'), f.getAttribute('aria-pressed')]; }), [true, 'true']);
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
+    await page.waitForFunction(() => document.querySelector('.am-toast.am-toast-show')?.textContent === 'Sena Şener takip ediliyor.');
+    await page.click('.am-hero-follow');
+    await page.waitForFunction(() => (window.__libraryRemoves || []).includes('spotify:artist:mock'));
+    assert.equal(await page.textContent('.am-toast'), 'Sena Şener takipten çıkarıldı.');
+    assert.equal(await page.getAttribute('.am-hero-follow', 'aria-pressed'), 'false');
     // Back and share + more float on the toolbar glass, in the artist view's own layer, one shape each on their rects.
     assert.deepEqual(await page.evaluate(() => { const g = [...document.querySelectorAll('#am-artist .am-tglass-root .am-tglass')].map(e => e.getBoundingClientRect()), b = document.querySelector('.am-artist-back').getBoundingClientRect();
       return [document.getElementById('am-artist').classList.contains('am-tglass-on'), g.length, Math.round(g[0].left) === Math.round(b.left), g[1].height]; }), [true, 2, true, 36]);
     // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
-    await page.waitForFunction(() => document.querySelector('.am-toast').classList.contains('am-toast-show'));
-    assert.match(await page.textContent('.am-toast'), /^Bağlantı kopyala/);
+    await page.waitForFunction(() => /^Bağlantı kopyala/.test(document.querySelector('.am-toast.am-toast-show')?.textContent));
     // It is Liquid Glass with a lens of its own, drawn at the toast's size.
     assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.am-toast')).backdropFilter), /url\(.*#am-glass-toast/);
     await page.waitForFunction(() => document.querySelector('#am-glass-toast feImage').getAttribute('width') === String(document.querySelector('.am-toast').offsetWidth));
@@ -709,6 +715,13 @@ try {
     await page.fill('.am-library-filter', 'rain');
     await page.waitForFunction(() => document.querySelectorAll('.am-library-card').length === 1);
     await page.fill('.am-library-filter', '');
+    // Spotify's live search results open under the toolbar, over the library rather than under it.
+    await page.fill('#global-nav-bar input', 'sena');
+    const results = await page.evaluate(() => { const r = document.getElementById('search-dropdown').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.id; });
+    assert.equal(results, 'search-dropdown');
+    await page.fill('#global-nav-bar input', '');
+    await page.mouse.click(700, 500);
+    assert.equal(await page.evaluate(() => [!!document.getElementById('search-dropdown'), getComputedStyle(document.getElementById('main')).zIndex].join()), 'false,0');
     await page.selectOption('.am-library-sort', 'name');
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
     // Right-click on library card opens context menu

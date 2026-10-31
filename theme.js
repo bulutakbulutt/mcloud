@@ -2011,12 +2011,18 @@
     heroContent.append(el('h1','am-artist-name',artist.profile.name));
     const heroActions=el('div','am-hero-actions');
     const playButton=button(T(artist.profile.name+' çal','Play '+artist.profile.name),'heroPlay',()=>playArtist(uri),'am-hero-play');
-    let saved=!!artist.saved;
+    let saved=!!artist.saved,following=false;
+    const showFollow=()=>{follow.classList.toggle('am-active',saved);follow.setAttribute('aria-pressed',String(saved));follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');};
+    // The star answers the click at once and pops, as Apple's symbols do; LibraryAPI follows, and the toast confirms.
     const follow=button(T('Takip et','Follow'),'star',async()=>{
-      try{saved=await toggleSaved(uri,saved);artist.saved=saved;follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');}
-      catch{notify(T('Takip durumu değiştirilemedi.','Couldn\'t change follow status.'));}
+      if(following)return;following=true;saved=!saved;showFollow();
+      if(!reducedMotion.matches)follow.firstElementChild?.animate([{transform:'none'},{transform:'scale(1.3)'},{transform:'none'}],{duration:300,easing:'ease-out'});
+      const name=artist.profile.name;
+      try{await toggleSaved(uri,!saved);artist.saved=saved;notify(saved?T(name+' takip ediliyor.','Following '+name+'.'):T(name+' takipten çıkarıldı.','Unfollowed '+name+'.'));}
+      catch{saved=!saved;showFollow();notify(T('Takip durumu değiştirilemedi.','Couldn\'t change follow status.'));}
+      finally{following=false;}
     },'am-hero-follow');
-    follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');
+    showFollow();
     const info=button(T('Hakkında','About'),'info',()=>openArtistInfo(artist,info),'am-hero-info');
     heroActions.append(info,playButton,follow);heroContent.append(heroActions);
     // The ⓘ sheet's colour and photo, ready before it is opened (after the header's own image has had its turn).
