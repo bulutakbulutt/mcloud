@@ -413,6 +413,12 @@ body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!i
    only (no var() or clamp()); a wide one is harmless, since Spotify's main view clips the page's other edges. */
 body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) {left:var(--am-side)!important;width:calc(100% - var(--am-side))!important;overflow:clip!important;overflow-clip-margin:800px}
 body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy-dynamic-bg {left:calc(-1 * var(--am-side))!important;width:calc(100% + var(--am-side))!important}
+/* Spicy's view controls (close, fullscreen, translate…) sit 24px from its page's top or bottom, but the page starts
+   under the toolbar and ends under the player, which covered them (#7). They move below the toolbar and above the
+   player; Spicy also moves top controls to the bottom when the toolbar is not Spotify's global nav. */
+body.am-ready #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:calc(var(--am-page-top) + 8px)!important;bottom:auto!important}
+body.am-ready #SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls,
+body.am-ready .Root:not(.global-nav) #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:auto!important;bottom:84px!important}
 /* When Spotify restarts on the lyrics route, Spicy can mount its page twice and remove only one, leaving lyrics
    over every other page. Off the /SpicyLyrics route, a page left in the main view is hidden. */
 body.am-ready:not(.am-spicy-route) .am-native-main #SpicyLyricsPage:not(.CardMode) {display:none!important}
