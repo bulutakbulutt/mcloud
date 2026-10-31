@@ -109,6 +109,10 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 /* Newer pages (Liked Songs with its genre filters) draw that cover-coloured band as a sibling of the action bar; with
    the action bar moved up it showed as a coloured strip under the header. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) > div[style*="background-color"] {background:none!important}
+/* Its header also darkens to half black at the bottom (a layer after the colour one), which the band used to carry on
+   into the page; without the band that ended in a hard line. Cleared too, so the header is the page's grey, as on
+   other playlists (whose colour layer has no height). */
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) > [data-testid="entity-header"] > div[style*="background-color"] + div:not(.main-entityHeader-contentWrapper) {background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] {padding-block:0!important;padding-inline-start:calc(var(--content-spacing) + var(--am-art) + var(--am-art-gap))!important;height:var(--am-btn)!important;background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] > [data-testid="action-bar-row"] {pointer-events:auto;height:var(--am-btn)!important;min-height:0!important;padding:0!important;gap:10px!important;column-gap:10px!important;flex-wrap:nowrap!important;align-items:center!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-actions"] {display:contents!important}
