@@ -549,11 +549,19 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
-    // The wide header (artistUnion.headerImage.data) fills the hero at its largest size, with blurred copies in steps
-    // at the bottom that run on under the first shelf; the play triangle sits 1.3px right, as in Apple Music.
-    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-hero-media .am-hero-image')].map(i => [i.src === window.__mockArtist.headerImage.data.sources[0].url, !!i.closest('.am-hero-soft'), getComputedStyle(i).filter])), [[true, false, 'blur(0px)'], [true, true, 'blur(2px)'], [true, true, 'blur(5px)'], [true, true, 'blur(13px)']]);
-    // The blurred copies line up with the photo.
-    assert.ok(await page.evaluate(() => { const [a, b] = ['.am-hero-media > .am-hero-image', '.am-soft-3 .am-hero-image'].map(s => document.querySelector(s).getBoundingClientRect()); return Math.abs(a.top - b.top) < 1 && Math.abs(a.height - b.height) < 1; }));
+    // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at its
+    // largest size, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
+    // the first shelf; the play triangle sits 1.3px right, as in Apple Music.
+    const hero = await page.evaluate(() => {
+      const media = document.querySelector('.am-hero-media').getBoundingClientRect();
+      const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image')], [sharp] = imgs, s = sharp.getBoundingClientRect();
+      return { w: innerWidth - media.left, photoH: s.height, mediaH: media.height,
+        src: imgs.every(i => i.src === window.__mockArtist.headerImage.data.sources[0].url), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? 'NaN')),
+        aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }) };
+    });
+    assert.ok(hero.src && hero.aligned, JSON.stringify(hero));
+    assert.ok(Math.abs(hero.photoH - hero.w / 2) < 1 && Math.abs(hero.mediaH - hero.w * .646) < 1, JSON.stringify(hero));
+    assert.deepEqual(hero.blurs.map(b => Math.round(b / hero.w * 1042)), [0, 3, 6, 10, 15, 20]);
     assert.ok(await page.evaluate(() => document.querySelector('.am-hero-media').getBoundingClientRect().bottom > document.querySelector('.am-artist-body').getBoundingClientRect().top + 40));
     assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.3);
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
