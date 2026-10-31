@@ -69,11 +69,26 @@ Write-Ok "Spicetify: $(Invoke-Spicetify -v | Select-Object -Last 1)"
 $config = Invoke-Spicetify -c | Where-Object { $_ -like '*config-xpui.ini' } | Select-Object -Last 1
 $configDir = if ($config) { Split-Path -Parent $config } else { Join-Path $env:APPDATA 'spicetify' }
 $themeDir = Join-Path $configDir "Themes\$Theme"
+# The theme settings mcloud replaced, so -Uninstall can put them back.
+$stateFile = Join-Path $themeDir 'previous.ini'
+
+function Get-Setting([string]$Key) { "$(Invoke-Spicetify config $Key | Select-Object -Last 1)".Trim() }
+function Get-Saved([string]$Key) {
+  if (-not (Test-Path -LiteralPath $stateFile)) { return '' }
+  $line = Get-Content -LiteralPath $stateFile | Where-Object { $_ -like "$Key=*" } | Select-Object -Last 1
+  if ($line) { $line.Substring($Key.Length + 1).Trim() } else { '' }
+}
+function Or([string]$Value, [string]$Default) { if ($Value) { $Value } else { $Default } }
 
 if ($Uninstall) {
   Write-Step (T 'mcloud kald\u0131r\u0131l\u0131yor...')
-  if ((Invoke-Spicetify config current_theme | Select-Object -Last 1) -eq $Theme) {
-    Invoke-Spicetify config current_theme ' ' color_scheme ' ' inject_theme_js 0 | Out-Null
+  if ((Get-Setting current_theme) -eq $Theme) {
+    $prevTheme = Get-Saved current_theme; $prevScheme = Get-Saved color_scheme
+    # Marketplace installs its themes only while its placeholder theme is selected.
+    if (-not $prevTheme -and (Test-Path -LiteralPath (Join-Path $configDir 'Themes\marketplace'))) { $prevTheme = 'marketplace'; $prevScheme = '' }
+    Invoke-Spicetify config current_theme (Or $prevTheme ' ') color_scheme (Or $prevScheme ' ') `
+      inject_css (Or (Get-Saved inject_css) '1') inject_theme_js (Or (Get-Saved inject_theme_js) '0') | Out-Null
+    if ($prevTheme) { Write-Ok ((T '\u00d6nceki tema geri y\u00fcklendi: ') + $prevTheme) }
   }
   if (Test-Path -LiteralPath $themeDir) { Remove-Item -LiteralPath $themeDir -Recurse -Force }
   if (-not (Invoke-Apply)) { Write-Fail (T 'Spicetify uygulanamad\u0131. Yukar\u0131daki \u00e7\u0131kt\u0131y\u0131 kontrol edin.') }
@@ -109,6 +124,11 @@ try {
     }
   }
   New-Item -ItemType Directory -Path $themeDir -Force | Out-Null
+  # Updating over mcloud keeps the settings saved by the first install.
+  if ((Get-Setting current_theme) -ne $Theme) {
+    $state = foreach ($key in 'current_theme', 'color_scheme', 'inject_css', 'inject_theme_js') { "$key=$(Get-Setting $key)" }
+    [IO.File]::WriteAllLines($stateFile, [string[]]$state)
+  }
   foreach ($file in $Files) { Copy-Item -LiteralPath (Join-Path $staging $file) -Destination $themeDir -Force }
 }
 finally {
