@@ -628,11 +628,37 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist-info {position:fixed;inset:0;z-index:75;background:#0000007d;animation:am-info-in .2s ease-out}
 @keyframes am-info-in {from{opacity:0}}
 .am-info-card {--am-iw:min(704px,calc(100vw - 32px));position:absolute;top:52px;bottom:40px;left:calc(50% - var(--am-iw) / 2);width:var(--am-iw);border-radius:16px;overflow:hidden;background:var(--am-tint-top,#3a3a3a);box-shadow:0 22px 70px #0000008c;color:#e4e4e4;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;-webkit-app-region:no-drag}
-.am-info-scroll {position:absolute;inset:0;overflow:auto;background:inherit;overscroll-behavior:contain;scrollbar-width:none}
+.am-info-scroll {position:absolute;inset:0;overflow:auto;background:inherit;scroll-timeline:--am-info;overscroll-behavior:contain;scrollbar-width:none}
 /* The sheet's overlay scroller sits in the card; a colour that lands late eases in rather than switching. */
 .am-info-card .am-scroll-thumb {position:absolute;z-index:2}
 .am-info-card {transition:background-color .3s}
-.am-info-media {position:relative;height:calc(var(--am-iw) * 1.295);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 38.2%,#0000);mask-image:linear-gradient(180deg,#000 38.2%,#0000)}
+/* Scrolling, measured the same way in three window heights (Apple's card never narrows below 704pt; nothing depends on
+   the window): the photo drifts up at 0.4x the scroll; from 0.257W of scroll it blurs and fades into the card's colour,
+   linearly, done 0.284W later at σ 0.051W. An animated blur re-runs every frame, so the blur steps through four copies
+   blurred once (4.5, 9, 18 and 36pt at W = 704), faded in turn and masked off where the bottom bands are blurrier.
+   The stage has no height so it stays stuck. The timeline is named: the media's overflow:hidden makes it a scroller. */
+.am-info-stage {position:sticky;top:0;height:0}
+.am-info-haze {position:absolute;inset:0;opacity:0}
+.am-info-haze-1 {-webkit-mask-image:linear-gradient(180deg,#000 65.8%,#0000 70%);mask-image:linear-gradient(180deg,#000 65.8%,#0000 70%)}
+.am-info-haze-2 {-webkit-mask-image:linear-gradient(180deg,#000 70%,#0000 74.4%);mask-image:linear-gradient(180deg,#000 70%,#0000 74.4%)}
+.am-info-haze-3 {-webkit-mask-image:linear-gradient(180deg,#000 79%,#0000 83.3%);mask-image:linear-gradient(180deg,#000 79%,#0000 83.3%)}
+.am-info-haze-1 .am-info-photo {filter:blur(calc(var(--am-iw) * .0064))}
+.am-info-haze-2 .am-info-photo {filter:blur(calc(var(--am-iw) * .0128))}
+.am-info-haze-3 .am-info-photo {filter:blur(calc(var(--am-iw) * .0256))}
+.am-info-haze-4 .am-info-photo {filter:blur(calc(var(--am-iw) * .0511))}
+@supports (animation-timeline:scroll()) {
+  .am-info-stage {animation:am-info-drift linear both;animation-timeline:--am-info;animation-range:0 1000px}
+  .am-info-media {animation:am-info-fade linear both;animation-timeline:--am-info;animation-range:calc(var(--am-iw) * .257) calc(var(--am-iw) * .541)}
+  .am-info-haze {animation:am-info-show linear both;animation-timeline:--am-info}
+  .am-info-haze-1 {animation-range:calc(var(--am-iw) * .257) calc(var(--am-iw) * .2925)}
+  .am-info-haze-2 {animation-range:calc(var(--am-iw) * .2925) calc(var(--am-iw) * .328)}
+  .am-info-haze-3 {animation-range:calc(var(--am-iw) * .328) calc(var(--am-iw) * .399)}
+  .am-info-haze-4 {animation-range:calc(var(--am-iw) * .399) calc(var(--am-iw) * .541)}
+}
+@keyframes am-info-drift {to{transform:translateY(-400px)}}
+@keyframes am-info-fade {to{opacity:0}}
+@keyframes am-info-show {from{opacity:0}to{opacity:1}}
+.am-info-media {position:absolute;top:0;left:0;width:100%;height:calc(var(--am-iw) * 1.295);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 38.2%,#0000);mask-image:linear-gradient(180deg,#000 38.2%,#0000)}
 .am-info-photo {position:absolute;top:0;left:0;width:100%;height:77.2%;object-fit:cover;-webkit-box-reflect:below}
 .am-info-soft {position:absolute;inset:61.7% 0 0;overflow:hidden}
 /* Not widened like the hero's copies: the photo is square, so a wider box would scale it and break the alignment. */
@@ -649,7 +675,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-info-soft-4 .am-info-photo {filter:blur(calc(var(--am-iw) * .0227))}
 .am-info-soft-5 .am-info-photo {filter:blur(calc(var(--am-iw) * .0341))}
 .am-info-soft-6 .am-info-photo {filter:blur(calc(var(--am-iw) * .0455))}
-.am-info-body {position:relative;margin-top:calc(var(--am-iw) * -.6044);padding:0 20px 40px}
+.am-info-body {position:relative;margin-top:calc(var(--am-iw) * .6906);padding:0 20px 40px}
 .am-info-body.am-info-plain {margin-top:0;padding-top:64px}
 .am-info-name {margin:0;font-size:26px;line-height:31px;font-weight:700;letter-spacing:-.01em;color:#e4e4e4}
 .am-info-facts {display:grid;grid-template-columns:1fr 1fr;column-gap:20px;row-gap:11.5px;margin-top:15px}
@@ -668,7 +694,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist-info .am-info-close {position:absolute;top:16px;left:15.5px;z-index:1;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#78787879;color:white;cursor:pointer}
 #am-artist-info .am-info-close svg {width:20px;height:20px;stroke-width:1.5}
 #am-artist-info .am-info-close:focus-visible {outline:2px solid white;outline-offset:2px}
-@media(prefers-reduced-motion:reduce){#am-artist-info{animation:none}}
+@media(prefers-reduced-motion:reduce){#am-artist-info{animation:none}.am-info-stage{position:static;animation:none}}
 .am-artist-body {display:flex;flex-direction:column;gap:30px;padding:10px 0 0 var(--am-side)}
 .am-shelf {position:relative}
 #am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}

@@ -1799,7 +1799,8 @@
     if(photo){
       const media=el('div','am-info-media'),sharp=lazyImage(photo,'am-info-photo');sharp.loading='eager';media.append(sharp);
       for(const step of [1,2,3,4,5,6]){const soft=el('div','am-info-soft am-info-soft-'+step),copy=lazyImage(photo,'am-info-photo');copy.loading='eager';soft.append(copy);media.append(soft);}
-      scroll.append(media);
+      for(const step of [1,2,3,4]){const haze=el('div','am-info-haze am-info-haze-'+step),copy=lazyImage(photo,'am-info-photo');copy.loading='eager';haze.append(copy);media.append(haze);}
+      const stage=el('div','am-info-stage');stage.append(media);scroll.append(stage);
       if(sheetColors.has(photo))card.style.backgroundColor=sheetColors.get(photo);
       else sheetColor(photo).then(color=>{if(color){sheetColors.set(photo,color);if(infoSheet===sheet)card.style.backgroundColor=color;}});
     }

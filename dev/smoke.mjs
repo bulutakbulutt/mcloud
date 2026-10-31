@@ -583,7 +583,16 @@ try {
     assert.deepEqual([sheet.w, sheet.top, sheet.role, sheet.focus, sheet.name, sheet.chips, sheet.aligned, sheet.photo], [Math.min(704, sheet.vw - 32), 52, 'dialog', true, 'Sena Şener', 3, true, true], JSON.stringify(sheet));
     assert.deepEqual(sheet.labels, ['Aylık dinleyici', 'Takipçi', 'En çok dinlendiği şehirler']);
     assert.equal(sheet.bio, 'Sena Şener, İstanbul doğumlu şarkıcı ve söz yazarı.');
-    assert.deepEqual(sheet.blurs, [0, 3, 6, 10, 16, 24, 32]);
+    assert.deepEqual(sheet.blurs, [0, 3, 6, 10, 16, 24, 32, 5, 9, 18, 36]);
+    // Scrolling, as Apple's: the photo drifts up at 0.4x; from 0.257W it blurs (copies in turn) and fades into the
+    // card's colour, half way at 0.399W.
+    assert.deepEqual(await page.evaluate(async () => {
+      const scroll = document.querySelector('.am-info-scroll'), w = document.querySelector('.am-info-card').offsetWidth, filler = document.createElement('div');
+      filler.style.height = '900px'; document.querySelector('.am-info-body').append(filler);
+      const at = async y => { scroll.scrollTop = y; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const q = s => getComputedStyle(document.querySelector(s));
+        return [Math.round(new DOMMatrix(q('.am-info-stage').transform).m42 / y * 100) / 100, Math.round(q('.am-info-media').opacity * 100) / 100, [1, 2, 3, 4].map(k => Math.round(q('.am-info-haze-' + k).opacity * 100) / 100)]; };
+      const steps = [await at(Math.round(w * .2)), await at(Math.round(w * .399))]; filler.remove(); scroll.scrollTop = 0; return steps;
+    }), [[-0.4, 1, [0, 0, 0, 0]], [-0.4, 0.5, [1, 1, 1, 0]]]);
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.getElementById('am-artist-info') && document.activeElement?.classList.contains('am-hero-info'));
     await page.click('.am-hero-info'); await page.waitForSelector('#am-artist-info');
