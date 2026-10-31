@@ -75,4 +75,4 @@ To try a change in the real client, run `./install.sh` (or `.\install.ps1`) from
 
 Bump the version comment at the top of `theme.js` and `user.css` together. The installers default to `main`; tags can be installed with `--ref` / `-Ref`.
 
-Marketplace loads `theme.js` and `user.css` from jsDelivr's `@main`, which caches for up to 12 hours; `.github/workflows/purge-cdn.yml` purges it after each push to main.
+Marketplace loads `theme.js` and `user.css` from jsDelivr's `@main`, which caches for up to 12 hours; `.github/workflows/purge-cdn.yml` purges it two minutes after the last push to main that touches them (a newer push cancels the wait), once, waiting out jsDelivr's throttle instead of purging again. Batch merges: repeated purges make jsDelivr throttle longer.

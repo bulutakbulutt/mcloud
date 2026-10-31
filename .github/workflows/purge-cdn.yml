@@ -12,7 +12,7 @@ on:
 permissions:
   contents: read
 
-# A newer push makes this run's checkout older than main; let the newer run verify.
+# A newer push makes this run's checkout older than main; let the newer run purge and verify.
 concurrency:
   group: purge-cdn
   cancel-in-progress: true
@@ -20,24 +20,48 @@ concurrency:
 jobs:
   purge:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
-      - name: Purge and verify
+      # Merges land in bursts. A newer push cancels this run while it waits, so a burst costs one purge.
+      - name: Let a burst of merges settle
+        if: github.event_name == 'push'
+        run: sleep 120
+      # jsDelivr throttles repeated purges of a path, and the throttle grows with every request (it reached ~50
+      # minutes on 2026-10-31 when each attempt purged again). Purge once; if throttled, wait out the reset it reports.
+      - name: Purge
+        run: |
+          purge() {
+            longest=0
+            for f in theme.js user.css; do
+              r=$(curl -fsS "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/$f" || echo '{}')
+              echo "$f: $(echo "$r" | tr -d '\n' | cut -c1-300)" >&2
+              t=$(echo "$r" | jq -r '[.paths[]? | select(.throttled) | (.throttlingReset // 60)] | max // 0')
+              [ "$t" -gt "$longest" ] && longest=$t
+            done
+            echo "$longest"
+          }
+          for attempt in 1 2 3; do
+            wait=$(purge)
+            [ "$wait" = 0 ] && exit 0
+            echo "Throttled for ${wait}s; waiting it out before retrying."
+            sleep $((wait + 15))
+          done
+          echo "::error::jsDelivr kept throttling the purge"
+          exit 1
+      # Polls without purging again.
+      - name: Verify
         run: |
           cdn="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main"
-          for attempt in 1 2 3 4 5; do
+          for attempt in $(seq 1 10); do
             stale=0
-            for f in theme.js user.css; do
-              curl -fsS "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/$f" > /dev/null || true
-            done
-            sleep 10
             for f in theme.js user.css; do
               want=$(sha256sum "$f" | cut -d' ' -f1)
               got=$(curl -fsS "$cdn/$f?ci=$GITHUB_RUN_ID-$attempt" | sha256sum | cut -d' ' -f1)
               if [ "$want" = "$got" ]; then echo "$f: fresh"; else echo "$f: stale"; stale=1; fi
             done
             [ "$stale" = 0 ] && exit 0
-            sleep $((attempt * 20))
+            sleep 30
           done
           echo "::error::jsDelivr still serves an old theme.js or user.css"
           exit 1
