@@ -6,8 +6,22 @@
   const library = [];
   names.forEach((n, i) => library.push({ uri: 'spotify:album:' + i, type: 'album', name: n, images: [{ url: art(i * 37, n.slice(0, 2)) }], owner: { name: 'Sanatçı ' + i } }));
   ['Frank Ocean','Tame Impala','Radiohead','Daft Punk','Lorde','Phoebe Bridgers'].forEach((n, i) => library.push({ uri: 'spotify:artist:' + i, type: 'artist', name: n, images: [{ url: art(200 + i * 20, n[0]) }] }));
-  ['Sabah Kahvesi','Koşu','Odak','Yol Şarkıları'].forEach((n, i) => library.push({ uri: 'spotify:playlist:' + i, type: 'playlist', name: n, images: [{ url: art(i * 90, '♪') }], owner: { displayName: 'emir' } }));
+  // Playlists in the order Spotify's Recents sort returns them: pinned first, then by last played.
+  library.push({ uri: 'spotify:folder:ruh', type: 'folder', name: 'Ruh Hali', pinned: true, images: [] });
+  ['Sabah Kahvesi','Koşu','Odak','Yol Şarkıları','Gece Sürüşü','Ders Çalışma','Akustik Akşamlar','Yağmurlu Günler','90\'lar Türkçe Pop','Haftalık Keşif'].forEach((n, i) => library.push({ uri: 'spotify:playlist:' + i, type: 'playlist', name: n, pinned: i === 0,
+    images: i === 6 ? [] : [{ url: art(i * 90, '♪'), width: 640 }, { url: art(i * 90 + 20, '♪'), width: 60 }], owner: { displayName: 'emir' }, lastPlayedAt: 1e12 - i }));
+  library.push({ uri: 'spotify:collection:tracks', type: 'liked-songs', name: 'Beğenilen Şarkılar', pinned: true, images: [] });
+  const folders = { 'spotify:folder:ruh': ['Neşeli', 'Hüzünlü'].map((n, i) => ({ uri: 'spotify:playlist:f' + i, type: 'playlist', name: n, images: [{ url: art(300 + i * 30, '♪') }], owner: { displayName: 'emir' } })) };
   window.__mockLibrary = library;
+  // Spotify's library and rootlist emit 'update' through an emitter behind getEvents().
+  const emitter = { listeners: [], addListener(name, fn) { if (name === 'update') this.listeners.push(fn); }, removeListener() {}, emit() { this.listeners.forEach(fn => fn({})); } };
+  let created = 0;
+  const createItem = type => async (name, location) => {
+    const uri = `spotify:${type}:new${++created}`;
+    (window.__created ||= []).push([type, name, location]);
+    library.splice(library.findIndex(i => !i.pinned && ['playlist', 'folder'].includes(i.type)), 0, { uri, type, name, images: [], owner: { displayName: 'emir' }, lastPlayedAt: 2e12 });
+    emitter.emit(); return uri;
+  };
   const state = { liked: false, playing: true, shuffle: false, repeat: 0, volume: .6, progress: 83000, duration: 245000 };
   window.__menus = [];
   window.Spicetify = {
@@ -36,10 +50,20 @@
         listen: f => listeners.push(f),
       },
       UserAPI: { getUser: async () => ({ username: 'emir', displayName: 'Emir Bilici', images: [] }) },
-      LibraryAPI: { getContents: async ({ offset }) => ({ items: offset ? [] : library, totalLength: library.length }) },
+      LibraryAPI: {
+        // filters ['2'] = playlists and folders; sortOrder '6' = Recents, the order the mock list is already in.
+        getContents: async ({ offset, filters = [], folderUri }) => {
+          let items = folderUri ? folders[folderUri] || [] : library;
+          if (filters.includes('2')) items = items.filter(i => ['playlist', 'folder', 'liked-songs'].includes(i.type));
+          return { items: offset ? [] : items, totalLength: items.length };
+        },
+        getEvents: () => ({ _emitter: emitter }),
+      },
+      RootlistAPI: { createPlaylist: createItem('playlist'), createFolder: createItem('folder'), getEvents: () => ({ _emitter: emitter }) },
     },
   };
   window.__mockState = state;
+  window.__firePlayer = name => (playerListeners[name] || []).forEach(f => f({}));
   // Shape follows Spotify's queryArtistOverview response (artistUnion).
   const cover = (n, i) => ({ sources: [{ url: art(i * 47, n.slice(0, 2)), width: 300, height: 300 }] });
   const release = (n, i, type, year) => ({ releases: { items: [{ uri: 'spotify:album:r' + i, name: n, type, date: { year }, coverArt: cover(n, i) }] } });

@@ -38,6 +38,9 @@
     left:'<path d="m15 4-8 8 8 8"/>',
     share:'<path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M6 11H5v10h14V11h-1"/>',
     plus:'<path d="M12 5v14M5 12h14"/>',
+    playlist:'<path d="M3 6h10M3 11h10M3 16h6"/><path d="M19.5 16.5V4.5l2 1.2"/><circle cx="17" cy="16.5" r="2.5"/>',
+    folder:'<path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/>',
+    pin:'<path d="M9 3h6l-1 6.5 3.5 3.5h-11L10 9.5z"/><path d="M12 13v8"/>',
     bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 21h4"/>',
     friends:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17.2" cy="9" r="2.6"/><path d="M16 14.1a5.5 5.5 0 0 1 5.4 5.9"/>',
     devices:'<path d="M7 17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="m12 15 5 6H7z" fill="currentColor"/>',
@@ -55,7 +58,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced'};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -133,7 +136,7 @@
     const b = button(label, icon, fn, 'am-nav-row'); b.append(el('span', '', label));
     nav.append(b); navItems.push({ b, key });
   }
-  function heading(text) { nav.append(el('div', 'am-nav-heading', text)); }
+  function heading(text) { const h = el('div', 'am-nav-heading', text); nav.append(h); return h; }
   row(T('Ara','Search'), 'search', () => { go('/search'); document.body.classList.add('am-search-open'); setTimeout(() => document.getElementById('global-nav-bar')?.querySelector('input')?.focus(), 150); }, '/search');
   row(T('Ana Sayfa','Home'), 'home', () => go('/'), '/');
   heading(T('Arşiv','Library'));
@@ -143,8 +146,146 @@
   row(T('Parçalar','Songs'), 'music', () => go('/collection/tracks'), '/collection/tracks');
   heading(T('Mağaza','Store'));
   row(T('Göz At','Browse'), 'store', () => go('/search'), 'browse');
-  heading(T('Listeler','Playlists'));
+  const listsHeading = heading(T('Listeler','Playlists'));
   row(T('Tüm Listeler','All Playlists'), 'grid', () => openLibrary('playlists'), '/collection/playlists');
+  // The user's playlists under "All Playlists", in the order of Spotify's own sidebar sorted by Recents: pinned
+  // playlists and folders first, then the most recently played. A few show; "Show All" lists the rest. Liked Songs
+  // is "Songs" above. "+" on the heading makes a playlist or folder, named in place as in Apple Music.
+  const lists = el('div', 'am-lists'); lists.setAttribute('role', 'group'); lists.setAttribute('aria-label', T('Çalma listelerin','Your playlists'));
+  const listBody = el('div', 'am-list-body'); lists.append(listBody); nav.append(lists);
+  const Rootlist = S.Platform.RootlistAPI, listPeek = 5;
+  let listItems = [], listComplete = false, listShown = '', listNav = [], listRequest = 0, listTimer = 0, listStale = false, listContext = '', naming = null;
+  const listArt = lazyObserver(nav, '200px 0px');
+  function listImage(item) {
+    const sizes = [...(item.images?.items || item.images || item.image?.sources || [])].filter(i => i?.url).sort((a, b) => (a.width || 0) - (b.width || 0));
+    // Rows show 22px artwork: the smallest size that stays sharp at 2x (mosaics come in 60, 300 and 640).
+    const pick = sizes.find(i => (i.width || 0) >= 48) || sizes[sizes.length - 1];
+    return spotifyImage(pick?.url || '').replace(/^https:\/\/mosaic\.scdn\.co\/(?:300|640)\//, 'https://mosaic.scdn.co/60/');
+  }
+  async function fetchLists() {
+    // Collapsed, one short page is enough: pinned items come first and only five more are shown.
+    const items = [], limit = settings.lists ? 200 : 50; let total = Infinity, offset = 0;
+    for (; offset < total && offset < (settings.lists ? 10000 : 50); offset += limit) {
+      const result = await S.Platform.LibraryAPI.getContents({ filters: ['2'], sortOrder: '6', offset, limit });
+      total = result?.totalLength ?? 0;
+      for (const item of result?.items || []) {
+        if (!item?.uri || item.canView === false || !['playlist','folder'].includes(item.type)) continue;
+        items.push({ uri: item.uri, type: item.type, name: item.name || '', pinned: !!item.pinned, image: item.type === 'playlist' ? listImage(item) : '' });
+      }
+      if (!result?.items?.length) { total = 0; break; }
+    }
+    return { complete: offset >= total, items: [...items.filter(i => i.pinned), ...items.filter(i => !i.pinned)] };
+  }
+  function renderLists() {
+    const open = settings.lists, pinned = listItems.filter(i => i.pinned), rest = listItems.filter(i => !i.pinned);
+    const shown = open ? listItems : [...pinned, ...rest.slice(0, listPeek)];
+    const more = rest.length > listPeek || !listComplete;
+    const key = JSON.stringify([open, more, shown]);
+    if (key === listShown) return;
+    listShown = key; listArt?.disconnect(); listNav = [];
+    const rows = shown.map(item => {
+      const b = el('button', 'am-nav-row am-list-row'); b.type = 'button'; b.title = item.name; b.dataset.uri = item.uri;
+      const art = el('span', 'am-list-art'), icon = item.type === 'folder' ? 'folder' : 'playlist';
+      if (item.image) {
+        const img = el('img', ''); img.alt = ''; img.decoding = 'async'; img.dataset.src = item.image;
+        img.onerror = () => { if (img.hasAttribute('src')) { listArt?.unobserve(img); img.remove(); art.innerHTML = svg(icon); } };
+        art.append(img);
+      } else art.innerHTML = svg(icon);
+      b.append(art, el('span', 'am-list-name', item.name || T('Adsız','Untitled')));
+      if (item.pinned) { const pin = el('span', 'am-list-pin'); pin.innerHTML = svg('pin'); b.append(pin); b.setAttribute('aria-description', T('Sabitlendi','Pinned')); }
+      const id = item.uri.split(':').slice(1).join('/');
+      b.addEventListener('click', () => item.type === 'folder' ? openLibrary('playlists', item.uri) : go('/' + id));
+      listNav.push({ b, key: item.type === 'folder' ? 'folder:' + item.uri : '/' + id });
+      return b;
+    });
+    if (more) {
+      const toggle = button(open ? T('Daha Az Göster','Show Less') : T('Tümünü Göster','Show All'), 'chevron', () => {
+        settings.lists = !settings.lists; saveSettings();
+        if (settings.lists && !listComplete) refreshLists(); else renderLists();
+      }, 'am-nav-row am-list-more');
+      toggle.setAttribute('aria-expanded', String(open)); toggle.append(el('span', '', toggle.title)); rows.push(toggle);
+    }
+    listBody.replaceChildren(...rows);
+    for (const img of listBody.querySelectorAll('img[data-src]')) observeLazy(listArt, img);
+    updateNav(); syncListPlaying();
+  }
+  async function refreshLists() {
+    const request = ++listRequest;
+    try { const result = await fetchLists(); if (request === listRequest) { ({ items: listItems, complete: listComplete } = result); renderLists(); } }
+    catch (e) { console.warn('[AppleMusicMac] Sidebar playlists', e); }
+  }
+  function scheduleLists(delay = 250) {
+    clearTimeout(listTimer);
+    if (document.hidden) { listStale = true; return; }
+    listTimer = setTimeout(refreshLists, delay);
+  }
+  // Apple Music marks the playing playlist with a speaker.
+  function syncListPlaying() {
+    const uri = S.Player.isPlaying?.() ? S.Player.data?.context?.uri || '' : '';
+    for (const { b } of listNav) b.classList.toggle('am-playing', b.dataset.uri === uri);
+  }
+  if (S.Platform.LibraryAPI?.getContents) {
+    for (const api of [S.Platform.LibraryAPI, Rootlist]) {
+      try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => scheduleLists(), {}); } catch {}
+    }
+    const onPlayer = () => {
+      syncListPlaying();
+      // Playing a playlist moves it to the top of Recents.
+      const context = S.Player.data?.context?.uri || '';
+      if (context !== listContext) { listContext = context; scheduleLists(1500); }
+    };
+    S.Player.addEventListener?.('songchange', onPlayer); S.Player.addEventListener?.('onplaypause', onPlayer);
+    listContext = S.Player.data?.context?.uri || '';
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) releaseLazy(listArt, listBody);
+      else { for (const img of listBody.querySelectorAll('img[data-src]')) observeLazy(listArt, img); if (listStale) { listStale = false; scheduleLists(0); } }
+    });
+    scheduleLists(0);
+  }
+  async function createItem(kind, name) {
+    try {
+      if (kind === 'folder') { await Rootlist.createFolder(name, { before: 'start' }); notify(T('Klasör oluşturuldu: ','Folder created: ') + name); }
+      else {
+        const created = await Rootlist.createPlaylist(name, { before: 'start' }), uri = typeof created === 'string' ? created : created?.uri;
+        if (/^spotify:playlist:/.test(uri || '')) go('/playlist/' + uri.split(':')[2]);
+      }
+      scheduleLists(0);
+    } catch (e) {
+      notify(kind === 'folder' ? T('Klasör oluşturulamadı.','Couldn\'t create the folder.') : T('Çalma listesi oluşturulamadı.','Couldn\'t create the playlist.'));
+      console.warn('[AppleMusicMac] Create ' + kind, e);
+    }
+  }
+  // The new item gets a name field at the top of the list: Enter or leaving the field creates it, Escape cancels.
+  function nameNewItem(kind) {
+    naming?.querySelector('input')?.blur();
+    const field = el('div', 'am-nav-row am-list-row am-list-new'), art = el('span', 'am-list-art'); art.innerHTML = svg(kind === 'folder' ? 'folder' : 'playlist');
+    const input = el('input', 'am-list-input'); input.type = 'text'; input.maxLength = 100; input.spellcheck = false;
+    input.defaultValue = kind === 'folder' ? T('Yeni Klasör','New Folder') : T('Yeni Çalma Listesi','New Playlist');
+    input.setAttribute('aria-label', kind === 'folder' ? T('Klasör adı','Folder name') : T('Çalma listesi adı','Playlist name'));
+    field.append(art, input); lists.prepend(field); naming = field;
+    let done = false;
+    const finish = create => {
+      if (done) return; done = true; if (naming === field) naming = null; field.remove();
+      if (create) createItem(kind, input.value.trim() || input.defaultValue);
+    };
+    input.addEventListener('keydown', event => {
+      event.stopPropagation();
+      if (event.key === 'Enter') { event.preventDefault(); finish(true); }
+      else if (event.key === 'Escape') { event.preventDefault(); finish(false); }
+    });
+    input.addEventListener('blur', () => finish(true));
+    // scrollIntoView would also shift <body> sideways (see STATUS.md).
+    const box = field.getBoundingClientRect(), view = nav.getBoundingClientRect();
+    if (box.top < view.top || box.bottom > view.bottom) nav.scrollTop += box.top - view.top - 40;
+    input.focus({ preventScroll: true }); input.select();
+  }
+  if (Rootlist?.createPlaylist) {
+    const add = button(T('Yeni çalma listesi veya klasör','New playlist or folder'), 'plus', () => togglePopover(add, () => [
+      { label: T('Yeni Çalma Listesi','New Playlist'), action: () => nameNewItem('playlist') },
+      ...(Rootlist.createFolder ? [{ label: T('Yeni Klasör','New Folder'), action: () => nameNewItem('folder') }] : []),
+    ]), 'am-nav-add');
+    add.setAttribute('aria-haspopup', 'menu'); listsHeading.append(add);
+  }
   // Apple Music's sidebar glass picks up the colours of the artwork beside it. A blurred backdrop that reaches past
   // the sidebar's edge carries those colours in; user.css shows it only inside the sidebar, fading from the edge.
   const sidebarGlow=el('div','');sidebarGlow.id='am-sidebar-glow';sidebarGlow.setAttribute('aria-hidden','true');
@@ -202,30 +343,37 @@
     }catch(e){console.warn('[AppleMusicMac] Profile',e);}
   })();
   function updateNav() {
-    const path = routePath();
-    for (const { b, key } of navItems) {
-      const selected = currentMode === 'library' ? key === libraryKeys[libraryKind] : path === key;
+    const path = routePath(), folderKey = currentMode === 'library' && libraryFolder ? 'folder:' + libraryFolder : '';
+    // A folder open in the library selects its own row when the sidebar lists it, "All Playlists" otherwise.
+    const folderShown = !!folderKey && listNav.some(n => n.key === folderKey);
+    for (const { b, key } of [...navItems, ...listNav]) {
+      const selected = currentMode === 'library' ? folderShown ? key === folderKey : key === libraryKeys[libraryKind] : path === key;
       b.classList.toggle('am-selected', selected);
       if(selected) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
     }    newsButton.classList.toggle('am-active',path==='/content-feed');
   }
   const libraryView = el('section', ''); libraryView.id='am-library'; libraryView.setAttribute('aria-label',T('Arşiv','Library'));document.body.append(libraryView);
-  let libraryKind='', libraryRequest=0;
+  let libraryKind='', libraryFolder='', libraryRequest=0;
   // Keep decoded artwork limited to the viewport and a short scroll buffer.
-  const artworkObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
-    for(const {target:img,isIntersecting} of entries){
-      if(isIntersecting&&!document.hidden){if(!img.hasAttribute('src'))img.src=img.dataset.src;}
-      else if(img.hasAttribute('src'))img.removeAttribute('src');
-    }
-  },{root:libraryView,rootMargin:'400px 0px'}):null;
-  function observeArtwork(img) {
+  function lazyObserver(root,rootMargin) {
+    return typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
+      for(const {target:img,isIntersecting} of entries){
+        if(isIntersecting&&!document.hidden){if(!img.hasAttribute('src'))img.src=img.dataset.src;}
+        else if(img.hasAttribute('src'))img.removeAttribute('src');
+      }
+    },{root,rootMargin}):null;
+  }
+  function observeLazy(observer,img) {
     if(document.hidden)return;
-    if(artworkObserver)artworkObserver.observe(img);else img.src=img.dataset.src;
+    if(observer)observer.observe(img);else img.src=img.dataset.src;
   }
-  function releaseArtwork() {
-    artworkObserver?.disconnect();
-    for(const img of libraryView.querySelectorAll('img[data-src]'))img.removeAttribute('src');
+  function releaseLazy(observer,container) {
+    observer?.disconnect();
+    for(const img of container.querySelectorAll('img[data-src]'))img.removeAttribute('src');
   }
+  const artworkObserver=lazyObserver(libraryView,'400px 0px');
+  const observeArtwork=img=>observeLazy(artworkObserver,img);
+  const releaseArtwork=()=>releaseLazy(artworkObserver,libraryView);
   function clearLibrary() { releaseArtwork();if(libraryView.hasChildNodes())libraryView.replaceChildren(); libraryView.scrollTop=0; }
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden)releaseArtwork();
@@ -278,7 +426,7 @@
   }
   async function renderLibrary(kind,folder='') {
     const request=++libraryRequest;
-    libraryKind=kind;currentMode='library';
+    libraryKind=kind;libraryFolder=folder;currentMode='library';
     document.body.classList.add('am-ready','am-library-open');document.body.classList.remove('am-search-open');updateNav();
     clearLibrary();
     libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));

@@ -52,6 +52,7 @@ The script:
   - The whole window takes on the artist's colour.
   - To switch to Spotify's own page, choose *Open Spotify's Page* (*Spotify Sayfasında Aç*) from the "…" menu in the top right.
 - **Library:** Your playlists, albums and artists, shown with their artwork. Filter by name, and sort by library order or A–Z.
+- **Playlists in the sidebar:** Your pinned playlists and folders, then the five you played most recently, as in Spotify's own sidebar sorted by Recents. *Show All* lists the rest; a speaker marks the one playing. The **+** next to *Playlists* makes a new playlist or folder: name it in place and press <kbd>Enter</kbd>.
 - **Spicy Lyrics:** Toggle lyrics and go full screen right from the player.
 - **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
 - **Typeface:** On macOS the theme uses Apple's own SF Pro. On Windows and Linux it uses Inter, embedded in the theme, so nothing is downloaded from the internet.

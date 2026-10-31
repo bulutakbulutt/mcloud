@@ -27,7 +27,7 @@ try {
   await page.waitForSelector('body.am-ready #am-sidebar');
 
   await check('shell renders', async () => {
-    assert.equal(await page.locator('#am-sidebar .am-nav-row').count(), 8);
+    assert.equal(await page.locator('#am-sidebar .am-navigation > .am-nav-row').count(), 8);
     assert.ok(await page.locator('#am-player .am-has-track').isVisible());
     assert.equal(await page.textContent('.am-track-title .am-marquee-inner > span'), 'Nights');
     await page.waitForFunction(() => !document.querySelector('.am-track-art img').hidden);
@@ -200,6 +200,72 @@ try {
     assert.ok(await page.evaluate(() => document.querySelector('#am-sidebar [aria-label="Arkadaş etkinliği"]').getBoundingClientRect().right <= document.getElementById('am-sidebar').getBoundingClientRect().right));
     await page.dblclick('.am-sidebar-resizer');
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-side')), '');
+  });
+
+  await check('sidebar playlists: pinned first, five recent, Show All lists the rest', async () => {
+    const rows = '#am-sidebar .am-list-row', names = () => page.locator(rows + ' .am-list-name').allTextContents();
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    // Liked Songs is "Songs" in the Library section, so it is left out.
+    assert.deepEqual(await names(), ['Ruh Hali', 'Sabah Kahvesi', 'Koşu', 'Odak', 'Yol Şarkıları', 'Gece Sürüşü', 'Ders Çalışma']);
+    assert.equal(await page.locator(rows + ' .am-list-pin').count(), 2);
+    // Rows load the small artwork, not the 640px one; the folder gets an icon.
+    await page.waitForFunction(() => document.querySelector('#am-sidebar [data-uri="spotify:playlist:1"] img')?.getAttribute('src') === window.__mockLibrary.find(i => i.uri === 'spotify:playlist:1').images[1].url);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:folder:ruh"] .am-list-art svg').count());
+    // The names line up with the rows above.
+    const left = sel => page.$eval(sel, e => Math.round(e.getBoundingClientRect().left));
+    assert.equal(await left(rows + ' .am-list-name'), await left('#am-sidebar .am-navigation > .am-nav-row span'));
+    await shot('sidebar-lists');
+    await page.click('#am-sidebar .am-list-more');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);
+    assert.equal(await page.textContent('#am-sidebar .am-list-more'), 'Daha Az Göster');
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).lists, true);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:6"] .am-list-art svg').count(), 'a playlist without artwork gets an icon');
+    await shot('sidebar-lists-open');
+    await page.click('#am-sidebar .am-list-more');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    // Rows open their playlist, folders the library's folder view; the open one is selected.
+    await page.click(rows + '[data-uri="spotify:playlist:1"]');
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/1');
+    assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:1"].am-selected').count());
+    await page.click(rows + '[data-uri="spotify:folder:ruh"]');
+    await page.waitForFunction(() => document.querySelectorAll('.am-library-card').length === 2);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:folder:ruh"].am-selected').count());
+    assert.equal(await page.locator('#am-sidebar .am-selected').count(), 1);
+    // The playing playlist gets a speaker.
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:playlist:2'; window.__firePlayer('songchange'); });
+    assert.equal(await page.$eval(rows + '[data-uri="spotify:playlist:2"]', e => e.classList.contains('am-playing') && getComputedStyle(e, '::after').width), '14px');
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
+  });
+
+  await check('new playlist and folder from the Playlists heading, named in place', async () => {
+    await page.click('#am-sidebar .am-nav-add');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Yeni Çalma Listesi', 'Yeni Klasör']);
+    await page.click('#am-popover .am-popover-item >> nth=0');
+    const input = '#am-sidebar .am-list-new input';
+    assert.equal(await page.evaluate(sel => document.activeElement === document.querySelector(sel) && document.activeElement.value, input), 'Yeni Çalma Listesi');
+    await shot('sidebar-new');
+    // Escape cancels.
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator(input).count(), 0);
+    assert.equal(await page.evaluate(() => window.__created?.length || 0), 0);
+    // Enter creates it at the top and opens it; the sidebar lists it under the pinned items.
+    await page.click('#am-sidebar .am-nav-add');
+    await page.click('#am-popover .am-popover-item >> nth=0');
+    await page.keyboard.type('Gece Yarısı');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/playlist/new1');
+    assert.deepEqual(await page.evaluate(() => window.__created[0]), ['playlist', 'Gece Yarısı', { before: 'start' }]);
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Gece Yarısı');
+    assert.ok(await page.locator('#am-sidebar .am-list-row[data-uri="spotify:playlist:new1"].am-selected').count());
+    // A folder keeps its default name when the field is left untouched, and the page stays where it was.
+    await page.click('#am-sidebar .am-nav-add');
+    await page.click('#am-popover .am-popover-item >> nth=1');
+    await page.click('#am-player');
+    await page.waitForFunction(() => window.__created.length === 2);
+    assert.deepEqual(await page.evaluate(() => window.__created[1]), ['folder', 'Yeni Klasör', { before: 'start' }]);
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/new1');
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
   });
 
   await check('volume wheel', async () => {
