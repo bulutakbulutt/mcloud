@@ -155,6 +155,10 @@ Spicy Lyrics is either not installed or hasn't loaded yet. Install the extension
 
 Built on macOS with Spotify 1.3.6.1921 and Spicetify 2.46.2. The install scripts work on macOS, Linux and Windows, but the theme has been tested most on macOS. Spotify UI updates may require adjustments; if you run into a problem, please [open an issue](https://github.com/bulutakbulutt/mcloud/issues) with your Spotify and Spicetify versions.
 
+## License
+
+mcloud is free and open source under the [MIT License](LICENSE). The embedded Inter typeface keeps its own licence, the [SIL Open Font License](licenses/Inter-OFL.txt).
+
 ## Special thanks
 
 Thanks to the Spicetify community for providing such a great platform.
