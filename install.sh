@@ -91,11 +91,22 @@ ok "Spicetify: $("$spicetify" -v 2>/dev/null | tail -n 1)"
 config=$("$spicetify" -c 2>/dev/null | grep 'config-xpui.ini' | tail -n 1 || true)
 if [ -n "$config" ]; then config_dir=$(dirname "$config"); else config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spicetify"; fi
 theme_dir="$config_dir/Themes/$THEME"
+# The theme settings mcloud replaced, so --uninstall can put them back.
+state="$theme_dir/previous.ini"
+
+setting() { "$spicetify" config "$1" 2>/dev/null | tail -n 1 | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' || true; }
+saved() { sed -n "s/^$1=//p" "$state" 2>/dev/null | tail -n 1; }
 
 if [ "$action" = uninstall ]; then
   step "mcloud kaldırılıyor…"
-  if [ "$("$spicetify" config current_theme 2>/dev/null || true)" = "$THEME" ]; then
-    "$spicetify" config current_theme " " color_scheme " " inject_theme_js 0 >/dev/null
+  if [ "$(setting current_theme)" = "$THEME" ]; then
+    prev_theme=$(saved current_theme); prev_scheme=$(saved color_scheme)
+    # Marketplace installs its themes only while its placeholder theme is selected.
+    if [ -z "$prev_theme" ] && [ -d "$config_dir/Themes/marketplace" ]; then prev_theme=marketplace; prev_scheme=''; fi
+    prev_css=$(saved inject_css); prev_js=$(saved inject_theme_js)
+    "$spicetify" config current_theme "${prev_theme:- }" color_scheme "${prev_scheme:- }" \
+      inject_css "${prev_css:-1}" inject_theme_js "${prev_js:-0}" >/dev/null
+    [ -z "$prev_theme" ] || ok "Önceki tema geri yüklendi: $prev_theme"
   fi
   rm -rf "$theme_dir"
   apply_theme || die "Spicetify uygulanamadı. Yukarıdaki çıktıyı kontrol edin."
@@ -122,6 +133,10 @@ else
 fi
 
 mkdir -p "$theme_dir"
+# Updating over mcloud keeps the settings saved by the first install.
+if [ "$(setting current_theme)" != "$THEME" ]; then
+  for k in current_theme color_scheme inject_css inject_theme_js; do printf '%s=%s\n' "$k" "$(setting "$k")"; done >"$state"
+fi
 for f in $FILES; do cp "$tmp/theme/$f" "$theme_dir/$f"; done
 ok "Tema dosyaları: $theme_dir"
 

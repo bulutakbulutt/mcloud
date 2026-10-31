@@ -101,6 +101,8 @@ curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.s
 & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1))) -Uninstall
 ```
 
+Uninstalling switches Spotify back to the theme you had before mcloud. If you had none and the Spicetify Marketplace is installed, it selects Marketplace's `marketplace` theme, so themes from the Marketplace install again. If an older uninstall already cleared it, run `spicetify config current_theme marketplace` and `spicetify apply`.
+
 To install a specific version, use `--ref <tag>` (`-Ref <tag>` on Windows).
 
 <details>
