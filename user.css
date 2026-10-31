@@ -599,7 +599,11 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist .am-soft-4 .am-hero-image {filter:blur(calc(var(--am-hw) * .0144))}
 #am-artist .am-soft-5 .am-hero-image {filter:blur(calc(var(--am-hw) * .0192))}
 .am-artist-body {position:relative}
-.am-hero-image {position:absolute;top:0;left:0;width:100%;height:77.4%;object-fit:cover;object-position:center 22%;-webkit-box-reflect:below;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));filter:blur(calc(var(--am-hero-progress,0) * 14px));will-change:transform}
+.am-hero-image {position:absolute;top:0;left:0;width:100%;height:77.4%;object-fit:cover;object-position:center 22%;-webkit-box-reflect:below;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));will-change:transform}
+/* Softening on scroll: blurred once, faded by opacity (cheap for the compositor), not a blur radius animated per frame. */
+#am-artist .am-hero-haze {will-change:transform,opacity}
+#am-artist .am-haze-1 {filter:blur(5px);opacity:clamp(0,calc(var(--am-hero-progress,0) * 2),1)}
+#am-artist .am-haze-2 {filter:blur(14px);opacity:clamp(0,calc(var(--am-hero-progress,0) * 2 - 1),1)}
 /* Artists without a wide header image: the round portrait over a glow of their colour, as in Apple Music. */
 .am-artist-hero.am-hero-avatar {height:auto;min-height:clamp(380px,62vh,620px);align-items:center;padding-top:48px;background:radial-gradient(60% 55% at calc(50% + var(--am-side) / 2) 34%,color-mix(in srgb,var(--am-tint-top,#555),#fff 16%),transparent 75%)}
 .am-hero-portrait {width:clamp(170px,17vw,250px);aspect-ratio:1;border-radius:50%;object-fit:cover;box-shadow:0 12px 40px #0006;margin-bottom:10px;background:#ffffff14}
@@ -612,7 +616,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist .am-hero-play {display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:white;color:var(--am-tint-top,#333);box-shadow:0 4px 16px #0003;transition:transform .12s}
 #am-artist .am-hero-play svg {width:35px;height:35px}
 #am-artist .am-hero-play:active {transform:scale(.94)}
-#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#ffffff14;backdrop-filter:blur(10px)}
+#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#ffffff14;box-shadow:inset 0 0 0 1px #ffffff0d;backdrop-filter:blur(10px)}
 #am-artist .am-hero-follow svg {width:20.5px;height:20.5px}
 #am-artist .am-hero-info svg {width:20px;height:20px}
 #am-artist .am-hero-follow.am-active svg path {fill:currentColor}
@@ -713,7 +717,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-concert-detail {font-size:11px;color:var(--am-tint-text,#ffffff99);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-about-text {max-width:760px;margin:0;padding:0 32px;font-size:13px;line-height:1.5;color:#ffffffd0;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
-@media(prefers-reduced-motion:reduce){.am-hero-image{transform:none;filter:none}}
+@media(prefers-reduced-motion:reduce){.am-hero-image{transform:none}#am-artist .am-hero-haze{display:none}}
 
 /* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
    frames, already carries its blur, lens and tone, so there is no tint, border or shadow on top. */

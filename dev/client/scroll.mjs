@@ -1,8 +1,10 @@
 // Scrolling smoothness of the artist page and its ⓘ sheet in the live client (macOS). Spotify must run with
 // --remote-debugging-port=9229; it is brought to the front. Input goes through CDP wheel events (Chromium's real
 // scroll path) in two profiles:
-//   wheel     a mouse wheel spun fast: 100px notches every 50ms (Chromium animates each notch), down then up
-//   trackpad  pixel-precise deltas every 8ms: a 350ms drag (6-14px) then momentum decaying from 30px, 4 flicks each way
+//   wheel     a mouse wheel spun fast: 100px notches every 50ms, sent without waiting (Chromium animates each notch)
+//   trackpad  Input.synthesizeScrollGesture: precise deltas generated every frame, at 600, 1200 and 2400px/s each way.
+//             (Precise wheel events sent one by one over CDP arrive ~20ms apart and move the page only every other
+//             frame: a measurement artefact, not a dropped frame.)
 // Frame intervals are rAF timestamps in the page. Per artist and target: cold (UI reloaded, first visit, as soon as the
 // photo has loaded) and warm (the same again).
 //   node dev/client/scroll.mjs <page|sheet> <artist id> [<artist id>…]
@@ -30,10 +32,10 @@ const cdp = () => page.context().newCDPSession(page);
 async function wheelAt(session, x, y, dy) { await session.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: 0, deltaY: dy }); }
 async function input(profile, x, y) {
   const s = await cdp();
-  if (profile === 'wheel') { for (const dir of [1, -1]) for (let t = 0; t < 2500; t += 50) { await wheelAt(s, x, y, 100 * dir); await sleep(50); } }
-  else for (const dir of [1, -1]) for (let flick = 0; flick < 4; flick++) {
-    for (let t = 0; t < 350; t += 8) { await wheelAt(s, x, y, dir * (6 + 8 * Math.sin(Math.PI * t / 350))); await sleep(8); }
-    for (let v = 30; v > .5; v *= .955) { await wheelAt(s, x, y, dir * v); await sleep(8); }
+  if (profile === 'wheel') { for (const dir of [1, -1]) for (let t = 0; t < 2500; t += 50) { wheelAt(s, x, y, 100 * dir).catch(() => {}); await sleep(50); } }
+  else for (const dir of [-1, 1]) for (const speed of [600, 1200, 2400]) {
+    await s.send('Input.synthesizeScrollGesture', { x: Math.round(x), y: Math.round(y), yDistance: dir * Math.round(speed * .7), speed, gestureSourceType: 'mouse', preventFling: true });
+    await sleep(150);
   }
   await s.detach().catch(() => {});
 }

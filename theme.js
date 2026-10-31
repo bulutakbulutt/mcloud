@@ -21,8 +21,9 @@
     play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
-    // Apple's "info": a lowercase i with a serif and a foot, 7 x 13.5pt at 20px.
-    info:'<circle cx="12.3" cy="5.6" r="1.55" fill="currentColor" stroke="none"/><path d="M9.8 10h2.5v9.2M8.8 19.2h7" stroke-width="2"/>',
+    // Apple's "info" (SF Symbols' slab i), traced pixel by pixel from the Music app at 2x: a 2.4pt dot, a serif, a 1.5pt
+    // stem right of centre and a 7pt foot, edges on the device-pixel grid at 20px (0.6 units = 1 device pixel).
+    info:'<circle cx="12.15" cy="5.9" r="1.45" fill="currentColor" stroke="none"/><path d="M8.4 10.2H13.2V19.2H16.2V21H8.1V19.2H11.4V12H8.4Z" fill="currentColor" stroke="none"/>',
     close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
@@ -1860,7 +1861,7 @@
     }catch{notify(T('Çalma başlatılamadı.','Couldn\'t start playback.'));}
   }
   async function renderArtist(id) {
-    const request=++artistRequest,uri='spotify:artist:'+id;closeArtistInfo();
+    const request=++artistRequest,uri='spotify:artist:'+id;closeArtistInfo();heroProgress='';
     currentMode='artist';++libraryRequest;clearLibrary();
     document.body.classList.remove('am-library-open','am-search-open','am-tinted');document.body.classList.add('am-artist-open');updateNav();
     artistView.replaceChildren(el('p','am-artist-loading',T('Yükleniyor…','Loading…')));artistView.scrollTop=0;
@@ -1918,6 +1919,9 @@
     else{
       // Blurred copies fade in one after another at the bottom: Apple Music's progressive blur under the name and buttons.
       const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
+      // Scrolling softens the photo by fading in copies blurred once (5 and 14px) instead of animating a blur radius,
+      // which re-ran a blur over the whole photo on every scroll frame (it added dropped frames in fast scrolls).
+      for(const step of [1,2]){const haze=lazyImage(heroArt.src,'am-hero-image am-hero-haze am-haze-'+step);haze.loading='eager';heroMedia.append(haze);}
       for(const step of [1,2,3,4,5]){const soft=el('div','am-hero-soft am-soft-'+step),copy=lazyImage(heroArt.src,'am-hero-image');copy.loading='eager';soft.append(copy);heroMedia.append(soft);}
       hero.append(heroMedia,heroContent);
     }
@@ -2027,11 +2031,14 @@
     return section;
   }
   // The hero image drifts and softens as the page scrolls, like Apple Music's artist header.
-  let heroFrame=0;
+  let heroFrame=0,heroProgress='';
   function updateHero() {
     heroFrame=0;
-    const progress=Math.min(1,artistScroll/Math.max(1,artistView.clientHeight*.7));
-    artistView.style.setProperty('--am-hero-progress',progress.toFixed(3));
+    const progress=Math.min(1,artistScroll/Math.max(1,artistView.clientHeight*.7)).toFixed(3);
+    if(progress===heroProgress)return;heroProgress=progress;
+    // Set on the header, not the page: an inherited custom property changed on #am-artist restyled every shelf and
+    // card on each scroll frame, and kept doing so (at 1.000) long after the header had scrolled away.
+    artistView.querySelector('.am-artist-hero')?.style.setProperty('--am-hero-progress',progress);
   }
   artistView.addEventListener('scroll',()=>{artistScroll=artistView.scrollTop;if(!heroFrame)heroFrame=requestAnimationFrame(updateHero);},{passive:true});
   // Sticky bars such as the home chips row paint a solid layer: an absolute child of the sticky bar with only

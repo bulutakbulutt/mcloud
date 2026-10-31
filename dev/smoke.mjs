@@ -554,14 +554,16 @@ try {
     // the first shelf; the play triangle sits 1.5px right in its 72px circle, as in Apple Music.
     const hero = await page.evaluate(() => {
       const media = document.querySelector('.am-hero-media').getBoundingClientRect();
-      const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image')], [sharp] = imgs, s = sharp.getBoundingClientRect();
+      const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image:not(.am-hero-haze)')], [sharp] = imgs, s = sharp.getBoundingClientRect();
       return { w: innerWidth - media.left, photoH: s.height, mediaH: media.height,
-        src: imgs.every(i => i.src === window.__mockArtist.headerImage.data.sources[0].url), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? 'NaN')),
+        src: imgs.every(i => i.src === window.__mockArtist.headerImage.data.sources[0].url), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0')), haze: [...document.querySelectorAll('.am-hero-haze')].map(i => [getComputedStyle(i).filter, getComputedStyle(i).opacity]),
         aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }) };
     });
     assert.ok(hero.src && hero.aligned, JSON.stringify(hero));
     assert.ok(Math.abs(hero.photoH - hero.w / 2) < 1 && Math.abs(hero.mediaH - hero.w * .646) < 1, JSON.stringify(hero));
     assert.deepEqual(hero.blurs.map(b => Math.round(b / hero.w * 1042)), [0, 3, 6, 10, 15, 20]);
+    // Scrolling softens the photo with copies blurred once and faded in, not an animated blur radius.
+    assert.deepEqual(hero.haze, [['blur(5px)', '0'], ['blur(14px)', '0']]);
     // ⓘ, play and follow are symmetric under the name, as in Apple Music.
     const buttons = await page.evaluate(() => { const [i, p, f] = ['.am-hero-info', '.am-hero-play', '.am-hero-follow'].map(s => document.querySelector(s).getBoundingClientRect()); const y = r => Math.round(r.top + r.height / 2);
       return { sizes: [i.width, p.width, f.width], centred: y(i) === y(p) && y(p) === y(f), gaps: [Math.round(p.left - i.right), Math.round(f.left - p.right)], font: parseFloat(getComputedStyle(document.querySelector('.am-artist-name')).fontSize) }; });
