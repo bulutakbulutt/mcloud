@@ -241,8 +241,9 @@ try {
   await check('toolbar glass: shapes under the controls, lit on hover, grown on press', async () => {
     // In #main (Spotify's isolated root), after .Root: in <body> it covered the toolbar's icons.
     const info = await page.evaluate(() => ({ host: document.getElementById('am-toolbar-glass')?.parentElement?.id, shapes: document.querySelectorAll('#am-toolbar-glass .am-tglass').length,
-      layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer').length, rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
-    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 3, rims: 2, on: true });
+      layers: document.querySelectorAll('#am-toolbar-glass .am-tglass-layer:not(.am-tglass-lite)').length, lite: [...document.querySelectorAll('#am-toolbar-glass .am-tglass-lite')].map(l => getComputedStyle(l).display).join(), rims: document.querySelectorAll('#am-toolbar-glass .am-tglass-rim').length, on: document.body.classList.contains('am-tglass-on') }));
+    // The lite layer (Balanced mode on the Spicy page) stays hidden elsewhere.
+    assert.deepEqual(info, { host: 'main', shapes: 2, layers: 3, lite: 'none', rims: 2, on: true });
     // One set of layers and one hairline for every shape: each filter merges the shapes' map pieces, clipped to them.
     const pane = await page.evaluate(() => { const l = document.querySelector('#am-toolbar-glass > .am-tglass-pane > .am-tglass-layer'), id = l.style.backdropFilter.match(/#([\w-]+)/)[1];
       return { members: new Set([...document.getElementById(id).querySelectorAll('feImage[href]')].map(i => i.dataset.member)).size, pills: (l.style.clipPath.match(/M/g) || []).length, line: !!document.querySelector('#am-toolbar-glass > .am-tglass-pane-rim') }; });
@@ -274,7 +275,7 @@ try {
       const face = document.querySelector('#am-player > .am-player-face'), id = getComputedStyle(face.querySelector('.am-tglass-layer')).backdropFilter.match(/#([\w-]+)/)[1];
       const part = p => document.getElementById(id).querySelector(`feImage[data-part="${p}"]`), [l, m, r] = ['l', 'm', 'r'].map(part), shift = document.getElementById(id).querySelector('feDisplacementMap'), n = a => Number(m.getAttribute(a));
       const span = [l.getAttribute('x'), +r.getAttribute('x') + +r.getAttribute('width')].join('-'), joined = Math.abs(+l.getAttribute('x') + +l.getAttribute('width') - n('x')) < 1e-6 && Math.abs(n('x') + n('width') - r.getAttribute('x')) < 1e-6;
-      return { size: span + 'x' + l.getAttribute('height'), joined, column: await new Promise(res => { const i = new Image(); i.onload = () => res(i.width); i.src = m.getAttribute('href'); }), href: l.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
+      return { size: span + 'x' + l.getAttribute('height'), joined, column: await new Promise(res => { const i = new Image(); i.onload = () => res(i.width); i.src = m.getAttribute('href'); }), href: l.getAttribute('href'), layers: face.querySelectorAll('.am-tglass-layer:not(.am-tglass-lite)').length, x: shift.getAttribute('xChannelSelector'), y: shift.getAttribute('yChannelSelector') };
     });
     await page.waitForFunction(() => document.querySelector('#am-player > .am-player-face .am-tglass-layer'));
     // The player's own bend filter (the toolbar's shapes have theirs too).
@@ -413,20 +414,24 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
-  await check('glass modes: balanced drops backdrop filters on the Spicy page only, full keeps them, eco is solid', async () => {
-    // face/pane: the player's and the toolbar's glass layers as drawn ('none' when hidden, null when not built).
+  await check('glass modes: balanced runs the lite glass on the Spicy page only, full keeps the layers, eco is solid', async () => {
+    // player/toolbar: the glass layers that run (null when the glass is not built); rims: hairline filters that run.
     const state = () => page.evaluate(() => {
-      const shown = sel => { const e = document.querySelector(sel); return e ? getComputedStyle(e).display !== 'none' : null; };
-      return { mode: ['am-balanced', 'am-solid'].filter(c => document.body.classList.contains(c)).join() || 'full', face: shown('#am-player .am-player-face'), pane: shown('#am-toolbar-glass > .am-tglass-pane'),
-        sidebar: /blur/.test(getComputedStyle(document.getElementById('am-sidebar')).backdropFilter), glow: shown('#am-sidebar-glow') };
+      const shown = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none';
+      const layers = sel => { const host = document.querySelector(sel); return host ? [...host.querySelectorAll('.am-tglass-layer')].filter(shown).map(l => l.classList[1].slice(10)).join() : null; };
+      return { mode: ['am-balanced', 'am-solid'].filter(c => document.body.classList.contains(c)).join() || 'full', player: layers('#am-player .am-player-face'), toolbar: layers('#am-toolbar-glass > .am-tglass-pane'),
+        rims: [...document.querySelectorAll('#am-player > .am-tglass-rim, #am-toolbar-glass > .am-tglass-pane-rim')].filter(e => shown(e) && getComputedStyle(e).backdropFilter !== 'none').length,
+        sidebar: /blur/.test(getComputedStyle(document.getElementById('am-sidebar')).backdropFilter), glow: shown(document.getElementById('am-sidebar-glow')) };
     });
     const pick = name => page.evaluate(n => window.__menus[0].items.find(i => i.name === n).onClick(), name);
-    const glass = { face: true, pane: true, sidebar: true, glow: true };
+    const glass = { player: 'bend,mid,tone', toolbar: 'bend,mid,tone', rims: 2, sidebar: true, glow: true };
     assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
     await page.evaluate(() => Spicetify.Platform.History.push('/SpicyLyrics'));
     await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
-    assert.deepEqual(await state(), { mode: 'am-balanced', face: false, pane: false, sidebar: false, glow: false });
-    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backgroundImage), /gradient/);
+    assert.deepEqual(await state(), { mode: 'am-balanced', player: 'lite', toolbar: 'lite', rims: 0, sidebar: false, glow: false });
+    // The lite filter: one displacement, read from the same maps as the bend.
+    assert.deepEqual(await page.evaluate(() => { const id = getComputedStyle(document.querySelector('#am-player .am-tglass-lite')).backdropFilter.match(/#([\w-]+)/)[1], f = document.getElementById(id);
+      return [f.querySelectorAll('feDisplacementMap').length, f.querySelectorAll('feGaussianBlur').length, !!f.querySelector('feImage[data-map="map"]').getAttribute('href')]; }), [1, 0, true]);
     // With the Liquid Glass player off, the toolbar's own buttons blur the page; Balanced turns that off here too.
     const blurs = () => page.evaluate(() => [...document.querySelectorAll('#global-nav-bar :is(button,input), #am-player, #am-sidebar')].filter(e => getComputedStyle(e).backdropFilter !== 'none').length);
     await pick('Liquid Glass oynatıcı');
@@ -438,7 +443,7 @@ try {
     assert.deepEqual(await state(), { mode: 'full', ...glass });
     await pick('Cam efekti: Eko');
     await page.waitForFunction(() => !document.getElementById('am-toolbar-glass'));
-    assert.deepEqual(await state(), { mode: 'am-solid', face: null, pane: null, sidebar: false, glow: false });
+    assert.deepEqual(await state(), { mode: 'am-solid', player: null, toolbar: null, rims: 0, sidebar: false, glow: false });
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).glass, 'eco');
     await pick('Cam efekti: Dengeli');
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
