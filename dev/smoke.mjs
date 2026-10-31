@@ -270,21 +270,31 @@ try {
     await shot('sidebar-lists');
     await page.click('#am-sidebar .am-list-more');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);
-    assert.equal(await page.textContent('#am-sidebar .am-list-more'), 'Daha Az Göster');
+    // One control at a time: open, the end row goes and the heading carries Show Less; focus moves to the first new row.
+    assert.equal(await page.locator('#am-sidebar .am-list-more').count(), 0, 'open, the end row goes');
+    assert.equal(await page.textContent('#am-sidebar .am-nav-less'), 'Daha Az Göster');
+    assert.equal(await page.evaluate(() => document.activeElement?.dataset.uri), 'spotify:playlist:6', 'focus moves to the first new playlist');
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).lists, true);
     assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:6"] .am-list-art svg').count(), 'a playlist without artwork gets an icon');
     await shot('sidebar-lists-open');
-    // Open, the heading sticks to the top of the sidebar with its own Show Less; closing from deep in the list leaves
-    // the heading at the top with the short list under it, and focus on Show All.
+    // Open, the heading sticks to the top of the sidebar with Show Less; closing from deep in the list fades the sidebar
+    // out and back in with the short list, and focus lands on Show All.
     const heading = () => page.locator('#am-sidebar .am-nav-heading:has(.am-nav-add)');
-    await page.setViewportSize({ width: 1440, height: 560 });
+    await page.setViewportSize({ width: 1440, height: 480 });
     await page.$eval('#am-sidebar .am-navigation', n => { n.scrollTop = n.scrollHeight; });
-    await page.waitForFunction(() => document.querySelector('#am-sidebar .am-nav-heading.am-lists-open')?.classList.contains('am-stuck'));
-    assert.equal(await heading().evaluate(h => Math.round(h.getBoundingClientRect().top - h.parentElement.getBoundingClientRect().top)), 10);
+    // Stuck, the heading floats in the sidebar (a spacer keeps its place) and the scroll area itself fades out under it,
+    // so fast scrolling can't run rows over it; it has no band of its own.
+    await page.waitForFunction(() => document.querySelector('#am-sidebar .am-nav-heading.am-floating'));
+    assert.equal(await heading().evaluate(h => Math.round(h.getBoundingClientRect().top - document.querySelector('#am-sidebar .am-navigation').getBoundingClientRect().top)), 10);
+    assert.equal(await heading().evaluate(h => getComputedStyle(h, '::before').content), 'none');
+    assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'), h = document.querySelector('#am-sidebar .am-floating'); return !!n.querySelector('.am-heading-spacer') && /gradient/.test(getComputedStyle(n).maskImage || getComputedStyle(n).webkitMaskImage) && Math.abs(n.getBoundingClientRect().top + parseFloat(n.style.getPropertyValue('--am-mask-edge')) - h.getBoundingClientRect().bottom - 4) <= 1; }), 'the scroll area fades out under the heading');
     await shot('sidebar-lists-stuck');
+    // Closing from deep in the list scrolls back to where the short list rests, then folds in place.
     await page.click('#am-sidebar .am-nav-less');
-    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'); return n.classList.contains('am-closing') || n.getAnimations({ subtree: true }).length > 0; }), 'closing animates');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7 && !document.querySelector('#am-sidebar .am-floating'));
     assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
+    assert.ok(await page.evaluate(() => !document.querySelector('#am-sidebar .am-heading-spacer') && !document.querySelector('#am-sidebar .am-navigation').classList.contains('am-masked')), 'back in the list');
     assert.ok(await page.evaluate(() => document.activeElement?.classList.contains('am-list-more')), 'focus stays on Show All');
     assert.equal(await page.locator('#am-sidebar .am-nav-less').isVisible(), false);
     await page.setViewportSize({ width: 1440, height: 900 });
