@@ -58,7 +58,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -76,6 +76,7 @@
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
     document.body.classList.toggle('am-liquid',settings.liquid);
+    document.body.classList.toggle('am-no-numbers',!settings.numbers);
     // Glass modes. Over a page that redraws every frame (Spicy Lyrics) each backdrop filter re-runs every frame, so
     // "balanced" draws glass without them there (body.am-balanced), "eco" (and the OS reduced-transparency setting)
     // swaps every blur and glass for solid surfaces (body.am-solid), "full" keeps the real glass everywhere.
@@ -1716,9 +1717,38 @@
     const input=libraryView.querySelector('.am-library-filter');
     if(input){event.preventDefault();input.focus();input.select();}
   });
+  // Track numbers can be hidden (settings.numbers, body.am-no-numbers). Spotify's "Change visible columns" menu is
+  // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
+  // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.
+  function addNumberColumn() {
+    const menu=document.querySelector('#context-menu ul[role="menu"]:has([role="menuitemcheckbox"][data-column])');
+    if(!menu||menu.querySelector('.am-column-number'))return !!menu;
+    const sample=menu.querySelector('[role="menuitemcheckbox"][data-column]'),check=sample.querySelector('[data-encore-id="formCheckbox"]');
+    const [labelBox,checkBox]=sample.children,text=labelBox?.firstElementChild;
+    if(!text||!check||!checkBox)return true;
+    const item=el('li',sample.parentElement.className+' am-column-number');item.setAttribute('role','presentation');
+    const b=el('button',sample.className);b.type='button';b.setAttribute('role','menuitemcheckbox');b.dataset.rowSize=sample.dataset.rowSize||'small';b.tabIndex=-1;
+    const name=T('Parça numarası','Track number'),label=el('span',text.className,name);b.setAttribute('aria-label',name);
+    // The checkbox only draws the state (no label "for", so clicking it does not toggle a second time).
+    const form=el('div',check.className);form.dataset.encoreId='formCheckbox';
+    const box=el('input',check.querySelector('input')?.className||'');box.type='checkbox';box.readOnly=true;box.tabIndex=-1;box.setAttribute('aria-hidden','true');
+    const mark=el('label',check.querySelector('label')?.className||'');mark.append(el('span',check.querySelector('label span')?.className||''));form.append(box,mark);
+    const inner=el('div',checkBox.firstElementChild?.className||'');inner.append(form);const outer=el('div',checkBox.className);outer.append(inner);
+    const labelWrap=el('div',labelBox.className);labelWrap.append(label);b.append(labelWrap,outer);item.append(b);
+    const sync=()=>{b.setAttribute('aria-checked',String(settings.numbers));box.checked=settings.numbers;label.className=label.className.replace(/encore-internal-color-text-(bright-accent|base)/,'encore-internal-color-text-'+(settings.numbers?'bright-accent':'base'));};
+    b.addEventListener('click',event=>{event.stopPropagation();settings.numbers=!settings.numbers;saveSettings();applySettings();sync();});
+    sync();sample.parentElement.before(item);return true;
+  }
+  // The menu mounts a moment after its button is clicked; look for it for a few frames instead of observing the page.
+  document.addEventListener('click',event=>{
+    const target=event.target instanceof Element?event.target:null;
+    if(!target?.closest('.main-trackList-trackListHeader button')||target.closest('.main-trackList-trackListHeaderRow'))return;
+    let frames=0;const look=()=>{if(!addNumberColumn()&&++frames<30)requestAnimationFrame(look);};requestAnimationFrame(look);
+  },true);
   // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
   if(S.Menu?.SubMenu&&S.Menu?.Item){
     const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
+    const numbers=toggle(T('Parça numaraları','Track numbers'),'numbers');document.addEventListener('am-settings',()=>numbers.setState(settings.numbers));
     const glassLabels={full:T('Tam','Full'),balanced:T('Dengeli','Balanced'),eco:T('Eko','Eco')};
     // The checkmark shows the mode in effect: reduced transparency in the OS keeps Eco whatever is picked.
     const glassMode=()=>reducedTransparency.matches?'eco':settings.glass,syncGlass=()=>glass.forEach((item,i)=>item.setState(glassModes[i]===glassMode()));
@@ -1734,7 +1764,7 @@
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,...recents,...colors,...langs]).register();
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();

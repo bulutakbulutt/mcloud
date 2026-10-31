@@ -296,6 +296,46 @@ try {
     await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
   });
 
+  await check('track numbers: a row in Spotify\'s Columns menu and a switch under mcloud hide them', async () => {
+    // Spotify's track list (classes and the grid variable as in 1.2.x) and its "Change visible columns" menu, which
+    // mounts a moment after the click.
+    await page.evaluate(() => {
+      const art = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#c33764"/></svg>');
+      const row = (n, img) => `<div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="row"><div class="main-trackList-rowSectionIndex" role="gridcell"><div class="main-trackList-rowMarker"><span>${n}</span><button class="main-trackList-rowImagePlayButton" aria-label="Çal"></button></div></div><div class="main-trackList-rowSectionStart" role="gridcell">${img ? `<img class="main-trackList-rowImage" alt="" src="${art}">` : ''}<div class="main-trackList-rowTitle">Şarkı ${n}</div></div><div role="gridcell">3:20</div></div>`;
+      document.querySelector('[data-testid="playlist-page"]').insertAdjacentHTML('beforeend', `<div class="mock-numbers">
+        <style>.mock-numbers .main-trackList-trackListRowGrid{display:grid;gap:16px;padding:0 16px;height:56px;position:relative;grid-template-columns:var(--grid-template-columns)}.mock-numbers .main-trackList-rowSectionIndex{justify-self:end;display:flex;align-items:center;position:relative}.mock-numbers .main-trackList-rowMarker{width:16px;min-width:16px;height:16px;position:relative}.mock-numbers .main-trackList-rowImagePlayButton{position:absolute;inset:0;opacity:0}.mock-numbers .main-trackList-rowSectionStart{display:flex;align-items:center;gap:12px}.mock-numbers .main-trackList-rowImage{width:40px;height:40px}</style>
+        <div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] var(--index-column-width,16px) [first] 4fr [last] 1fr">
+          <div class="main-trackList-trackListHeader"><div class="main-trackList-trackListHeaderRow main-trackList-trackListRowGrid" role="row"><div class="main-trackList-rowSectionIndex" role="columnheader"><div>#</div></div><div class="main-trackList-rowSectionStart" role="columnheader"><button>Başlık</button></div><div role="columnheader">Süre</div></div><button class="mock-columns" aria-label="Görünür sütunları değiştir">▾</button></div>
+          ${row(1, true)}${row(2, false)}
+        </div></div>`);
+      document.querySelector('.mock-columns').addEventListener('click', () => setTimeout(() => document.body.insertAdjacentHTML('beforeend', `<div data-tippy-root class="mock-menu" style="position:fixed;top:120px;right:40px;z-index:100;background:#282828"><div id="context-menu"><ul role="menu"><li role="presentation"><span>Sütunlar</span></li><li role="presentation" class="mock-li"><button class="mock-item" role="menuitemcheckbox" aria-checked="true" aria-label="Albüm" data-column="ALBUM"><div class="mock-label"><span class="encore-internal-color-text-bright-accent">Albüm</span></div><div class="mock-box"><div class="mock-box-inner"><div class="mock-check" data-encore-id="formCheckbox"><input type="checkbox" checked><label class="mock-mark"><span class="mock-dot"></span></label></div></div></div></button></li></ul></div></div>`), 50));
+    });
+    const layout = () => page.evaluate(() => {
+      const [image, plain] = document.querySelectorAll('.mock-numbers .main-trackList-trackListRow'), left = e => Math.round(e.getBoundingClientRect().left - image.getBoundingClientRect().left);
+      const marker = image.querySelector('.main-trackList-rowMarker').getBoundingClientRect(), img = image.querySelector('img').getBoundingClientRect();
+      return { index: getComputedStyle(image).gridTemplateColumns.split(' ')[1], title: left(plain.querySelector('.main-trackList-rowSectionStart')), hash: getComputedStyle(document.querySelector('.mock-numbers .main-trackList-trackListHeaderRow .main-trackList-rowSectionIndex')).visibility, plainIndex: getComputedStyle(plain.querySelector('.main-trackList-rowSectionIndex')).visibility, onArt: Math.round(marker.left - img.left) === 0 && Math.round(marker.width) === Math.round(img.width) };
+    });
+    assert.deepEqual(await layout(), { index: '16px', title: 48, hash: 'visible', plainIndex: 'visible', onArt: false });
+    // The menu's new row comes first, as the column does, and starts checked.
+    await page.click('.mock-columns');
+    await page.waitForSelector('.am-column-number');
+    assert.deepEqual(await page.$$eval('#context-menu li', l => l.map(e => e.textContent)), ['Sütunlar', 'Parça numarası', 'Albüm']);
+    assert.equal(await page.getAttribute('.am-column-number button', 'aria-checked'), 'true');
+    await page.click('.am-column-number button');
+    assert.equal(await page.getAttribute('.am-column-number button', 'aria-checked'), 'false');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-numbers')));
+    // The index column folds away, titles take its place and the play button sits on the artwork.
+    assert.deepEqual(await layout(), { index: '0px', title: 16, hash: 'hidden', plainIndex: 'hidden', onArt: true });
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).numbers, false);
+    // The mcloud switch follows, and turns them back on.
+    const numbers = () => page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları'));
+    assert.equal((await numbers()).checked, false);
+    await page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick());
+    assert.equal((await numbers()).checked, true);
+    assert.equal((await layout()).index, '16px');
+    await page.evaluate(() => document.querySelectorAll('.mock-numbers, .mock-menu').forEach(e => e.remove()));
+  });
+
   await check('volume wheel', async () => {
     await page.hover('.am-volume-wrap');
     await page.mouse.wheel(0, 100);
