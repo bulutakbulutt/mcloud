@@ -161,24 +161,71 @@
   const Rootlist = S.Platform.RootlistAPI, listPeeks = [0, 3, 5, 10, 20];
   if (!listPeeks.includes(settings.recent)) settings.recent = 5;
   let listItems = [], listComplete = false, listShown = '', listNav = [], listRequest = 0, listTimer = 0, listStale = false, listContext = '', naming = null;
-  let listPending = false, listFlush = 0, stuckFrame = 0;
+  let listPending = false, listFlush = 0, stuckFrame = 0, listToggling = false;
   const listArt = lazyObserver(nav, '200px 0px'), listRows = new Map();
-  // "Show All" / "Show Less" ends the list. While the list is open the heading sticks to the top of the sidebar with
-  // a "Show Less" chevron of its own, so a long list can be closed from anywhere in it (VS Code's sticky headers;
-  // Apple's HIG keeps actions off the bottom of a sidebar).
-  const listMore = button(T('Tümünü Göster','Show All'), 'chevron', () => toggleLists(listMore), 'am-nav-row am-list-more'); listMore.append(el('span', ''));
-  const listLess = button(T('Daha Az Göster','Show Less'), 'chevron', () => toggleLists(listLess), 'am-nav-less'); listLess.hidden = true; listsHeading.append(listLess);
+  // One control at a time (Apple's HIG: one disclosure per view; no well-known app shows two for one toggle): closed,
+  // "Show All" ends the list; open, that row goes and the heading, which sticks to the top of the sidebar, carries
+  // "Show Less", so a long list closes from anywhere in it, as Notification Center's stacks do.
+  const listMore = button(T('Tümünü Göster','Show All'), 'chevron', () => toggleLists(listMore), 'am-nav-row am-list-more'); listMore.append(el('span', '', T('Tümünü Göster','Show All'))); listMore.setAttribute('aria-expanded', 'false');
+  const listLess = el('button', 'am-nav-less', T('Daha Az Göster','Show Less')); listLess.type = 'button'; listLess.setAttribute('aria-expanded', 'true'); listLess.hidden = true;
+  listLess.addEventListener('click', () => toggleLists(listLess)); listsHeading.append(listLess);
   function toggleLists(from) {
-    const closing = settings.lists, stuck = allLists.getBoundingClientRect().top < listsHeading.getBoundingClientRect().bottom;
+    if (listToggling) return;
+    const closing = settings.lists;
     settings.lists = !settings.lists; saveSettings();
-    if (settings.lists && !listComplete) refreshLists(true); else renderLists(true);
-    // Closed from deep in the list: the heading stays at the top with the short list under it.
-    if (closing && stuck) nav.scrollTop += allLists.getBoundingClientRect().top - listsHeading.getBoundingClientRect().bottom - 4;
-    (from.hidden ? listMore : from).focus({ preventScroll: true });
+    const focusAfter = () => {
+      const next = settings.lists ? listRows.get(listItems.filter(i => !i.pinned)[settings.recent]?.uri)?.b || listLess : listMore;
+      next.focus({ preventScroll: true });
+    };
+    if (!closing) { if (listComplete) { renderLists(true, true); focusAfter(); } else refreshLists(true, true, focusAfter); return; }
+    // Closing mirrors opening: the rows that go fade out in place and Show All comes back (renderLists). From deep in
+    // the list the sidebar first scrolls back, like a tap on the status bar on iOS, to where the short list will rest
+    // (so nothing jumps when it shrinks), then folds; fading the whole sidebar out and in left a blank frame.
+    const rows = [...listBody.children].filter(b => !b.classList.contains('am-list-ghost')), rowHeight = rows[0]?.offsetHeight || 32;
+    const pinned = listItems.filter(i => i.pinned).length, kept = pinned + Math.min(listItems.length - pinned, settings.recent) + 1;
+    const shrunkMax = Math.max(0, nav.scrollHeight - Math.max(0, rows.length - kept) * rowHeight - nav.clientHeight);
+    const headingTop = allLists.getBoundingClientRect().top - 4 - listsHeading.offsetHeight, navTop = nav.getBoundingClientRect().top;
+    const target = listsHeading.classList.contains('am-stuck') ? nav.scrollTop + headingTop - navTop - 10 : nav.scrollTop;
+    const from0 = nav.scrollTop, to = Math.max(0, Math.min(target, shrunkMax));
+    const fold = () => { renderLists(true, true); focusAfter(); listToggling = false; nav.classList.remove('am-closing'); };
+    if (Math.abs(from0 - to) < 1 || document.hidden || reducedMotion.matches) { nav.scrollTop = to; return fold(); }
+    // The rows that stay load their artwork now, so it is there when the scroll arrives.
+    for (const b of rows.slice(0, kept - 1)) for (const img of b.querySelectorAll('img[data-src]:not([src])')) img.src = img.dataset.src;
+    listToggling = true; nav.classList.add('am-closing'); listArt?.disconnect();
+    const duration = Math.min(450, 250 + Math.abs(from0 - to) / 30), t0 = performance.now();
+    const ease = t => t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    const step = now => {
+      const t = Math.min(1, (now - t0) / duration); nav.scrollTop = from0 + (to - from0) * ease(t);
+      if (t < 1) return requestAnimationFrame(step);
+      for (const img of listBody.querySelectorAll('img[data-src]')) observeLazy(listArt, img);
+      syncStuck(); fold();
+    };
+    requestAnimationFrame(step);
   }
+  // While the list is open the heading sticks to the top of the sidebar. Once stuck it leaves the scrolling content
+  // for the sidebar itself (a spacer keeps its place) and the scroll area fades out under it with a mask of its own,
+  // which stays put however fast the list scrolls; a mask on the rows, moved from script, lagged and let rows run over
+  // the heading. It has no background, so it sits on whatever colour the sidebar has.
+  const headingSpacer = el('div', 'am-nav-heading am-heading-spacer', T('Listeler','Playlists')); headingSpacer.setAttribute('aria-hidden', 'true');
   function syncStuck() {
     stuckFrame = 0;
-    listsHeading.classList.toggle('am-stuck', listsHeading.classList.contains('am-lists-open') && listsHeading.getBoundingClientRect().top - nav.getBoundingClientRect().top < 10.5);
+    const floating = listsHeading.classList.contains('am-floating'), open = listsHeading.classList.contains('am-lists-open');
+    const navTop = nav.getBoundingClientRect().top, anchor = floating ? headingSpacer : listsHeading;
+    const stuck = open && anchor.getBoundingClientRect().top - navTop < 10.5;
+    listsHeading.classList.toggle('am-stuck', stuck);
+    if (stuck === floating) return;
+    const focused = listsHeading.contains(document.activeElement) ? document.activeElement : null;
+    if (stuck) {
+      const h = listsHeading.getBoundingClientRect(), side = sidebar.getBoundingClientRect();
+      Object.assign(listsHeading.style, { top: h.top - side.top + 'px', left: h.left - side.left + 'px', right: side.right - h.right + 'px' });
+      nav.style.setProperty('--am-mask-edge', Math.round(h.bottom - navTop + 4) + 'px');
+      listsHeading.replaceWith(headingSpacer); sidebar.append(listsHeading);
+    } else {
+      headingSpacer.replaceWith(listsHeading);
+      for (const k of ['top', 'left', 'right']) listsHeading.style.removeProperty(k);
+    }
+    listsHeading.classList.toggle('am-floating', stuck); nav.classList.toggle('am-masked', stuck);
+    focused?.focus({ preventScroll: true });
   }
   nav.addEventListener('scroll', () => { if (!stuckFrame && listsHeading.classList.contains('am-lists-open')) stuckFrame = requestAnimationFrame(syncStuck); }, { passive: true });
   function listImage(item) {
@@ -224,7 +271,8 @@
   const listBusy = () => !!naming || [listsHeading, lists].some(e => e.matches(':hover') || !!e.querySelector(':focus-visible')) || !!listsHeading.querySelector('.am-nav-add[aria-expanded="true"]');
   function flushLists() { clearTimeout(listFlush); if (listPending) listFlush = setTimeout(() => listBusy() ? flushLists() : renderLists(), 400); }
   // user: the change answers a click here (Show All, the count, a new playlist) and shows at once, without motion.
-  function renderLists(user = false) {
+  // motion: animate even though the user asked for it (opening and closing the list).
+  function renderLists(user = false, motion = !user) {
     const open = settings.lists, pinned = listItems.filter(i => i.pinned), rest = listItems.filter(i => !i.pinned);
     const shown = open ? listItems : [...pinned, ...rest.slice(0, settings.recent)];
     const more = rest.length > settings.recent || !listComplete;
@@ -232,46 +280,55 @@
     if (key === listShown) { listPending = false; return; }
     if (!user && listShown && listBusy()) { listPending = true; flushLists(); return; }
     // Moves slide (FLIP, 300ms, as in Messages); a row from outside the view or the list fades in with a small drop
-    // and the one pushed out fades away. Off screen, in the background or with reduced motion, rows just swap.
-    const animate = !user && !!listShown && !document.hidden && !reducedMotion.matches;
+    // and the one pushed out fades away. Opening and closing the list use the same motion: closed, the rows that go
+    // fade where they were and Show All slides up. Off screen, in the background or with reduced motion, rows swap.
+    const animate = motion && !!listShown && !document.hidden && !reducedMotion.matches;
     listShown = key; listPending = false;
     const old = [...listBody.children].filter(b => !b.classList.contains('am-list-ghost')), before = new Map();
     if (animate) for (const b of old) { before.set(b, b.getBoundingClientRect()); for (const a of b.getAnimations()) a.cancel(); }
     const kept = shown.map(listRow), rows = kept.map(r => r.b);
     for (const [uri, r] of listRows) if (!rows.includes(r.b)) listRows.delete(uri);
-    const label = open ? T('Daha Az Göster','Show Less') : T('Tümünü Göster','Show All');
-    listMore.title = label; listMore.setAttribute('aria-label', label); listMore.setAttribute('aria-expanded', String(open)); listMore.lastChild.textContent = label;
-    listLess.hidden = !(open && more); listsHeading.classList.toggle('am-lists-open', open && more);
-    if (more) rows.push(listMore);
+    // Show Less fades in when it appears (not when the heading moves between the list and the sidebar).
+    const lessWasHidden = listLess.hidden; listLess.hidden = !(open && more); listsHeading.classList.toggle('am-lists-open', open && more);
+    if (lessWasHidden && !listLess.hidden && !reducedMotion.matches) listLess.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
+    if (more && !open) rows.push(listMore);
     // In a scrolled list the first steady row in view keeps its place, so rows added or removed above don't jump it.
     const view = nav.getBoundingClientRect(), inView = r => r.bottom > view.top && r.top < view.bottom;
     const anchor = nav.scrollTop > 0 && old.find((b, i) => rows.includes(b) && Math.abs(rows.indexOf(b) - i) <= 1 && b.getBoundingClientRect().top >= view.top);
     const anchorTop = anchor && anchor.getBoundingClientRect().top;
     const gone = old.filter(b => !rows.includes(b) && b !== listMore), focused = document.activeElement;
+    const headingWas = listsHeading.getBoundingClientRect().top;
     listBody.replaceChildren(...rows);
     if (focused !== document.activeElement && listBody.contains(focused)) focused.focus({ preventScroll: true });
     if (anchor) nav.scrollTop += anchor.getBoundingClientRect().top - anchorTop;
-    for (const b of gone) for (const img of b.querySelectorAll('img')) { listArt?.unobserve(img); img.removeAttribute('src'); }
+    const release = b => { for (const img of b.querySelectorAll('img')) { listArt?.unobserve(img); img.removeAttribute('src'); } };
+    const ghosts = animate ? gone.filter(b => before.get(b) && inView(before.get(b))) : [];
+    for (const b of gone) if (!ghosts.includes(b)) release(b);
     for (const img of listBody.querySelectorAll('img[data-src]:not([src])')) observeLazy(listArt, img);
     if (animate) {
-      const ease = 'cubic-bezier(.2,0,0,1)', body = listBody.getBoundingClientRect();
+      // When the sidebar has to scroll (closing a long list), its content moves as one piece: the heading, the rows
+      // above it and the list slide together by the heading's shift, and rows inside the list only by what is left.
+      const ease = 'cubic-bezier(.2,0,0,1)', shift = Math.round(headingWas - listsHeading.getBoundingClientRect().top);
+      const body = listBody.getBoundingClientRect(), nows = new Map(rows.map(b => [b, b.getBoundingClientRect()]));
+      if (shift) for (const c of nav.children) c.animate([{ transform: `translateY(${shift}px)` }, { transform: 'none' }], { duration: 300, easing: ease });
       for (const b of rows) {
-        const was = before.get(b), now = b.getBoundingClientRect();
-        if (was && inView(was)) { const dy = was.top - now.top; if (Math.abs(dy) >= 1) b.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 300, easing: ease }); }
-        else if (inView(now)) b.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: ease });
+        const was = before.get(b), now = nows.get(b);
+        if (was && inView(was)) { const dy = was.top - now.top - shift; if (Math.abs(dy) >= 1) b.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 300, easing: ease }); }
+        else if (inView(now)) b.animate([{ opacity: 0, transform: shift ? 'none' : 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 200, easing: ease });
       }
-      for (const b of gone) {
-        const was = before.get(b); if (!was || !inView(was)) continue;
-        b.classList.add('am-list-ghost'); b.inert = true; b.style.top = was.top - body.top + 'px'; listBody.append(b);
-        b.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: 'linear' }).onfinish = () => b.remove();
+      // Rows that go fade where they were (moving with the list), keeping their artwork until they are gone.
+      for (const b of ghosts) {
+        b.classList.add('am-list-ghost'); b.inert = true; b.style.top = before.get(b).top - body.top - shift + 'px'; listBody.append(b);
+        const leave = user ? [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-8px)' }] : [{ opacity: 1 }, { opacity: 0 }];
+        b.animate(leave, { duration: user ? 200 : 150, easing: user ? 'cubic-bezier(.2,0,0,1)' : 'linear' }).onfinish = () => { release(b); b.remove(); };
       }
     }
     listNav = kept.map(({ b, key }) => ({ b, key }));
     updateNav(); syncListPlaying(); syncStuck();
   }
-  async function refreshLists(user = false) {
+  async function refreshLists(user = false, motion = !user, done = null) {
     const request = ++listRequest;
-    try { const result = await fetchLists(); if (request === listRequest) { ({ items: listItems, complete: listComplete } = result); renderLists(user); } }
+    try { const result = await fetchLists(); if (request === listRequest) { ({ items: listItems, complete: listComplete } = result); renderLists(user, motion); done?.(); } }
     catch (e) { console.warn('[AppleMusicMac] Sidebar playlists', e); }
   }
   function scheduleLists(delay = 250, user = false) {

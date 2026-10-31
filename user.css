@@ -109,6 +109,10 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 /* Newer pages (Liked Songs with its genre filters) draw that cover-coloured band as a sibling of the action bar; with
    the action bar moved up it showed as a coloured strip under the header. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) > div[style*="background-color"] {background:none!important}
+/* Its header also darkens to half black at the bottom (a layer after the colour one), which the band used to carry on
+   into the page; without the band that ended in a hard line. Cleared too, so the header is the page's grey, as on
+   other playlists (whose colour layer has no height). */
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) > [data-testid="entity-header"] > div[style*="background-color"] + div:not(.main-entityHeader-contentWrapper) {background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] {padding-block:0!important;padding-inline-start:calc(var(--content-spacing) + var(--am-art) + var(--am-art-gap))!important;height:var(--am-btn)!important;background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] > [data-testid="action-bar-row"] {pointer-events:auto;height:var(--am-btn)!important;min-height:0!important;padding:0!important;gap:10px!important;column-gap:10px!important;flex-wrap:nowrap!important;align-items:center!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-actions"] {display:contents!important}
@@ -243,23 +247,23 @@ body.am-resizing * {transition:none!important}
 .am-list-row.am-playing::after {content:"";flex-shrink:0;width:14px;height:14px;background:var(--am-accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3z'/%3E%3Cpath d='M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
 #am-sidebar .am-list-more {color:#ffffff8c;font-weight:500}
 #am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}
-#am-sidebar .am-list-more[aria-expanded="true"] svg {transform:rotate(90deg)}
 #am-sidebar .am-list-more:hover {color:#f2f2f2}
 /* Rows pushed out of the list fade where they were (theme.js renderLists), which also keeps the scroll position when
    rows move; the browser's own scroll anchoring would correct it a second time. */
 #am-sidebar .am-navigation {overflow-anchor:none}
 .am-list-body {position:relative}
 #am-sidebar .am-list-ghost {position:absolute;left:0;right:0;pointer-events:none}
-/* While the list is open the heading sticks to the top of the sidebar with "Show Less" (the chevron). It takes a
-   material only while stuck, so at rest it looks like the other headings. */
+/* While the list is open the heading sticks to the top of the sidebar and carries "Show Less" (theme.js). Once stuck
+   it floats in the sidebar itself (a hidden spacer keeps its place in the list), and the scroll area fades out under it
+   with a mask of its own, fixed to the scroll area, so rows never run over it however fast the list scrolls. It has no
+   background: it sits on the sidebar's own colour, tinted or solid, like the scroll edge of a macOS sidebar. */
 #am-sidebar .am-nav-heading.am-lists-open {position:sticky;top:10px;z-index:2}
-#am-sidebar .am-nav-heading.am-lists-open::before {content:"";position:absolute;inset:-10px -6px -6px;z-index:-1;opacity:0;transition:opacity .15s;background:color-mix(in srgb,#262626 94%,transparent);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 1px #ffffff0d}
-#am-sidebar .am-nav-heading.am-stuck::before {opacity:1}
-body.am-solid #am-sidebar .am-nav-heading.am-lists-open::before {background:#1a1a1a;-webkit-backdrop-filter:none;backdrop-filter:none}
-#am-sidebar .am-nav-less {display:grid;place-items:center;width:22px;height:22px;margin:-5px 0 -7px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-heading.am-floating {position:absolute;margin:0;z-index:3}
+#am-sidebar .am-heading-spacer {visibility:hidden}
+#am-sidebar .am-navigation.am-masked {-webkit-mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px));mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px))}
+#am-sidebar .am-nav-less {height:20px;margin:-4px 4px -4px auto;padding:0 8px;border-radius:10px;background:#ffffff0f;color:#ffffff8c;font:inherit;font-size:11px;font-weight:600;white-space:nowrap;transition:background-color .15s,color .15s}
 #am-sidebar .am-nav-less[hidden] {display:none}
-#am-sidebar .am-nav-less svg {width:12px;height:12px;transform:rotate(90deg)}
-#am-sidebar .am-nav-less:hover {background:#ffffff14;color:#f2f2f2}
+#am-sidebar .am-nav-less:hover {background:#ffffff1f;color:#f2f2f2}
 #am-sidebar .am-nav-less:not([hidden]) + .am-nav-add {margin-left:0}
 .am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:#1c1c1e;color:#f2f2f2;font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
