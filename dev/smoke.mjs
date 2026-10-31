@@ -516,6 +516,25 @@ try {
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').remove(); document.getElementById('mock-spicy-css').remove(); Spicetify.Platform.History.push('/'); });
   });
 
+  await check('English when Spotify is not in Turkish; the menu switches the language and reloads', async () => {
+    const english = await browser.newPage({ viewport: { width: 1440, height: 900 } }), englishErrors = [];
+    english.on('pageerror', e => englishErrors.push(e.message));
+    try {
+      await english.goto(pathToFileURL(path.join(here, 'preview.html')).href + '?locale=en');
+      await english.waitForSelector('body.am-ready #am-sidebar');
+      assert.deepEqual((await english.locator('#am-sidebar .am-nav-row').allTextContents()).slice(0, 2), ['Search', 'Home']);
+      assert.equal(await english.getAttribute('#am-player .am-play', 'aria-label'), 'Pause');
+      assert.equal(await english.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-t-play')), '"Play"');
+      const names = await english.evaluate(() => window.__menus[0].items.map(i => i.name));
+      assert.deepEqual([names[0], ...names.slice(-3)], ['Artwork in player', 'Language: Automatic', 'Language: English', 'Language: Türkçe']);
+      await Promise.all([english.waitForEvent('load'), english.evaluate(() => window.__menus[0].items.find(i => i.name === 'Language: Türkçe').onClick())]);
+      await english.waitForSelector('body.am-ready #am-sidebar');
+      assert.equal(await english.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
+      assert.equal(JSON.parse(await english.evaluate(() => localStorage.getItem('mcloud:settings'))).lang, 'tr');
+      assert.deepEqual(englishErrors, []);
+    } finally { await english.close(); }
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();

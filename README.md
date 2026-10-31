@@ -12,7 +12,7 @@ A persistent sidebar, a floating player, a cover-art library view and Spicy Lyri
 </div>
 
 > [!NOTE]
-> The theme's own menus and messages are in Turkish. The labels the theme shows are quoted below in *italics*.
+> The theme's own menus and messages follow Spotify's language: Turkish when Spotify is in Turkish, English otherwise. Pick one yourself under **mcloud → Language** (*Dil*).
 
 ## Installation
 
@@ -50,7 +50,7 @@ The script:
   - Full-width artist image, a large name, and play and follow buttons.
   - Latest Release and Top Songs side by side, followed by shelves for Albums, Singles & EPs, Upcoming Concerts, Appears On and Similar Artists.
   - The whole window takes on the artist's colour.
-  - To switch to Spotify's own page, choose *Spotify Sayfasında Aç* (Open in Spotify) from the "…" menu in the top right.
+  - To switch to Spotify's own page, choose *Open Spotify's Page* (*Spotify Sayfasında Aç*) from the "…" menu in the top right.
 - **Library:** Your playlists, albums and artists, shown with their artwork. Filter by name, and sort by library order or A–Z.
 - **Spicy Lyrics:** Toggle lyrics and go full screen right from the player.
 - **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
@@ -63,9 +63,10 @@ Click **your profile** in the bottom-left corner to pick an accent colour or ope
 
 | Setting | Description |
 | --- | --- |
-| *Oynatıcıda albüm kapağı* (Album artwork in player) | Shows the current track's artwork in the player. |
-| *Liquid Glass oynatıcı* (Liquid Glass player) | A macOS 26-style glass effect: the page behind refracts along the player's edges. Turn it off to go back to classic frosted glass. |
-| *Renk: …* (Colour: …) | Changes the accent colour. |
+| *Artwork in player* (*Oynatıcıda albüm kapağı*) | Shows the current track's artwork in the player. |
+| *Liquid Glass player* (*Liquid Glass oynatıcı*) | A macOS 26-style glass effect: the page behind refracts along the player's edges. Turn it off to go back to classic frosted glass. |
+| *Colour: …* (*Renk: …*) | Changes the accent colour. |
+| *Language: …* (*Dil: …*) | *Automatic* follows Spotify's language; *English* or *Türkçe* fixes it. Spotify reloads to apply it. |
 
 Settings are stored on this computer and survive Spotify restarts.
 
