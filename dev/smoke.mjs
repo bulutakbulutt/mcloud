@@ -314,6 +314,18 @@ try {
     assert.ok(await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => b.__kept === true), 'the row was moved, not rebuilt');
     await moveBefore('spotify:playlist:4', 'spotify:playlist:5');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
+    // Spotify moves a playlist you play to the top of Recents a while after it starts, with no library event; the
+    // sidebar looks again until it leads.
+    await page.evaluate(() => {
+      Spicetify.Player.data.context.uri = 'spotify:playlist:5'; window.__firePlayer('songchange');
+      setTimeout(() => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === 'spotify:playlist:5'), 1); l.splice(l.findIndex(x => !x.pinned && ['playlist', 'folder'].includes(x.type)), 0, item); }, 2500);
+    });
+    await page.waitForTimeout(2000);
+    assert.equal(await third(), 'Koşu', 'not yet reordered by Spotify');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Ders Çalışma', null, { timeout: 8000 });
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    await moveBefore('spotify:playlist:5', 'spotify:playlist:6');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
     // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
     const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
     await recent(3);

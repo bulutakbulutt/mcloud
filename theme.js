@@ -288,11 +288,23 @@
     for (const api of [S.Platform.LibraryAPI, Rootlist]) {
       try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => scheduleLists(), {}); } catch {}
     }
+    // Playing a playlist moves it to the top of Recents, but Spotify reorders a while after playback starts and sends
+    // no library event for it: look again at growing intervals until the playlist leads the list.
+    let recentsTimer = 0;
+    const watchRecents = (uri, step = 0) => {
+      clearTimeout(recentsTimer);
+      recentsTimer = setTimeout(async () => {
+        if (listContext !== uri) return;
+        if (document.hidden) { listStale = true; return; }
+        await refreshLists();
+        const leads = listItems.find(i => !i.pinned)?.uri === uri || listItems.some(i => i.pinned && i.uri === uri);
+        if (!leads && /^spotify:playlist:/.test(uri) && step < 3) watchRecents(uri, step + 1);
+      }, [1500, 3500, 10000, 15000][step]);
+    };
     const onPlayer = () => {
       syncListPlaying();
-      // Playing a playlist moves it to the top of Recents.
       const context = S.Player.data?.context?.uri || '';
-      if (context !== listContext) { listContext = context; scheduleLists(1500); }
+      if (context !== listContext) { listContext = context; watchRecents(context); }
     };
     S.Player.addEventListener?.('songchange', onPlayer); S.Player.addEventListener?.('onplaypause', onPlayer);
     listContext = S.Player.data?.context?.uri || '';
