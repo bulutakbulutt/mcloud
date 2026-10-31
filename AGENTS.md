@@ -34,7 +34,7 @@ There is no build step and no runtime dependency. Spotify loads `theme.js` and `
 ## Conventions
 
 - **Prefix** every class, id and CSS variable the theme creates with `am-` / `--am-`.
-- **User-facing strings are Turkish.** Comments and identifiers are English.
+- **User-facing strings come in Turkish and English:** write them as `T('Türkçe','English')` in `theme.js` (CSS labels through `--am-t-*` variables). The language follows Spotify's (`Spicetify.Locale`) unless `settings.lang` picks one. The installers stay Turkish. Comments and identifiers are English.
 - **Match the existing dense style** in `theme.js` and `user.css`: short helpers (`el`, `button`, `svg`), compact one-line rules, and comments only where the *why* is not obvious.
 - **Accent colour** comes from `--am-accent` / `--am-accent-focus`, which `theme.js` sets at runtime. Do not hard-code the red.
 - **Performance is a feature.** Do no work while `document.hidden`, load artwork lazily through the shared `IntersectionObserver`, release image sources that leave the viewport, and avoid per-second DOM writes unless the value changed.

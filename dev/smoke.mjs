@@ -498,6 +498,43 @@ try {
     } finally { await scaled.close(); }
   });
 
+  await check('Spicy Lyrics view controls clear the toolbar and the player', async () => {
+    // Spicy's page in Spotify's scroll viewport, with the rules from its default.css that place the controls.
+    await page.evaluate(() => {
+      document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').insertAdjacentHTML('beforeend', `<style id="mock-spicy-css">#SpicyLyricsPage{position:absolute;inset:0}
+        #SpicyLyricsPage:not(.Fullscreen) .ViewControls{position:absolute;width:100%;height:44px;display:flex;justify-content:center;z-index:101}
+        #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls{top:24px}#SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls{bottom:24px}</style>
+        <div id="SpicyLyricsPage" class="ViewControlsPosition_Top"><div class="ContentBox"><div class="ViewControls"><button class="ViewControl">×</button></div></div></div>`);
+      Spicetify.Platform.History.push('/SpicyLyrics');
+    });
+    await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+    const rect = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; });
+    const toolbar = await page.$eval('#global-nav-bar .am-toolbar-leading', e => e.getBoundingClientRect().bottom);
+    assert.ok((await rect('#SpicyLyricsPage .ViewControls')).top >= toolbar, 'top controls sit below the toolbar');
+    await page.evaluate(() => { document.getElementById('SpicyLyricsPage').className = 'ViewControlsPosition_Bottom'; });
+    assert.ok((await rect('#SpicyLyricsPage .ViewControls')).bottom <= (await rect('#am-player')).top, 'bottom controls sit above the player');
+    await page.evaluate(() => { document.getElementById('SpicyLyricsPage').remove(); document.getElementById('mock-spicy-css').remove(); Spicetify.Platform.History.push('/'); });
+  });
+
+  await check('English when Spotify is not in Turkish; the menu switches the language and reloads', async () => {
+    const english = await browser.newPage({ viewport: { width: 1440, height: 900 } }), englishErrors = [];
+    english.on('pageerror', e => englishErrors.push(e.message));
+    try {
+      await english.goto(pathToFileURL(path.join(here, 'preview.html')).href + '?locale=en');
+      await english.waitForSelector('body.am-ready #am-sidebar');
+      assert.deepEqual((await english.locator('#am-sidebar .am-nav-row').allTextContents()).slice(0, 2), ['Search', 'Home']);
+      assert.equal(await english.getAttribute('#am-player .am-play', 'aria-label'), 'Pause');
+      assert.equal(await english.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-t-play')), '"Play"');
+      const names = await english.evaluate(() => window.__menus[0].items.map(i => i.name));
+      assert.deepEqual([names[0], ...names.slice(-3)], ['Artwork in player', 'Language: Automatic', 'Language: English', 'Language: Türkçe']);
+      await Promise.all([english.waitForEvent('load'), english.evaluate(() => window.__menus[0].items.find(i => i.name === 'Language: Türkçe').onClick())]);
+      await english.waitForSelector('body.am-ready #am-sidebar');
+      assert.equal(await english.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
+      assert.equal(JSON.parse(await english.evaluate(() => localStorage.getItem('mcloud:settings'))).lang, 'tr');
+      assert.deepEqual(englishErrors, []);
+    } finally { await english.close(); }
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();

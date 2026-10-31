@@ -55,9 +55,16 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const accents={red:['Kırmızı','#fa2d48','#fa4662'],pink:['Pembe','#ff375f','#ff5c7c'],orange:['Turuncu','#ff9f0a','#ffb340'],yellow:['Sarı','#ffd60a','#ffe04d'],green:['Yeşil','#30d158','#5ade7a'],teal:['Turkuaz','#40c8e0','#6dd6ea'],blue:['Mavi','#0a84ff','#409cff'],purple:['Mor','#bf5af2','#cf7ff5'],spotify:['Spotify Yeşili','#1ed760','#3be477']};
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto'};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
+  // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
+  // built once, so changing the language reloads Spotify.
+  const lang=['tr','en'].includes(settings.lang)?settings.lang:/^tr\b/i.test(S.Locale?.getLocale?.()||navigator.language||'')?'tr':'en';
+  const T=(tr,en)=>lang==='tr'?tr:en;
+  // Playlist and album pages label Spotify's play button in CSS (user.css), which reads these.
+  document.documentElement.style.setProperty('--am-t-play',JSON.stringify(T('Çal','Play')));
+  document.documentElement.style.setProperty('--am-t-pause',JSON.stringify(T('Duraklat','Pause')));
+  const accents={red:[T('Kırmızı','Red'),'#fa2d48','#fa4662'],pink:[T('Pembe','Pink'),'#ff375f','#ff5c7c'],orange:[T('Turuncu','Orange'),'#ff9f0a','#ffb340'],yellow:[T('Sarı','Yellow'),'#ffd60a','#ffe04d'],green:[T('Yeşil','Green'),'#30d158','#5ade7a'],teal:[T('Turkuaz','Teal'),'#40c8e0','#6dd6ea'],blue:[T('Mavi','Blue'),'#0a84ff','#409cff'],purple:[T('Mor','Purple'),'#bf5af2','#cf7ff5'],spotify:[T('Spotify Yeşili','Spotify Green'),'#1ed760','#3be477']};
   if(!accents[settings.accent])settings.accent='red';
   function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
   function applySettings(){
@@ -110,7 +117,7 @@
   }
   for (let i = 0; i < 120 && !bindLayout(); i++) await wait(250);
   if (!main) return;
-  const sidebar = el('aside', '', ''); sidebar.id = 'am-sidebar'; sidebar.setAttribute('aria-label', 'Ana gezinme');
+  const sidebar = el('aside', '', ''); sidebar.id = 'am-sidebar'; sidebar.setAttribute('aria-label', T('Ana gezinme','Main navigation'));
   const drag = el('div', 'am-drag'); sidebar.append(drag);
   const nav = el('nav', 'am-navigation'); sidebar.append(nav);
   const navItems = [];
@@ -120,24 +127,24 @@
     nav.append(b); navItems.push({ b, key });
   }
   function heading(text) { nav.append(el('div', 'am-nav-heading', text)); }
-  row('Ara', 'search', () => { go('/search'); document.body.classList.add('am-search-open'); setTimeout(() => document.getElementById('global-nav-bar')?.querySelector('input')?.focus(), 150); }, '/search');
-  row('Ana Sayfa', 'home', () => go('/'), '/');
-  heading('Arşiv');
-  row('Son Eklenen', 'clock', () => openLibrary('recent'), '/collection');
-  row('Sanatçılar', 'artist', () => openLibrary('artists'), '/collection/artists');
-  row('Albümler', 'album', () => openLibrary('albums'), '/collection/albums');
-  row('Parçalar', 'music', () => go('/collection/tracks'), '/collection/tracks');
-  heading('Mağaza');
-  row('Göz At', 'store', () => go('/search'), 'browse');
-  heading('Listeler');
-  row('Tüm Listeler', 'grid', () => openLibrary('playlists'), '/collection/playlists');
+  row(T('Ara','Search'), 'search', () => { go('/search'); document.body.classList.add('am-search-open'); setTimeout(() => document.getElementById('global-nav-bar')?.querySelector('input')?.focus(), 150); }, '/search');
+  row(T('Ana Sayfa','Home'), 'home', () => go('/'), '/');
+  heading(T('Arşiv','Library'));
+  row(T('Son Eklenen','Recently Added'), 'clock', () => openLibrary('recent'), '/collection');
+  row(T('Sanatçılar','Artists'), 'artist', () => openLibrary('artists'), '/collection/artists');
+  row(T('Albümler','Albums'), 'album', () => openLibrary('albums'), '/collection/albums');
+  row(T('Parçalar','Songs'), 'music', () => go('/collection/tracks'), '/collection/tracks');
+  heading(T('Mağaza','Store'));
+  row(T('Göz At','Browse'), 'store', () => go('/search'), 'browse');
+  heading(T('Listeler','Playlists'));
+  row(T('Tüm Listeler','All Playlists'), 'grid', () => openLibrary('playlists'), '/collection/playlists');
   // Apple Music's sidebar glass picks up the colours of the artwork beside it. A blurred backdrop that reaches past
   // the sidebar's edge carries those colours in; user.css shows it only inside the sidebar, fading from the edge.
   const sidebarGlow=el('div','');sidebarGlow.id='am-sidebar-glow';sidebarGlow.setAttribute('aria-hidden','true');
   document.body.append(sidebarGlow,sidebar);
   // As in Apple Music, the sidebar's right edge resizes it; double-click resets.
   const resizer=el('div','am-sidebar-resizer');resizer.tabIndex=0;
-  resizer.setAttribute('role','separator');resizer.setAttribute('aria-orientation','vertical');resizer.setAttribute('aria-label','Kenar çubuğu genişliği');
+  resizer.setAttribute('role','separator');resizer.setAttribute('aria-orientation','vertical');resizer.setAttribute('aria-label',T('Kenar çubuğu genişliği','Sidebar width'));
   sidebar.append(resizer);
   const clampSidebar=width=>Math.round(Math.min(360,innerWidth*.4,Math.max(170,width)));
   function setSidebarWidth(width,save){settings.sidebar=width&&clampSidebar(width);applySettings();if(save)saveSettings();}
@@ -160,13 +167,13 @@
   const avatar=el('span','am-avatar'),profileName=el('span','am-profile-name');profile.append(avatar,profileName);
   const nativeToolbarButton=selector=>document.querySelector('#global-nav-bar .am-toolbar-trailing '+selector);
   const nativeNews=()=>[...document.querySelectorAll('#global-nav-bar .am-toolbar-trailing button')].find(b=>!b.matches('[data-restore-focus-key],[data-testid="user-widget-link"]'));
-  const newsButton=button('Yenilikler','bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
+  const newsButton=button(T('Yenilikler','What\'s New'),'bell',()=>{const native=nativeNews();if(native)native.click();else go('/content-feed');},'am-account-button');
   // Spotify mounts the feed only after fetching it (~0.5s on the first open), so press the button at once and let
   // syncNativePanels confirm it; a feed that never arrives releases it after 3s.
   let friendsPending=0;
-  const friendsButton=button('Arkadaş etkinliği','friends',()=>{
+  const friendsButton=button(T('Arkadaş etkinliği','Friend Activity'),'friends',()=>{
     const native=nativeToolbarButton('[data-restore-focus-key="buddy_feed"]');
-    if(!native){notify('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.');return;}
+    if(!native){notify(T('Arkadaş etkinliği bu Spotify sürümünde kullanılamıyor.','Friend Activity is not available in this version of Spotify.'));return;}
     const open=!friendsButton.classList.contains('am-active');friendsPending=open?performance.now():0;
     friendsButton.classList.toggle('am-active',open);friendsButton.setAttribute('aria-pressed',String(open));
     native.click();if(open)setTimeout(syncNativePanels,3100);
@@ -180,8 +187,8 @@
       if(image){const img=el('img','');img.alt='';img.decoding='async';img.onerror=()=>img.remove();img.src=image;avatar.append(img);}
       profile.onclick=()=>{const native=nativeToolbarButton('[data-testid="user-widget-link"]');if(native){closePopover();native.click();}else togglePopover(profile,menu);};
       const menu=()=>[
-        ...(user.username?[{label:'Profil',action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
-        {label:'Ayarlar',action:()=>go('/preferences')},
+        ...(user.username?[{label:T('Profil','Profile'),action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
+        {label:T('Ayarlar','Settings'),action:()=>go('/preferences')},
         '-',{swatches:true},
       ];
       profile.hidden=false;
@@ -195,7 +202,7 @@
       if(selected) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
     }    newsButton.classList.toggle('am-active',path==='/content-feed');
   }
-  const libraryView = el('section', ''); libraryView.id='am-library'; libraryView.setAttribute('aria-label','Arşiv');document.body.append(libraryView);
+  const libraryView = el('section', ''); libraryView.id='am-library'; libraryView.setAttribute('aria-label',T('Arşiv','Library'));document.body.append(libraryView);
   let libraryKind='', libraryRequest=0;
   // Keep decoded artwork limited to the viewport and a short scroll buffer.
   const artworkObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{
@@ -236,7 +243,7 @@
     const kind=art.dataset.icon;
     img.remove();art.innerHTML=svg(kind);
   },true);
-  const libraryLabels={recent:'Son Eklenen',artists:'Sanatçılar',albums:'Albümler',playlists:'Tüm Listeler'};
+  const libraryLabels={recent:T('Son Eklenen','Recently Added'),artists:T('Sanatçılar','Artists'),albums:T('Albümler','Albums'),playlists:T('Tüm Listeler','All Playlists')};
   const libraryKeys={recent:'/collection',artists:'/collection/artists',albums:'/collection/albums',playlists:'/collection/playlists'};
   function openLibrary(kind, folder='') {
     H.push({pathname:'/',search:'?am-library='+kind+(folder?'&am-folder='+encodeURIComponent(folder):'')});
@@ -256,7 +263,7 @@
         if(kind==='artists'&&item.type!=='artist'||kind==='albums'&&item.type!=='album')continue;
         if(kind==='playlists'&&!['playlist','folder','liked-songs','your-episodes'].includes(item.type)&&item.uri!=='spotify:collection:tracks')continue;
         items.push({uri:item.uri,type:item.type,name:item.name,imageUrl:libraryImage(item),
-          subtitle:item.owner?.displayName||item.owner?.name||({artist:'Sanatçı',album:'Albüm',playlist:'Çalma listesi',folder:'Klasör'}[item.type]||'')});
+          subtitle:item.owner?.displayName||item.owner?.name||({artist:T('Sanatçı','Artist'),album:T('Albüm','Album'),playlist:T('Çalma listesi','Playlist'),folder:T('Klasör','Folder')}[item.type]||'')});
       }
       if(!result.items?.length||offset+result.items.length>=result.totalLength||result.items.length<200) break;
     }
@@ -268,25 +275,25 @@
     document.body.classList.add('am-ready','am-library-open');document.body.classList.remove('am-search-open');updateNav();
     clearLibrary();
     libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));
-    const status=el('p','am-library-status','Kitaplığın yükleniyor…');libraryView.append(status);
+    const status=el('p','am-library-status',T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
     try {
       const all=await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
       let items=all;
-      status.textContent=all.length?all.length+' öğe':'Bu bölümde kayıtlı öğe yok.';
+      status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
       const tools=el('div','am-library-tools');
-      const filter=el('input','am-library-filter');filter.type='search';filter.placeholder='Filtrele';filter.setAttribute('aria-label','Kitaplığı filtrele');
-      const sort=el('select','am-library-sort');sort.setAttribute('aria-label','Sıralama');
-      for(const [value,label] of [['library','Kitaplık sırası'],['name','Ada göre (A–Z)']]){const option=el('option','',label);option.value=value;sort.append(option);}
+      const filter=el('input','am-library-filter');filter.type='search';filter.placeholder=T('Filtrele','Filter');filter.setAttribute('aria-label',T('Kitaplığı filtrele','Filter library'));
+      const sort=el('select','am-library-sort');sort.setAttribute('aria-label',T('Sıralama','Sort'));
+      for(const [value,label] of [['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]]){const option=el('option','',label);option.value=value;sort.append(option);}
       sort.value=settings.sort==='name'?'name':'library';
       tools.append(filter,sort);if(all.length)status.before(tools);
       const grid=el('div','am-library-grid');libraryView.append(grid);
       let rendered=0;
-      const more=el('button','am-library-retry','Daha fazla göster');
+      const more=el('button','am-library-retry',T('Daha fazla göster','Show more'));
       function showItems() {
         const query=filter.value.trim().toLocaleLowerCase('tr');
         items=query?all.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):all.slice();
         if(sort.value==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
-        status.textContent=query?(items.length?items.length+' / '+all.length+' öğe':'Eşleşen öğe yok.'):all.length+' öğe';
+        status.textContent=query?(items.length?items.length+' / '+all.length+T(' öğe',' items'):T('Eşleşen öğe yok.','No matches.')):all.length+T(' öğe',' items');
         releaseArtwork();grid.replaceChildren();rendered=0;libraryView.append(more);appendBatch();
       }
       let filterTimer=null;
@@ -299,14 +306,14 @@
         const artwork=[];
         for(;rendered<end;rendered++){
         const item=items[rendered];
-        const b=el('button','am-library-card');b.type='button';b.setAttribute('aria-label',item.name||'Adsız');
+        const b=el('button','am-library-card');b.type='button';b.setAttribute('aria-label',item.name||T('Adsız','Untitled'));
         b.dataset.uri=item.uri;b.dataset.kind=kind;b.dataset.folder=String(item.type==='folder');
         const art=el('span','am-library-art');
         art.dataset.icon=item.type==='artist'?'artist':item.type==='album'?'album':'music';
         const src=item.imageUrl;
         if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else art.innerHTML=svg(item.type==='artist'?'artist':item.type==='album'?'album':'music');
         if(item.type==='artist')art.classList.add('am-artist-art');
-        b.append(art,el('span','am-library-name',item.name||'Adsız'),el('span','am-library-sub',item.subtitle));
+        b.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')),el('span','am-library-sub',item.subtitle));
         fragment.append(b);
         }
         grid.append(fragment);
@@ -314,23 +321,23 @@
         if(rendered>=items.length) more.remove();
       }
       more.onclick=appendBatch;libraryView.append(more);if(sort.value==='name')showItems();else appendBatch();
-    }catch(e){if(request!==libraryRequest)return;status.textContent='Kitaplık yüklenemedi. Yeniden dene.';const retry=el('button','am-library-retry','Yeniden dene');retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
+    }catch(e){if(request!==libraryRequest)return;status.textContent=T('Kitaplık yüklenemedi. Yeniden dene.','Couldn\'t load your library. Try again.');const retry=el('button','am-library-retry',T('Yeniden dene','Try Again'));retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
-  const player=el('section','','');player.id='am-player';player.setAttribute('aria-label','Oynatıcı');
+  const player=el('section','','');player.id='am-player';player.setAttribute('aria-label',T('Oynatıcı','Player'));
   const controls=el('div','am-transport');player.append(controls);
-  const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify('Bu işlem şu anda kullanılamıyor.')); } catch { notify('Oynatıcı henüz hazır değil.'); } };
-  const shuffle=button('Karıştır','shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
-  const back=button('Önceki parça','back',safe(()=>S.Player.back()));
-  const play=button('Çal','play',safe(()=>S.Player.togglePlay()),'am-play');
-  const next=button('Sonraki parça','next',safe(()=>S.Player.next()));
-  const repeat=button('Yinele','repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
+  const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
+  const shuffle=button(T('Karıştır','Shuffle'),'shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
+  const back=button(T('Önceki parça','Previous'),'back',safe(()=>S.Player.back()));
+  const play=button(T('Çal','Play'),'play',safe(()=>S.Player.togglePlay()),'am-play');
+  const next=button(T('Sonraki parça','Next'),'next',safe(()=>S.Player.next()));
+  const repeat=button(T('Yinele','Repeat'),'repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
   // The centre "LCD" follows Apple Music: artwork, title, a marquee subtitle
   // and a hairline scrubber that is always clickable and thickens on hover.
   const track=el('div','am-player-track');player.append(track);
   const logo=el('span','am-apple','');track.append(logo);
   const lcd=el('div','am-lcd');track.append(lcd);
   const fullscreenButton=el('button','am-track-art');fullscreenButton.type='button';fullscreenButton.id='am-fullscreen-toggle';
-  fullscreenButton.setAttribute('aria-label','Tam ekran');fullscreenButton.title='Tam ekran';
+  fullscreenButton.setAttribute('aria-label',T('Tam ekran','Full Screen'));fullscreenButton.title=T('Tam ekran','Full Screen');
   const cover=el('img','');cover.alt='';cover.decoding='async';cover.hidden=true;
   cover.addEventListener('error',()=>{cover.hidden=true;});
   cover.addEventListener('load',()=>{cover.hidden=false;});
@@ -353,19 +360,19 @@
   }
   const text=el('div','am-lcd-text'),titleRow=el('div','am-title-row');
   const title=marquee('am-track-title'),subtitle=marquee('am-track-subtitle');
-  const star=button('Beğenilen Şarkılar\'a ekle','star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
+  const star=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
   title.root.addEventListener('click',()=>{const item=S.Player.data?.item;const uri=item?.album?.uri||item?.metadata?.album_uri||item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
   // As in Apple Music, the artist — album line asks where to go.
   subtitle.root.setAttribute('role','button');subtitle.root.tabIndex=0;subtitle.root.setAttribute('aria-haspopup','menu');
   subtitle.root.addEventListener('click',()=>togglePopover(subtitle.root,subtitleMenu));
   subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
-  const more=button('Diğer seçenekler','more',()=>togglePopover(more,trackMenu),'am-more');
+  const more=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(more,trackMenu),'am-more');
   lcd.append(fullscreenButton,text,more);
   const scrub=el('div','am-scrub');
   const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
   const bar=el('span','am-bar'),barFill=el('span','am-bar-fill');bar.append(barFill);
-  const seek=el('input','am-seek');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.setAttribute('aria-label','Çalma konumu');
+  const seek=el('input','am-seek');seek.type='range';seek.min='0';seek.max='1000';seek.value='0';seek.setAttribute('aria-label',T('Çalma konumu','Playback position'));
   scrub.append(elapsed,remaining,bar,seek);track.append(scrub);
   let dragging=false,shownFraction=-1;
   function setScrubbing(on){track.classList.toggle('am-scrubbing',on);if(on)renderProgress(dragging?Number(seek.value)/1000:S.Player.getProgressPercent?.()||0,true);}
@@ -412,25 +419,25 @@
     }
   }
   const extras=el('div','am-player-extras');player.append(extras);
-  const lyricsButton=button('Spicy Lyrics sözlerini aç / kapat','lyrics',toggleSpicyLyrics);
+  const lyricsButton=button(T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'),'lyrics',toggleSpicyLyrics);
   lyricsButton.id='am-lyrics-toggle';
-  const popupLyricsButton=button('Spicy Lyrics açılır pencere','popup',()=>runSpicyControl('SpicyLyrics_PopupLyricsButton'));popupLyricsButton.hidden=true;
+  const popupLyricsButton=button(T('Spicy Lyrics açılır pencere','Spicy Lyrics popup'),'popup',()=>runSpicyControl('SpicyLyrics_PopupLyricsButton'));popupLyricsButton.hidden=true;
   // Spotify Connect opens its device list in the right panel, shown as the same glass sheet as the queue.
-  const connectButton=button('Bir cihaza bağlan','devices',()=>{
+  const connectButton=button(T('Bir cihaza bağlan','Connect to a device'),'devices',()=>{
     const native=nativeConnect();
-    if(native)native.click();else notify('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.');
+    if(native)native.click();else notify(T('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.','Device selection is not available in this version of Spotify.'));
   });
-  extras.append(popupLyricsButton,lyricsButton,connectButton,button('Çalma sırası','queue',()=>{
+  extras.append(popupLyricsButton,lyricsButton,connectButton,button(T('Çalma sırası','Playing Next'),'queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
-    else notify('Çalma sırası bu Spotify sürümünde kullanılamıyor.');
+    else notify(T('Çalma sırası bu Spotify sürümünde kullanılamıyor.','The queue is not available in this version of Spotify.'));
   }));
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
   const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
-  const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label','Ses seviyesi');
+  const volume=el('input','am-volume');volume.type='range';volume.min='0';volume.max='1';volume.step='.01';volume.setAttribute('aria-label',T('Ses seviyesi','Volume'));
   let unmutedVolume=.5,volumeIcon='volume',volumeTimer=0,wheelAccum=0,wheelTimer=0;
-  const volumeButton=button('Sesi kapat / aç','volume',safe(()=>setVolume(S.Player.getVolume()>0?0:unmutedVolume)),'am-volume-button');
+  const volumeButton=button(T('Sesi kapat / aç','Mute / unmute'),'volume',safe(()=>setVolume(S.Player.getVolume()>0?0:unmutedVolume)),'am-volume-button');
   function renderVolume(level) {
     volume.style.setProperty('--am-level',(level*100).toFixed(1)+'%');
     const icon=level<=0?'volumeMuted':level<.34?'volume1':level<.67?'volume2':'volume';
@@ -554,7 +561,7 @@
       if(entry.swatches){
         const row=el('div','am-popover-swatches');
         for(const [key,[label,color]] of Object.entries(accents)){
-          const swatch=el('button','am-swatch');swatch.type='button';swatch.title=label;swatch.setAttribute('aria-label','Vurgu rengi: '+label);
+          const swatch=el('button','am-swatch');swatch.type='button';swatch.title=label;swatch.setAttribute('aria-label',T('Vurgu rengi: ','Accent colour: ')+label);
           swatch.style.background=color;swatch.classList.toggle('am-selected',settings.accent===key);
           swatch.onclick=()=>{setAccent(key);row.querySelectorAll('.am-swatch').forEach(n=>n.classList.toggle('am-selected',n===swatch));};
           row.append(swatch);
@@ -581,12 +588,12 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artistUri=item.artists?.[0]?.uri||meta.artist_uri;
     return [
-      ...(albumUri?[{label:'Albüme Git',action:()=>openUri(albumUri)}]:[]),
-      ...(artistUri?[{label:'Sanatçıya Git',action:()=>openUri(artistUri)}]:[]),
-      {label:'Şarkı Bağlantısını Kopyala',action:async()=>{
+      ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
+      ...(artistUri?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artistUri)}]:[]),
+      {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{
         const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
-        try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify('Bağlantı kopyalandı.');}
-        catch{notify('Bağlantı kopyalanamadı.');}
+        try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}
+        catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}
       }},
     ];
   }
@@ -595,8 +602,8 @@
     const albumUri=item.album?.uri||meta.album_uri,artists=(item.artists||[]).filter(artist=>artist?.uri);
     if(!artists.length&&meta.artist_uri)artists.push({uri:meta.artist_uri,name:meta.artist_name||''});
     return [
-      ...artists.map(artist=>({label:artists.length>1?'Sanatçıya Git: '+artist.name:'Sanatçıya Git',action:()=>openUri(artist.uri)})),
-      ...(albumUri?[{label:'Albüme Git',action:()=>openUri(albumUri)}]:[]),
+      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
+      ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
     ];
   }
   let boundToolbar=null, toolbarChildren=[];
@@ -1010,7 +1017,7 @@
   function spicyPage() { return document.getElementById('SpicyLyricsPage'); }
   function runSpicyControl(id) {
     const native=document.getElementById(id);
-    if(!native){notify('Spicy Lyrics henüz hazır değil. Eklenti yüklendiğinde tekrar dene.');return;}
+    if(!native){notify(T('Spicy Lyrics henüz hazır değil. Eklenti yüklendiğinde tekrar dene.','Spicy Lyrics isn\'t ready yet. Try again once the extension has loaded.'));return;}
     // Invoke the installed extension's real controls, including its settings,
     // route history, pending page mount and fullscreen lifecycle.
     native.click();
@@ -1025,7 +1032,7 @@
   function toggleFullscreen() {
     if(document.getElementById('SpicyLyrics_FullscreenButton')){runSpicyControl('SpicyLyrics_FullscreenButton');return;}
     const native=document.querySelector('[data-testid="fullscreen-mode-button"]');
-    if(native)native.click();else notify('Tam ekran bu Spotify sürümünde kullanılamıyor.');
+    if(native)native.click();else notify(T('Tam ekran bu Spotify sürümünde kullanılamıyor.','Full screen is not available in this version of Spotify.'));
   }
   let friendPane=null,asideSeq=0;const asideSeen=new WeakMap();
   function syncNativePanels() {
@@ -1079,12 +1086,12 @@
     popupLyricsButton.hidden=!document.getElementById('SpicyLyrics_PopupLyricsButton');
     lyricsButton.classList.toggle('am-active',lyricsOpen);
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));
-    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?'Spicy Lyrics sözlerini kapat':'Spicy Lyrics sözlerini aç'):'Spicy Lyrics yükleniyor…');
+    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?T('Spicy Lyrics sözlerini kapat','Hide Spicy Lyrics'):T('Spicy Lyrics sözlerini aç','Show Spicy Lyrics')):T('Spicy Lyrics yükleniyor…','Spicy Lyrics is loading…'));
     fullscreenButton.classList.toggle('am-active',fullscreen);
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
-    setAttributeIfChanged(fullscreenButton,'title',fullscreen?'Tam ekrandan çık':'Tam ekran');
+    setAttributeIfChanged(fullscreenButton,'title',fullscreen?T('Tam ekrandan çık','Exit Full Screen'):T('Tam ekran','Full Screen'));
   }
-  // Playlist and album pages label Spotify's play button "Çal"/"Duraklat" in CSS; this says whether that page is the one playing.
+  // Playlist and album pages label Spotify's play button Play/Pause in CSS; this says whether that page is the one playing.
   function syncEntityPlaying() {
     const [,kind,id]=/^\/(playlist|album)\/([A-Za-z0-9]+)/.exec(routePath())||[];
     const playing=!!kind&&S.Player.data?.context?.uri===`spotify:${kind}:${id}`&&!!S.Player.isPlaying?.();
@@ -1095,14 +1102,14 @@
     if(document.hidden||!S.Player.origin?._state) return;
     syncEntityPlaying();
     const playing=S.Player.isPlaying();
-    if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?'Duraklat':'Çal');play.title=playing?'Duraklat':'Çal';}
+    if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
     if(!dragging)renderProgress(S.Player.getProgressPercent()||0,false);
     const liked=!!S.Player.getHeart?.();
     star.classList.toggle('am-active',liked);setAttributeIfChanged(star,'aria-pressed',String(liked));
-    setAttributeIfChanged(star,'title',liked?'Beğenilen Şarkılar\'dan çıkar':'Beğenilen Şarkılar\'a ekle');
+    setAttributeIfChanged(star,'title',liked?T('Beğenilen Şarkılar\'dan çıkar','Remove from Liked Songs'):T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'));
     const item=S.Player.data?.item,meta=item?.metadata||{};
     const trackTitle=item?.name||meta.title||'',trackArtist=meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'';
     const album=item?.album?.name||meta.album_title||'';
@@ -1126,7 +1133,7 @@
   document.addEventListener('visibilitychange',resumeUpdates);resumeUpdates();
   // Artist pages are redrawn after Apple Music from Spotify's own artist query.
   // Any missing API or failed request falls back to Spotify's native page.
-  const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label','Sanatçı');document.body.append(artistView);
+  const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label',T('Sanatçı','Artist'));document.body.append(artistView);
   // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
   // overlay thumb, as on macOS, shows while scrolling or hovered and can be dragged.
   function overlayScrollbar(view,cls) {
@@ -1271,9 +1278,9 @@
   const releaseDate=date=>{
     if(!date?.year)return '';
     if(!date.month||!date.day)return String(date.year);
-    try{return new Intl.DateTimeFormat('tr',{day:'numeric',month:'short',year:'numeric'}).format(new Date(date.year,date.month-1,date.day));}catch{return String(date.year);}
+    try{return new Intl.DateTimeFormat(lang,{day:'numeric',month:'short',year:'numeric'}).format(new Date(date.year,date.month-1,date.day));}catch{return String(date.year);}
   };
-  const releaseLabel={SINGLE:'Single',EP:'EP',COMPILATION:'Derleme'};
+  const releaseLabel={SINGLE:'Single',EP:'EP',COMPILATION:T('Derleme','Compilation')};
   function lazyImage(src,cls) {
     const img=el('img',cls||'');img.alt='';img.loading='lazy';img.decoding='async';
     if(src){img.src=src;img.addEventListener('error',()=>img.remove(),{once:true});}
@@ -1286,8 +1293,8 @@
     if(link){head.type='button';head.insertAdjacentHTML('beforeend',svg('chevron'));head.addEventListener('click',()=>go(link));}
     const track=el('div','am-shelf-track');
     for(const item of items){const node=render(item);if(node)track.append(node);}
-    const prev=button('Geri kaydır','left',()=>track.scrollBy({left:-track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-prev');
-    const next=button('İleri kaydır','chevron',()=>track.scrollBy({left:track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-next');
+    const prev=button(T('Geri kaydır','Scroll back'),'left',()=>track.scrollBy({left:-track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-prev');
+    const next=button(T('İleri kaydır','Scroll forward'),'chevron',()=>track.scrollBy({left:track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-next');
     const edges=()=>{prev.hidden=track.scrollLeft<4;next.hidden=track.scrollLeft+track.clientWidth>=track.scrollWidth-4;};
     track.addEventListener('scroll',edges,{passive:true});requestAnimationFrame(edges);
     shelf.append(head,track,prev,next);return shelf;
@@ -1310,13 +1317,13 @@
     try{
       if(trackUri&&S.Platform.PlayerAPI?.play)return S.Platform.PlayerAPI.play({uri},{featureIdentifier:'artist'},{skipTo:{uri:trackUri}});
       return S.Player.playUri(trackUri||uri);
-    }catch{notify('Çalma başlatılamadı.');}
+    }catch{notify(T('Çalma başlatılamadı.','Couldn\'t start playback.'));}
   }
   async function renderArtist(id) {
     const request=++artistRequest,uri='spotify:artist:'+id;
     currentMode='artist';++libraryRequest;clearLibrary();
     document.body.classList.remove('am-library-open','am-search-open','am-tinted');document.body.classList.add('am-artist-open');updateNav();
-    artistView.replaceChildren(el('p','am-artist-loading','Yükleniyor…'));artistView.scrollTop=0;
+    artistView.replaceChildren(el('p','am-artist-loading',T('Yükleniyor…','Loading…')));artistView.scrollTop=0;
     let artist;
     try{
       const response=await S.GraphQL.Request(S.GraphQL.Definitions.queryArtistOverview,{uri,locale:S.Locale?.getLocale?.()||'',includePrerelease:true});
@@ -1336,15 +1343,15 @@
     artworkColor(smallImage(visuals.headerImage||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
-    const back=button('Geri','left',()=>H.goBack?.(),'am-artist-back');
+    const back=button(T('Geri','Back'),'left',()=>H.goBack?.(),'am-artist-back');
     const shareLink='https://open.spotify.com/artist/'+id;
-    const copyLink=async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify('Bağlantı kopyalandı.');}catch{notify('Bağlantı kopyalanamadı.');}};
+    const copyLink=async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}};
     const actions=el('div','am-artist-actions');
-    const moreButton=button('Diğer seçenekler','more',()=>togglePopover(moreButton,()=>[
-      {label:'Bağlantıyı Kopyala',action:copyLink},
-      {label:'Spotify Sayfasında Aç',action:()=>{nativeArtists.add(id);closeArtist();currentMode='native';}},
+    const moreButton=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(moreButton,()=>[
+      {label:T('Bağlantıyı Kopyala','Copy Link'),action:copyLink},
+      {label:T('Spotify Sayfasında Aç','Open Spotify\'s Page'),action:()=>{nativeArtists.add(id);closeArtist();currentMode='native';}},
     ]));
-    const shareButton=button('Paylaş','share',copyLink),glassRoot=el('div','am-tglass-root');
+    const shareButton=button(T('Paylaş','Share'),'share',copyLink),glassRoot=el('div','am-tglass-root');
     actions.append(shareButton,moreButton);
     page.append(glassRoot,back,actions);
     // Hero: full-bleed artwork that fades into the tint, name and the play/follow pair.
@@ -1353,16 +1360,16 @@
     const heroContent=el('div','am-hero-content');
     if(avatarOnly)heroContent.append(heroArt);
     const concerts=artist.goods?.events?.concerts?.items||[];
-    if(concerts.length)heroContent.append(el('span','am-hero-pill','Yaklaşan Konserler'));
+    if(concerts.length)heroContent.append(el('span','am-hero-pill',T('Yaklaşan Konserler','Upcoming Concerts')));
     heroContent.append(el('h1','am-artist-name',artist.profile.name));
     const heroActions=el('div','am-hero-actions');
-    const playButton=button(artist.profile.name+' çal','play',()=>playArtist(uri),'am-hero-play');
+    const playButton=button(T(artist.profile.name+' çal','Play '+artist.profile.name),'play',()=>playArtist(uri),'am-hero-play');
     let saved=!!artist.saved;
-    const follow=button('Takip et','star',async()=>{
-      try{saved=await toggleSaved(uri,saved);follow.classList.toggle('am-active',saved);follow.title=saved?'Takibi bırak':'Takip et';}
-      catch{notify('Takip durumu değiştirilemedi.');}
+    const follow=button(T('Takip et','Follow'),'star',async()=>{
+      try{saved=await toggleSaved(uri,saved);follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');}
+      catch{notify(T('Takip durumu değiştirilemedi.','Couldn\'t change follow status.'));}
     },'am-hero-follow');
-    follow.classList.toggle('am-active',saved);follow.title=saved?'Takibi bırak':'Takip et';
+    follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');
     heroActions.append(playButton,follow);heroContent.append(heroActions);
     // The mask lives on a wrapper so the drifting image never shows a hard clipped edge.
     if(avatarOnly)hero.append(heroContent);
@@ -1376,19 +1383,19 @@
       const row=el('section','am-shelf am-shelf-top'),track=el('div','am-shelf-track');
       if(latest?.uri){
         const block=el('div','am-latest');
-        block.append(el('h2','am-shelf-title','Son Çıkan'));
+        block.append(el('h2','am-shelf-title',T('Son Çıkan','Latest Release')));
         const card=el('div','am-latest-card');
         const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
         const info=el('div','am-latest-info');
         info.append(el('span','am-latest-date',releaseDate(latest.date)),el('span','am-latest-name',(latest.name||'')+(releaseLabel[latest.type]?' - '+releaseLabel[latest.type]:'')));
-        const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+' şarkı'));
+        const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+T(' şarkı',count===1?' song':' songs')));
         let added=false;
-        const add=button('Arşive ekle','plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);notify(added?'Arşive eklendi.':'Arşivden çıkarıldı.');}catch{notify('Arşiv güncellenemedi.');}},'am-latest-add');
+        const add=button(T('Arşive ekle','Add to Library'),'plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);notify(added?T('Arşive eklendi.','Added to Library.'):T('Arşivden çıkarıldı.','Removed from Library.'));}catch{notify(T('Arşiv güncellenemedi.','Couldn\'t update your library.'));}},'am-latest-add');
         info.append(add);card.append(cover,info);block.append(card);track.append(block);
       }
       if(topTracks.length){
         const block=el('div','am-top-songs');
-        block.append(el('h2','am-shelf-title','Popüler Şarkılar'));
+        block.append(el('h2','am-shelf-title',T('Popüler Şarkılar','Top Songs')));
         const grid=el('div','am-song-grid');
         for(const song of topTracks){
           const row=el('div','am-song');
@@ -1399,29 +1406,29 @@
           const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
           text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
           playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
-          const songMore=button('Diğer seçenekler','more',()=>togglePopover(songMore,()=>[
-            ...(song.albumOfTrack?.uri?[{label:'Albüme Git',action:()=>openUri(song.albumOfTrack.uri)}]:[]),
-            {label:'Şarkı Bağlantısını Kopyala',action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify('Bağlantı kopyalandı.');}catch{notify('Bağlantı kopyalanamadı.');}}},
+          const songMore=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(songMore,()=>[
+            ...(song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[]),
+            {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
           ]),'am-song-more');
           row.append(playSong,songMore);grid.append(row);
         }
         block.append(grid);track.append(block);
       }
-      const prev=button('Geri kaydır','left',()=>track.scrollBy({left:-track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-prev');
-      const next=button('İleri kaydır','chevron',()=>track.scrollBy({left:track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-next');
+      const prev=button(T('Geri kaydır','Scroll back'),'left',()=>track.scrollBy({left:-track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-prev');
+      const next=button(T('İleri kaydır','Scroll forward'),'chevron',()=>track.scrollBy({left:track.clientWidth*.85,behavior:'smooth'}),'am-shelf-arrow am-next');
       const edges=()=>{prev.hidden=track.scrollLeft<4;next.hidden=track.scrollLeft+track.clientWidth>=track.scrollWidth-4;};
       track.addEventListener('scroll',edges,{passive:true});requestAnimationFrame(edges);
       row.append(track,prev,next);body.append(row);
     }
     const releases=group=>(group?.items||[]).map(item=>item?.releases?.items?.[0]||item).filter(release=>release?.uri);
     const shelves=[
-      artistShelf('Albümler',releases(discography.albums),release=>releaseCard(release,{subtitle:String(release.date?.year||'')}),{link:`/artist/${id}/discography/album`}),
-      artistShelf('Single\'lar ve EP\'ler',releases(discography.singles),release=>releaseCard({...release,name:(release.name||'')+(releaseLabel[release.type]?' - '+releaseLabel[release.type]:'')},{subtitle:String(release.date?.year||'')}),{link:`/artist/${id}/discography/single`}),
-      artistShelf('Derlemeler',releases(discography.compilations),release=>releaseCard(release,{subtitle:String(release.date?.year||'')})),
+      artistShelf(T('Albümler','Albums'),releases(discography.albums),release=>releaseCard(release,{subtitle:String(release.date?.year||'')}),{link:`/artist/${id}/discography/album`}),
+      artistShelf(T('Single\'lar ve EP\'ler','Singles & EPs'),releases(discography.singles),release=>releaseCard({...release,name:(release.name||'')+(releaseLabel[release.type]?' - '+releaseLabel[release.type]:'')},{subtitle:String(release.date?.year||'')}),{link:`/artist/${id}/discography/single`}),
+      artistShelf(T('Derlemeler','Compilations'),releases(discography.compilations),release=>releaseCard(release,{subtitle:String(release.date?.year||'')})),
       concertList(concerts),
-      artistShelf('Sanatçı Çalma Listeleri',(related.featuringV2?.items||[]).map(item=>item?.data).filter(list=>list?.uri),list=>releaseCard(list,{subtitle:list.ownerV2?.data?.name||''})),
-      artistShelf('Yer Aldığı',releases(related.appearsOn),release=>releaseCard(release,{subtitle:(release.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ')}),{link:`/artist/${id}/appears-on`}),
-      artistShelf('Benzer Sanatçılar',(related.relatedArtists?.items||[]).filter(a=>a?.uri),person=>releaseCard({uri:person.uri,name:person.profile?.name,visuals:person.visuals},{round:true}),{link:`/artist/${id}/related`,cls:'am-shelf-artists'}),
+      artistShelf(T('Sanatçı Çalma Listeleri','Artist Playlists'),(related.featuringV2?.items||[]).map(item=>item?.data).filter(list=>list?.uri),list=>releaseCard(list,{subtitle:list.ownerV2?.data?.name||''})),
+      artistShelf(T('Yer Aldığı','Appears On'),releases(related.appearsOn),release=>releaseCard(release,{subtitle:(release.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ')}),{link:`/artist/${id}/appears-on`}),
+      artistShelf(T('Benzer Sanatçılar','Similar Artists'),(related.relatedArtists?.items||[]).filter(a=>a?.uri),person=>releaseCard({uri:person.uri,name:person.profile?.name,visuals:person.visuals},{round:true}),{link:`/artist/${id}/related`,cls:'am-shelf-artists'}),
       aboutSection(artist),
     ];
     for(const shelf of shelves)if(shelf)body.append(shelf);
@@ -1430,13 +1437,13 @@
   function concertList(items) {
     const concerts=items.map(item=>item?.data||item).filter(c=>c?.date?.isoString||c?.startDateIsoString).slice(0,6);
     if(!concerts.length)return null;
-    const section=el('section','am-shelf am-concerts');section.append(el('h2','am-shelf-title','Yaklaşan Konserler'));
+    const section=el('section','am-shelf am-concerts');section.append(el('h2','am-shelf-title',T('Yaklaşan Konserler','Upcoming Concerts')));
     const grid=el('div','am-concert-grid');
     for(const concert of concerts){
       const date=new Date(concert.date?.isoString||concert.startDateIsoString);if(isNaN(date))continue;
       const row=el('div','am-concert');
       const place=concert.venue?.location?.name||concert.location?.name||concert.title||'';
-      const detail=[concert.venue?.name,new Intl.DateTimeFormat('tr',{weekday:'short',hour:'2-digit',minute:'2-digit'}).format(date)].filter(Boolean).join(' · ');
+      const detail=[concert.venue?.name,new Intl.DateTimeFormat(lang,{weekday:'short',hour:'2-digit',minute:'2-digit'}).format(date)].filter(Boolean).join(' · ');
       const text=el('span','am-concert-text');text.append(el('span','am-concert-place',place),el('span','am-concert-detail',detail));
       row.append(el('span','am-concert-day',String(date.getDate())),text);grid.append(row);
     }
@@ -1446,9 +1453,9 @@
     const raw=artist.profile?.biography?.text||'';
     const listeners=artist.stats?.monthlyListeners;
     if(!raw&&!listeners)return null;
-    const section=el('section','am-shelf am-about');section.append(el('h2','am-shelf-title','Hakkında'));
+    const section=el('section','am-shelf am-about');section.append(el('h2','am-shelf-title',T('Hakkında','About')));
     if(raw){const holder=document.createElement('template');holder.innerHTML=raw;section.append(el('p','am-about-text',holder.content.textContent.trim()));}
-    if(listeners)section.append(el('p','am-about-stat',new Intl.NumberFormat('tr').format(listeners)+' aylık dinleyici'));
+    if(listeners)section.append(el('p','am-about-stat',new Intl.NumberFormat(lang).format(listeners)+T(' aylık dinleyici',' monthly listeners')));
     return section;
   }
   // The hero image drifts and softens as the page scrolls, like Apple Music's artist header.
@@ -1549,9 +1556,10 @@
   // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
   if(S.Menu?.SubMenu&&S.Menu?.Item){
     const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
-    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item('Renk: '+label,settings.accent===key,()=>setAccent(key)));
+    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
-    new S.Menu.SubMenu('mcloud',[toggle('Oynatıcıda albüm kapağı','artwork'),toggle('Liquid Glass oynatıcı','liquid'),...colors]).register();
+    const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
