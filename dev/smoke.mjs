@@ -704,6 +704,8 @@ try {
     await page.click('text=Albümler');
     await page.waitForSelector('.am-library-card');
     assert.equal(await page.locator('.am-library-card').count(), 20);
+    // Album cards name the artist, which Spotify sends in artists[] (albums have no owner).
+    assert.equal(await page.textContent('.am-library-card .am-library-sub'), 'Sanatçı 0');
     await page.fill('.am-library-filter', 'rain');
     await page.waitForFunction(() => document.querySelectorAll('.am-library-card').length === 1);
     await page.fill('.am-library-filter', '');
