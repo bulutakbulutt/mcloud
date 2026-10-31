@@ -588,6 +588,8 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
    so the blur never pulls a transparent edge in (the photo is height-bound, so it still lines up). */
 .am-hero-soft {position:absolute;inset:58% 0 0;overflow:hidden}
 #am-artist .am-hero-soft .am-hero-image {top:-138.1%;height:184.3%;left:-40px;width:calc(100% + 80px)}
+/* A cropped photo (black bars cut off) can be narrower than the box; a wider copy would then scale and misalign. */
+#am-artist .am-hero-cropped .am-hero-soft .am-hero-image {left:0;width:100%}
 .am-soft-1 {-webkit-mask-image:linear-gradient(180deg,#0000 1.9%,#000 10.5%);mask-image:linear-gradient(180deg,#0000 1.9%,#000 10.5%)}
 .am-soft-2 {-webkit-mask-image:linear-gradient(180deg,#0000 10.5%,#000 21.2%);mask-image:linear-gradient(180deg,#0000 10.5%,#000 21.2%)}
 .am-soft-3 {-webkit-mask-image:linear-gradient(180deg,#0000 21.2%,#000 36.9%);mask-image:linear-gradient(180deg,#0000 21.2%,#000 36.9%)}
@@ -599,7 +601,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist .am-soft-4 .am-hero-image {filter:blur(calc(var(--am-hw) * .0144))}
 #am-artist .am-soft-5 .am-hero-image {filter:blur(calc(var(--am-hw) * .0192))}
 .am-artist-body {position:relative}
-.am-hero-image {position:absolute;top:0;left:0;width:100%;height:77.4%;object-fit:cover;object-position:center 22%;-webkit-box-reflect:below;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));will-change:transform}
+.am-hero-image {position:absolute;top:0;left:0;width:100%;height:77.4%;object-fit:cover;object-view-box:var(--am-hero-crop,none);object-position:center 22%;-webkit-box-reflect:below;transform:translateY(calc(var(--am-hero-progress,0) * 18%)) scale(calc(1 + var(--am-hero-progress,0) * .06));will-change:transform}
 /* Softening on scroll: blurred once, faded by opacity (cheap for the compositor), not a blur radius animated per frame. */
 #am-artist .am-hero-haze {will-change:transform,opacity}
 #am-artist .am-haze-1 {filter:blur(5px);opacity:clamp(0,calc(var(--am-hero-progress,0) * 2),1)}
@@ -627,6 +629,9 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 @keyframes am-info-in {from{opacity:0}}
 .am-info-card {--am-iw:min(704px,calc(100vw - 32px));position:absolute;top:52px;bottom:40px;left:calc(50% - var(--am-iw) / 2);width:var(--am-iw);border-radius:16px;overflow:hidden;background:var(--am-tint-top,#3a3a3a);box-shadow:0 22px 70px #0000008c;color:#e4e4e4;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;-webkit-app-region:no-drag}
 .am-info-scroll {position:absolute;inset:0;overflow:auto;background:inherit;overscroll-behavior:contain;scrollbar-width:none}
+/* The sheet's overlay scroller sits in the card; a colour that lands late eases in rather than switching. */
+.am-info-card .am-scroll-thumb {position:absolute;z-index:2}
+.am-info-card {transition:background-color .3s}
 .am-info-media {position:relative;height:calc(var(--am-iw) * 1.295);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 38.2%,#0000);mask-image:linear-gradient(180deg,#000 38.2%,#0000)}
 .am-info-photo {position:absolute;top:0;left:0;width:100%;height:77.2%;object-fit:cover;-webkit-box-reflect:below}
 .am-info-soft {position:absolute;inset:61.7% 0 0;overflow:hidden}

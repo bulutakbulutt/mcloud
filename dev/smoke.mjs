@@ -549,14 +549,14 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
-    // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at its
-    // largest size, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
+    // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at the
+    // smallest size still sharp there, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
     // the first shelf; the play triangle sits 1.5px right in its 72px circle, as in Apple Music.
     const hero = await page.evaluate(() => {
       const media = document.querySelector('.am-hero-media').getBoundingClientRect();
       const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image:not(.am-hero-haze)')], [sharp] = imgs, s = sharp.getBoundingClientRect();
       return { w: innerWidth - media.left, photoH: s.height, mediaH: media.height,
-        src: imgs.every(i => i.src === window.__mockArtist.headerImage.data.sources[0].url), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0')), haze: [...document.querySelectorAll('.am-hero-haze')].map(i => [getComputedStyle(i).filter, getComputedStyle(i).opacity]),
+        src: (() => { const [big, small] = window.__mockArtist.headerImage.data.sources, need = media.width * 1.17 * devicePixelRatio; return imgs.every(i => i.src === (small.maxWidth >= need ? small : big).url); })(), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0')), haze: [...document.querySelectorAll('.am-hero-haze')].map(i => [getComputedStyle(i).filter, getComputedStyle(i).opacity]),
         aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }) };
     });
     assert.ok(hero.src && hero.aligned, JSON.stringify(hero));
