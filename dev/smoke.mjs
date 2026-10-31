@@ -549,21 +549,57 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
-    // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at its
-    // largest size, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
-    // the first shelf; the play triangle sits 1.3px right, as in Apple Music.
+    // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at the
+    // smallest size still sharp there, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
+    // the first shelf; the play triangle sits 1.5px right in its 72px circle, as in Apple Music.
     const hero = await page.evaluate(() => {
       const media = document.querySelector('.am-hero-media').getBoundingClientRect();
-      const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image')], [sharp] = imgs, s = sharp.getBoundingClientRect();
+      const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image:not(.am-hero-haze)')], [sharp] = imgs, s = sharp.getBoundingClientRect();
       return { w: innerWidth - media.left, photoH: s.height, mediaH: media.height,
-        src: imgs.every(i => i.src === window.__mockArtist.headerImage.data.sources[0].url), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? 'NaN')),
+        src: (() => { const [big, small] = window.__mockArtist.headerImage.data.sources, need = media.width * 1.17 * devicePixelRatio; return imgs.every(i => i.src === (small.maxWidth >= need ? small : big).url); })(), blurs: imgs.map(i => parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0')), haze: [...document.querySelectorAll('.am-hero-haze')].map(i => [getComputedStyle(i).filter, getComputedStyle(i).opacity]),
         aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }) };
     });
     assert.ok(hero.src && hero.aligned, JSON.stringify(hero));
     assert.ok(Math.abs(hero.photoH - hero.w / 2) < 1 && Math.abs(hero.mediaH - hero.w * .646) < 1, JSON.stringify(hero));
     assert.deepEqual(hero.blurs.map(b => Math.round(b / hero.w * 1042)), [0, 3, 6, 10, 15, 20]);
+    // Scrolling softens the photo with copies blurred once and faded in, not an animated blur radius.
+    assert.deepEqual(hero.haze, [['blur(5px)', '0'], ['blur(14px)', '0']]);
+    // ⓘ, play and follow are symmetric under the name, as in Apple Music.
+    const buttons = await page.evaluate(() => { const [i, p, f] = ['.am-hero-info', '.am-hero-play', '.am-hero-follow'].map(s => document.querySelector(s).getBoundingClientRect()); const y = r => Math.round(r.top + r.height / 2);
+      return { sizes: [i.width, p.width, f.width], centred: y(i) === y(p) && y(p) === y(f), gaps: [Math.round(p.left - i.right), Math.round(f.left - p.right)], font: parseFloat(getComputedStyle(document.querySelector('.am-artist-name')).fontSize) }; });
+    assert.deepEqual(buttons, { sizes: [48, 72, 48], centred: true, gaps: [24, 24], font: 40 });
+    assert.ok(await page.evaluate(() => { const c = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.left + r.width / 2; }; return Math.abs((c('.am-hero-play') - c('.am-hero-info')) - (c('.am-hero-follow') - c('.am-hero-play'))) < 1 && Math.abs(c('.am-hero-play') - c('.am-artist-name')) < 1; }));
+    // ⓘ opens the About sheet measured on Apple Music's: 704px card 52px from the top, photo copies aligned and blurred
+    // in steps, facts, city chips and the bio; Escape closes it and focus returns to ⓘ, a click on the dim closes it too.
+    await page.click('.am-hero-info');
+    await page.waitForSelector('#am-artist-info .am-info-card');
+    const sheet = await page.evaluate(() => {
+      const card = document.querySelector('.am-info-card').getBoundingClientRect(), imgs = [...document.querySelectorAll('.am-info-media .am-info-photo')], s = imgs[0].getBoundingClientRect();
+      return { w: card.width, top: card.top, vw: innerWidth, role: document.querySelector('.am-info-card').getAttribute('role'), focus: document.activeElement?.classList.contains('am-info-close'),
+        name: document.querySelector('.am-info-name').textContent, labels: [...document.querySelectorAll('.am-info-label')].map(l => l.textContent), chips: document.querySelectorAll('.am-info-chip').length,
+        bio: document.querySelector('.am-info-bio')?.textContent, aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }),
+        photo: Math.round(s.width) === Math.round(card.width) && Math.round(s.height) === Math.round(card.width), blurs: imgs.map(i => Math.round(parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0') / card.width * 704)) };
+    });
+    assert.deepEqual([sheet.w, sheet.top, sheet.role, sheet.focus, sheet.name, sheet.chips, sheet.aligned, sheet.photo], [Math.min(704, sheet.vw - 32), 52, 'dialog', true, 'Sena Şener', 3, true, true], JSON.stringify(sheet));
+    assert.deepEqual(sheet.labels, ['Aylık dinleyici', 'Takipçi', 'En çok dinlendiği şehirler']);
+    assert.equal(sheet.bio, 'Sena Şener, İstanbul doğumlu şarkıcı ve söz yazarı.');
+    assert.deepEqual(sheet.blurs, [0, 3, 6, 10, 16, 24, 32, 5, 9, 18, 36]);
+    // Scrolling, as Apple's: the photo drifts up at 0.4x; from 0.257W it blurs (copies in turn) and fades into the
+    // card's colour, half way at 0.399W.
+    assert.deepEqual(await page.evaluate(async () => {
+      const scroll = document.querySelector('.am-info-scroll'), w = document.querySelector('.am-info-card').offsetWidth, filler = document.createElement('div');
+      filler.style.height = '900px'; document.querySelector('.am-info-body').append(filler);
+      const at = async y => { scroll.scrollTop = y; await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const q = s => getComputedStyle(document.querySelector(s));
+        return [Math.round(new DOMMatrix(q('.am-info-stage').transform).m42 / y * 100) / 100, Math.round(q('.am-info-media').opacity * 100) / 100, [1, 2, 3, 4].map(k => Math.round(q('.am-info-haze-' + k).opacity * 100) / 100)]; };
+      const steps = [await at(Math.round(w * .2)), await at(Math.round(w * .399))]; filler.remove(); scroll.scrollTop = 0; return steps;
+    }), [[-0.4, 1, [0, 0, 0, 0]], [-0.4, 0.5, [1, 1, 1, 0]]]);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.getElementById('am-artist-info') && document.activeElement?.classList.contains('am-hero-info'));
+    await page.click('.am-hero-info'); await page.waitForSelector('#am-artist-info');
+    await page.mouse.click(8, 300);
+    await page.waitForFunction(() => !document.getElementById('am-artist-info'));
     assert.ok(await page.evaluate(() => document.querySelector('.am-hero-media').getBoundingClientRect().bottom > document.querySelector('.am-artist-body').getBoundingClientRect().top + 40));
-    assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.3);
+    assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.5);
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
     // Over the artist's colour the sidebar is Apple's dark material and the edge glow is off.
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);
@@ -598,6 +634,22 @@ try {
     assert.equal(await page.locator('.am-hero-image').count(), 0);
     await page.evaluate(() => { window.__mockArtist.headerImage = window.__savedHeader; Spicetify.Platform.History.push('/'); });
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
+  });
+
+  await check('going back, the artist page stays up until Spotify\'s page has settled', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-artist-name');
+    // Spotify's own page renders under ours; React replaces it ~120ms after the route changes, then fills rows.
+    assert.deepEqual(await page.evaluate(async () => {
+      const host = document.querySelector('.main-view-container__scroll-node-child > main'), under = host.firstElementChild, next = document.createElement('section');
+      const wait = ms => new Promise(r => setTimeout(r, ms)), open = () => document.body.classList.contains('am-artist-open'), steps = [];
+      Spicetify.Platform.History.push('/'); steps.push(open());
+      await wait(120); steps.push(open()); under.replaceWith(next);
+      await wait(25); steps.push(open()); next.append(document.createElement('div'));
+      await wait(25); steps.push(open());
+      await wait(100); steps.push(open()); next.replaceWith(under);
+      return steps;
+    }), [true, true, true, true, false]);
   });
 
   await check('page and artist view run under the glass sidebar', async () => {
@@ -675,6 +727,20 @@ try {
     assert.equal(await page.evaluate(() => { const card = document.querySelector('.am-library-card'), b = card.getBoundingClientRect(); return card.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), true, 'library cards are covered while a sheet is open');
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+  });
+
+  await check('back to the library: its last contents at once, refreshed behind them', async () => {
+    // Albums is open: leave for one of Spotify's pages and come back. No "Loading your library…": the cards are there
+    // in the same task, and LibraryAPI is asked again in the background.
+    assert.deepEqual(await page.evaluate(async () => {
+      const api = Spicetify.Platform.LibraryAPI, get = api.getContents; let calls = 0; api.getContents = (...a) => { calls++; return get.apply(api, a); };
+      Spicetify.Platform.History.push('/playlist/mock');
+      await new Promise(r => setTimeout(r, 800));
+      Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' });
+      const now = [document.querySelectorAll('.am-library-card').length, document.querySelector('.am-library-status').textContent];
+      await new Promise(r => setTimeout(r, 100)); api.getContents = get;
+      return [...now, calls > 0];
+    }), [20, '20 öğe', true]);
   });
 
   await check('settings menu', async () => {

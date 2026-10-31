@@ -83,11 +83,12 @@
   window.__mockArtist = {
     uri: 'spotify:artist:mock', saved: false,
     profile: { name: 'Sena Şener', biography: { text: 'Sena Şener, <b>İstanbul</b> doğumlu şarkıcı ve söz yazarı.' } },
-    stats: { monthlyListeners: 1234567 },
+    stats: { monthlyListeners: 1234567, followers: 456789, topCities: { items: [{ city: 'İstanbul', country: 'TR', numberOfListeners: 210000 }, { city: 'Ankara', country: 'TR', numberOfListeners: 90000 }, { city: 'Berlin', country: 'DE', numberOfListeners: 40000 }] } },
     // Spotify moved the wide header out of visuals (2026): sources carry maxWidth/maxHeight, largest first.
     headerImage: { data: { sources: [{ url: art(355, 'SŞ'), maxWidth: 2660, maxHeight: 1140 }, { url: art(350, 'S'), maxWidth: 1495, maxHeight: 641 }] } },
     visuals: {
       avatarImage: { sources: [{ url: art(355, 'SŞ'), width: 640 }], extractedColors: { colorRaw: { hex: '#C8102E' } } },
+      gallery: { items: [{ sources: [{ url: art(20, 'Gal'), width: 640, height: 640 }] }] },
     },
     goods: { events: { concerts: { items: [
       { title: 'Edirne', date: { isoString: '2026-11-13T22:00:00' }, venue: { name: 'Black Corner Pub', location: { name: 'Edirne, Türkiye' } } },

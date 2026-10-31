@@ -21,6 +21,10 @@
     play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
+    // Apple's "info" (SF Symbols' slab i), traced pixel by pixel from the Music app at 2x: a 2.4pt dot, a serif, a 1.5pt
+    // stem right of centre and a 7pt foot, edges on the device-pixel grid at 20px (0.6 units = 1 device pixel).
+    info:'<circle cx="12.15" cy="5.9" r="1.45" fill="currentColor" stroke="none"/><path d="M8.4 10.2H13.2V19.2H16.2V21H8.1V19.2H11.4V12H8.4Z" fill="currentColor" stroke="none"/>',
+    close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -136,7 +140,8 @@
   const navItems = [];
   // Search and Browse both open Spotify's /search page; the row that opened it stays selected there.
   let browsing = false;
-  function go(path) { currentMode = 'native'; document.body.classList.remove('am-library-open'); clearLibrary(); ++libraryRequest; H.push(path); updateNav(); }
+  // The route change closes the library (H.listen), once the page under it has been replaced.
+  function go(path) { H.push(path); updateNav(); }
   function row(label, icon, fn, key) {
     const b = button(label, icon, fn, 'am-nav-row'); b.append(el('span', '', label));
     nav.append(b); navItems.push({ b, key });
@@ -517,8 +522,17 @@
       }
     },{root,rootMargin}):null;
   }
+  // Artwork that loaded before is set at once and decoded at paint, so a page drawn again (going back) has it in its
+  // first frame; left to the observer or to async decoding it pops in a frame or three later. The last 200 are held by
+  // an Image each: released sources otherwise drop out of the memory cache and load asynchronously again.
+  const seenArtwork=new Map();
+  document.addEventListener('load',event=>{
+    const img=event.target,src=img.tagName==='IMG'&&img.closest?.('#am-library,#am-artist')&&img.getAttribute('src');if(!src||seenArtwork.has(src))return;
+    const hold=new Image();hold.src=src;seenArtwork.set(src,hold);if(seenArtwork.size>200)seenArtwork.delete(seenArtwork.keys().next().value);
+  },true);
   function observeLazy(observer,img) {
     if(document.hidden)return;
+    if(seenArtwork.has(img.dataset.src)){img.decoding='auto';img.src=img.dataset.src;}
     if(observer)observer.observe(img);else img.src=img.dataset.src;
   }
   function releaseLazy(observer,container) {
@@ -598,15 +612,24 @@
     }
     return items;
   }
-  async function renderLibrary(kind,folder='') {
-    const request=++libraryRequest;
+  // Each view's last contents are kept for the session: going back to one shows them at once, then refreshes them,
+  // instead of "Loading your library…" for the 300–400ms LibraryAPI takes. A refresh that only reorders (the playlist
+  // just opened moves up in Recents) waits for the next visit rather than shuffling the grid under the pointer.
+  const libraryCache=new Map(),librarySet=items=>items.map(i=>i.uri+'\n'+i.name+'\n'+i.imageUrl).sort().join('\n');
+  async function renderLibrary(kind,folder='',refresh=true) {
+    const request=++libraryRequest,key=kind+'\n'+folder,cached=libraryCache.get(key);
     libraryKind=kind;libraryFolder=folder;currentMode='library';
     document.body.classList.add('am-ready','am-library-open');document.body.classList.remove('am-search-open');updateNav();
     clearLibrary();
     libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));
-    const status=el('p','am-library-status',T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
+    const status=el('p','am-library-status',cached?'':T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
     try {
-      const all=await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
+      const all=cached||await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
+      libraryCache.set(key,all);
+      if(cached&&refresh)loadLibrary(folder,request,kind).then(fresh=>{
+        if(request!==libraryRequest)return;libraryCache.set(key,fresh);
+        if(librarySet(fresh)!==librarySet(all))renderLibrary(kind,folder,false);
+      }).catch(()=>{});
       let items=all;
       status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
       const tools=el('div','am-library-tools');
@@ -1593,14 +1616,16 @@
   });
   // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
   // overlay thumb, as on macOS, shows while scrolling or hovered and can be dragged.
-  function overlayScrollbar(view,cls) {
-    const thumb=el('div','am-scroll-thumb '+cls);document.body.append(thumb);
+  // host: where the thumb lives; the page's thumbs are fixed to the window, the ⓘ sheet's sits inside its card.
+  function overlayScrollbar(view,cls,host=document.body) {
+    const thumb=el('div','am-scroll-thumb '+cls);host.append(thumb);
     let hideTimer=0,drag=null;
     function place(show) {
       const range=view.scrollHeight-view.clientHeight,box=view.getBoundingClientRect();
       if(range<=1||!box.height){thumb.style.opacity='0';return;}
       const height=Math.max(36,box.height*view.clientHeight/view.scrollHeight);
-      thumb.style.height=height+'px';thumb.style.transform='translateY('+(box.top+(box.height-height)*view.scrollTop/range).toFixed(1)+'px)';
+      const top=host===document.body?box.top:box.top-host.getBoundingClientRect().top;
+      thumb.style.height=height+'px';thumb.style.transform='translateY('+(top+(box.height-height)*view.scrollTop/range).toFixed(1)+'px)';
       if(!show)return;
       thumb.style.opacity='1';clearTimeout(hideTimer);
       hideTimer=setTimeout(()=>{if(!drag&&!thumb.matches(':hover'))thumb.style.opacity='0';},900);
@@ -1616,6 +1641,7 @@
     });
     const stop=()=>{if(!drag)return;drag=null;thumb.classList.remove('am-dragging');place(true);};
     thumb.addEventListener('pointerup',stop);thumb.addEventListener('pointercancel',stop);
+    return place;
   }
   overlayScrollbar(artistView,'am-scroll-artist');overlayScrollbar(libraryView,'am-scroll-library');
   const nativeArtists=new Set();
@@ -1729,9 +1755,101 @@
   const bySize=visual=>[...(visual?.sources||[])].sort((a,b)=>(a.width||a.maxWidth||0)-(b.width||b.maxWidth||0));
   const smallImage=visual=>spotifyImage(bySize(visual)[0]?.url||'');
   function closeArtist() {
+    closeArtistInfo();
     if(!document.body.classList.contains('am-artist-open')&&!artistView.hasChildNodes())return;
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
     artistView.replaceChildren();artistView.scrollTop=0;syncArtistGlass(null);
+  }
+  // Spotify renders its own page under ours (its artist page under ours, Home under the library). Going to another of
+  // Spotify's pages, ours stays up until that page has settled: React replaces the old page after ~120ms, then a list
+  // restores its scroll position (~190ms) and fills placeholder rows (~250ms); shown earlier, each step flashes.
+  // Settled = 50ms without a new node, at most 700ms. `request` reads the view's counter: a newer render cancels.
+  function revealNative(close,request,ready) {
+    const under=main.querySelector('.main-view-container__scroll-node-child > main > *');
+    if(ready||!under)return close();
+    let quiet=0;
+    const token=request(),cap=setTimeout(done,700),observer=new MutationObserver(()=>{
+      if(under.isConnected)return;clearTimeout(quiet);quiet=setTimeout(done,50);
+    });
+    function done(){observer.disconnect();clearTimeout(cap);clearTimeout(quiet);if(token===request())close();}
+    observer.observe(main,{childList:true,subtree:true});
+  }
+  // The ⓘ sheet, measured on Apple Music's (macOS, six artists from light to dark): a 704pt card 52pt below the window's
+  // top and 40pt above its bottom over a 49% black dim. Its square photo fades linearly from 0.495W into the photo's most
+  // common colour (Apple's bgColor; brightness capped at 42%, so white text always reads) and blurs in steps from 0.8W.
+  // Name, values and headings are solid #e4e4e4; labels, chips and the bio are added onto what is behind them
+  // (plus-lighter), as macOS draws vibrant text.
+  let infoSheet=null,infoOpener=null;
+  function closeArtistInfo() {
+    if(!infoSheet)return;
+    infoSheet.remove();infoSheet=null;infoOpener?.focus?.({preventScroll:true});infoOpener=null;
+  }
+  // Computed while the artist page loads, so the sheet opens in its final colour: computed on open, the colour could
+  // land after the sheet was up (a cold photo) and switch under the first scroll.
+  const sheetColors=new Map();
+  function sheetPhoto(artist){return artistImage(artist.visuals?.gallery?.items?.[0]||artist.visuals?.avatarImage,true);}
+  function sheetColor(url) {
+    return new Promise(resolve=>{
+      if(!url)return resolve(null);
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
+      img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const size=64,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+        const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(img,0,0,size,size);
+        const data=context.getImageData(0,0,size,size).data,buckets=new Map();
+        for(let i=0;i<data.length;i+=4){
+          const key=(data[i]/24|0)*121+(data[i+1]/24|0)*11+(data[i+2]/24|0),bucket=buckets.get(key)||[0,0,0,0];
+          bucket[0]+=data[i];bucket[1]+=data[i+1];bucket[2]+=data[i+2];bucket[3]++;buckets.set(key,bucket);
+        }
+        const top=[...buckets.values()].reduce((a,b)=>b[3]>a[3]?b:a);let rgb=top.slice(0,3).map(v=>v/top[3]);
+        const max=Math.max(...rgb);if(max>107)rgb=rgb.map(v=>v*107/max);
+        resolve(`rgb(${rgb.map(Math.round).join(',')})`);
+      }catch{resolve(null);}};
+      img.src=url;
+    });
+  }
+  function openArtistInfo(artist,opener) {
+    closeArtistInfo();
+    const profile=artist.profile||{},stats=artist.stats||{},visuals=artist.visuals||{},number=new Intl.NumberFormat(lang);
+    const photo=sheetPhoto(artist);
+    const sheet=el('div','am-info');sheet.id='am-artist-info';
+    const card=el('section','am-info-card');card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',profile.name||T('Hakkında','About'));
+    const scroll=el('div','am-info-scroll'),close=button(T('Kapat','Close'),'close',closeArtistInfo,'am-info-close');
+    if(photo){
+      const media=el('div','am-info-media'),sharp=lazyImage(photo,'am-info-photo');sharp.loading='eager';media.append(sharp);
+      for(const step of [1,2,3,4,5,6]){const soft=el('div','am-info-soft am-info-soft-'+step),copy=lazyImage(photo,'am-info-photo');copy.loading='eager';soft.append(copy);media.append(soft);}
+      for(const step of [1,2,3,4]){const haze=el('div','am-info-haze am-info-haze-'+step),copy=lazyImage(photo,'am-info-photo');copy.loading='eager';haze.append(copy);media.append(haze);}
+      const stage=el('div','am-info-stage');stage.append(media);scroll.append(stage);
+      if(sheetColors.has(photo))card.style.backgroundColor=sheetColors.get(photo);
+      else sheetColor(photo).then(color=>{if(color){sheetColors.set(photo,color);if(infoSheet===sheet)card.style.backgroundColor=color;}});
+    }
+    const body=el('div','am-info-body'+(photo?'':' am-info-plain')),facts=el('div','am-info-facts');
+    body.append(el('h2','am-info-name',profile.name||''));
+    const fact=(label,value,wide)=>{const item=el('div','am-info-fact'+(wide?' am-info-wide':''));item.append(el('span','am-info-label',label),value);facts.append(item);};
+    if(stats.monthlyListeners)fact(T('Aylık dinleyici','Monthly listeners'),el('span','am-info-value',number.format(stats.monthlyListeners)));
+    if(stats.followers)fact(T('Takipçi','Followers'),el('span','am-info-value',number.format(stats.followers)));
+    const cities=(stats.topCities?.items||[]).filter(c=>c?.city).slice(0,5);
+    if(cities.length){const chips=el('div','am-info-chips');for(const c of cities){const chip=el('span','am-info-chip');chip.append(el('span','',c.city));chips.append(chip);}fact(T('En çok dinlendiği şehirler','Top cities'),chips,true);}
+    if(facts.childElementCount)body.append(facts);
+    const raw=profile.biography?.text||'';
+    if(raw){
+      const holder=document.createElement('template');holder.innerHTML=raw;const text=holder.content.textContent.trim();
+      if(text)body.append(el('h3','am-info-heading',T('Hakkında','About')),el('p','am-info-bio',text));
+    }
+    scroll.append(body);card.append(scroll,close);sheet.append(card);
+    // The bio usually starts below the card's edge (e.g. David Bowie's in a 770pt window), with nothing saying there is
+    // more: like an AppKit scroll view appearing, the overlay scroller flashes once when the content runs past the card.
+    const placeThumb=overlayScrollbar(scroll,'am-scroll-sheet',card);
+    sheet.addEventListener('pointerdown',event=>{if(event.target===sheet)closeArtistInfo();});
+    sheet.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtistInfo();}
+      else if(event.key==='Tab'){
+        const items=[...card.querySelectorAll('button,a[href],[tabindex]:not([tabindex="-1"])')],at=items.indexOf(document.activeElement);
+        event.preventDefault();items[(at+(event.shiftKey?-1:1)+items.length)%items.length]?.focus();
+      }
+    });
+    document.body.append(sheet);infoSheet=sheet;infoOpener=opener;close.focus({preventScroll:true});
+    requestAnimationFrame(()=>requestAnimationFrame(()=>placeThumb(true)));
   }
   const artistImage=(visual,big)=>{const sources=bySize(visual);return spotifyImage((big?sources.at(-1):sources.find(s=>(s.width||0)>=300)||sources.at(-1))?.url||'');};
   const releaseDate=date=>{
@@ -1741,7 +1859,7 @@
   };
   const releaseLabel={SINGLE:'Single',EP:'EP',COMPILATION:T('Derleme','Compilation')};
   function lazyImage(src,cls) {
-    const img=el('img',cls||'');img.alt='';img.loading='lazy';img.decoding='async';
+    const img=el('img',cls||''),seen=seenArtwork.has(src);img.alt='';img.loading=seen?'eager':'lazy';img.decoding=seen?'auto':'async';
     if(src){img.src=src;img.addEventListener('error',()=>img.remove(),{once:true});}
     return img;
   }
@@ -1760,7 +1878,7 @@
   }
   function releaseCard(release,{subtitle,round}={}) {
     if(!release?.uri)return null;
-    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';
+    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';card.dataset.uri=release.uri;
     const art=el('span','am-card-art');art.append(lazyImage(artistImage(release.coverArt||release.visuals?.avatarImage||release.images?.items?.[0])));
     card.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
     if(subtitle)card.append(el('span','am-card-sub',subtitle));
@@ -1788,17 +1906,75 @@
       return S.Player.playUri(trackUri||uri);
     }catch{notify(T('Çalma başlatılamadı.','Couldn\'t start playback.'));}
   }
+  // Artist overviews for this session. A fresh queryArtistOverview takes 0.4–0.9s (Spotify's API, measured), so a
+  // revisit opened in ~0.5s where Spotify's own page answers from its cache in ~0.13s. Cached ones open at once and
+  // refresh in the background after two minutes; hovering an artist link starts the request (see below).
+  const artistCache=new Map();
+  function artistOverview(id) {
+    const hit=artistCache.get(id),age=hit?Date.now()-hit.time:Infinity;
+    if(hit&&age<120e3)return hit.promise;
+    const promise=S.GraphQL.Request(S.GraphQL.Definitions.queryArtistOverview,{uri:'spotify:artist:'+id,locale:S.Locale?.getLocale?.()||'',includePrerelease:true}).then(response=>{
+      const artist=response?.data?.artistUnion;
+      if(!artist?.profile?.name)throw new Error(response?.errors?.[0]?.message||'No artist data');
+      artistCache.set(id,{promise:Promise.resolve(artist),time:Date.now()});
+      while(artistCache.size>60)artistCache.delete(artistCache.keys().next().value);
+      return artist;
+    });
+    if(!hit)artistCache.set(id,{promise,time:Date.now()});
+    promise.catch(()=>{if(artistCache.get(id)?.promise===promise)artistCache.delete(id);});
+    return hit&&age<30*60e3?(promise.catch(()=>{}),hit.promise):promise;
+  }
+  let prefetchTimer=0;
+  document.addEventListener('pointerover',event=>{
+    const link=event.target.closest?.('a[href*="/artist/"],[data-uri^="spotify:artist:"]');
+    if(!link){clearTimeout(prefetchTimer);return;}
+    const id=/artist[:/]([A-Za-z0-9]{22})/.exec(link.getAttribute('href')||link.dataset.uri||'')?.[1];
+    if(!id||artistCache.has(id)||nativeArtists.has(id)||typeof S.GraphQL?.Request!=='function')return;
+    clearTimeout(prefetchTimer);prefetchTimer=setTimeout(()=>artistOverview(id).then(artist=>{
+      // and the header photo, so the click finds both (Spotify's image CDN).
+      const header=artist.headerImage?.data||artist.visuals?.headerImage,img=new Image();img.decoding='async';
+      img.src=header?.sources?.length?heroSource(header):artistImage(artist.visuals?.avatarImage,true);
+      if(header?.sources?.length)headerBars(smallImage(header));
+    }).catch(()=>{}),80);
+  },{passive:true});
+  // The header's source: the smallest one of the header's own shape (2.33:1; the 16:9 ones are another crop) that is
+  // still sharp at this width, e.g. 1494px (~200KB) on a 1x screen instead of always 2660px (~650KB).
+  function heroSource(visual) {
+    const need=(innerWidth-(document.getElementById('am-sidebar')?.offsetWidth||0))*1.17*(devicePixelRatio||1),sources=bySize(visual).filter(s=>{const w=s.width||s.maxWidth,h=s.height||s.maxHeight;return !w||!h||Math.abs(w/h-7/3)<.1;});
+    return spotifyImage((sources.find(s=>(s.width||s.maxWidth||0)>=need)||sources.at(-1)||bySize(visual).at(-1))?.url||'');
+  }
+  // Some headers carry black bars baked into the image (Doja Cat: 203px a side; Sade: a band on top). Measured on a
+  // small copy; uniform near-black edges over 1.5% are left out of the image's view box. Kept per image and measured
+  // on hover too: measured on every visit, the crop landed ~300ms after the photo and zoomed it (David Bowie: 2.5%).
+  const heroCrops=new Map();
+  function headerBars(url) {
+    if(heroCrops.has(url))return Promise.resolve(heroCrops.get(url));
+    return measureBars(url).then(crop=>{heroCrops.set(url,crop);if(heroCrops.size>100)heroCrops.delete(heroCrops.keys().next().value);return crop;});
+  }
+  function measureBars(url) {
+    return new Promise(resolve=>{
+      if(!url)return resolve(null);
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const w=280,h=120,canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+        const c=canvas.getContext('2d',{willReadFrequently:true});c.drawImage(img,0,0,w,h);const d=c.getImageData(0,0,w,h).data;
+        const dark=(x0,y0,x1,y1)=>{let max=0;for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){const i=(y*w+x)*4;max=Math.max(max,d[i],d[i+1],d[i+2]);}return max<20;};
+        let l=0,r=0,t=0,b=0;
+        while(l<w/3&&dark(l,0,l+1,h))l++;while(r<w/3&&dark(w-1-r,0,w-r,h))r++;
+        while(t<h/3&&dark(0,t,w,t+1))t++;while(b<h/3&&dark(0,h-1-b,w,h-b))b++;
+        const pct=(v,n)=>v/n>.015?((v+1)/n*100).toFixed(2)+'%':'0%';  // one sample more: the bar's edge is soft in the JPEG
+        resolve(l+r+t+b?`inset(${pct(t,h)} ${pct(r,w)} ${pct(b,h)} ${pct(l,w)})`:null);
+      }catch{resolve(null);}};
+      img.src=url;
+    });
+  }
   async function renderArtist(id) {
-    const request=++artistRequest,uri='spotify:artist:'+id;
+    const request=++artistRequest,uri='spotify:artist:'+id;closeArtistInfo();heroProgress='';
     currentMode='artist';++libraryRequest;clearLibrary();
     document.body.classList.remove('am-library-open','am-search-open','am-tinted');document.body.classList.add('am-artist-open');updateNav();
     artistView.replaceChildren(el('p','am-artist-loading',T('Yükleniyor…','Loading…')));artistView.scrollTop=0;
     let artist;
-    try{
-      const response=await S.GraphQL.Request(S.GraphQL.Definitions.queryArtistOverview,{uri,locale:S.Locale?.getLocale?.()||'',includePrerelease:true});
-      artist=response?.data?.artistUnion;
-      if(!artist?.profile?.name)throw new Error(response?.errors?.[0]?.message||'No artist data');
-    }catch(e){
+    try{artist=await artistOverview(id);}catch(e){
       if(request!==artistRequest)return;
       console.warn('[AppleMusicMac] Artist view, using Spotify page',e);
       nativeArtists.add(id);closeArtist();currentMode='native';return;
@@ -1826,7 +2002,7 @@
     page.append(glassRoot,back,actions);
     // Hero: full-bleed artwork that fades into the tint, name and the play/follow pair.
     const hero=el('header','am-artist-hero'+(avatarOnly?' am-hero-avatar':''));
-    const heroArt=lazyImage(artistImage(header||visuals.avatarImage,true),avatarOnly?'am-hero-portrait':'am-hero-image');heroArt.loading='eager';
+    const heroArt=lazyImage(avatarOnly?artistImage(visuals.avatarImage,true):heroSource(header),avatarOnly?'am-hero-portrait':'am-hero-image');heroArt.loading='eager';
     const heroContent=el('div','am-hero-content');
     if(avatarOnly)heroContent.append(heroArt);
     const concerts=artist.goods?.events?.concerts?.items||[];
@@ -1836,16 +2012,25 @@
     const playButton=button(T(artist.profile.name+' çal','Play '+artist.profile.name),'heroPlay',()=>playArtist(uri),'am-hero-play');
     let saved=!!artist.saved;
     const follow=button(T('Takip et','Follow'),'star',async()=>{
-      try{saved=await toggleSaved(uri,saved);follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');}
+      try{saved=await toggleSaved(uri,saved);artist.saved=saved;follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');}
       catch{notify(T('Takip durumu değiştirilemedi.','Couldn\'t change follow status.'));}
     },'am-hero-follow');
     follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');
-    heroActions.append(playButton,follow);heroContent.append(heroActions);
+    const info=button(T('Hakkında','About'),'info',()=>openArtistInfo(artist,info),'am-hero-info');
+    heroActions.append(info,playButton,follow);heroContent.append(heroActions);
+    // The ⓘ sheet's colour and photo, ready before it is opened (after the header's own image has had its turn).
+    const sheetUrl=sheetPhoto(artist);
+    if(sheetUrl&&!sheetColors.has(sheetUrl))setTimeout(()=>sheetColor(sheetUrl).then(color=>{if(color){sheetColors.set(sheetUrl,color);while(sheetColors.size>100)sheetColors.delete(sheetColors.keys().next().value);}}),700);
     // The mask lives on a wrapper so the drifting image never shows a hard clipped edge.
     if(avatarOnly)hero.append(heroContent);
     else{
       // Blurred copies fade in one after another at the bottom: Apple Music's progressive blur under the name and buttons.
       const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
+      const cropUrl=smallImage(header),setCrop=crop=>{if(crop){heroMedia.style.setProperty('--am-hero-crop',crop);heroMedia.classList.add('am-hero-cropped');}};
+      if(heroCrops.has(cropUrl))setCrop(heroCrops.get(cropUrl));else headerBars(cropUrl).then(crop=>{if(request===artistRequest)setCrop(crop);});
+      // Scrolling softens the photo by fading in copies blurred once (5 and 14px) instead of animating a blur radius,
+      // which re-ran a blur over the whole photo on every scroll frame (it added dropped frames in fast scrolls).
+      for(const step of [1,2]){const haze=lazyImage(heroArt.src,'am-hero-image am-hero-haze am-haze-'+step);haze.loading='eager';heroMedia.append(haze);}
       for(const step of [1,2,3,4,5]){const soft=el('div','am-hero-soft am-soft-'+step),copy=lazyImage(heroArt.src,'am-hero-image');copy.loading='eager';soft.append(copy);heroMedia.append(soft);}
       hero.append(heroMedia,heroContent);
     }
@@ -1955,11 +2140,14 @@
     return section;
   }
   // The hero image drifts and softens as the page scrolls, like Apple Music's artist header.
-  let heroFrame=0;
+  let heroFrame=0,heroProgress='';
   function updateHero() {
     heroFrame=0;
-    const progress=Math.min(1,artistScroll/Math.max(1,artistView.clientHeight*.7));
-    artistView.style.setProperty('--am-hero-progress',progress.toFixed(3));
+    const progress=Math.min(1,artistScroll/Math.max(1,artistView.clientHeight*.7)).toFixed(3);
+    if(progress===heroProgress)return;heroProgress=progress;
+    // Set on the header, not the page: an inherited custom property changed on #am-artist restyled every shelf and
+    // card on each scroll frame, and kept doing so (at 1.000) long after the header had scrolled away.
+    artistView.querySelector('.am-artist-hero')?.style.setProperty('--am-hero-progress',progress);
   }
   artistView.addEventListener('scroll',()=>{artistScroll=artistView.scrollTop;if(!heroFrame)heroFrame=requestAnimationFrame(updateHero);},{passive:true});
   // Sticky bars such as the home chips row paint a solid layer: an absolute child of the sticky bar with only
@@ -2012,8 +2200,11 @@
     if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
     if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
-    closeArtist();
-    currentMode='native';++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');
+    const closeLibrary=()=>{++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');},body=document.body.classList;
+    if(artistId){closeArtist();closeLibrary();}
+    else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
+    else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
+    currentMode='native';
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host
