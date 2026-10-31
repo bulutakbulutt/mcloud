@@ -606,13 +606,57 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-hero-content {position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 32px 26px;text-align:center}
 .am-hero-pill {padding:4px 10px;border-radius:7px;background:#00000040;backdrop-filter:blur(10px);font-size:11px;font-weight:600}
 .am-artist-name {margin:0;font-size:clamp(30px,3vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.1;text-shadow:0 1px 18px #0003}
-.am-hero-actions {display:flex;align-items:center;gap:22px;margin-top:6px;padding-left:62px}
+.am-hero-actions {display:flex;align-items:center;gap:22px;margin-top:6px}
 #am-artist .am-hero-play {display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:white;color:var(--am-tint-top,#333);box-shadow:0 4px 16px #0003;transition:transform .12s}
 #am-artist .am-hero-play svg {width:31px;height:31px}
 #am-artist .am-hero-play:active {transform:scale(.94)}
-#am-artist .am-hero-follow {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#ffffff26;backdrop-filter:blur(10px)}
-#am-artist .am-hero-follow svg {width:17px;height:17px}
+#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#ffffff26;backdrop-filter:blur(10px)}
+#am-artist :is(.am-hero-follow,.am-hero-info) svg {width:17px;height:17px}
 #am-artist .am-hero-follow.am-active svg path {fill:currentColor}
+/* The ⓘ sheet, measured on Apple Music's About sheet (see openArtistInfo in theme.js). W (--am-iw) is the card's width,
+   704pt there. Fade 0.495W to 1.295W; blur 0 until 0.8W, then 3, 6, 10, 16, 24, 32pt by 0.852, 0.908, 0.965, 1.022, 1.08
+   and 1.15W. Text: name 26/31 bold, labels 11/13, values 14/17, chips 25 tall, heading 16/19, bio 13/18. */
+#am-artist-info {position:fixed;inset:0;z-index:75;background:#0000007d;animation:am-info-in .2s ease-out}
+@keyframes am-info-in {from{opacity:0}}
+.am-info-card {--am-iw:min(704px,calc(100vw - 32px));position:absolute;top:52px;bottom:40px;left:calc(50% - var(--am-iw) / 2);width:var(--am-iw);border-radius:16px;overflow:hidden;background:var(--am-tint-top,#3a3a3a);box-shadow:0 22px 70px #0000008c;color:#e4e4e4;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;-webkit-app-region:no-drag}
+.am-info-scroll {position:absolute;inset:0;overflow:auto;background:inherit;overscroll-behavior:contain;scrollbar-width:none}
+.am-info-media {position:relative;height:calc(var(--am-iw) * 1.295);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 38.2%,#0000);mask-image:linear-gradient(180deg,#000 38.2%,#0000)}
+.am-info-photo {position:absolute;top:0;left:0;width:100%;height:77.2%;object-fit:cover;-webkit-box-reflect:below}
+.am-info-soft {position:absolute;inset:61.7% 0 0;overflow:hidden}
+/* Not widened like the hero's copies: the photo is square, so a wider box would scale it and break the alignment. */
+.am-info-soft .am-info-photo {top:-161.1%;height:201.6%}
+.am-info-soft-1 {-webkit-mask-image:linear-gradient(180deg,#0000 0,#000 10.6%);mask-image:linear-gradient(180deg,#0000 0,#000 10.6%)}
+.am-info-soft-2 {-webkit-mask-image:linear-gradient(180deg,#0000 10.6%,#000 21.8%);mask-image:linear-gradient(180deg,#0000 10.6%,#000 21.8%)}
+.am-info-soft-3 {-webkit-mask-image:linear-gradient(180deg,#0000 21.8%,#000 33.2%);mask-image:linear-gradient(180deg,#0000 21.8%,#000 33.2%)}
+.am-info-soft-4 {-webkit-mask-image:linear-gradient(180deg,#0000 33.2%,#000 44.9%);mask-image:linear-gradient(180deg,#0000 33.2%,#000 44.9%)}
+.am-info-soft-5 {-webkit-mask-image:linear-gradient(180deg,#0000 44.9%,#000 56.4%);mask-image:linear-gradient(180deg,#0000 44.9%,#000 56.4%)}
+.am-info-soft-6 {-webkit-mask-image:linear-gradient(180deg,#0000 56.4%,#000 70.8%);mask-image:linear-gradient(180deg,#0000 56.4%,#000 70.8%)}
+.am-info-soft-1 .am-info-photo {filter:blur(calc(var(--am-iw) * .00426))}
+.am-info-soft-2 .am-info-photo {filter:blur(calc(var(--am-iw) * .00852))}
+.am-info-soft-3 .am-info-photo {filter:blur(calc(var(--am-iw) * .0142))}
+.am-info-soft-4 .am-info-photo {filter:blur(calc(var(--am-iw) * .0227))}
+.am-info-soft-5 .am-info-photo {filter:blur(calc(var(--am-iw) * .0341))}
+.am-info-soft-6 .am-info-photo {filter:blur(calc(var(--am-iw) * .0455))}
+.am-info-body {position:relative;margin-top:calc(var(--am-iw) * -.6044);padding:0 20px 40px}
+.am-info-body.am-info-plain {margin-top:0;padding-top:64px}
+.am-info-name {margin:0;font-size:26px;line-height:31px;font-weight:700;letter-spacing:-.01em;color:#e4e4e4}
+.am-info-facts {display:grid;grid-template-columns:1fr 1fr;column-gap:20px;row-gap:11.5px;margin-top:15px}
+.am-info-fact {display:flex;flex-direction:column;gap:1px;min-width:0}
+.am-info-wide {grid-column:1 / -1}
+.am-info-label {font-size:11px;line-height:13px;font-weight:600;color:#484848;mix-blend-mode:plus-lighter}
+.am-info-value {font-size:14px;line-height:17px;font-weight:600;color:#e4e4e4}
+.am-info-chips {display:flex;flex-wrap:wrap;gap:8px;margin-top:5px}
+.am-info-chip {position:relative;height:25px;padding:0 12px;font-size:12px;line-height:25px;font-weight:600;color:#e4e4e4;white-space:nowrap}
+.am-info-chip::before {content:'';position:absolute;inset:0;border-radius:12.5px;border:1px solid #1a1a1a;background:#141414;mix-blend-mode:plus-lighter}
+.am-info-chip > span {position:relative}
+.am-info-heading {margin:36px 0 0;font-size:16px;line-height:19px;font-weight:700;color:#e4e4e4}
+/* The bio dims from its first line down (187 to 157 added over 150px), with the content, not at the card's edge:
+   in a short window Apple's text right above the edge keeps its colour. */
+.am-info-bio {margin:12px 0 0;font-size:13px;line-height:18px;color:#0000;background:linear-gradient(180deg,#bbb 4px,#9d9d9d 154px);-webkit-background-clip:text;background-clip:text;mix-blend-mode:plus-lighter;white-space:pre-line}
+#am-artist-info .am-info-close {position:absolute;top:16px;left:15.5px;z-index:1;display:grid;place-items:center;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:#78787879;color:white;cursor:pointer}
+#am-artist-info .am-info-close svg {width:20px;height:20px;stroke-width:1.5}
+#am-artist-info .am-info-close:focus-visible {outline:2px solid white;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#am-artist-info{animation:none}}
 .am-artist-body {display:flex;flex-direction:column;gap:30px;padding:10px 0 0 var(--am-side)}
 .am-shelf {position:relative}
 #am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}

@@ -562,6 +562,28 @@ try {
     assert.ok(hero.src && hero.aligned, JSON.stringify(hero));
     assert.ok(Math.abs(hero.photoH - hero.w / 2) < 1 && Math.abs(hero.mediaH - hero.w * .646) < 1, JSON.stringify(hero));
     assert.deepEqual(hero.blurs.map(b => Math.round(b / hero.w * 1042)), [0, 3, 6, 10, 15, 20]);
+    // ⓘ, play and follow are symmetric under the name, as in Apple Music.
+    assert.ok(await page.evaluate(() => { const c = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.left + r.width / 2; }; return Math.abs((c('.am-hero-play') - c('.am-hero-info')) - (c('.am-hero-follow') - c('.am-hero-play'))) < 1 && Math.abs(c('.am-hero-play') - c('.am-artist-name')) < 1; }));
+    // ⓘ opens the About sheet measured on Apple Music's: 704px card 52px from the top, photo copies aligned and blurred
+    // in steps, facts, city chips and the bio; Escape closes it and focus returns to ⓘ, a click on the dim closes it too.
+    await page.click('.am-hero-info');
+    await page.waitForSelector('#am-artist-info .am-info-card');
+    const sheet = await page.evaluate(() => {
+      const card = document.querySelector('.am-info-card').getBoundingClientRect(), imgs = [...document.querySelectorAll('.am-info-media .am-info-photo')], s = imgs[0].getBoundingClientRect();
+      return { w: card.width, top: card.top, vw: innerWidth, role: document.querySelector('.am-info-card').getAttribute('role'), focus: document.activeElement?.classList.contains('am-info-close'),
+        name: document.querySelector('.am-info-name').textContent, labels: [...document.querySelectorAll('.am-info-label')].map(l => l.textContent), chips: document.querySelectorAll('.am-info-chip').length,
+        bio: document.querySelector('.am-info-bio')?.textContent, aligned: imgs.slice(1).every(i => { const r = i.getBoundingClientRect(); return Math.abs(r.top - s.top) < 1 && Math.abs(r.height - s.height) < 1; }),
+        photo: Math.round(s.width) === Math.round(card.width) && Math.round(s.height) === Math.round(card.width), blurs: imgs.map(i => Math.round(parseFloat(/blur\(([\d.]+)px/.exec(getComputedStyle(i).filter)?.[1] ?? '0') / card.width * 704)) };
+    });
+    assert.deepEqual([sheet.w, sheet.top, sheet.role, sheet.focus, sheet.name, sheet.chips, sheet.aligned, sheet.photo], [Math.min(704, sheet.vw - 32), 52, 'dialog', true, 'Sena Şener', 3, true, true], JSON.stringify(sheet));
+    assert.deepEqual(sheet.labels, ['Aylık dinleyici', 'Takipçi', 'En çok dinlendiği şehirler']);
+    assert.equal(sheet.bio, 'Sena Şener, İstanbul doğumlu şarkıcı ve söz yazarı.');
+    assert.deepEqual(sheet.blurs, [0, 3, 6, 10, 16, 24, 32]);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.getElementById('am-artist-info') && document.activeElement?.classList.contains('am-hero-info'));
+    await page.click('.am-hero-info'); await page.waitForSelector('#am-artist-info');
+    await page.mouse.click(8, 300);
+    await page.waitForFunction(() => !document.getElementById('am-artist-info'));
     assert.ok(await page.evaluate(() => document.querySelector('.am-hero-media').getBoundingClientRect().bottom > document.querySelector('.am-artist-body').getBoundingClientRect().top + 40));
     assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.3);
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));

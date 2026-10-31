@@ -21,6 +21,8 @@
     play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
+    info:'<path d="M12 10.5v7.5" stroke-width="2.2"/><circle cx="12" cy="6.8" r="1.35" fill="currentColor" stroke="none"/>',
+    close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -1729,9 +1731,77 @@
   const bySize=visual=>[...(visual?.sources||[])].sort((a,b)=>(a.width||a.maxWidth||0)-(b.width||b.maxWidth||0));
   const smallImage=visual=>spotifyImage(bySize(visual)[0]?.url||'');
   function closeArtist() {
+    closeArtistInfo();
     if(!document.body.classList.contains('am-artist-open')&&!artistView.hasChildNodes())return;
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
     artistView.replaceChildren();artistView.scrollTop=0;syncArtistGlass(null);
+  }
+  // The ⓘ sheet, measured on Apple Music's (macOS, six artists from light to dark): a 704pt card 52pt below the window's
+  // top and 40pt above its bottom over a 49% black dim. Its square photo fades linearly from 0.495W into the photo's most
+  // common colour (Apple's bgColor; brightness capped at 42%, so white text always reads) and blurs in steps from 0.8W.
+  // Name, values and headings are solid #e4e4e4; labels, chips and the bio are added onto what is behind them
+  // (plus-lighter), as macOS draws vibrant text.
+  let infoSheet=null,infoOpener=null;
+  function closeArtistInfo() {
+    if(!infoSheet)return;
+    infoSheet.remove();infoSheet=null;infoOpener?.focus?.({preventScroll:true});infoOpener=null;
+  }
+  function sheetColor(url) {
+    return new Promise(resolve=>{
+      if(!url)return resolve(null);
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
+      img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const size=64,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
+        const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(img,0,0,size,size);
+        const data=context.getImageData(0,0,size,size).data,buckets=new Map();
+        for(let i=0;i<data.length;i+=4){
+          const key=(data[i]/24|0)*121+(data[i+1]/24|0)*11+(data[i+2]/24|0),bucket=buckets.get(key)||[0,0,0,0];
+          bucket[0]+=data[i];bucket[1]+=data[i+1];bucket[2]+=data[i+2];bucket[3]++;buckets.set(key,bucket);
+        }
+        const top=[...buckets.values()].reduce((a,b)=>b[3]>a[3]?b:a);let rgb=top.slice(0,3).map(v=>v/top[3]);
+        const max=Math.max(...rgb);if(max>107)rgb=rgb.map(v=>v*107/max);
+        resolve(`rgb(${rgb.map(Math.round).join(',')})`);
+      }catch{resolve(null);}};
+      img.src=url;
+    });
+  }
+  function openArtistInfo(artist,opener) {
+    closeArtistInfo();
+    const profile=artist.profile||{},stats=artist.stats||{},visuals=artist.visuals||{},number=new Intl.NumberFormat(lang);
+    const photo=artistImage(visuals.gallery?.items?.[0]||visuals.avatarImage,true);
+    const sheet=el('div','am-info');sheet.id='am-artist-info';
+    const card=el('section','am-info-card');card.setAttribute('role','dialog');card.setAttribute('aria-modal','true');card.setAttribute('aria-label',profile.name||T('Hakkında','About'));
+    const scroll=el('div','am-info-scroll'),close=button(T('Kapat','Close'),'close',closeArtistInfo,'am-info-close');
+    if(photo){
+      const media=el('div','am-info-media'),sharp=lazyImage(photo,'am-info-photo');sharp.loading='eager';media.append(sharp);
+      for(const step of [1,2,3,4,5,6]){const soft=el('div','am-info-soft am-info-soft-'+step),copy=lazyImage(photo,'am-info-photo');copy.loading='eager';soft.append(copy);media.append(soft);}
+      scroll.append(media);
+      sheetColor(photo).then(color=>{if(color&&infoSheet===sheet)card.style.backgroundColor=color;});
+    }
+    const body=el('div','am-info-body'+(photo?'':' am-info-plain')),facts=el('div','am-info-facts');
+    body.append(el('h2','am-info-name',profile.name||''));
+    const fact=(label,value,wide)=>{const item=el('div','am-info-fact'+(wide?' am-info-wide':''));item.append(el('span','am-info-label',label),value);facts.append(item);};
+    if(stats.monthlyListeners)fact(T('Aylık dinleyici','Monthly listeners'),el('span','am-info-value',number.format(stats.monthlyListeners)));
+    if(stats.followers)fact(T('Takipçi','Followers'),el('span','am-info-value',number.format(stats.followers)));
+    const cities=(stats.topCities?.items||[]).filter(c=>c?.city).slice(0,5);
+    if(cities.length){const chips=el('div','am-info-chips');for(const c of cities){const chip=el('span','am-info-chip');chip.append(el('span','',c.city));chips.append(chip);}fact(T('En çok dinlendiği şehirler','Top cities'),chips,true);}
+    if(facts.childElementCount)body.append(facts);
+    const raw=profile.biography?.text||'';
+    if(raw){
+      const holder=document.createElement('template');holder.innerHTML=raw;const text=holder.content.textContent.trim();
+      if(text)body.append(el('h3','am-info-heading',T('Hakkında','About')),el('p','am-info-bio',text));
+    }
+    scroll.append(body);card.append(scroll,close);sheet.append(card);
+    sheet.addEventListener('pointerdown',event=>{if(event.target===sheet)closeArtistInfo();});
+    sheet.addEventListener('keydown',event=>{
+      if(event.key==='Escape'){event.preventDefault();event.stopPropagation();closeArtistInfo();}
+      else if(event.key==='Tab'){
+        const items=[...card.querySelectorAll('button,a[href],[tabindex]:not([tabindex="-1"])')],at=items.indexOf(document.activeElement);
+        event.preventDefault();items[(at+(event.shiftKey?-1:1)+items.length)%items.length]?.focus();
+      }
+    });
+    document.body.append(sheet);infoSheet=sheet;infoOpener=opener;close.focus({preventScroll:true});
   }
   const artistImage=(visual,big)=>{const sources=bySize(visual);return spotifyImage((big?sources.at(-1):sources.find(s=>(s.width||0)>=300)||sources.at(-1))?.url||'');};
   const releaseDate=date=>{
@@ -1789,7 +1859,7 @@
     }catch{notify(T('Çalma başlatılamadı.','Couldn\'t start playback.'));}
   }
   async function renderArtist(id) {
-    const request=++artistRequest,uri='spotify:artist:'+id;
+    const request=++artistRequest,uri='spotify:artist:'+id;closeArtistInfo();
     currentMode='artist';++libraryRequest;clearLibrary();
     document.body.classList.remove('am-library-open','am-search-open','am-tinted');document.body.classList.add('am-artist-open');updateNav();
     artistView.replaceChildren(el('p','am-artist-loading',T('Yükleniyor…','Loading…')));artistView.scrollTop=0;
@@ -1840,7 +1910,8 @@
       catch{notify(T('Takip durumu değiştirilemedi.','Couldn\'t change follow status.'));}
     },'am-hero-follow');
     follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');
-    heroActions.append(playButton,follow);heroContent.append(heroActions);
+    const info=button(T('Hakkında','About'),'info',()=>openArtistInfo(artist,info),'am-hero-info');
+    heroActions.append(info,playButton,follow);heroContent.append(heroActions);
     // The mask lives on a wrapper so the drifting image never shows a hard clipped edge.
     if(avatarOnly)hero.append(heroContent);
     else{
