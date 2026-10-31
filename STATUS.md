@@ -97,6 +97,7 @@ Working notes for the next session (people and agents). Read after AGENTS.md. Wo
 
 ## Gotchas found the hard way
 
+- **Marketplace installs load `theme.js` and `user.css` from jsDelivr** (`cdn.jsdelivr.net/gh/bulutakbulutt/mcloud@main/…`, on every Spotify start), even though `manifest.json` names `user.css` relative to the repo: Marketplace rewrites GitHub raw URLs to jsDelivr. jsDelivr caches a branch for up to 12 hours and ignores Marketplace's `?time=` query, so on 2026-10-31 it served a `theme.js` from that morning with a `user.css` from the day before. `.github/workflows/purge-cdn.yml` purges both after each push to main that touches them and fails if the CDN still serves old files; run it by hand (workflow_dispatch) if a purge is needed. `color.ini` is read once at install and stored by Marketplace, so a scheme change reaches existing installs only after a reinstall.
 - `spicetify config <key> <value>` **writes**, it does not read, and the change can get applied right away. Read `config-xpui.ini` instead (path from `spicetify -c`). Remove a list item with `spicetify config extensions name-`. On this machine `extensions` should be empty (only the theme and Marketplace load).
 - Spotify marks the window's top 60px (`.body-drag-top`) as a drag region; controls there need `-webkit-app-region:no-drag`. The browser preview cannot show this.
 - Links inside Spotify carry a locale prefix (`/intl-tr/artist/…`); use `routePath()`.

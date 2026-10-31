@@ -67,3 +67,5 @@ To try a change in the real client, run `./install.sh` (or `.\install.ps1`) from
 ## Releases
 
 Bump the version comment at the top of `theme.js` and `user.css` together. The installers default to `main`; tags can be installed with `--ref` / `-Ref`.
+
+Marketplace loads `theme.js` and `user.css` from jsDelivr's `@main`, which caches for up to 12 hours; `.github/workflows/purge-cdn.yml` purges it after each push to main.
