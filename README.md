@@ -65,6 +65,7 @@ Click **your profile** in the bottom-left corner to pick an accent colour or ope
 | --- | --- |
 | *Artwork in player* (*Oynatıcıda albüm kapağı*) | Shows the current track's artwork in the player. |
 | *Liquid Glass player* (*Liquid Glass oynatıcı*) | A macOS 26-style glass effect: the page behind refracts along the player's edges. Turn it off to go back to classic frosted glass. |
+| *Glass effect: Full / Balanced / Eco* (*Cam efekti: Tam / Dengeli / Eko*) | **Balanced** (default) uses the real glass everywhere except the Spicy Lyrics page, where its background redraws every frame and the glass would be redrawn with it; there the surfaces keep the glass look without the blur. **Full** keeps the real glass there too and works the GPU hard. **Eco** swaps the glass and blur effects for solid surfaces everywhere. |
 | *Colour: …* (*Renk: …*) | Changes the accent colour. |
 | *Language: …* (*Dil: …*) | *Automatic* follows Spotify's language; *English* or *Türkçe* fixes it. Spotify reloads to apply it. |
 

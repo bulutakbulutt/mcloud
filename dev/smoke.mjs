@@ -413,6 +413,54 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('glass modes: balanced drops backdrop filters on the Spicy page only, full keeps them, eco is solid', async () => {
+    // face/pane: the player's and the toolbar's glass layers as drawn ('none' when hidden, null when not built).
+    const state = () => page.evaluate(() => {
+      const shown = sel => { const e = document.querySelector(sel); return e ? getComputedStyle(e).display !== 'none' : null; };
+      return { mode: ['am-balanced', 'am-solid'].filter(c => document.body.classList.contains(c)).join() || 'full', face: shown('#am-player .am-player-face'), pane: shown('#am-toolbar-glass > .am-tglass-pane'),
+        sidebar: /blur/.test(getComputedStyle(document.getElementById('am-sidebar')).backdropFilter), glow: shown('#am-sidebar-glow') };
+    });
+    const pick = name => page.evaluate(n => window.__menus[0].items.find(i => i.name === n).onClick(), name);
+    const glass = { face: true, pane: true, sidebar: true, glow: true };
+    assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
+    await page.evaluate(() => Spicetify.Platform.History.push('/SpicyLyrics'));
+    await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+    assert.deepEqual(await state(), { mode: 'am-balanced', face: false, pane: false, sidebar: false, glow: false });
+    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backgroundImage), /gradient/);
+    // With the Liquid Glass player off, the toolbar's own buttons blur the page; Balanced turns that off here too.
+    const blurs = () => page.evaluate(() => [...document.querySelectorAll('#global-nav-bar :is(button,input), #am-player, #am-sidebar')].filter(e => getComputedStyle(e).backdropFilter !== 'none').length);
+    await pick('Liquid Glass oynatıcı');
+    await page.waitForFunction(() => !document.body.classList.contains('am-tglass-on'));
+    assert.equal(await blurs(), 0);
+    await pick('Liquid Glass oynatıcı');
+    await page.waitForFunction(() => document.body.classList.contains('am-tglass-on'));
+    await pick('Cam efekti: Tam');
+    assert.deepEqual(await state(), { mode: 'full', ...glass });
+    await pick('Cam efekti: Eko');
+    await page.waitForFunction(() => !document.getElementById('am-toolbar-glass'));
+    assert.deepEqual(await state(), { mode: 'am-solid', face: null, pane: null, sidebar: false, glow: false });
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).glass, 'eco');
+    await pick('Cam efekti: Dengeli');
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForSelector('#am-toolbar-glass > .am-tglass-pane');
+    assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
+    // Reduced transparency in the OS keeps Eco: the menu checks Eco and says why another pick changes nothing.
+    const checks = () => page.evaluate(() => window.__menus[0].items.filter(i => i.name.startsWith('Cam efekti: ')).map(i => i.checked));
+    assert.deepEqual(await checks(), [false, true, false]);
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
+    await page.waitForFunction(() => document.body.classList.contains('am-solid'));
+    assert.deepEqual(await checks(), [false, false, true]);
+    await pick('Cam efekti: Tam');
+    assert.match(await page.textContent('.am-toast'), /saydamlık/);
+    assert.deepEqual(await checks(), [false, false, true]);
+    await pick('Cam efekti: Dengeli');
+    await cdp.send('Emulation.setEmulatedMedia', { features: [] });
+    await page.waitForFunction(() => !document.body.classList.contains('am-solid'));
+    assert.deepEqual(await checks(), [false, true, false]);
+    await cdp.detach();
+  });
+
   await check('album page: artwork, title column and play controls laid out like Apple Music', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
     // The shape of Spotify's album page: header, then the action bar inside an OverlayScrollbars host. Spotify's
