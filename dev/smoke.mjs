@@ -187,7 +187,19 @@ try {
 
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    // Hover submenu test: hovering 'Çalma Listesine Ekle' opens the flyout submenu to the right
+    await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
+    assert.ok(await page.locator('#am-popover-sub').isVisible());
+    assert.ok(await page.locator('#am-popover-sub .am-popover-item:has-text("+ Yeni Çalma Listesi")').isVisible());
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('#am-popover-sub').isHidden());
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('#am-popover').isHidden());
+    // Right click on player also opens track menu
+    await page.click('#am-player', { button: 'right' });
+    assert.ok(await page.locator('#am-popover').isVisible());
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
@@ -547,6 +559,12 @@ try {
     // It is Liquid Glass with a lens of its own, drawn at the toast's size.
     assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.am-toast')).backdropFilter), /url\(.*#am-glass-toast/);
     await page.waitForFunction(() => document.querySelector('#am-glass-toast feImage').getAttribute('width') === String(document.querySelector('.am-toast').offsetWidth));
+    // Right-click on song row opens context menu
+    await page.click('.am-song >> nth=0', { button: 'right' });
+    assert.ok(await page.locator('#am-popover').isVisible());
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Şarkı Bağlantısını Kopyala']);
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('#am-popover').isHidden());
     await page.click('.am-artist-back');
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });
@@ -617,6 +635,12 @@ try {
     await page.fill('.am-library-filter', '');
     await page.selectOption('.am-library-sort', 'name');
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
+    // Right-click on library card opens context menu
+    await page.click('.am-library-card >> nth=0', { button: 'right' });
+    assert.ok(await page.locator('#am-popover').isVisible());
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala']);
+    await page.keyboard.press('Escape');
+    assert.ok(await page.locator('#am-popover').isHidden());
   });
   await shot('library');
 

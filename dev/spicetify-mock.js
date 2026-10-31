@@ -41,8 +41,10 @@
       getProgressPercent: () => state.progress / state.duration, seek: ms => { state.progress = ms; },
       getHeart: () => state.liked, toggleHeart: () => { state.liked = !state.liked; },
       back() {}, next() {},
+      playUri: async uri => { window.__playedUri = uri; },
       addEventListener: (n, f) => (playerListeners[n] ||= []).push(f),
     },
+    addToQueue: async items => { (window.__queueAdds ||= []).push(...items); },
     Platform: {
       History: {
         location: { pathname: '/', search: '' },
@@ -50,6 +52,13 @@
         listen: f => listeners.push(f),
       },
       UserAPI: { getUser: async () => ({ username: 'emir', displayName: 'Emir Bilici', images: [] }) },
+      PlayerAPI: {
+        addToQueue: async items => { (window.__queueAdds ||= []).push(...items); },
+        play: async () => {},
+      },
+      PlaylistAPI: {
+        add: async (playlistUri, uris, options) => { (window.__playlistAdds ||= []).push({ playlistUri, uris, options }); },
+      },
       LibraryAPI: {
         // filters ['2'] = playlists and folders; sortOrder '6' = Recents, the order the mock list is already in.
         getContents: async ({ offset, filters = [], folderUri }) => {
