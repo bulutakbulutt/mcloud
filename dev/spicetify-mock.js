@@ -4,7 +4,7 @@
   const art = (hue, label) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue},70%,55%)"/><stop offset="1" stop-color="hsl(${(hue+60)%360},70%,30%)"/></linearGradient></defs><rect width="300" height="300" fill="url(#g)"/><text x="20" y="270" font-family="Helvetica" font-size="36" fill="white">${label}</text></svg>`);
   const names = ['Blonde','Currents','In Rainbows','Random Access Memories','Melodrama','Discovery','Norman F***ing Rockwell','Ctrl','Igor','Awaken, My Love!','Channel Orange','Kid A','Sour','folklore','After Hours','Ants From Up There','Punisher','Titanic Rising','Since I Left You','Heaven or Las Vegas'];
   const library = [];
-  names.forEach((n, i) => library.push({ uri: 'spotify:album:' + i, type: 'album', name: n, images: [{ url: art(i * 37, n.slice(0, 2)) }], owner: { name: 'Sanatçı ' + i } }));
+  names.forEach((n, i) => library.push({ uri: 'spotify:album:' + i, type: 'album', name: n, images: [{ url: art(i * 37, n.slice(0, 2)) }], artists: [{ type: 'artist', name: 'Sanatçı ' + i, uri: 'spotify:artist:a' + i }] }));
   ['Frank Ocean','Tame Impala','Radiohead','Daft Punk','Lorde','Phoebe Bridgers'].forEach((n, i) => library.push({ uri: 'spotify:artist:' + i, type: 'artist', name: n, images: [{ url: art(200 + i * 20, n[0]) }] }));
   // Playlists in the order Spotify's Recents sort returns them: pinned first, then by last played.
   library.push({ uri: 'spotify:folder:ruh', type: 'folder', name: 'Ruh Hali', pinned: true, images: [] });

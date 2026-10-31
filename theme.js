@@ -606,7 +606,8 @@
         if(kind==='artists'&&item.type!=='artist'||kind==='albums'&&item.type!=='album')continue;
         if(kind==='playlists'&&!['playlist','folder','liked-songs','your-episodes'].includes(item.type)&&item.uri!=='spotify:collection:tracks')continue;
         items.push({uri:item.uri,type:item.type,name:item.name,imageUrl:libraryImage(item),
-          subtitle:item.owner?.displayName||item.owner?.name||({artist:T('Sanatçı','Artist'),album:T('Albüm','Album'),playlist:T('Çalma listesi','Playlist'),folder:T('Klasör','Folder')}[item.type]||'')});
+          // Spotify's library items carry album artists in artists[], playlist owners in owner.
+          subtitle:item.owner?.displayName||item.owner?.name||item.artists?.map(a=>a.name).filter(Boolean).join(', ')||({artist:T('Sanatçı','Artist'),album:T('Albüm','Album'),playlist:T('Çalma listesi','Playlist'),folder:T('Klasör','Folder')}[item.type]||'')});
       }
       if(!result.items?.length||offset+result.items.length>=result.totalLength||result.items.length<200) break;
     }

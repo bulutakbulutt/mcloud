@@ -6,8 +6,7 @@
 
 A persistent sidebar, a floating player, a cover-art library view and Spicy Lyrics integration.
 
-<img width="1254" height="1254" alt="Unknown" src="https://github.com/user-attachments/assets/5dfe8c2c-c5fa-4b0d-8bb3-d43596734af8" />
-
+<img width="880" alt="mcloud in Spotify: the Apple Music sidebar, an album grid and the floating player" src="docs/screenshot.png" />
 
 </div>
 
@@ -58,6 +57,10 @@ The script:
 - **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
 - **Typeface:** On macOS the theme uses Apple's own SF Pro. On Windows and Linux it uses Inter, embedded in the theme, so nothing is downloaded from the internet.
 - **Lightweight:** Only the artwork on screen is loaded. Off-screen artwork is released, and background work pauses while the window is hidden.
+
+<p align="center"><img width="880" alt="The player's Liquid Glass bends the album art beneath it; with only a blur, the lines run straight through" src="docs/glass.png" /></p>
+
+<p align="center"><img width="880" alt="An artist page in mcloud: full-width photo, name and play button, Latest Release and Top Songs, the window tinted pink by the photo" src="docs/artist.png" /></p>
 
 ## Settings
 
