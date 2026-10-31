@@ -1564,7 +1564,13 @@
   if(S.Menu?.SubMenu&&S.Menu?.Item){
     const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
     const glassLabels={full:T('Tam','Full'),balanced:T('Dengeli','Balanced'),eco:T('Eko','Eco')};
-    const glass=glassModes.map(key=>new S.Menu.Item(T('Cam: ','Glass: ')+glassLabels[key],settings.glass===key,()=>{settings.glass=key;saveSettings();applySettings();glass.forEach((item,i)=>item.setState(glassModes[i]===key));}));
+    // The checkmark shows the mode in effect: reduced transparency in the OS keeps Eco whatever is picked.
+    const glassMode=()=>reducedTransparency.matches?'eco':settings.glass,syncGlass=()=>glass.forEach((item,i)=>item.setState(glassModes[i]===glassMode()));
+    const glass=glassModes.map(key=>new S.Menu.Item(T('Cam efekti: ','Glass effect: ')+glassLabels[key],glassMode()===key,()=>{
+      settings.glass=key;saveSettings();applySettings();syncGlass();
+      if(key!=='eco'&&reducedTransparency.matches)notify(T('Sistem ayarlarında saydamlık kapalı olduğu için cam efekti açılamıyor.','Transparency is reduced in your system settings, so the glass effect stays off.'));
+    }));
+    reducedTransparency.addEventListener?.('change',syncGlass);
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
