@@ -64,6 +64,13 @@ When you add a feature, extend `dev/spicetify-mock.js` with any Spicetify API it
 
 To try a change in the real client, run `./install.sh` (or `.\install.ps1`) from the clone. It copies the local files instead of downloading them.
 
+## Replying to issues
+
+- Show the change, not only a description: a reply that reports a fix includes screenshots from the real client. Use before/after where there is a "before" (the reporter's own screenshot works), and put Apple Music beside it when matching Apple Music was the point.
+- Crop the maintainer's personal data out of every screenshot: the sidebar's playlists, the profile, and the now-playing bar.
+- `gh` cannot upload attachments, so host the images in a gist and link their raw URLs.
+- Show the maintainer the draft and every image, and post only after they approve.
+
 ## Releases
 
 Bump the version comment at the top of `theme.js` and `user.css` together. The installers default to `main`; tags can be installed with `--ref` / `-Ref`.
