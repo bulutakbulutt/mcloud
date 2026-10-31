@@ -41,6 +41,12 @@ try {
       const value = getComputedStyle(b).backgroundColor; b.remove(); return value;
     });
     assert.equal(bg, 'rgb(250, 45, 72)');
+    // So does its playing equaliser, a green GIF: a filter fills its shape with the accent.
+    const equaliser = await page.evaluate(() => {
+      const img = document.body.appendChild(document.createElement('img')); img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=#/images/equaliser-animated-green.gif';
+      const value = [getComputedStyle(img).filter, getComputedStyle(document.querySelector('#am-accent-fill feFlood')).floodColor]; img.remove(); return value;
+    });
+    assert.deepEqual(equaliser, ['url("#am-accent-fill")', 'rgb(250, 45, 72)']);
   });
 
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {
@@ -144,6 +150,33 @@ try {
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
+  await check('a playlist\'s Add and Mix work in the header capsule', async () => {
+    // A playlist page with an image header and Spotify's editing row: Add (unlabelled, pressed while "Add to
+    // playlist" is open in the right panel) and Mix, whose glowing pill is stacked over its real button.
+    await page.evaluate(() => {
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<section class="mock-capsule" data-testid="playlist-page"><style>.mock-mix{position:relative}.mock-mix > .mock-pill{position:absolute;inset:0;pointer-events:none}</style>
+        <div data-testid="entity-header"><div class="main-entityHeader-imageContainer"></div></div>
+        <div class="contentSpacing" data-testid="playlist-toolbar"><div data-overlayscrollbars="host"><div data-overlayscrollbars-viewport><div>
+          <button class="mock-add" data-restore-focus-key="assisted_curation" aria-pressed="false" data-encore-id="buttonPrimary"><span><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Ekle</span></button>
+          <div class="mock-mix"><div><button class="mock-mix-button" aria-label="Mix" data-encore-id="buttonPrimary"><span><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Mix</span></button></div>
+            <div class="mock-pill"><div><button data-encore-id="buttonSecondary"><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Mix</button></div></div></div>
+        </div></div></div></div></section>`);
+      const add = document.querySelector('.mock-add'), label = 'Çalma listesine ekle';
+      const close = () => { add.setAttribute('aria-pressed', 'false'); swapPanel(npv); };
+      window.__mockAddClose = close;
+      add.addEventListener('click', () => { if (add.getAttribute('aria-pressed') === 'true') return close(); add.setAttribute('aria-pressed', 'true'); swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="__mockAddClose()">×</button></aside>`); });
+    });
+    // The pill sits on the real Mix button, so a click on it reaches the button.
+    await page.evaluate(() => { const vp = document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]'); vp.scrollTop = vp.scrollHeight; });
+    assert.equal(await page.evaluate(() => { const pill = document.querySelector('.mock-pill button').getBoundingClientRect(), hit = document.elementFromPoint(pill.left + pill.width / 2, pill.top + pill.height / 2); return hit.closest('button')?.className; }), 'mock-mix-button');
+    await page.click('.mock-add');
+    await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
+    assert.ok(await page.evaluate(() => { const a = document.querySelector('.am-native-right aside[aria-label="Çalma listesine ekle"]'); return a.classList.contains('am-friends-sheet') && a.getBoundingClientRect().width > 0; }), 'Add to playlist shows as the sheet');
+    await page.click('.am-native-right aside[aria-label="Çalma listesine ekle"] button[aria-label="Kapat"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    await page.evaluate(() => { document.querySelector('.mock-capsule').remove(); delete window.__mockAddClose; document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').scrollTop = 0; });
+  });
+
   await check('star toggles Liked Songs', async () => {
     await page.click('.am-star');
     await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
@@ -238,8 +271,20 @@ try {
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).lists, true);
     assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:6"] .am-list-art svg').count(), 'a playlist without artwork gets an icon');
     await shot('sidebar-lists-open');
-    await page.click('#am-sidebar .am-list-more');
+    // Open, the heading sticks to the top of the sidebar with its own Show Less; closing from deep in the list leaves
+    // the heading at the top with the short list under it, and focus on Show All.
+    const heading = () => page.locator('#am-sidebar .am-nav-heading:has(.am-nav-add)');
+    await page.setViewportSize({ width: 1440, height: 560 });
+    await page.$eval('#am-sidebar .am-navigation', n => { n.scrollTop = n.scrollHeight; });
+    await page.waitForFunction(() => document.querySelector('#am-sidebar .am-nav-heading.am-lists-open')?.classList.contains('am-stuck'));
+    assert.equal(await heading().evaluate(h => Math.round(h.getBoundingClientRect().top - h.parentElement.getBoundingClientRect().top)), 10);
+    await shot('sidebar-lists-stuck');
+    await page.click('#am-sidebar .am-nav-less');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
+    assert.ok(await page.evaluate(() => document.activeElement?.classList.contains('am-list-more')), 'focus stays on Show All');
+    assert.equal(await page.locator('#am-sidebar .am-nav-less').isVisible(), false);
+    await page.setViewportSize({ width: 1440, height: 900 });
     // Rows open their playlist, folders the library's folder view; the open one is selected.
     await page.click(rows + '[data-uri="spotify:playlist:1"]');
     assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/1');
@@ -252,6 +297,20 @@ try {
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:playlist:2'; window.__firePlayer('songchange'); });
     assert.equal(await page.$eval(rows + '[data-uri="spotify:playlist:2"]', e => e.classList.contains('am-playing') && getComputedStyle(e, '::after').width), '14px');
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    // A refresh that reorders waits while the pointer is on the list, then moves the same row (its artwork stays
+    // loaded) instead of rebuilding it.
+    const moveBefore = (uri, before) => page.evaluate(([u, b]) => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === u), 1); l.splice(l.findIndex(x => x.uri === b), 0, item); window.__libraryUpdate(); }, [uri, before]);
+    const third = () => page.evaluate(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent);
+    await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => { b.__kept = true; });
+    await page.hover(rows + '[data-uri="spotify:playlist:1"]');
+    await moveBefore('spotify:playlist:4', 'spotify:playlist:1');
+    await page.waitForTimeout(900);
+    assert.equal(await third(), 'Koşu', 'nothing moves under the pointer');
+    await page.mouse.move(900, 450);
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Gece Sürüşü');
+    assert.ok(await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => b.__kept === true), 'the row was moved, not rebuilt');
+    await moveBefore('spotify:playlist:4', 'spotify:playlist:5');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
     // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
     const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
     await recent(3);
@@ -690,8 +749,9 @@ try {
     await page.evaluate(() => {
       document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').insertAdjacentHTML('beforeend', `<style id="mock-spicy-css">#SpicyLyricsPage{position:absolute;inset:0}
         #SpicyLyricsPage:not(.Fullscreen) .ViewControls{position:absolute;width:100%;height:44px;display:flex;justify-content:center;z-index:101}
-        #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls{top:24px}#SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls{bottom:24px}</style>
-        <div id="SpicyLyricsPage" class="ViewControlsPosition_Top"><div class="ContentBox"><div class="ViewControls"><button class="ViewControl">×</button></div></div></div>`);
+        #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls{top:24px}#SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls{bottom:24px}
+        .NowBar{position:absolute;left:0;top:0;bottom:0;width:294px}.NowBar .CenteredView{height:100%}.NowBar .Header{display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;height:100%;padding-bottom:15px}.NowBar .Metadata{height:29px}</style>
+        <div id="SpicyLyricsPage" class="ViewControlsPosition_Top"><div class="ContentBox"><div class="NowBar LeftSide Active"><div class="CenteredView"><div class="Header"><div class="Metadata">Şarkı</div></div></div></div><div class="ViewControls"><button class="ViewControl">×</button></div></div></div>`);
       Spicetify.Platform.History.push('/SpicyLyrics');
     });
     await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
@@ -700,6 +760,8 @@ try {
     assert.ok((await rect('#SpicyLyricsPage .ViewControls')).top >= toolbar, 'top controls sit below the toolbar');
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').className = 'ViewControlsPosition_Bottom'; });
     assert.ok((await rect('#SpicyLyricsPage .ViewControls')).bottom <= (await rect('#am-player')).top, 'bottom controls sit above the player');
+    // The NowBar stacks the cover and title at the page's bottom edge; the title stays above the player.
+    assert.ok((await rect('#SpicyLyricsPage .NowBar .Metadata')).bottom <= (await rect('#am-player')).top, 'the NowBar title sits above the player');
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').remove(); document.getElementById('mock-spicy-css').remove(); Spicetify.Platform.History.push('/'); });
   });
 

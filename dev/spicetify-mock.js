@@ -64,6 +64,7 @@
   };
   window.__mockState = state;
   window.__firePlayer = name => (playerListeners[name] || []).forEach(f => f({}));
+  window.__libraryUpdate = () => emitter.emit();
   // Shape follows Spotify's queryArtistOverview response (artistUnion).
   const cover = (n, i) => ({ sources: [{ url: art(i * 47, n.slice(0, 2)), width: 300, height: 300 }] });
   const release = (n, i, type, year) => ({ releases: { items: [{ uri: 'spotify:album:r' + i, name: n, type, date: { year }, coverArt: cover(n, i) }] } });
