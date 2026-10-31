@@ -41,6 +41,12 @@ try {
       const value = getComputedStyle(b).backgroundColor; b.remove(); return value;
     });
     assert.equal(bg, 'rgb(250, 45, 72)');
+    // So does its playing equaliser, a green GIF: a filter fills its shape with the accent.
+    const equaliser = await page.evaluate(() => {
+      const img = document.body.appendChild(document.createElement('img')); img.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=#/images/equaliser-animated-green.gif';
+      const value = [getComputedStyle(img).filter, getComputedStyle(document.querySelector('#am-accent-fill feFlood')).floodColor]; img.remove(); return value;
+    });
+    assert.deepEqual(equaliser, ['url("#am-accent-fill")', 'rgb(250, 45, 72)']);
   });
 
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {
@@ -716,8 +722,9 @@ try {
     await page.evaluate(() => {
       document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').insertAdjacentHTML('beforeend', `<style id="mock-spicy-css">#SpicyLyricsPage{position:absolute;inset:0}
         #SpicyLyricsPage:not(.Fullscreen) .ViewControls{position:absolute;width:100%;height:44px;display:flex;justify-content:center;z-index:101}
-        #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls{top:24px}#SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls{bottom:24px}</style>
-        <div id="SpicyLyricsPage" class="ViewControlsPosition_Top"><div class="ContentBox"><div class="ViewControls"><button class="ViewControl">×</button></div></div></div>`);
+        #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls{top:24px}#SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls{bottom:24px}
+        .NowBar{position:absolute;left:0;top:0;bottom:0;width:294px}.NowBar .CenteredView{height:100%}.NowBar .Header{display:flex;flex-direction:column;justify-content:flex-end;box-sizing:border-box;height:100%;padding-bottom:15px}.NowBar .Metadata{height:29px}</style>
+        <div id="SpicyLyricsPage" class="ViewControlsPosition_Top"><div class="ContentBox"><div class="NowBar LeftSide Active"><div class="CenteredView"><div class="Header"><div class="Metadata">Şarkı</div></div></div></div><div class="ViewControls"><button class="ViewControl">×</button></div></div></div>`);
       Spicetify.Platform.History.push('/SpicyLyrics');
     });
     await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
@@ -726,6 +733,8 @@ try {
     assert.ok((await rect('#SpicyLyricsPage .ViewControls')).top >= toolbar, 'top controls sit below the toolbar');
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').className = 'ViewControlsPosition_Bottom'; });
     assert.ok((await rect('#SpicyLyricsPage .ViewControls')).bottom <= (await rect('#am-player')).top, 'bottom controls sit above the player');
+    // The NowBar stacks the cover and title at the page's bottom edge; the title stays above the player.
+    assert.ok((await rect('#SpicyLyricsPage .NowBar .Metadata')).bottom <= (await rect('#am-player')).top, 'the NowBar title sits above the player');
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').remove(); document.getElementById('mock-spicy-css').remove(); Spicetify.Platform.History.push('/'); });
   });
 

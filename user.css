@@ -104,6 +104,9 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistContent {background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) div:has(> div > [data-testid="action-bar"]) {position:relative;background:none!important;pointer-events:none;z-index:1;margin-top:calc(-1 * var(--am-btn))!important;height:var(--am-btn)!important;min-height:0!important;overflow:visible!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) div:has(> [data-testid="action-bar"]) {overflow:visible!important}
+/* Newer pages (Liked Songs with its genre filters) draw that cover-coloured band as a sibling of the action bar; with
+   the action bar moved up it showed as a coloured strip under the header. */
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) > div[style*="background-color"] {background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] {padding-block:0!important;padding-inline-start:calc(var(--content-spacing) + var(--am-art) + var(--am-art-gap))!important;height:var(--am-btn)!important;background:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar"] > [data-testid="action-bar-row"] {pointer-events:auto;height:var(--am-btn)!important;min-height:0!important;padding:0!important;gap:10px!important;column-gap:10px!important;flex-wrap:nowrap!important;align-items:center!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-actions"] {display:contents!important}
@@ -154,6 +157,9 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:#ffffff0f!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:#ffffff66}
+/* Spotify's playing equaliser is a green GIF; #am-accent-fill (theme.js) fills its shape with the accent. */
+#am-accent-fill feFlood {flood-color:var(--am-accent)}
+img[src*="equaliser-animated-green"] {filter:url(#am-accent-fill)}
 /* Track numbers off (theme.js, settings.numbers): Spotify's index column folds to nothing (its own variable) and the
    title column moves into its place. Rows with artwork keep the play button and playing indicator, on the artwork as
    in Apple Music; rows without it (albums, compact lists) show the playing track by its accent title alone. */
@@ -467,6 +473,9 @@ body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy
 body.am-ready #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:calc(var(--am-page-top) + 8px)!important;bottom:auto!important}
 body.am-ready #SpicyLyricsPage.ViewControlsPosition_Bottom:not(.Fullscreen) .ViewControls,
 body.am-ready .Root:not(.global-nav) #SpicyLyricsPage.ViewControlsPosition_Top:not(.Fullscreen) .ViewControls {top:auto!important;bottom:84px!important}
+/* The NowBar (cover, title and artist beside the lyrics) stacks its content at the page's bottom edge, where the
+   title ran under the player; its column keeps the same clearance. */
+body.am-ready #SpicyLyricsPage:not(.Fullscreen) .NowBar .Header {padding-bottom:84px!important}
 /* Balanced glass (the default): Spicy redraws its background every frame, and every pass of every backdrop filter over
    it reruns on each one (GPU 96-98% at 144Hz on a 2x Mac). On its page the glass is the lite layer (theme.js
    toolbarLens: the bend in one tap, tone and highlight) with a CSS hairline instead of the three layers and the

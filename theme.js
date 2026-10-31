@@ -732,8 +732,11 @@
   const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
   // The player's glass is toolbarLens (below); the toast keeps this filter: it fades in with opacity, and an element
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
+  // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
+  // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
   glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)
-    +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`;
+    +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
+    +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>';
   document.body.append(glass);
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
   const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
