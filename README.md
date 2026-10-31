@@ -52,6 +52,8 @@ The script:
   - The whole window takes on the artist's colour.
   - To switch to Spotify's own page, choose *Open Spotify's Page* (*Spotify Sayfasında Aç*) from the "…" menu in the top right.
 - **Library:** Your playlists, albums and artists, shown with their artwork. Filter by name, and sort by library order or A–Z.
+- **Playlists in the sidebar:** Your pinned playlists and folders, then the five you played most recently (pick how many under *mcloud*), as in Spotify's own sidebar sorted by Recents. *Show All* lists the rest; a speaker marks the one playing. The **+** next to *Playlists* makes a new playlist or folder: name it in place and press <kbd>Enter</kbd>.
+- **Track numbers:** Hide the numbers beside songs in playlists and albums from Spotify's own *Columns* menu above the track list (*Track number*) or under *mcloud*. Titles move into their place, and the play button shows over the artwork.
 - **Spicy Lyrics:** Toggle lyrics and go full screen right from the player.
 - **Accent colour:** Red, pink, orange, yellow, green, teal, blue, purple or Spotify green.
 - **Typeface:** On macOS the theme uses Apple's own SF Pro. On Windows and Linux it uses Inter, embedded in the theme, so nothing is downloaded from the internet.
@@ -66,6 +68,8 @@ Click **your profile** in the bottom-left corner to pick an accent colour or ope
 | *Artwork in player* (*Oynatıcıda albüm kapağı*) | Shows the current track's artwork in the player. |
 | *Liquid Glass player* (*Liquid Glass oynatıcı*) | A macOS 26-style glass effect: the page behind refracts along the player's edges. Turn it off to go back to classic frosted glass. |
 | *Glass effect: Full / Balanced / Eco* (*Cam efekti: Tam / Dengeli / Eko*) | **Balanced** (default) uses the real glass everywhere except the Spicy Lyrics page, where its background redraws every frame and the glass would be redrawn with it; there the surfaces keep the glass look without the blur. **Full** keeps the real glass there too and works the GPU hard. **Eco** swaps the glass and blur effects for solid surfaces everywhere. |
+| *Recent playlists: None / 3 / 5 / 10 / 20* (*Son listeler: …*) | How many recently played playlists the sidebar lists under your pinned ones (default 5). Fewer keeps the sidebar calm; more saves clicks. *Show All* still lists every playlist. |
+| *Track numbers* (*Parça numaraları*) | Shows the numbers beside songs in playlists and albums (on by default). The same switch is in Spotify's *Columns* menu above the track list, as *Track number*. |
 | *Colour: …* (*Renk: …*) | Changes the accent colour. |
 | *Language: …* (*Dil: …*) | *Automatic* follows Spotify's language; *English* or *Türkçe* fixes it. Spotify reloads to apply it. |
 

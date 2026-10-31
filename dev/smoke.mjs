@@ -27,7 +27,7 @@ try {
   await page.waitForSelector('body.am-ready #am-sidebar');
 
   await check('shell renders', async () => {
-    assert.equal(await page.locator('#am-sidebar .am-nav-row').count(), 8);
+    assert.equal(await page.locator('#am-sidebar .am-navigation > .am-nav-row').count(), 8);
     assert.ok(await page.locator('#am-player .am-has-track').isVisible());
     assert.equal(await page.textContent('.am-track-title .am-marquee-inner > span'), 'Nights');
     await page.waitForFunction(() => !document.querySelector('.am-track-art img').hidden);
@@ -200,6 +200,140 @@ try {
     assert.ok(await page.evaluate(() => document.querySelector('#am-sidebar [aria-label="Arkadaş etkinliği"]').getBoundingClientRect().right <= document.getElementById('am-sidebar').getBoundingClientRect().right));
     await page.dblclick('.am-sidebar-resizer');
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-side')), '');
+  });
+
+  await check('Browse sits with Search and Home and stays selected on the page it opens', async () => {
+    assert.deepEqual((await page.locator('#am-sidebar .am-navigation > .am-nav-row').allTextContents()).slice(0, 3), ['Ara', 'Ana Sayfa', 'Göz At']);
+    assert.deepEqual(await page.locator('#am-sidebar .am-nav-heading').evaluateAll(h => h.map(e => e.firstChild.textContent)), ['Arşiv', 'Listeler']);
+    const selected = () => page.locator('#am-sidebar .am-selected').allTextContents();
+    await page.click('#am-sidebar .am-nav-row:has-text("Göz At")');
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/search');
+    assert.deepEqual(await selected(), ['Göz At']);
+    await page.click('#am-sidebar .am-nav-row:has-text("Ara")');
+    assert.deepEqual(await selected(), ['Ara']);
+    await page.click('#am-sidebar .am-nav-row:has-text("Göz At")');
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
+    assert.deepEqual(await selected(), ['Ana Sayfa']);
+  });
+
+  await check('sidebar playlists: pinned first, five recent, Show All lists the rest', async () => {
+    const rows = '#am-sidebar .am-list-row', names = () => page.locator(rows + ' .am-list-name').allTextContents();
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    // Liked Songs is "Songs" in the Library section, so it is left out.
+    assert.deepEqual(await names(), ['Ruh Hali', 'Sabah Kahvesi', 'Koşu', 'Odak', 'Yol Şarkıları', 'Gece Sürüşü', 'Ders Çalışma']);
+    assert.equal(await page.locator(rows + ' .am-list-pin').count(), 2);
+    // Rows load the small artwork, not the 640px one; the folder gets an icon.
+    await page.waitForFunction(() => document.querySelector('#am-sidebar [data-uri="spotify:playlist:1"] img')?.getAttribute('src') === window.__mockLibrary.find(i => i.uri === 'spotify:playlist:1').images[1].url);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:folder:ruh"] .am-list-art svg').count());
+    // The names line up with the rows above.
+    const left = sel => page.$eval(sel, e => Math.round(e.getBoundingClientRect().left));
+    assert.equal(await left(rows + ' .am-list-name'), await left('#am-sidebar .am-navigation > .am-nav-row span'));
+    // "+" on the heading sits over the pin column.
+    const centre = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return Math.round(r.left + r.width / 2); });
+    assert.equal(await centre('#am-sidebar .am-nav-add svg'), await centre(rows + ' .am-list-pin svg'));
+    await shot('sidebar-lists');
+    await page.click('#am-sidebar .am-list-more');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);
+    assert.equal(await page.textContent('#am-sidebar .am-list-more'), 'Daha Az Göster');
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).lists, true);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:6"] .am-list-art svg').count(), 'a playlist without artwork gets an icon');
+    await shot('sidebar-lists-open');
+    await page.click('#am-sidebar .am-list-more');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
+    // Rows open their playlist, folders the library's folder view; the open one is selected.
+    await page.click(rows + '[data-uri="spotify:playlist:1"]');
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/1');
+    assert.ok(await page.locator(rows + '[data-uri="spotify:playlist:1"].am-selected').count());
+    await page.click(rows + '[data-uri="spotify:folder:ruh"]');
+    await page.waitForFunction(() => document.querySelectorAll('.am-library-card').length === 2);
+    assert.ok(await page.locator(rows + '[data-uri="spotify:folder:ruh"].am-selected').count());
+    assert.equal(await page.locator('#am-sidebar .am-selected').count(), 1);
+    // The playing playlist gets a speaker.
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:playlist:2'; window.__firePlayer('songchange'); });
+    assert.equal(await page.$eval(rows + '[data-uri="spotify:playlist:2"]', e => e.classList.contains('am-playing') && getComputedStyle(e, '::after').width), '14px');
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
+    const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
+    await recent(3);
+    assert.equal(await page.locator(rows).count(), 5);
+    await recent('Yok');
+    assert.deepEqual(await names(), ['Ruh Hali', 'Sabah Kahvesi']);
+    assert.ok(await page.locator('#am-sidebar .am-list-more').isVisible());
+    assert.deepEqual(await page.evaluate(() => window.__menus[0].items.filter(i => i.name.startsWith('Son listeler')).map(i => i.checked)), [true, false, false, false, false]);
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).recent, 0);
+    await recent(5);
+    assert.equal(await page.locator(rows).count(), 7);
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
+  });
+
+  await check('new playlist and folder from the Playlists heading, named in place', async () => {
+    await page.click('#am-sidebar .am-nav-add');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Yeni Çalma Listesi', 'Yeni Klasör']);
+    await page.click('#am-popover .am-popover-item >> nth=0');
+    const input = '#am-sidebar .am-list-new input';
+    assert.equal(await page.evaluate(sel => document.activeElement === document.querySelector(sel) && document.activeElement.value, input), 'Yeni Çalma Listesi');
+    await shot('sidebar-new');
+    // Escape cancels.
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator(input).count(), 0);
+    assert.equal(await page.evaluate(() => window.__created?.length || 0), 0);
+    // Enter creates it at the top and opens it; the sidebar lists it under the pinned items.
+    await page.click('#am-sidebar .am-nav-add');
+    await page.click('#am-popover .am-popover-item >> nth=0');
+    await page.keyboard.type('Gece Yarısı');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/playlist/new1');
+    assert.deepEqual(await page.evaluate(() => window.__created[0]), ['playlist', 'Gece Yarısı', { before: 'start' }]);
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Gece Yarısı');
+    assert.ok(await page.locator('#am-sidebar .am-list-row[data-uri="spotify:playlist:new1"].am-selected').count());
+    // A folder keeps its default name when the field is left untouched, and the page stays where it was.
+    await page.click('#am-sidebar .am-nav-add');
+    await page.click('#am-popover .am-popover-item >> nth=1');
+    await page.click('#am-player');
+    await page.waitForFunction(() => window.__created.length === 2);
+    assert.deepEqual(await page.evaluate(() => window.__created[1]), ['folder', 'Yeni Klasör', { before: 'start' }]);
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/playlist/new1');
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
+  });
+
+  await check('track numbers: a row in Spotify\'s Columns menu and a switch under mcloud hide them', async () => {
+    // Spotify's track list (classes and the grid variable as in 1.2.x) and its "Change visible columns" menu, which
+    // mounts a moment after the click.
+    await page.evaluate(() => {
+      const art = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="#c33764"/></svg>');
+      const row = (n, img) => `<div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="row"><div class="main-trackList-rowSectionIndex" role="gridcell"><div class="main-trackList-rowMarker"><span>${n}</span><button class="main-trackList-rowImagePlayButton" aria-label="Çal"></button></div></div><div class="main-trackList-rowSectionStart" role="gridcell">${img ? `<img class="main-trackList-rowImage" alt="" src="${art}">` : ''}<div class="main-trackList-rowTitle">Şarkı ${n}</div></div><div role="gridcell">3:20</div></div>`;
+      document.querySelector('[data-testid="playlist-page"]').insertAdjacentHTML('beforeend', `<div class="mock-numbers">
+        <style>.mock-numbers .main-trackList-trackListRowGrid{display:grid;gap:16px;padding:0 16px;height:56px;position:relative;grid-template-columns:var(--grid-template-columns)}.mock-numbers .main-trackList-rowSectionIndex{justify-self:end;display:flex;align-items:center;position:relative}.mock-numbers .main-trackList-rowMarker{width:16px;min-width:16px;height:16px;position:relative}.mock-numbers .main-trackList-rowImagePlayButton{position:absolute;inset:0;opacity:0}.mock-numbers .main-trackList-rowSectionStart{display:flex;align-items:center;gap:12px}.mock-numbers .main-trackList-rowImage{width:40px;height:40px}</style>
+        <div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] var(--index-column-width,16px) [first] 4fr [last] 1fr">
+          <div class="main-trackList-trackListHeader"><div class="main-trackList-trackListHeaderRow main-trackList-trackListRowGrid" role="row"><div class="main-trackList-rowSectionIndex" role="columnheader"><div>#</div></div><div class="main-trackList-rowSectionStart" role="columnheader"><button>Başlık</button></div><div role="columnheader">Süre</div></div><button class="mock-columns" aria-label="Görünür sütunları değiştir">▾</button></div>
+          ${row(1, true)}${row(2, false)}
+        </div></div>`);
+      document.querySelector('.mock-columns').addEventListener('click', () => setTimeout(() => document.body.insertAdjacentHTML('beforeend', `<div data-tippy-root class="mock-menu" style="position:fixed;top:120px;right:40px;z-index:100;background:#282828"><div id="context-menu"><ul role="menu"><li role="presentation"><span>Sütunlar</span></li><li role="presentation" class="mock-li"><button class="mock-item" role="menuitemcheckbox" aria-checked="true" aria-label="Albüm" data-column="ALBUM"><div class="mock-label"><span class="encore-internal-color-text-bright-accent">Albüm</span></div><div class="mock-box"><div class="mock-box-inner"><div class="mock-check" data-encore-id="formCheckbox"><input type="checkbox" checked><label class="mock-mark"><span class="mock-dot"></span></label></div></div></div></button></li></ul></div></div>`), 50));
+    });
+    const layout = () => page.evaluate(() => {
+      const [image, plain] = document.querySelectorAll('.mock-numbers .main-trackList-trackListRow'), left = e => Math.round(e.getBoundingClientRect().left - image.getBoundingClientRect().left);
+      const marker = image.querySelector('.main-trackList-rowMarker').getBoundingClientRect(), img = image.querySelector('img').getBoundingClientRect();
+      return { index: getComputedStyle(image).gridTemplateColumns.split(' ')[1], title: left(plain.querySelector('.main-trackList-rowSectionStart')), hash: getComputedStyle(document.querySelector('.mock-numbers .main-trackList-trackListHeaderRow .main-trackList-rowSectionIndex')).visibility, plainIndex: getComputedStyle(plain.querySelector('.main-trackList-rowSectionIndex')).visibility, onArt: Math.round(marker.left - img.left) === 0 && Math.round(marker.width) === Math.round(img.width) };
+    });
+    assert.deepEqual(await layout(), { index: '16px', title: 48, hash: 'visible', plainIndex: 'visible', onArt: false });
+    // The menu's new row comes first, as the column does, and starts checked.
+    await page.click('.mock-columns');
+    await page.waitForSelector('.am-column-number');
+    assert.deepEqual(await page.$$eval('#context-menu li', l => l.map(e => e.textContent)), ['Sütunlar', 'Parça numarası', 'Albüm']);
+    assert.equal(await page.getAttribute('.am-column-number button', 'aria-checked'), 'true');
+    await page.click('.am-column-number button');
+    assert.equal(await page.getAttribute('.am-column-number button', 'aria-checked'), 'false');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-numbers')));
+    // The index column folds away, titles take its place and the play button sits on the artwork.
+    assert.deepEqual(await layout(), { index: '0px', title: 16, hash: 'hidden', plainIndex: 'hidden', onArt: true });
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).numbers, false);
+    // The mcloud switch follows, and turns them back on.
+    const numbers = () => page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları'));
+    assert.equal((await numbers()).checked, false);
+    await page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick());
+    assert.equal((await numbers()).checked, true);
+    assert.equal((await layout()).index, '16px');
+    await page.evaluate(() => document.querySelectorAll('.mock-numbers, .mock-menu').forEach(e => e.remove()));
   });
 
   await check('volume wheel', async () => {

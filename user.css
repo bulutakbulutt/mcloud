@@ -154,6 +154,18 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:#ffffff0f!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:#ffffff66}
+/* Track numbers off (theme.js, settings.numbers): Spotify's index column folds to nothing (its own variable) and the
+   title column moves into its place. Rows with artwork keep the play button and playing indicator, on the artwork as
+   in Apple Music; rows without it (albums, compact lists) show the playing track by its accent title alone. */
+body.am-no-numbers .am-native-main .main-trackList-indexable {--index-column-width:0px}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRowGrid > .main-trackList-rowSectionStart {margin-inline-start:-16px}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRowGrid:not(:has(.main-trackList-rowImage)) > .main-trackList-rowSectionIndex {visibility:hidden}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-rowMarker > span {visibility:hidden}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage) > .main-trackList-rowSectionIndex {position:static}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage) .main-trackList-rowMarker {position:absolute;left:16px;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:5px;display:grid;place-items:center;color:#fff}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage):is(:hover,:focus-within) .main-trackList-rowMarker,body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-rowMarker:has(> img) {background:#00000080}
+body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:has(.main-trackList-rowImage)::after {left:68px}
+body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:not(:has(.main-trackList-rowImage))::after {left:16px}
 body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!important;padding-inline:calc(var(--am-side) + 16px) 16px!important;box-sizing:border-box}
 
 #am-sidebar,#am-player {box-sizing:border-box;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;color:var(--am-text);font-size:var(--am-font);letter-spacing:-.02em}
@@ -198,6 +210,26 @@ body.am-resizing * {transition:none!important}
 .am-avatar img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .am-profile-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:#ffffff5c;margin:16px 6px 4px}
+/* Playlists under "All Playlists" (theme.js): 22px artwork in the icon column, the name lined up with the rows above.
+   "+" on the heading keeps the heading's height (negative margins). It is centred on the pin column below, and 1px
+   below the line box's centre: between the heading's cap-height and x-height centres. */
+.am-nav-heading {display:flex;align-items:center;min-height:13px}
+#am-sidebar .am-nav-add {display:grid;place-items:center;width:22px;height:22px;margin:-5px 5px -7px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-add svg {width:15px;height:15px}
+#am-sidebar .am-nav-add:hover,#am-sidebar .am-nav-add[aria-expanded="true"] {background:#ffffff14;color:#f2f2f2}
+#am-sidebar .am-list-row {gap:8px;padding:0 16px 0 14px}
+.am-list-art {display:grid;place-items:center;width:22px;height:22px;border-radius:4px;overflow:hidden;flex-shrink:0;background:#ffffff14}
+.am-list-art img {width:100%;height:100%;object-fit:cover}
+#am-sidebar .am-list-art svg {width:14px;height:14px}
+.am-list-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.am-list-pin {display:grid;flex-shrink:0;color:#ffffff59}
+#am-sidebar .am-list-pin svg {width:12px;height:12px;color:inherit}
+.am-list-row.am-playing::after {content:"";flex-shrink:0;width:14px;height:14px;background:var(--am-accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3z'/%3E%3Cpath d='M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
+#am-sidebar .am-list-more {color:#ffffff8c;font-weight:500}
+#am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}
+#am-sidebar .am-list-more[aria-expanded="true"] svg {transform:rotate(90deg)}
+#am-sidebar .am-list-more:hover {color:#f2f2f2}
+.am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:#1c1c1e;color:#f2f2f2;font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
 /* Spotify's own toasts sit under the floating player; lift them above it (they stay under the artist view, so the
    theme's messages use .am-toast instead). */
