@@ -282,6 +282,7 @@ try {
     await shot('sidebar-lists');
     await page.click('#am-sidebar .am-list-more');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);
+    await page.waitForFunction(() => document.activeElement?.dataset?.uri === 'spotify:playlist:6');
     // One control at a time: open, the end row goes and the heading carries Show Less; focus moves to the first new row.
     assert.equal(await page.locator('#am-sidebar .am-list-more').count(), 0, 'open, the end row goes');
     assert.equal(await page.textContent('#am-sidebar .am-nav-less'), 'Daha Az Göster');
@@ -307,6 +308,7 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7 && !document.querySelector('#am-sidebar .am-floating'));
     assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
     assert.ok(await page.evaluate(() => !document.querySelector('#am-sidebar .am-heading-spacer') && !document.querySelector('#am-sidebar .am-navigation').classList.contains('am-masked')), 'back in the list');
+    await page.waitForFunction(() => document.activeElement?.classList?.contains('am-list-more'));
     assert.ok(await page.evaluate(() => document.activeElement?.classList.contains('am-list-more')), 'focus stays on Show All');
     assert.equal(await page.locator('#am-sidebar .am-nav-less').isVisible(), false);
     await page.setViewportSize({ width: 1440, height: 900 });
