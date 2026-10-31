@@ -140,7 +140,8 @@
   const navItems = [];
   // Search and Browse both open Spotify's /search page; the row that opened it stays selected there.
   let browsing = false;
-  function go(path) { currentMode = 'native'; document.body.classList.remove('am-library-open'); clearLibrary(); ++libraryRequest; H.push(path); updateNav(); }
+  // The route change closes the library (H.listen), once the page under it has been replaced.
+  function go(path) { H.push(path); updateNav(); }
   function row(label, icon, fn, key) {
     const b = button(label, icon, fn, 'am-nav-row'); b.append(el('span', '', label));
     nav.append(b); navItems.push({ b, key });
@@ -521,8 +522,17 @@
       }
     },{root,rootMargin}):null;
   }
+  // Artwork that loaded before is set at once and decoded at paint, so a page drawn again (going back) has it in its
+  // first frame; left to the observer or to async decoding it pops in a frame or three later. The last 200 are held by
+  // an Image each: released sources otherwise drop out of the memory cache and load asynchronously again.
+  const seenArtwork=new Map();
+  document.addEventListener('load',event=>{
+    const img=event.target,src=img.tagName==='IMG'&&img.closest?.('#am-library,#am-artist')&&img.getAttribute('src');if(!src||seenArtwork.has(src))return;
+    const hold=new Image();hold.src=src;seenArtwork.set(src,hold);if(seenArtwork.size>200)seenArtwork.delete(seenArtwork.keys().next().value);
+  },true);
   function observeLazy(observer,img) {
     if(document.hidden)return;
+    if(seenArtwork.has(img.dataset.src)){img.decoding='auto';img.src=img.dataset.src;}
     if(observer)observer.observe(img);else img.src=img.dataset.src;
   }
   function releaseLazy(observer,container) {
@@ -602,15 +612,24 @@
     }
     return items;
   }
-  async function renderLibrary(kind,folder='') {
-    const request=++libraryRequest;
+  // Each view's last contents are kept for the session: going back to one shows them at once, then refreshes them,
+  // instead of "Loading your library…" for the 300–400ms LibraryAPI takes. A refresh that only reorders (the playlist
+  // just opened moves up in Recents) waits for the next visit rather than shuffling the grid under the pointer.
+  const libraryCache=new Map(),librarySet=items=>items.map(i=>i.uri+'\n'+i.name+'\n'+i.imageUrl).sort().join('\n');
+  async function renderLibrary(kind,folder='',refresh=true) {
+    const request=++libraryRequest,key=kind+'\n'+folder,cached=libraryCache.get(key);
     libraryKind=kind;libraryFolder=folder;currentMode='library';
     document.body.classList.add('am-ready','am-library-open');document.body.classList.remove('am-search-open');updateNav();
     clearLibrary();
     libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));
-    const status=el('p','am-library-status',T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
+    const status=el('p','am-library-status',cached?'':T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
     try {
-      const all=await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
+      const all=cached||await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
+      libraryCache.set(key,all);
+      if(cached&&refresh)loadLibrary(folder,request,kind).then(fresh=>{
+        if(request!==libraryRequest)return;libraryCache.set(key,fresh);
+        if(librarySet(fresh)!==librarySet(all))renderLibrary(kind,folder,false);
+      }).catch(()=>{});
       let items=all;
       status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
       const tools=el('div','am-library-tools');
@@ -1741,18 +1760,18 @@
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
     artistView.replaceChildren();artistView.scrollTop=0;syncArtistGlass(null);
   }
-  // Spotify renders its own artist page under ours. Going back to one of Spotify's pages, ours stays up until the page
-  // has settled: React replaces the artist page after ~120ms, then a list restores its scroll position (~190ms) and
-  // fills placeholder rows (~250ms). Shown earlier, each of those steps flashes. Settled = 50ms without a new node.
-  function leaveArtist() {
-    const under=document.body.classList.contains('am-artist-open')&&main.querySelector('[data-testid="artist-page"]');
-    if(!under)return closeArtist();
-    closeArtistInfo();
+  // Spotify renders its own page under ours (its artist page under ours, Home under the library). Going to another of
+  // Spotify's pages, ours stays up until that page has settled: React replaces the old page after ~120ms, then a list
+  // restores its scroll position (~190ms) and fills placeholder rows (~250ms); shown earlier, each step flashes.
+  // Settled = 50ms without a new node, at most 700ms. `request` reads the view's counter: a newer render cancels.
+  function revealNative(close,request,ready) {
+    const under=main.querySelector('.main-view-container__scroll-node-child > main > *');
+    if(ready||!under)return close();
     let quiet=0;
-    const request=artistRequest,cap=setTimeout(done,700),observer=new MutationObserver(()=>{
+    const token=request(),cap=setTimeout(done,700),observer=new MutationObserver(()=>{
       if(under.isConnected)return;clearTimeout(quiet);quiet=setTimeout(done,50);
     });
-    function done(){observer.disconnect();clearTimeout(cap);clearTimeout(quiet);if(request===artistRequest)closeArtist();}
+    function done(){observer.disconnect();clearTimeout(cap);clearTimeout(quiet);if(token===request())close();}
     observer.observe(main,{childList:true,subtree:true});
   }
   // The ⓘ sheet, measured on Apple Music's (macOS, six artists from light to dark): a 704pt card 52pt below the window's
@@ -1840,7 +1859,7 @@
   };
   const releaseLabel={SINGLE:'Single',EP:'EP',COMPILATION:T('Derleme','Compilation')};
   function lazyImage(src,cls) {
-    const img=el('img',cls||'');img.alt='';img.loading='lazy';img.decoding='async';
+    const img=el('img',cls||''),seen=seenArtwork.has(src);img.alt='';img.loading=seen?'eager':'lazy';img.decoding=seen?'auto':'async';
     if(src){img.src=src;img.addEventListener('error',()=>img.remove(),{once:true});}
     return img;
   }
@@ -2173,8 +2192,11 @@
     if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
     if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
-    if(artistId)closeArtist();else leaveArtist();
-    currentMode='native';++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');
+    const closeLibrary=()=>{++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');},body=document.body.classList;
+    if(artistId){closeArtist();closeLibrary();}
+    else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
+    else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
+    currentMode='native';
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
   });
   // Ignore feed cards, lyrics text and player progress mutations. Only host

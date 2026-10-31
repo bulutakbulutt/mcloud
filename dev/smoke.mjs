@@ -639,16 +639,15 @@ try {
   await check('going back, the artist page stays up until Spotify\'s page has settled', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
-    // Spotify's own artist page renders under ours; React replaces it ~120ms after the route changes, then fills rows.
+    // Spotify's own page renders under ours; React replaces it ~120ms after the route changes, then fills rows.
     assert.deepEqual(await page.evaluate(async () => {
-      const host = document.querySelector('.main-view-container__scroll-node-child'), under = document.createElement('section'), next = document.createElement('div');
-      under.dataset.testid = 'artist-page'; host.append(under);
+      const host = document.querySelector('.main-view-container__scroll-node-child > main'), under = host.firstElementChild, next = document.createElement('section');
       const wait = ms => new Promise(r => setTimeout(r, ms)), open = () => document.body.classList.contains('am-artist-open'), steps = [];
       Spicetify.Platform.History.push('/'); steps.push(open());
-      await wait(120); steps.push(open()); under.remove(); host.append(next);
+      await wait(120); steps.push(open()); under.replaceWith(next);
       await wait(25); steps.push(open()); next.append(document.createElement('div'));
       await wait(25); steps.push(open());
-      await wait(100); steps.push(open()); next.remove();
+      await wait(100); steps.push(open()); next.replaceWith(under);
       return steps;
     }), [true, true, true, true, false]);
   });
@@ -728,6 +727,20 @@ try {
     assert.equal(await page.evaluate(() => { const card = document.querySelector('.am-library-card'), b = card.getBoundingClientRect(); return card.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)); }), true, 'library cards are covered while a sheet is open');
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+  });
+
+  await check('back to the library: its last contents at once, refreshed behind them', async () => {
+    // Albums is open: leave for one of Spotify's pages and come back. No "Loading your library…": the cards are there
+    // in the same task, and LibraryAPI is asked again in the background.
+    assert.deepEqual(await page.evaluate(async () => {
+      const api = Spicetify.Platform.LibraryAPI, get = api.getContents; let calls = 0; api.getContents = (...a) => { calls++; return get.apply(api, a); };
+      Spicetify.Platform.History.push('/playlist/mock');
+      await new Promise(r => setTimeout(r, 800));
+      Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' });
+      const now = [document.querySelectorAll('.am-library-card').length, document.querySelector('.am-library-status').textContent];
+      await new Promise(r => setTimeout(r, 100)); api.getContents = get;
+      return [...now, calls > 0];
+    }), [20, '20 öğe', true]);
   });
 
   await check('settings menu', async () => {
