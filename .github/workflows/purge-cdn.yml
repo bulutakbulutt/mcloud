@@ -1,0 +1,43 @@
+name: Purge jsDelivr
+
+# Marketplace loads theme.js and user.css from cdn.jsdelivr.net/gh/…@main, which
+# caches a branch for up to 12 hours (its ?time= query does not bypass that).
+# Purge both together so installs never mix a new theme.js with an old user.css.
+on:
+  push:
+    branches: [main]
+    paths: [theme.js, user.css]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push makes this run's checkout older than main; let the newer run verify.
+concurrency:
+  group: purge-cdn
+  cancel-in-progress: true
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Purge and verify
+        run: |
+          cdn="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main"
+          for attempt in 1 2 3 4 5; do
+            stale=0
+            for f in theme.js user.css; do
+              curl -fsS "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/$f" > /dev/null || true
+            done
+            sleep 10
+            for f in theme.js user.css; do
+              want=$(sha256sum "$f" | cut -d' ' -f1)
+              got=$(curl -fsS "$cdn/$f?ci=$GITHUB_RUN_ID-$attempt" | sha256sum | cut -d' ' -f1)
+              if [ "$want" = "$got" ]; then echo "$f: fresh"; else echo "$f: stale"; stale=1; fi
+            done
+            [ "$stale" = 0 ] && exit 0
+            sleep $((attempt * 20))
+          done
+          echo "::error::jsDelivr still serves an old theme.js or user.css"
+          exit 1
