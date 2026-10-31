@@ -668,7 +668,7 @@ try {
       document.querySelector('main').insertAdjacentHTML('beforeend', `<header class="main-topBar-container" style="position:sticky;top:0;height:64px;z-index:2"><div class="main-topBar-topbarContentWrapper"><div class="main-topBar-topbarContent">Blonde</div></div></header>
         <section data-testid="album-page" id="mock-album"><div data-testid="entity-header" style="height:340px"><div style="--background-base:#335"></div>
           <div class="main-entityHeader-contentWrapper contentSpacing" style="display:flex;height:300px;padding-inline:var(--content-spacing)"><div></div>
-            <button class="main-entityHeader-imageContainer" style="width:232px;height:232px"><img src="${Spicetify.Player.data.item.images[0].url}"></button>
+            <button class="main-entityHeader-imageContainer" style="width:232px;height:232px;position:relative"><img src="${Spicetify.Player.data.item.images[0].url}"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='502' height='192'/%3E#lens-flare" alt="" style="position:absolute;top:0;left:50%;width:80%"></button>
             <div class="main-entityHeader-headerText" style="display:flex;flex-direction:column"><span class="encore-text-body-small">Album</span><span><span class="main-entityHeader-title"><h1 style="font-size:6rem;white-space:nowrap">Blonde</h1></span></span>
               <div><div class="main-entityHeader-creatorWrapper"><figure></figure><span><a data-testid="creator-link">Frank Ocean</a></span></div><span>•</span><span>2016</span></div></div></div></div>
           <div style="--background-base:#335"></div>
@@ -683,6 +683,9 @@ try {
     const title = await box('#mock-album h1'), play = await box('#mock-album [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"]');
     const shuffle = await box('#mock-album [aria-label="Shuffle"]');
     assert.ok(Math.abs(art.width - art.height) < 1, 'artwork stays square');
+    // Mix's lens flare shares the artwork's container; stretched to the artwork it was a hard-edged beam.
+    const flare = await page.$eval('#mock-album img[src*="lens-flare"]', e => [e.getBoundingClientRect().width, getComputedStyle(e).objectFit]);
+    assert.ok(Math.abs(flare[0] - .8 * art.width) < 1 && flare[1] !== 'cover', 'Mix\'s lens flare keeps its own size');
     assert.ok(Math.abs(row.y + row.height - (art.y + art.height)) <= 1, 'controls line up with the artwork bottom');
     assert.ok(row.x >= art.x + art.width && title.x >= art.x + art.width, 'title and controls sit beside the artwork');
     assert.ok(shuffle.x < play.x, 'shuffle leads the play button');
