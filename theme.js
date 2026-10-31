@@ -1934,6 +1934,7 @@
       // and the header photo, so the click finds both (Spotify's image CDN).
       const header=artist.headerImage?.data||artist.visuals?.headerImage,img=new Image();img.decoding='async';
       img.src=header?.sources?.length?heroSource(header):artistImage(artist.visuals?.avatarImage,true);
+      if(header?.sources?.length)headerBars(smallImage(header));
     }).catch(()=>{}),80);
   },{passive:true});
   // The header's source: the smallest one of the header's own shape (2.33:1; the 16:9 ones are another crop) that is
@@ -1943,8 +1944,14 @@
     return spotifyImage((sources.find(s=>(s.width||s.maxWidth||0)>=need)||sources.at(-1)||bySize(visual).at(-1))?.url||'');
   }
   // Some headers carry black bars baked into the image (Doja Cat: 203px a side; Sade: a band on top). Measured on a
-  // small copy; uniform near-black edges over 1.5% are left out of the image's view box.
+  // small copy; uniform near-black edges over 1.5% are left out of the image's view box. Kept per image and measured
+  // on hover too: measured on every visit, the crop landed ~300ms after the photo and zoomed it (David Bowie: 2.5%).
+  const heroCrops=new Map();
   function headerBars(url) {
+    if(heroCrops.has(url))return Promise.resolve(heroCrops.get(url));
+    return measureBars(url).then(crop=>{heroCrops.set(url,crop);if(heroCrops.size>100)heroCrops.delete(heroCrops.keys().next().value);return crop;});
+  }
+  function measureBars(url) {
     return new Promise(resolve=>{
       if(!url)return resolve(null);
       const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
@@ -2019,7 +2026,8 @@
     else{
       // Blurred copies fade in one after another at the bottom: Apple Music's progressive blur under the name and buttons.
       const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
-      headerBars(smallImage(header)).then(crop=>{if(crop&&request===artistRequest){heroMedia.style.setProperty('--am-hero-crop',crop);heroMedia.classList.add('am-hero-cropped');}});
+      const cropUrl=smallImage(header),setCrop=crop=>{if(crop){heroMedia.style.setProperty('--am-hero-crop',crop);heroMedia.classList.add('am-hero-cropped');}};
+      if(heroCrops.has(cropUrl))setCrop(heroCrops.get(cropUrl));else headerBars(cropUrl).then(crop=>{if(request===artistRequest)setCrop(crop);});
       // Scrolling softens the photo by fading in copies blurred once (5 and 14px) instead of animating a blur radius,
       // which re-ran a blur over the whole photo on every scroll frame (it added dropped frames in fast scrolls).
       for(const step of [1,2]){const haze=lazyImage(heroArt.src,'am-hero-image am-hero-haze am-haze-'+step);haze.loading='eager';heroMedia.append(haze);}
