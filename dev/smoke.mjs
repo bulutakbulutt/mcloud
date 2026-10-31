@@ -862,6 +862,17 @@ try {
     await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
+  await check('artwork viewer covers the sidebar and player and grows from its centre', async () => {
+    // Spotify's "View album artwork" modal: react-modal's portal with an absolute backdrop and no z-index (styles inlined).
+    await page.evaluate(() => document.body.insertAdjacentHTML('beforeend', `<div class="ReactModalPortal" id="mock-artwork"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000b">
+      <div role="dialog" aria-modal="true" style="position:relative;transform:translateY(25%) scale(.6)"><div style="--image-aspect-ratio:1"><div role="img" style="width:400px;height:400px;background:#888"></div></div></div></div></div>`));
+    const covers = await page.evaluate(() => ['#am-sidebar', '#am-player'].map(s => { const b = document.querySelector(s).getBoundingClientRect(); return document.getElementById('mock-artwork').contains(document.elementFromPoint(b.x + 20, b.y + b.height / 2)); }));
+    assert.deepEqual(covers, [true, true], 'the backdrop is above the sidebar and the player');
+    const dialog = await page.$eval('#mock-artwork [role="dialog"]', e => [getComputedStyle(e).transform, getComputedStyle(e).animationName]);
+    assert.deepEqual(dialog, ['none', 'am-artwork-in']);
+    await page.evaluate(() => document.getElementById('mock-artwork').remove());
+  });
+
   await check('watch feed sits between the sidebar and the player', async () => {
     // Spotify's Explore overlay: a dimmed layer over .Root that centres the feed, sized from the window (styles inlined).
     const box = await page.evaluate(() => {
