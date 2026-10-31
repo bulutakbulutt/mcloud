@@ -154,7 +154,7 @@ try {
     // A playlist page with an image header and Spotify's editing row: Add (unlabelled, pressed while "Add to
     // playlist" is open in the right panel) and Mix, whose glowing pill is stacked over its real button.
     await page.evaluate(() => {
-      document.querySelector('main').insertAdjacentHTML('beforeend', `<section class="mock-capsule" data-testid="playlist-page"><style>.mock-mix{position:relative}.mock-mix > .mock-pill{position:absolute;inset:0;pointer-events:none}</style>
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<section class="mock-capsule" data-testid="playlist-page"><style>.mock-mix{position:relative}.mock-capsule button{padding:0;border:0;background:none;color:inherit}.mock-mix{display:inline-flex}.mock-mix > .mock-pill{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}.mock-pill .icon-wrapper{position:absolute;inset-inline-start:12px}</style>
         <div data-testid="entity-header"><div class="main-entityHeader-imageContainer"></div></div>
         <div class="contentSpacing" data-testid="playlist-toolbar"><div data-overlayscrollbars="host"><div data-overlayscrollbars-viewport><div>
           <button class="mock-add" data-restore-focus-key="assisted_curation" aria-pressed="false" data-encore-id="buttonPrimary"><span><span class="icon-wrapper"><svg viewBox="0 0 16 16"></svg></span>Ekle</span></button>
@@ -169,6 +169,9 @@ try {
     // The pill sits on the real Mix button, so a click on it reaches the button.
     await page.evaluate(() => { const vp = document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]'); vp.scrollTop = vp.scrollHeight; });
     assert.equal(await page.evaluate(() => { const pill = document.querySelector('.mock-pill button').getBoundingClientRect(), hit = document.elementFromPoint(pill.left + pill.width / 2, pill.top + pill.height / 2); return hit.closest('button')?.className; }), 'mock-mix-button');
+    // Its icon sits exactly on the button's (Spotify places a pill's leading icon 12px from its edge), so turning mixing
+    // on or off does not move it.
+    assert.equal(await page.evaluate(() => { const c = s => { const r = document.querySelector(s).getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 10); }; return c('.mock-pill svg') - c('.mock-mix-button svg'); }), 0);
     await page.click('.mock-add');
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
     assert.ok(await page.evaluate(() => { const a = document.querySelector('.am-native-right aside[aria-label="Çalma listesine ekle"]'); return a.classList.contains('am-friends-sheet') && a.getBoundingClientRect().width > 0; }), 'Add to playlist shows as the sheet');
@@ -310,6 +313,18 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Gece Sürüşü');
     assert.ok(await page.$eval(rows + '[data-uri="spotify:playlist:4"]', b => b.__kept === true), 'the row was moved, not rebuilt');
     await moveBefore('spotify:playlist:4', 'spotify:playlist:5');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
+    // Spotify moves a playlist you play to the top of Recents a while after it starts, with no library event; the
+    // sidebar looks again until it leads.
+    await page.evaluate(() => {
+      Spicetify.Player.data.context.uri = 'spotify:playlist:5'; window.__firePlayer('songchange');
+      setTimeout(() => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(x => x.uri === 'spotify:playlist:5'), 1); l.splice(l.findIndex(x => !x.pinned && ['playlist', 'folder'].includes(x.type)), 0, item); }, 2500);
+    });
+    await page.waitForTimeout(2000);
+    assert.equal(await third(), 'Koşu', 'not yet reordered by Spotify');
+    await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Ders Çalışma', null, { timeout: 8000 });
+    await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    await moveBefore('spotify:playlist:5', 'spotify:playlist:6');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
     // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
     const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
