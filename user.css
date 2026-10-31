@@ -369,6 +369,12 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
 @keyframes am-pop {from{opacity:0;transform:translateY(4px) scale(.98)}}
+/* Spotify's modals (artwork viewer, dialogs) portal into body without a z-index, under the sidebar and player. */
+.ReactModalPortal > * {z-index:65}
+/* The artwork viewer grows from its centre instead of Spotify's rise from below. Its fade is left to the backdrop
+   (its parent), which react-modal opens a couple of frames after mounting, hence the delay. */
+.ReactModalPortal [role="dialog"]:has(> [style*="--image-aspect-ratio"]) {transform:none!important;opacity:1!important;animation:am-artwork-in .3s ease-out 30ms backwards}
+@keyframes am-artwork-in {from{scale:.6}}
 .am-popover-item {display:block;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-popover-item:hover,.am-popover-item:focus-visible,.am-popover-item.am-active {background:var(--am-accent);color:white;outline:0}
 .am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
@@ -381,7 +387,7 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
 body.am-solid :is(#am-popover,#am-popover-sub) {background:#2c2c2e;backdrop-filter:none}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub){animation:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"]{animation:none}}
 
 
 body:not(.am-library-open) #am-library {display:none!important}
