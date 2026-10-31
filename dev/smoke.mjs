@@ -252,6 +252,17 @@ try {
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:playlist:2'; window.__firePlayer('songchange'); });
     assert.equal(await page.$eval(rows + '[data-uri="spotify:playlist:2"]', e => e.classList.contains('am-playing') && getComputedStyle(e, '::after').width), '14px');
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
+    // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
+    const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
+    await recent(3);
+    assert.equal(await page.locator(rows).count(), 5);
+    await recent('Yok');
+    assert.deepEqual(await names(), ['Ruh Hali', 'Sabah Kahvesi']);
+    assert.ok(await page.locator('#am-sidebar .am-list-more').isVisible());
+    assert.deepEqual(await page.evaluate(() => window.__menus[0].items.filter(i => i.name.startsWith('Son listeler')).map(i => i.checked)), [true, false, false, false, false]);
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).recent, 0);
+    await recent(5);
+    assert.equal(await page.locator(rows).count(), 7);
     await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
   });
 

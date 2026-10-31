@@ -58,7 +58,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -151,11 +151,13 @@
   const listsHeading = heading(T('Listeler','Playlists'));
   row(T('Tüm Listeler','All Playlists'), 'grid', () => openLibrary('playlists'), '/collection/playlists');
   // The user's playlists under "All Playlists", in the order of Spotify's own sidebar sorted by Recents: pinned
-  // playlists and folders first, then the most recently played. A few show; "Show All" lists the rest. Liked Songs
-  // is "Songs" above. "+" on the heading makes a playlist or folder, named in place as in Apple Music.
+  // playlists and folders first, then the most recently played. A few show (settings.recent, picked under mcloud);
+  // "Show All" lists the rest. Liked Songs is "Songs" above. "+" on the heading makes a playlist or folder, named in
+  // place as in Apple Music.
   const lists = el('div', 'am-lists'); lists.setAttribute('role', 'group'); lists.setAttribute('aria-label', T('Çalma listelerin','Your playlists'));
   const listBody = el('div', 'am-list-body'); lists.append(listBody); nav.append(lists);
-  const Rootlist = S.Platform.RootlistAPI, listPeek = 5;
+  const Rootlist = S.Platform.RootlistAPI, listPeeks = [0, 3, 5, 10, 20];
+  if (!listPeeks.includes(settings.recent)) settings.recent = 5;
   let listItems = [], listComplete = false, listShown = '', listNav = [], listRequest = 0, listTimer = 0, listStale = false, listContext = '', naming = null;
   const listArt = lazyObserver(nav, '200px 0px');
   function listImage(item) {
@@ -165,7 +167,7 @@
     return spotifyImage(pick?.url || '').replace(/^https:\/\/mosaic\.scdn\.co\/(?:300|640)\//, 'https://mosaic.scdn.co/60/');
   }
   async function fetchLists() {
-    // Collapsed, one short page is enough: pinned items come first and only five more are shown.
+    // Collapsed, one short page is enough: pinned items come first and at most 20 more are shown.
     const items = [], limit = settings.lists ? 200 : 50; let total = Infinity, offset = 0;
     for (; offset < total && offset < (settings.lists ? 10000 : 50); offset += limit) {
       const result = await S.Platform.LibraryAPI.getContents({ filters: ['2'], sortOrder: '6', offset, limit });
@@ -180,8 +182,8 @@
   }
   function renderLists() {
     const open = settings.lists, pinned = listItems.filter(i => i.pinned), rest = listItems.filter(i => !i.pinned);
-    const shown = open ? listItems : [...pinned, ...rest.slice(0, listPeek)];
-    const more = rest.length > listPeek || !listComplete;
+    const shown = open ? listItems : [...pinned, ...rest.slice(0, settings.recent)];
+    const more = rest.length > settings.recent || !listComplete;
     const key = JSON.stringify([open, more, shown]);
     if (key === listShown) return;
     listShown = key; listArt?.disconnect(); listNav = [];
@@ -1725,10 +1727,14 @@
       if(key!=='eco'&&reducedTransparency.matches)notify(T('Sistem ayarlarında saydamlık kapalı olduğu için cam efekti açılamıyor.','Transparency is reduced in your system settings, so the glass effect stays off.'));
     }));
     reducedTransparency.addEventListener?.('change',syncGlass);
+    // How many recent playlists the sidebar lists under the pinned ones: fewer for a calmer sidebar, more for fewer clicks.
+    const recents=listPeeks.map(n=>new S.Menu.Item(T('Son listeler: ','Recent playlists: ')+(n||T('Yok','None')),settings.recent===n,()=>{
+      settings.recent=n;saveSettings();recents.forEach((item,i)=>item.setState(listPeeks[i]===n));renderLists();
+    }));
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,...colors,...langs]).register();
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,...recents,...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
