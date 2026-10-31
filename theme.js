@@ -16,7 +16,7 @@
     artist:'<path d="m5 20 8-12M9 4l11 7M3 22l4-1 11-14a3 3 0 0 0-5-4L3 18z"/>',
     album:'<rect x="4" y="5" width="16" height="17" rx="2"/><path d="M6 2h12"/>',
     music:'<path d="M10 17V5l10-3v12M10 7l10-3"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
-    store:'<rect x="4" y="6" width="16" height="16" rx="2"/><path d="M8 6V4a4 4 0 0 1 8 0v2"/>',
+    browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
     play:'<path d="m7 3 15 9-15 9z" fill="currentColor" stroke="none"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
@@ -131,21 +131,23 @@
   const drag = el('div', 'am-drag'); sidebar.append(drag);
   const nav = el('nav', 'am-navigation'); sidebar.append(nav);
   const navItems = [];
+  // Search and Browse both open Spotify's /search page; the row that opened it stays selected there.
+  let browsing = false;
   function go(path) { currentMode = 'native'; document.body.classList.remove('am-library-open'); clearLibrary(); ++libraryRequest; H.push(path); updateNav(); }
   function row(label, icon, fn, key) {
     const b = button(label, icon, fn, 'am-nav-row'); b.append(el('span', '', label));
     nav.append(b); navItems.push({ b, key });
   }
   function heading(text) { const h = el('div', 'am-nav-heading', text); nav.append(h); return h; }
-  row(T('Ara','Search'), 'search', () => { go('/search'); document.body.classList.add('am-search-open'); setTimeout(() => document.getElementById('global-nav-bar')?.querySelector('input')?.focus(), 150); }, '/search');
+  row(T('Ara','Search'), 'search', () => { browsing = false; go('/search'); document.body.classList.add('am-search-open'); setTimeout(() => document.getElementById('global-nav-bar')?.querySelector('input')?.focus(), 150); }, '/search');
   row(T('Ana Sayfa','Home'), 'home', () => go('/'), '/');
+  // Spotify has no store: Browse sits with Search and Home, as Apple Music's Home, New and Radio do (no heading).
+  row(T('Göz At','Browse'), 'browse', () => { browsing = true; go('/search'); }, 'browse');
   heading(T('Arşiv','Library'));
   row(T('Son Eklenen','Recently Added'), 'clock', () => openLibrary('recent'), '/collection');
   row(T('Sanatçılar','Artists'), 'artist', () => openLibrary('artists'), '/collection/artists');
   row(T('Albümler','Albums'), 'album', () => openLibrary('albums'), '/collection/albums');
   row(T('Parçalar','Songs'), 'music', () => go('/collection/tracks'), '/collection/tracks');
-  heading(T('Mağaza','Store'));
-  row(T('Göz At','Browse'), 'store', () => go('/search'), 'browse');
   const listsHeading = heading(T('Listeler','Playlists'));
   row(T('Tüm Listeler','All Playlists'), 'grid', () => openLibrary('playlists'), '/collection/playlists');
   // The user's playlists under "All Playlists", in the order of Spotify's own sidebar sorted by Recents: pinned
@@ -343,14 +345,15 @@
     }catch(e){console.warn('[AppleMusicMac] Profile',e);}
   })();
   function updateNav() {
-    const path = routePath(), folderKey = currentMode === 'library' && libraryFolder ? 'folder:' + libraryFolder : '';
+    const path = routePath(), route = path === '/search' && browsing ? 'browse' : path, folderKey = currentMode === 'library' && libraryFolder ? 'folder:' + libraryFolder : '';
     // A folder open in the library selects its own row when the sidebar lists it, "All Playlists" otherwise.
     const folderShown = !!folderKey && listNav.some(n => n.key === folderKey);
     for (const { b, key } of [...navItems, ...listNav]) {
-      const selected = currentMode === 'library' ? folderShown ? key === folderKey : key === libraryKeys[libraryKind] : path === key;
+      const selected = currentMode === 'library' ? folderShown ? key === folderKey : key === libraryKeys[libraryKind] : route === key;
       b.classList.toggle('am-selected', selected);
       if(selected) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
     }    newsButton.classList.toggle('am-active',path==='/content-feed');
+    if(path!=='/search')browsing=false;
   }
   const libraryView = el('section', ''); libraryView.id='am-library'; libraryView.setAttribute('aria-label',T('Arşiv','Library'));document.body.append(libraryView);
   let libraryKind='', libraryFolder='', libraryRequest=0;

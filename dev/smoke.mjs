@@ -202,6 +202,20 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-side')), '');
   });
 
+  await check('Browse sits with Search and Home and stays selected on the page it opens', async () => {
+    assert.deepEqual((await page.locator('#am-sidebar .am-navigation > .am-nav-row').allTextContents()).slice(0, 3), ['Ara', 'Ana Sayfa', 'Göz At']);
+    assert.deepEqual(await page.locator('#am-sidebar .am-nav-heading').evaluateAll(h => h.map(e => e.firstChild.textContent)), ['Arşiv', 'Listeler']);
+    const selected = () => page.locator('#am-sidebar .am-selected').allTextContents();
+    await page.click('#am-sidebar .am-nav-row:has-text("Göz At")');
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/search');
+    assert.deepEqual(await selected(), ['Göz At']);
+    await page.click('#am-sidebar .am-nav-row:has-text("Ara")');
+    assert.deepEqual(await selected(), ['Ara']);
+    await page.click('#am-sidebar .am-nav-row:has-text("Göz At")');
+    await page.click('#am-sidebar .am-nav-row:has-text("Ana Sayfa")');
+    assert.deepEqual(await selected(), ['Ana Sayfa']);
+  });
+
   await check('sidebar playlists: pinned first, five recent, Show All lists the rest', async () => {
     const rows = '#am-sidebar .am-list-row', names = () => page.locator(rows + ' .am-list-name').allTextContents();
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7);
