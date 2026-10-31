@@ -413,6 +413,32 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('glass modes: balanced drops backdrop filters on the Spicy page only, full keeps them, eco is solid', async () => {
+    // face/pane: the player's and the toolbar's glass layers as drawn ('none' when hidden, null when not built).
+    const state = () => page.evaluate(() => {
+      const shown = sel => { const e = document.querySelector(sel); return e ? getComputedStyle(e).display !== 'none' : null; };
+      return { mode: ['am-balanced', 'am-solid'].filter(c => document.body.classList.contains(c)).join() || 'full', face: shown('#am-player .am-player-face'), pane: shown('#am-toolbar-glass > .am-tglass-pane'),
+        sidebar: /blur/.test(getComputedStyle(document.getElementById('am-sidebar')).backdropFilter), glow: shown('#am-sidebar-glow') };
+    });
+    const pick = name => page.evaluate(n => window.__menus[0].items.find(i => i.name === n).onClick(), name);
+    const glass = { face: true, pane: true, sidebar: true, glow: true };
+    assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
+    await page.evaluate(() => Spicetify.Platform.History.push('/SpicyLyrics'));
+    await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+    assert.deepEqual(await state(), { mode: 'am-balanced', face: false, pane: false, sidebar: false, glow: false });
+    assert.match(await page.evaluate(() => getComputedStyle(document.getElementById('am-player')).backgroundImage), /gradient/);
+    await pick('Cam: Tam');
+    assert.deepEqual(await state(), { mode: 'full', ...glass });
+    await pick('Cam: Eko');
+    await page.waitForFunction(() => !document.getElementById('am-toolbar-glass'));
+    assert.deepEqual(await state(), { mode: 'am-solid', face: null, pane: null, sidebar: false, glow: false });
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).glass, 'eco');
+    await pick('Cam: Dengeli');
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForSelector('#am-toolbar-glass > .am-tglass-pane');
+    assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
+  });
+
   await check('album page: artwork, title column and play controls laid out like Apple Music', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
     // The shape of Spotify's album page: header, then the action bar inside an OverlayScrollbars host. Spotify's

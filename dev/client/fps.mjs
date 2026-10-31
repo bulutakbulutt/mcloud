@@ -38,6 +38,12 @@ const VARIANTS = {
   tbrimonly: '#am-toolbar-glass .am-tglass-layer{backdrop-filter:none!important}',
   tbbendonly: '#am-toolbar-glass .am-tglass-layer:not(:first-child),#am-toolbar-glass .am-tglass-rim{backdrop-filter:none!important}',
   alloff: '#am-toolbar-glass,.am-player-face,#am-player > .am-tglass-rim{display:none!important}',
+  // Spicy Lyrics open: its background canvas redraws every frame under the theme's backdrop filters.
+  nosideblur: '#am-sidebar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
+  themeoff: '#am-toolbar-glass,.am-player-face,#am-player > .am-tglass-rim,#am-sidebar-glow{display:none!important}#am-player,#am-sidebar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
+  nospicybg: '#SpicyLyricsPage .spicy-dynamic-bg,#SpicyLyricsPage .CanvasAmbient{visibility:hidden!important}',
+  spicylite: '#am-toolbar-glass :is(.am-tglass-layer,.am-tglass-rim){backdrop-filter:none!important}.am-player-face,#am-player > .am-tglass-rim,#am-sidebar-glow{display:none!important}#am-player,#am-sidebar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}',
+  bare: '#am-toolbar-glass,.am-player-face,#am-player > .am-tglass-rim,#am-sidebar-glow{display:none!important}#am-player,#am-sidebar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}#SpicyLyricsPage .spicy-dynamic-bg,#SpicyLyricsPage .CanvasAmbient{visibility:hidden!important}',
 };
 async function connect() {
   const browser = await chromium.connectOverCDP('http://127.0.0.1:9229');

@@ -55,7 +55,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto'};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced'};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -73,11 +73,18 @@
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
     document.body.classList.toggle('am-liquid',settings.liquid);
+    // Glass modes. Over a page that redraws every frame (Spicy Lyrics) each backdrop filter re-runs every frame, so
+    // "balanced" draws glass without them there (body.am-balanced), "eco" (and the OS reduced-transparency setting)
+    // swaps every blur and glass for solid surfaces (body.am-solid), "full" keeps the real glass everywhere.
+    if(!glassModes.includes(settings.glass))settings.glass='balanced';
+    const solid=settings.glass==='eco'||reducedTransparency.matches;
+    document.body.classList.toggle('am-solid',solid);document.body.classList.toggle('am-balanced',!solid&&settings.glass==='balanced');
     // 0 keeps the proportional default width from user.css.
     if(settings.sidebar>0)document.documentElement.style.setProperty('--am-side','min('+settings.sidebar+'px,40vw)');
     else document.documentElement.style.removeProperty('--am-side');
     document.dispatchEvent(new Event('am-settings'));
   }
+  const glassModes=['full','balanced','eco'],reducedTransparency=matchMedia('(prefers-reduced-transparency: reduce)');reducedTransparency.addEventListener?.('change',applySettings);
   applySettings();
   const accentListeners=[];
   function setAccent(key){settings.accent=key;saveSettings();applySettings();accentListeners.forEach(fn=>fn());}
@@ -897,7 +904,7 @@
   // button size). Off with the setting or reduced transparency (user.css keeps the frosted or solid player then).
   let playerFace=null;
   function syncPlayerGlass() {
-    const live=document.body.classList.contains('am-liquid')&&!matchMedia('(prefers-reduced-transparency: reduce)').matches;
+    const live=document.body.classList.contains('am-liquid')&&!document.body.classList.contains('am-solid');
     player.classList.toggle('am-player-glass',live);
     if(!live){playerFace?.remove();player.querySelector(':scope > .am-tglass-rim')?.remove();playerFace=null;return;}
     if(playerFace)return;
@@ -975,7 +982,7 @@
   }
   // Groups from the toolbar as Spotify renders it; rebuilt only when its controls change, re-placed on any resize.
   const toolbarGlassResize=typeof ResizeObserver==='function'?new ResizeObserver(()=>toolbarGlasses.forEach(g=>g.place())):null;
-  const glassLive=()=>document.body.classList.contains('am-liquid')&&!matchMedia('(prefers-reduced-transparency: reduce)').matches;
+  const glassLive=()=>document.body.classList.contains('am-liquid')&&!document.body.classList.contains('am-solid');
   function syncToolbarGlass(toolbar) {
     const live=glassLive();
     const lead=toolbar.querySelector('.am-toolbar-leading'),center=toolbar.querySelector('.am-toolbar-center'),search=center?.querySelector('form[role="search"],[role="search"]');
@@ -1556,10 +1563,12 @@
   // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
   if(S.Menu?.SubMenu&&S.Menu?.Item){
     const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
+    const glassLabels={full:T('Tam','Full'),balanced:T('Dengeli','Balanced'),eco:T('Eko','Eco')};
+    const glass=glassModes.map(key=>new S.Menu.Item(T('Cam: ','Glass: ')+glassLabels[key],settings.glass===key,()=>{settings.glass=key;saveSettings();applySettings();glass.forEach((item,i)=>item.setState(glassModes[i]===key));}));
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...colors,...langs]).register();
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
