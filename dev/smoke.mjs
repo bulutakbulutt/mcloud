@@ -530,6 +530,13 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
+    // The wide header (artistUnion.headerImage.data) fills the hero at its largest size, with blurred copies in steps
+    // at the bottom that run on under the first shelf; the play triangle sits 1.3px right, as in Apple Music.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-hero-media .am-hero-image')].map(i => [i.src === window.__mockArtist.headerImage.data.sources[0].url, !!i.closest('.am-hero-soft'), getComputedStyle(i).filter])), [[true, false, 'blur(0px)'], [true, true, 'blur(2px)'], [true, true, 'blur(5px)'], [true, true, 'blur(13px)']]);
+    // The blurred copies line up with the photo.
+    assert.ok(await page.evaluate(() => { const [a, b] = ['.am-hero-media > .am-hero-image', '.am-soft-3 .am-hero-image'].map(s => document.querySelector(s).getBoundingClientRect()); return Math.abs(a.top - b.top) < 1 && Math.abs(a.height - b.height) < 1; }));
+    assert.ok(await page.evaluate(() => document.querySelector('.am-hero-media').getBoundingClientRect().bottom > document.querySelector('.am-artist-body').getBoundingClientRect().top + 40));
+    assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.3);
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
     // Over the artist's colour the sidebar is Apple's dark material and the edge glow is off.
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);
@@ -553,10 +560,10 @@ try {
   await shot('artist');
 
   await check('locale-prefixed artist links and portrait-only artists', async () => {
-    await page.evaluate(() => { window.__savedHeader = window.__mockArtist.visuals.headerImage; window.__mockArtist.visuals.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
+    await page.evaluate(() => { window.__savedHeader = window.__mockArtist.headerImage; window.__mockArtist.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
     await page.waitForSelector('body.am-artist-open .am-hero-avatar .am-hero-portrait');
     assert.equal(await page.locator('.am-hero-image').count(), 0);
-    await page.evaluate(() => { window.__mockArtist.visuals.headerImage = window.__savedHeader; Spicetify.Platform.History.push('/'); });
+    await page.evaluate(() => { window.__mockArtist.headerImage = window.__savedHeader; Spicetify.Platform.History.push('/'); });
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
   });
 
