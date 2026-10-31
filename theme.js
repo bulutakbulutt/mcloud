@@ -1741,6 +1741,20 @@
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
     artistView.replaceChildren();artistView.scrollTop=0;syncArtistGlass(null);
   }
+  // Spotify renders its own artist page under ours. Going back to one of Spotify's pages, ours stays up until the page
+  // has settled: React replaces the artist page after ~120ms, then a list restores its scroll position (~190ms) and
+  // fills placeholder rows (~250ms). Shown earlier, each of those steps flashes. Settled = 50ms without a new node.
+  function leaveArtist() {
+    const under=document.body.classList.contains('am-artist-open')&&main.querySelector('[data-testid="artist-page"]');
+    if(!under)return closeArtist();
+    closeArtistInfo();
+    let quiet=0;
+    const request=artistRequest,cap=setTimeout(done,700),observer=new MutationObserver(()=>{
+      if(under.isConnected)return;clearTimeout(quiet);quiet=setTimeout(done,50);
+    });
+    function done(){observer.disconnect();clearTimeout(cap);clearTimeout(quiet);if(request===artistRequest)closeArtist();}
+    observer.observe(main,{childList:true,subtree:true});
+  }
   // The ⓘ sheet, measured on Apple Music's (macOS, six artists from light to dark): a 704pt card 52pt below the window's
   // top and 40pt above its bottom over a 49% black dim. Its square photo fades linearly from 0.495W into the photo's most
   // common colour (Apple's bgColor; brightness capped at 42%, so white text always reads) and blurs in steps from 0.8W.
@@ -2158,7 +2172,7 @@
     if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
     if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
-    closeArtist();
+    if(artistId)closeArtist();else leaveArtist();
     currentMode='native';++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
   });

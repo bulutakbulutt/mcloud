@@ -627,6 +627,23 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
   });
 
+  await check('going back, the artist page stays up until Spotify\'s page has settled', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-artist-name');
+    // Spotify's own artist page renders under ours; React replaces it ~120ms after the route changes, then fills rows.
+    assert.deepEqual(await page.evaluate(async () => {
+      const host = document.querySelector('.main-view-container__scroll-node-child'), under = document.createElement('section'), next = document.createElement('div');
+      under.dataset.testid = 'artist-page'; host.append(under);
+      const wait = ms => new Promise(r => setTimeout(r, ms)), open = () => document.body.classList.contains('am-artist-open'), steps = [];
+      Spicetify.Platform.History.push('/'); steps.push(open());
+      await wait(120); steps.push(open()); under.remove(); host.append(next);
+      await wait(25); steps.push(open()); next.append(document.createElement('div'));
+      await wait(25); steps.push(open());
+      await wait(100); steps.push(open()); next.remove();
+      return steps;
+    }), [true, true, true, true, false]);
+  });
+
   await check('page and artist view run under the glass sidebar', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
