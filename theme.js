@@ -19,6 +19,8 @@
     browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
     play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
+    // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
+    heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -1723,13 +1725,15 @@
     }
     syncHeaderColor();
   }
-  const smallImage=visual=>spotifyImage([...(visual?.sources||[])].sort((a,b)=>(a.width||0)-(b.width||0))[0]?.url||'');
+  // Header image sources give maxWidth instead of width.
+  const bySize=visual=>[...(visual?.sources||[])].sort((a,b)=>(a.width||a.maxWidth||0)-(b.width||b.maxWidth||0));
+  const smallImage=visual=>spotifyImage(bySize(visual)[0]?.url||'');
   function closeArtist() {
     if(!document.body.classList.contains('am-artist-open')&&!artistView.hasChildNodes())return;
     ++artistRequest;document.body.classList.remove('am-artist-open','am-tinted');
     artistView.replaceChildren();artistView.scrollTop=0;syncArtistGlass(null);
   }
-  const artistImage=(visual,big)=>{const sources=[...(visual?.sources||[])].sort((a,b)=>(a.width||0)-(b.width||0));return spotifyImage((big?sources.at(-1):sources.find(s=>(s.width||0)>=300)||sources.at(-1))?.url||'');};
+  const artistImage=(visual,big)=>{const sources=bySize(visual);return spotifyImage((big?sources.at(-1):sources.find(s=>(s.width||0)>=300)||sources.at(-1))?.url||'');};
   const releaseDate=date=>{
     if(!date?.year)return '';
     if(!date.month||!date.day)return String(date.year);
@@ -1802,10 +1806,11 @@
     if(request!==artistRequest)return;
     const visuals=artist.visuals||{},discography=artist.discography||{},related=artist.relatedContent||{};
     // Artists without a wide header image get Apple Music's round portrait instead of a stretched avatar.
-    const avatarOnly=!visuals.headerImage?.sources?.length;
-    const spotifyColor=visuals.headerImage?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
+    // Spotify now sends the header as artistUnion.headerImage.data; visuals.headerImage is the older place.
+    const header=artist.headerImage?.data||visuals.headerImage,avatarOnly=!header?.sources?.length;
+    const spotifyColor=header?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
     const fallbackTint=setTimeout(()=>{if(request===artistRequest)setTint(spotifyColor);},600);
-    artworkColor(smallImage(visuals.headerImage||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
+    artworkColor(smallImage(header||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
     const back=button(T('Geri','Back'),'left',()=>H.goBack?.(),'am-artist-back');
@@ -1821,14 +1826,14 @@
     page.append(glassRoot,back,actions);
     // Hero: full-bleed artwork that fades into the tint, name and the play/follow pair.
     const hero=el('header','am-artist-hero'+(avatarOnly?' am-hero-avatar':''));
-    const heroArt=lazyImage(artistImage(visuals.headerImage||visuals.avatarImage,true),avatarOnly?'am-hero-portrait':'am-hero-image');heroArt.loading='eager';
+    const heroArt=lazyImage(artistImage(header||visuals.avatarImage,true),avatarOnly?'am-hero-portrait':'am-hero-image');heroArt.loading='eager';
     const heroContent=el('div','am-hero-content');
     if(avatarOnly)heroContent.append(heroArt);
     const concerts=artist.goods?.events?.concerts?.items||[];
     if(concerts.length)heroContent.append(el('span','am-hero-pill',T('Yaklaşan Konserler','Upcoming Concerts')));
     heroContent.append(el('h1','am-artist-name',artist.profile.name));
     const heroActions=el('div','am-hero-actions');
-    const playButton=button(T(artist.profile.name+' çal','Play '+artist.profile.name),'play',()=>playArtist(uri),'am-hero-play');
+    const playButton=button(T(artist.profile.name+' çal','Play '+artist.profile.name),'heroPlay',()=>playArtist(uri),'am-hero-play');
     let saved=!!artist.saved;
     const follow=button(T('Takip et','Follow'),'star',async()=>{
       try{saved=await toggleSaved(uri,saved);follow.classList.toggle('am-active',saved);follow.title=saved?T('Takibi bırak','Unfollow'):T('Takip et','Follow');}
@@ -1838,7 +1843,12 @@
     heroActions.append(playButton,follow);heroContent.append(heroActions);
     // The mask lives on a wrapper so the drifting image never shows a hard clipped edge.
     if(avatarOnly)hero.append(heroContent);
-    else{const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);hero.append(heroMedia,heroContent);}
+    else{
+      // Blurred copies fade in one after another at the bottom: Apple Music's progressive blur under the name and buttons.
+      const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
+      for(const step of [1,2,3]){const soft=el('div','am-hero-soft am-soft-'+step),copy=lazyImage(heroArt.src,'am-hero-image');copy.loading='eager';soft.append(copy);heroMedia.append(soft);}
+      hero.append(heroMedia,heroContent);
+    }
     page.append(hero);
     const body=el('div','am-artist-body');page.append(body);
     // Latest release and top songs share one horizontal row, as in Apple Music.
