@@ -1846,7 +1846,7 @@
     else{
       // Blurred copies fade in one after another at the bottom: Apple Music's progressive blur under the name and buttons.
       const heroMedia=el('div','am-hero-media');heroMedia.append(heroArt);
-      for(const step of [1,2,3]){const soft=el('div','am-hero-soft am-soft-'+step),copy=lazyImage(heroArt.src,'am-hero-image');copy.loading='eager';soft.append(copy);heroMedia.append(soft);}
+      for(const step of [1,2,3,4,5]){const soft=el('div','am-hero-soft am-soft-'+step),copy=lazyImage(heroArt.src,'am-hero-image');copy.loading='eager';soft.append(copy);heroMedia.append(soft);}
       hero.append(heroMedia,heroContent);
     }
     page.append(hero);
