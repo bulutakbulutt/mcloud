@@ -68,7 +68,10 @@
         },
         getEvents: () => ({ _emitter: emitter }),
       },
-      RootlistAPI: { createPlaylist: createItem('playlist'), createFolder: createItem('folder'), getEvents: () => ({ _emitter: emitter }) },
+      RootlistAPI: { createPlaylist: createItem('playlist'), createFolder: createItem('folder'), getEvents: () => ({ _emitter: emitter }),
+        // Rootlist order with folders flattened; a Spotify-made playlist such as Haftalık Keşif can't be added to.
+        getContents: async ({ flatten } = {}) => ({ items: library.filter(i => ['playlist', 'folder'].includes(i.type)).flatMap(i => [i, ...(flatten && folders[i.uri] || [])])
+          .map(i => ({ ...i, canAdd: i.type === 'playlist' && i.name !== 'Haftalık Keşif' })) }) },
     },
   };
   window.__mockState = state;

@@ -192,8 +192,13 @@ try {
     await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
     assert.ok(await page.locator('#am-popover-sub').isVisible());
     assert.ok(await page.locator('#am-popover-sub .am-popover-item:has-text("+ Yeni Çalma Listesi")').isVisible());
+    // Spotify's own list: playlists you can add to, those in folders too, not Spotify-made ones.
+    await page.waitForFunction(() => [...document.querySelectorAll('#am-popover-sub .am-popover-item')].some(b => b.textContent === 'Neşeli'));
+    const targets = await page.locator('#am-popover-sub .am-popover-item').allTextContents();
+    assert.ok(targets.includes('Sabah Kahvesi') && !targets.includes('Haftalık Keşif') && !targets.includes('Yükleniyor…'), targets.join());
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover-sub').isHidden());
+    assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Çalma Listesine Ekle', 'Escape returns focus to the submenu item');
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     // Right click on player also opens track menu
