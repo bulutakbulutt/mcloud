@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Spicetify Documentation
+    url: https://spicetify.app/docs/getting-started
+    about: Need help setting up Spicetify? Check the official Spicetify guide.
