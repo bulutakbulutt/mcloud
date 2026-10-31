@@ -174,9 +174,8 @@
     const closing = settings.lists;
     settings.lists = !settings.lists; saveSettings();
     const focusAfter = () => {
-      const next = settings.lists ? listRows.get(listItems.filter(i => !i.pinned)[settings.recent]?.uri)?.b || listLess : listMore;
-      next.focus({ preventScroll: true });
-      setTimeout(() => next.focus({ preventScroll: true }), 0);
+      const focus = () => (settings.lists ? listRows.get(listItems.filter(i => !i.pinned)[settings.recent]?.uri)?.b || listLess : listMore)?.focus({ preventScroll: true });
+      focus(); requestAnimationFrame(focus); setTimeout(focus, 50);
     };
     if (!closing) { if (listComplete) { renderLists(true, true); focusAfter(); } else refreshLists(true, true, focusAfter); return; }
     // Closing mirrors opening: the rows that go fade out in place and Show All comes back (renderLists). From deep in
