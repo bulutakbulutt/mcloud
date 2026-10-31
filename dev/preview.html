@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../user.css">
 <style>
   body {margin:0}
-  #main {position:relative}
+  #main {position:relative;z-index:0;isolation:isolate} /* as Spotify's xpui css: a stacking context under the theme's views */
   .layout {display:grid;height:100vh;grid-template-areas:"global-nav global-nav global-nav" "left-sidebar main-view right-sidebar" "now-playing-bar now-playing-bar now-playing-bar";grid-template-columns:280px 1fr 0;grid-template-rows:64px 1fr 90px}
   .Root {background:#121212;transition:background .5s cubic-bezier(.3,0,.4,1)}
   .left {grid-area:left-sidebar;background:#111}
@@ -61,6 +61,13 @@
     if (open?.getAttribute('aria-label') === label) { swapPanel(npv); return; }
     setTimeout(() => swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
   }
+  // Typing in the search field opens Spotify's live results under it (#search-dropdown, absolute inside the toolbar's
+  // form); a click elsewhere closes them.
+  addEventListener('input', event => {
+    const form = event.target.closest?.('#global-nav-bar [role="search"]');
+    if (form && !document.getElementById('search-dropdown')) form.insertAdjacentHTML('beforeend', '<div id="search-dropdown" style="position:absolute;top:100%;left:0;width:100%;height:300px;z-index:7;background:#2a2a2a">Sonuçlar</div>');
+  });
+  addEventListener('mousedown', event => { if (!event.target.closest?.('#global-nav-bar [role="search"]')) document.getElementById('search-dropdown')?.remove(); });
 </script>
 <script>swapPanel(npv)</script>
 <script src="spicetify-mock.js"></script>
