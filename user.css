@@ -582,7 +582,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
    buttons' centre sits just below it, the photo fades into the page colour from 0.245W to 0.646W, and its blur grows
    from 0 at 0.38W to 3, 6, 10, 15 and 20pt (at W=1042) by 0.403, 0.432, 0.475, 0.498 and 0.52W. */
 #am-artist {--am-hw:calc(100vw - var(--am-side))}
-.am-artist-hero {position:relative;height:max(380px,calc(var(--am-hw) * .5 + 64px));display:flex;align-items:flex-end;justify-content:center;padding-left:var(--am-side)}
+.am-artist-hero {position:relative;height:max(380px,calc(var(--am-hw) * .5 + 68px));display:flex;align-items:flex-end;justify-content:center;padding-left:var(--am-side)}
 .am-hero-media {position:absolute;top:0;right:0;left:var(--am-side);height:calc(var(--am-hw) * .646);overflow:hidden;-webkit-mask-image:linear-gradient(180deg,#000 37.9%,#0000);mask-image:linear-gradient(180deg,#000 37.9%,#0000)}
 /* Each blur step is a copy of the photo kept to the lower 42% (smaller layers) and placed to line up with it; 40px wider
    so the blur never pulls a transparent edge in (the photo is height-bound, so it still lines up). */
@@ -605,13 +605,16 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-hero-portrait {width:clamp(170px,17vw,250px);aspect-ratio:1;border-radius:50%;object-fit:cover;box-shadow:0 12px 40px #0006;margin-bottom:10px;background:#ffffff14}
 .am-hero-content {position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 32px 26px;text-align:center}
 .am-hero-pill {padding:4px 10px;border-radius:7px;background:#00000040;backdrop-filter:blur(10px);font-size:11px;font-weight:600}
-.am-artist-name {margin:0;font-size:clamp(30px,3vw,46px);font-weight:700;letter-spacing:-.02em;line-height:1.1;text-shadow:0 1px 18px #0003}
-.am-hero-actions {display:flex;align-items:center;gap:22px;margin-top:6px}
-#am-artist .am-hero-play {display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:white;color:var(--am-tint-top,#333);box-shadow:0 4px 16px #0003;transition:transform .12s}
-#am-artist .am-hero-play svg {width:31px;height:31px}
+/* Measured on Apple Music's header (1100 and 1500pt windows): the name is a fixed 40pt (#e4e4e4), its baseline 23pt
+   above the buttons; ⓘ 48, play 72 and follow 48pt sit 24pt apart on one centre line, play centred on the name. */
+.am-artist-name {margin:0;font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:44px;color:#e4e4e4;text-shadow:0 1px 18px #0003}
+.am-hero-actions {display:flex;align-items:center;gap:24px;margin-top:3.5px}
+#am-artist .am-hero-play {display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:white;color:var(--am-tint-top,#333);box-shadow:0 4px 16px #0003;transition:transform .12s}
+#am-artist .am-hero-play svg {width:35px;height:35px}
 #am-artist .am-hero-play:active {transform:scale(.94)}
-#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#ffffff26;backdrop-filter:blur(10px)}
-#am-artist :is(.am-hero-follow,.am-hero-info) svg {width:17px;height:17px}
+#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#ffffff14;backdrop-filter:blur(10px)}
+#am-artist .am-hero-follow svg {width:20.5px;height:20.5px}
+#am-artist .am-hero-info svg {width:20px;height:20px}
 #am-artist .am-hero-follow.am-active svg path {fill:currentColor}
 /* The ⓘ sheet, measured on Apple Music's About sheet (see openArtistInfo in theme.js). W (--am-iw) is the card's width,
    704pt there. Fade 0.495W to 1.295W; blur 0 until 0.8W, then 3, 6, 10, 16, 24, 32pt by 0.852, 0.908, 0.965, 1.022, 1.08

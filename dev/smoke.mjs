@@ -551,7 +551,7 @@ try {
     assert.equal(await page.textContent('.am-artist-name'), 'Sena Şener');
     // The wide header (artistUnion.headerImage.data) fills W×W/2 right of the sidebar (W = window minus sidebar) at its
     // largest size, with five blurred copies (3-20pt at W=1042, scaling with W) that line up with it and run on under
-    // the first shelf; the play triangle sits 1.3px right, as in Apple Music.
+    // the first shelf; the play triangle sits 1.5px right in its 72px circle, as in Apple Music.
     const hero = await page.evaluate(() => {
       const media = document.querySelector('.am-hero-media').getBoundingClientRect();
       const imgs = [...document.querySelectorAll('.am-hero-media .am-hero-image')], [sharp] = imgs, s = sharp.getBoundingClientRect();
@@ -563,6 +563,9 @@ try {
     assert.ok(Math.abs(hero.photoH - hero.w / 2) < 1 && Math.abs(hero.mediaH - hero.w * .646) < 1, JSON.stringify(hero));
     assert.deepEqual(hero.blurs.map(b => Math.round(b / hero.w * 1042)), [0, 3, 6, 10, 15, 20]);
     // ⓘ, play and follow are symmetric under the name, as in Apple Music.
+    const buttons = await page.evaluate(() => { const [i, p, f] = ['.am-hero-info', '.am-hero-play', '.am-hero-follow'].map(s => document.querySelector(s).getBoundingClientRect()); const y = r => Math.round(r.top + r.height / 2);
+      return { sizes: [i.width, p.width, f.width], centred: y(i) === y(p) && y(p) === y(f), gaps: [Math.round(p.left - i.right), Math.round(f.left - p.right)], font: parseFloat(getComputedStyle(document.querySelector('.am-artist-name')).fontSize) }; });
+    assert.deepEqual(buttons, { sizes: [48, 72, 48], centred: true, gaps: [24, 24], font: 40 });
     assert.ok(await page.evaluate(() => { const c = s => { const r = document.querySelector(s).getBoundingClientRect(); return r.left + r.width / 2; }; return Math.abs((c('.am-hero-play') - c('.am-hero-info')) - (c('.am-hero-follow') - c('.am-hero-play'))) < 1 && Math.abs(c('.am-hero-play') - c('.am-artist-name')) < 1; }));
     // ⓘ opens the About sheet measured on Apple Music's: 704px card 52px from the top, photo copies aligned and blurred
     // in steps, facts, city chips and the bio; Escape closes it and focus returns to ⓘ, a click on the dim closes it too.
@@ -585,7 +588,7 @@ try {
     await page.mouse.click(8, 300);
     await page.waitForFunction(() => !document.getElementById('am-artist-info'));
     assert.ok(await page.evaluate(() => document.querySelector('.am-hero-media').getBoundingClientRect().bottom > document.querySelector('.am-artist-body').getBoundingClientRect().top + 40));
-    assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.3);
+    assert.equal(await page.evaluate(() => { const b = document.querySelector('.am-hero-play').getBoundingClientRect(), t = document.querySelector('.am-hero-play path').getBoundingClientRect(); return Math.round((t.left + t.width / 2 - b.left - b.width / 2) * 10) / 10; }), 1.5);
     await page.waitForFunction(() => document.body.classList.contains('am-tinted'));
     // Over the artist's colour the sidebar is Apple's dark material and the edge glow is off.
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);

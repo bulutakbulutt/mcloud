@@ -21,7 +21,8 @@
     play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
-    info:'<path d="M12 10.5v7.5" stroke-width="2.2"/><circle cx="12" cy="6.8" r="1.35" fill="currentColor" stroke="none"/>',
+    // Apple's "info": a lowercase i with a serif and a foot, 7 x 13.5pt at 20px.
+    info:'<circle cx="12.3" cy="5.6" r="1.55" fill="currentColor" stroke="none"/><path d="M9.8 10h2.5v9.2M8.8 19.2h7" stroke-width="2"/>',
     close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
