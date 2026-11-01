@@ -908,12 +908,17 @@ try {
     const shown = () => page.evaluate(() => [...document.querySelectorAll('#mock-tip svg')].map(s => s.getBoundingClientRect().width > 0));
     await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-tip'; tip.setAttribute('data-tippy-root', '');
       const icon = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
-      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div>Add to queue</div></button></li><li><button role="menuitem"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li></ul>`;
+      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li></ul>`;
       document.body.append(tip); });
     await page.waitForFunction(() => document.querySelector('#mock-tip [role="menuitem"][data-am-iconed]'));
-    assert.deepEqual(await shown(), [false, false, true]);
+    assert.deepEqual(await shown(), [false, false, false]);
+    // A submenu row (aria-expanded) ends in the theme's thin ›, not Spotify's triangle.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [aria-expanded] > :last-child'), '::after').content), '"›"');
+    // In the theme's menu measure: 13px labels on 21px rows, separators as the theme's.
+    assert.deepEqual(await page.evaluate(() => { const item = document.querySelector('#mock-tip [role="menuitem"]'), sep = document.querySelector('#mock-tip ul > div');
+      return [getComputedStyle(item).padding, getComputedStyle(item.querySelector('span')).fontSize, getComputedStyle(sep).height, getComputedStyle(sep).marginLeft]; }), ['3px 10px', '13px', '1px', '11px']);
     await page.evaluate(() => document.body.classList.add('am-menu-icons'));
-    assert.deepEqual(await shown(), [true, true, true]);
+    assert.deepEqual(await shown(), [true, true, false]);
     await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });
   });
 
