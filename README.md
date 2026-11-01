@@ -173,4 +173,6 @@ mcloud is free and open source under the [MIT License](LICENSE). The embedded In
 Thanks to the Spicetify community for providing such a great platform.
 Thanks also to emribilemir and f0rknturkoglu for their contributions.
 
+Thanks to m8tec for [Apple Music Animated Artworks](https://github.com/m8tec/apple-music-animated-artworks), whose API will bring Apple Music's animated album covers to mcloud, and for letting us use it.
+
 This is not an official project and is not affiliated with Apple or Spotify. The theme uses Spotify content.
