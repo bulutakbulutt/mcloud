@@ -450,14 +450,14 @@
     if (box.top < view.top || box.bottom > view.bottom) nav.scrollTop += box.top - view.top - 40;
     input.focus({ preventScroll: true }); input.select();
   }
-  nav.addEventListener('contextmenu', event => {
+  nav.addEventListener('contextmenu', async event => {
     const row = event.target.closest?.('.am-list-row');
     if (!row || !listBody.contains(row)) return;
     event.preventDefault();
     // Folders have no playable context or public link.
     const uri = row.dataset.uri; if (!uri || /:folder:/.test(uri)) return;
-    const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/');
-    togglePopover({ x: event.clientX, y: event.clientY }, () => [
+    const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/'), at = { x: event.clientX, y: event.clientY }, extra = await libraryEntries(uri);
+    togglePopover(at, () => [
       { label: T('Çal','Play'), action: () => { if (S.Player.playUri) S.Player.playUri(uri); else go('/' + uri.split(':').slice(1).join('/')); } },
       ...(canQueue(uri) ? [{ label: T('Sıraya Ekle','Add to Queue'), action: () => enqueueTrack(uri) }] : []),
       '-',
@@ -465,6 +465,7 @@
         try { if (S.Platform.ClipboardAPI?.copy) await S.Platform.ClipboardAPI.copy(shareLink); else await navigator.clipboard.writeText(shareLink); notify(T('Bağlantı kopyalandı.','Link copied.')); }
         catch { notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.')); }
       }},
+      ...(extra.length ? ['-', ...extra] : []),
     ]);
   });
   if (Rootlist?.createPlaylist) {
@@ -585,13 +586,13 @@
     if(folder==='true')openLibrary(kind,uri);
     else go('/'+uri.split(':').slice(1).join('/'));
   });
-  libraryView.addEventListener('contextmenu',event=>{
+  libraryView.addEventListener('contextmenu',async event=>{
     const card=event.target.closest?.('.am-library-card');
     if(!card||!libraryView.contains(card))return;
     event.preventDefault();
     const {uri,kind,folder}=card.dataset;if(!uri)return;
-    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/');
-    togglePopover({x:event.clientX,y:event.clientY},()=>{
+    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/'),at={x:event.clientX,y:event.clientY},extra=folder==='true'?[]:await libraryEntries(uri);
+    togglePopover(at,()=>{
       if(folder==='true')return [
         {label:T('Klasörü Aç','Open Folder'),action:()=>openLibrary(kind,uri)},
         ...(Rootlist?.createPlaylist?[{label:T('Yeni Çalma Listesi','New Playlist'),action:()=>nameNewItem('playlist')}]:[]),
@@ -602,6 +603,7 @@
         '-',
         {label:T('Aç','Open'),action:()=>go('/'+uri.split(':').slice(1).join('/'))},
         {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+        ...(extra.length?['-',...extra]:[]),
       ];
     });
   });
@@ -711,7 +713,7 @@
     if(popover.contains(event.target))return;
     event.preventDefault();
     if(!S.Player.data?.item?.uri)return;
-    togglePopover({x:event.clientX,y:event.clientY},trackMenu);
+    openTrackMenu({x:event.clientX,y:event.clientY});
   });
   const controls=el('div','am-transport');player.append(controls);
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
@@ -756,7 +758,7 @@
   subtitle.root.addEventListener('click',()=>togglePopover(subtitle.root,subtitleMenu));
   subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
-  const more=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(more,trackMenu),'am-more');
+  const more=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(more),'am-more');
   lcd.append(fullscreenButton,text,more);
   const scrub=el('div','am-scrub');
   const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
@@ -1138,6 +1140,39 @@
   const loadAddTargets=()=>addLoading||=Promise.resolve(Rootlist?.getContents?.({flatten:true}))
     .then(r=>{addTargets=(r?.items||[]).filter(i=>i.type==='playlist'&&i.canAdd);}).catch(()=>{addTargets=[];}).finally(()=>{addLoading=null;});
   try{const events=Rootlist?.getEvents?.();(events?._emitter||events)?.addListener?.('update',()=>{addTargets=null;},{});}catch{}
+  // What Spotify's own menu offers on library items (issue #59): remove an album, artist or followed playlist from the
+  // library; your own playlist can be deleted (confirmed in a submenu) and shown on or hidden from your profile. The
+  // item's state is read as its menu opens (a few ms), so the labels match it.
+  async function libraryEntries(uri) {
+    const type=uri.split(':')[1],L=S.Platform.LibraryAPI;
+    const removal=label=>({label,action:async()=>{try{await L.remove({uris:[uri]});notify(T('Kitaplıktan çıkarıldı.','Removed from Your Library.'));}catch{notify(T('Kitaplıktan çıkarılamadı.','Couldn\'t remove it from Your Library.'));}}});
+    if(type==='playlist'){
+      const meta=await S.Platform.PlaylistAPI?.getMetadata?.(uri).catch(()=>null);if(!meta)return [];
+      if(!meta.isOwnedBySelf)return meta.isSaved&&L?.remove?[removal(T('Kitaplıktan Çıkar','Remove from Your Library'))]:[];
+      const name=meta.name||T('Bu liste','This playlist');
+      return [
+        ...(Rootlist?.setPublishedState?[{label:meta.isPublished?T('Profilden Kaldır','Remove from Profile'):T('Profile Ekle','Add to Profile'),action:async()=>{
+          try{await Rootlist.setPublishedState(uri,!meta.isPublished);notify(meta.isPublished?T('Profilden kaldırıldı.','Removed from your profile.'):T('Profile eklendi.','Added to your profile.'));}
+          catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}]:[]),
+        ...(Rootlist?.remove?[{label:T('Sil','Delete'),submenu:[{label:T(`"${name}" Silinsin`,`Delete "${name}"`),action:async()=>{
+          try{await Rootlist.remove([{uri}]);notify(T('Çalma listesi silindi.','Playlist deleted.'));}catch{notify(T('Silinemedi.','Couldn\'t delete it.'));}}}]}]:[]),
+      ];
+    }
+    if(!['album','artist','show','audiobook'].includes(type)||!L?.contains||!L.remove)return [];
+    const [saved]=await L.contains(uri).catch(()=>[false]);
+    return saved?[removal(type==='artist'?T('Takibi Bırak','Unfollow'):T('Kitaplıktan Çıkar','Remove from Your Library'))]:[];
+  }
+  // The playing track out of the playlist it plays from, when that playlist is yours to edit (Spotify's "Remove from this
+  // playlist"); the row is named by its uid, so a track listed twice loses only this copy.
+  async function playlistRemoval() {
+    const item=S.Player.data?.item,context=S.Player.data?.context?.uri;
+    if(!item?.uri||!item.uid||!/^spotify:playlist:/.test(context||'')||!S.Platform.PlaylistAPI?.remove)return [];
+    const meta=await S.Platform.PlaylistAPI.getMetadata?.(context).catch(()=>null);if(!meta?.canRemove)return [];
+    return [{label:T('Bu Listeden Çıkar','Remove from this Playlist'),action:async()=>{
+      try{await S.Platform.PlaylistAPI.remove(context,[{uri:item.uri,uid:item.uid}]);notify(T('Listeden çıkarıldı.','Removed from the playlist.'));}
+      catch{notify(T('Listeden çıkarılamadı.','Couldn\'t remove it from the playlist.'));}}}];
+  }
+  const openTrackMenu=async anchor=>{const extra=await playlistRemoval();togglePopover(anchor,()=>trackMenu(extra));};
   function playlistSubmenu(trackUri) {
     if(!addTargets)loadAddTargets();
     return () => {
@@ -1151,7 +1186,7 @@
       ];
     };
   }
-  function trackMenu() {
+  function trackMenu(extra=[]) {
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artistUri=item.artists?.[0]?.uri||meta.artist_uri;
     return [
@@ -1166,6 +1201,7 @@
         try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}
         catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}
       }},
+      ...(extra.length?['-',...extra]:[]),
     ];
   }
   function subtitleMenu() {

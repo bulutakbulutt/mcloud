@@ -113,6 +113,16 @@
   Object.assign(Spicetify.Platform.LibraryAPI, {
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
+    contains: async (...uris) => uris.map(() => true),
+  });
+  // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
+  Object.assign(Spicetify.Platform.PlaylistAPI, {
+    getMetadata: async uri => { const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own }; },
+    remove: async (uri, items) => { (window.__playlistRemoves ||= []).push({ uri, items }); },
+  });
+  Object.assign(Spicetify.Platform.RootlistAPI, {
+    remove: async items => { (window.__rootlistRemoves ||= []).push(...items.map(i => i.uri)); },
+    setPublishedState: async (uri, on) => { (window.__published ||= []).push([uri, on]); },
   });
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();

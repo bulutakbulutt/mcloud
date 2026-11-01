@@ -784,9 +784,36 @@ try {
     // Right-click on library card opens context menu
     await page.click('.am-library-card >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala']);
-    await page.keyboard.press('Escape');
+    // Spotify's own menu offers removal for a saved album (#59).
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala', 'Kitaplıktan Çıkar']);
+    await page.click('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
+    assert.equal(await page.evaluate(() => window.__libraryRemoves.at(-1)), await page.evaluate(() => document.querySelector('.am-library-card').dataset.uri));
     assert.ok(await page.locator('#am-popover').isHidden());
+  });
+
+  await check('library actions on playlists and the playing track (#59)', async () => {
+    // Your own playlist: on or off your profile, and delete confirmed in a submenu.
+    const row = name => `#am-sidebar .am-list-row[title="${name}"]`;
+    await page.click(row('Sabah Kahvesi'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
+    const items = await page.locator('#am-popover .am-popover-item').allTextContents();
+    assert.ok(items.includes('Sil') && items.some(t => /^Profil(den Kaldır|e Ekle)$/.test(t)), items.join());
+    await page.hover('#am-popover .am-popover-item:has-text("Sil")');
+    await page.click('#am-popover-sub .am-popover-item:has-text("Silinsin")');
+    const uri = await page.getAttribute(row('Sabah Kahvesi'), 'data-uri');
+    assert.deepEqual(await page.evaluate(() => window.__rootlistRemoves), [uri]);
+    // A playlist you follow is only removed from the library.
+    await page.evaluate(uri => { window.__followed = [uri]; }, await page.getAttribute(row('Koşu'), 'data-uri'));
+    await page.click(row('Koşu'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
+    assert.ok(!(await page.locator('#am-popover .am-popover-item').allTextContents()).includes('Sil'));
+    await page.keyboard.press('Escape');
+    // The playing track from your own playlist: "Remove from this Playlist" names its row by uid.
+    await page.evaluate(uri => { const d = Spicetify.Player.data; window.__ctx = d.context; d.context = { uri }; d.item.uid = 'u1'; }, uri);
+    await page.click('.am-more');
+    await page.click('#am-popover .am-popover-item:has-text("Bu Listeden Çıkar")');
+    assert.deepEqual(await page.evaluate(() => window.__playlistRemoves), [{ uri, items: [{ uri: 'spotify:track:1', uid: 'u1' }] }]);
+    await page.evaluate(() => { Spicetify.Player.data.context = window.__ctx; delete Spicetify.Player.data.item.uid; });
   });
   await shot('library');
 
