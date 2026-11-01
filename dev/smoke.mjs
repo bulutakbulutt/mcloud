@@ -790,6 +790,20 @@ try {
   });
   await shot('library');
 
+  await check('the toolbar Home leaves a library view (#59)', async () => {
+    // Library views are /?am-library=…; Spotify's Home does nothing where the path is already '/'.
+    await page.click('text=Albümler');
+    await page.waitForSelector('body.am-library-open');
+    // A stand-in for Spotify's Home in the toolbar's centre group, for this check only (the toolbar glass counts shapes).
+    await page.evaluate(() => { const b = document.createElement('button'); b.className = 'mock-home'; b.textContent = 'H'; b.onclick = () => { if (Spicetify.Platform.History.location.pathname !== '/') Spicetify.Platform.History.push('/'); }; document.querySelector('#global-nav-bar .am-toolbar-center').prepend(b); });
+    await page.click('#global-nav-bar .mock-home');
+    await page.waitForFunction(() => !document.body.classList.contains('am-library-open'));
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.search), '');
+    await page.evaluate(() => document.querySelector('#global-nav-bar .mock-home').remove());
+    await page.click('text=Albümler');
+    await page.waitForSelector('body.am-library-open .am-library-card');
+  });
+
   await check('a sheet over the library opens without a grey fade', async () => {
     // Spotify fades .Root's background; #main is lifted over the library while a sheet is open.
     await page.click('#am-sidebar [aria-label="Arkadaş etkinliği"]');

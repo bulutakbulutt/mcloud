@@ -149,6 +149,14 @@
   let browsing = false;
   // The route change closes the library (H.listen), once the page under it has been replaced.
   function go(path) { H.push(path); updateNav(); }
+  // Library views live at /?am-library=..., which Spotify's own toolbar Home takes for home already, so it did nothing
+  // there (issue #59): that click goes home.
+  document.addEventListener('click',event=>{
+    if(!document.body.classList.contains('am-library-open'))return;
+    const button=event.target.closest?.('#global-nav-bar .am-toolbar-center button');
+    if(!button||button.closest('[role="search"]'))return;
+    event.preventDefault();event.stopPropagation();go('/');
+  },true);
   function row(label, icon, fn, key) {
     const b = button(label, icon, fn, 'am-nav-row'); b.append(el('span', '', label));
     nav.append(b); navItems.push({ b, key });
