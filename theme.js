@@ -26,7 +26,7 @@
     info:'<circle cx="12.15" cy="5.9" r="1.45" fill="currentColor" stroke="none"/><path d="M8.4 10.2H13.2V19.2H16.2V21H8.1V19.2H11.4V12H8.4Z" fill="currentColor" stroke="none"/>',
     close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
     // Menu icons (the Spotify-style option): the theme's own line drawings, not Spotify's.
-    queue:'<path d="M3 6h12M3 12h12M3 18h7M18 14v7M14.5 17.5h7"/>',
+    addQueue:'<path d="M3 6h12M3 12h12M3 18h7M18 14v7M14.5 17.5h7"/>',
     plus:'<path d="M12 5v14M5 12h14"/>',
     disc:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>',
     person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
@@ -39,6 +39,8 @@
     edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
     lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
     ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
+    credits:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+    radio:'<circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -1071,11 +1073,12 @@
   subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);subAnchor?.classList.add('am-parent');});
   subPopover.addEventListener('pointerleave',()=>{subAnchor?.classList.remove('am-parent');subTimer=setTimeout(closeSubPopover,140);});
   // Our menus are text only, as macOS draws them; the setting adds an icon to each row, as Spotify's menus have.
-  const menuIcons=Object.fromEntries([['Çal','Play','play'],['Sanatçıyı Çal','Play Artist','play'],['Sıraya Ekle','Add to Queue','queue'],['Çalma Listesine Ekle','Add to Playlist','plus'],
+  const menuIcons=Object.fromEntries([['Çal','Play','play'],['Sanatçıyı Çal','Play Artist','play'],['Sıraya Ekle','Add to Queue','addQueue'],['Çalma Listesine Ekle','Add to Playlist','plus'],
     ['Albüme Git','Go to Album','disc'],['Sanatçıya Git','Go to Artist','person'],['Bağlantıyı Kopyala','Copy Link','link'],['Şarkı Bağlantısını Kopyala','Copy Song Link','link'],
     ['Sanatçı Bağlantısını Kopyala','Copy Artist Link','link'],['Aç','Open','open'],['Kitaplıktan Çıkar','Remove from Your Library','check'],['Takibi Bırak','Unfollow','check'],
     ['Profilden Kaldır','Remove from Profile','profile'],['Profile Ekle','Add to Profile','profile'],['Sil','Delete','trash'],['Bu Listeden Çıkar','Remove from this Playlist','minus'],
-    ['Ayrıntıları Düzenle','Edit Details','edit'],['Gizli Yap','Make Private','lock'],['Herkese Açık Yap','Make Public','lock'],['Bu Sanatçıyı Çalma','Don\'t Play This Artist','ban'],['Bu Sanatçıya İzin Ver','Allow This Artist','ban']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
+    ['Ayrıntıları Düzenle','Edit Details','edit'],['Gizli Yap','Make Private','lock'],['Herkese Açık Yap','Make Public','lock'],['Bu Sanatçıyı Çalma','Don\'t Play This Artist','ban'],['Bu Sanatçıya İzin Ver','Allow This Artist','ban'],
+    ['Katkıda Bulunanları Görüntüle','View Credits','credits'],['Sanatçı Radyosuna Git','Go to Artist Radio','radio']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
   function renderPopoverEntries(entries) {
     popover.replaceChildren();
     for(const entry of entries){
@@ -1185,9 +1188,9 @@
           try{await Rootlist.remove([{uri}]);notify(T('Çalma listesi silindi.','Playlist deleted.'));}catch{notify(T('Silinemedi.','Couldn\'t delete it.'));}}}]}]:[]),
       ];
     }
-    if(!['album','artist','show','audiobook'].includes(type)||!L?.contains||!L.remove)return [];
-    const [saved]=await L.contains(uri).catch(()=>[false]);
-    return [...(saved?[removal(type==='artist'?T('Takibi Bırak','Unfollow'):T('Kitaplıktan Çıkar','Remove from Your Library'))]:[]),...(type==='artist'?await artistBan(uri):[])];
+    if(!['album','artist','show','audiobook'].includes(type))return [];
+    const [saved]=L?.contains&&L.remove?await L.contains(uri).catch(()=>[false]):[false];
+    return [...(saved?[removal(type==='artist'?T('Takibi Bırak','Unfollow'):T('Kitaplıktan Çıkar','Remove from Your Library'))]:[]),...(type==='artist'?[...await artistBan(uri),...artistRadio(uri)]:[])];
   }
   // Spotify's "Don't play this artist": the artist goes into the artistban set (and out of the library); undone the same way.
   async function artistBan(uri) {
@@ -1197,6 +1200,23 @@
       try{if(banned)await C.remove('artistban',[uri]);else{await C.add('artistban',[uri]);await S.Platform.LibraryAPI?.remove?.({uris:[uri],silent:true});}
         notify(banned?T('Bu sanatçı yeniden çalınabilir.','This artist can play again.'):T('Bu sanatçı çalınmayacak.','This artist won\'t be played.'));}
       catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}];
+  }
+  // Spotify's "Go to artist radio": a playlist Spotify's server makes from the artist, fetched the way its own menu does.
+  const artistRadio=uri=>S.CosmosAsync?.get?[{label:T('Sanatçı Radyosuna Git','Go to Artist Radio'),action:async()=>{
+    try{const list=(await S.CosmosAsync.get('https://spclient.wg.spotify.com/inspiredby-mix/v2/seed_to_playlist/'+uri+'?response-format=json'))?.mediaItems?.[0]?.uri;if(!list)throw 0;openUri(list);}
+    catch{notify(T('Radyo açılamadı.','Couldn\'t open the radio.'));}}}]:[];
+  // Spotify's own credits dialog. Its menu opens it with a Redux action that no Platform API offers, so the store is
+  // taken from the React tree under #main; the row is left out if it isn't there or holds no credits state.
+  let reduxStore=null;
+  function creditsEntry(trackUri) {
+    if(!reduxStore)try{
+      const host=document.getElementById('main'),key=host&&Object.keys(host).find(k=>k.startsWith('__reactContainer'));
+      const walk=(fiber,depth)=>{for(let n=fiber,i=0;n&&i<200&&!reduxStore;n=n.sibling,i++){const store=n.memoizedProps?.store;
+        if(store?.dispatch&&store.getState&&'trackCreditsModal' in (store.getState()?.ui||{}))reduxStore=store;else if(depth<20)walk(n.child,depth+1);}};
+      if(key)walk(host[key],0);
+    }catch{}
+    if(!reduxStore||!/^spotify:track:/.test(trackUri||''))return [];
+    return [{label:T('Katkıda Bulunanları Görüntüle','View Credits'),action:()=>reduxStore.dispatch({type:'SHOW_TRACK_CREDITS',isOpen:true,trackUri})}];
   }
   // Spotify's Edit details: name and description in a small sheet, saved through PlaylistAPI.updateDetails.
   function editDetails(uri,meta) {
@@ -1243,6 +1263,7 @@
       '-',
       ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
       ...(artistUri?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artistUri)}]:[]),
+      ...creditsEntry(item.uri),
       '-',
       {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{
         const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
@@ -1800,7 +1821,7 @@
     if(event.defaultPrevented||popover.contains(event.target))return;
     event.preventDefault();
     const id=routePath().replace(/^\/artist\//,'');if(!id)return;
-    const shareLink='https://open.spotify.com/artist/'+id,at={x:event.clientX,y:event.clientY},extra=await artistBan('spotify:artist:'+id);
+    const shareLink='https://open.spotify.com/artist/'+id,at={x:event.clientX,y:event.clientY},extra=[...await artistBan('spotify:artist:'+id),...artistRadio('spotify:artist:'+id)];
     togglePopover(at,()=>[
       {label:T('Sanatçıyı Çal','Play Artist'),action:()=>playArtist('spotify:artist:'+id)},
       '-',
@@ -2082,7 +2103,8 @@
       const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
       togglePopover({x:event.clientX,y:event.clientY},()=>[
         {label:T('Çal','Play'),action:()=>openUri(release.uri)},
-        {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)},
+        ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
+        ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
         '-',
         {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
       ]);
@@ -2282,6 +2304,7 @@
             {label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)},
             '-',
             ...(song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[]),
+            ...creditsEntry(song.uri),
             '-',
             {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
           ];

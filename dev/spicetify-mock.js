@@ -127,5 +127,9 @@
     remove: async items => { (window.__rootlistRemoves ||= []).push(...items.map(i => i.uri)); },
     setPublishedState: async (uri, on) => { (window.__published ||= []).push([uri, on]); },
   });
+  // Spotify's Redux store, found by the theme in the React tree under #main (it opens Spotify's credits dialog), and the
+  // radio lookup Spotify's "Go to artist radio" makes.
+  document.getElementById('main').__reactContainer$mock = { child: { memoizedProps: { store: { getState: () => ({ ui: { trackCreditsModal: { isOpen: false } } }), dispatch: action => { (window.__dispatched ||= []).push(action); } } } } };
+  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url); return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();

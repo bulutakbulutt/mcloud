@@ -216,7 +216,7 @@ try {
 
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
     // Liquid Glass: the menu's own filter, its nine-piece map placed for its size (by a ResizeObserver: after a frame's rAF callbacks, before its paint).
     const menuGlass = () => page.evaluate(async () => { for (let n = 0; n < 2; n++) await new Promise(r => requestAnimationFrame(r)); const p = document.getElementById('am-popover'), f = document.getElementById('am-menu-glass-' + p.dataset.amGlass), i = [...f.querySelectorAll('feImage')], br = i.find(e => e.dataset.piece === 'br');
       return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight]; });
@@ -247,7 +247,7 @@ try {
     // Right click on player also opens track menu
     await page.click('#am-player', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
@@ -683,13 +683,33 @@ try {
     // Right-click on song row opens context menu
     await page.click('.am-song >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     await page.click('.am-artist-back');
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });
   await shot('artist');
+
+  await check('View Credits opens Spotify\'s dialog; Go to Artist Radio opens the radio playlist (#59)', async () => {
+    // Credits: the action Spotify's own track menu dispatches to its store, for the song the menu is about.
+    await page.click('.am-more');
+    await page.click('#am-popover .am-popover-item:has-text("Katkıda Bulunanları Görüntüle")');
+    assert.deepEqual(await page.evaluate(() => window.__dispatched?.at(-1)), { type: 'SHOW_TRACK_CREDITS', isOpen: true, trackUri: 'spotify:track:1' });
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-song');
+    await page.click('.am-song >> nth=1', { button: 'right' });
+    await page.click('#am-popover .am-popover-item:has-text("Katkıda Bulunanları Görüntüle")');
+    assert.equal(await page.evaluate(() => window.__dispatched.at(-1).trackUri), 'spotify:track:t1');
+    // Radio: Spotify's server names a playlist made from the artist; the theme opens it.
+    await page.click('.am-artist-name', { button: 'right' });
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sanatçıyı Çal', 'Sanatçı Bağlantısını Kopyala', 'Bu Sanatçıyı Çalma', 'Sanatçı Radyosuna Git']);
+    await page.click('#am-popover .am-popover-item:has-text("Sanatçı Radyosuna Git")');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/playlist/radio');
+    assert.match(await page.evaluate(() => window.__cosmos.at(-1)), /\/seed_to_playlist\/spotify:artist:mock\?/);
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
+  });
 
   await check('locale-prefixed artist links and portrait-only artists', async () => {
     await page.evaluate(() => { window.__savedHeader = window.__mockArtist.headerImage; window.__mockArtist.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
