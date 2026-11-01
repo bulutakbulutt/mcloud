@@ -107,7 +107,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true,menuIcons:false};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -125,7 +125,6 @@
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
     document.body.classList.toggle('am-liquid',settings.liquid);
-    document.body.classList.toggle('am-menu-icons',settings.menuIcons);
     document.body.classList.toggle('am-no-numbers',!settings.numbers);
     // Glass modes. Over a page that redraws every frame (Spicy Lyrics) each backdrop filter re-runs every frame, so
     // "balanced" draws glass without them there (body.am-balanced), "eco" (and the OS reduced-transparency setting)
@@ -1075,10 +1074,10 @@
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
       for(const tip of document.querySelectorAll('body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
         for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
-        // Spotify's (and Spicetify's) leading icons, which user.css shows only with the menu icons setting, as in the
-        // theme's menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first
-        // icon before the label's text, taken with its wrappers up to the one that holds text. Trailing icons (submenu
-        // chevrons, checks, "opens outside") stay.
+        // Spotify's (and Spicetify's) leading icons, which user.css sets in Apple Music's icon column, as in the theme's
+        // menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first icon
+        // before the label's text, taken with its wrappers up to the one that holds text. Trailing icons (submenu
+        // chevrons, checks, "opens outside") stay where they are.
         for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"],li > button):not([data-am-iconed])')){
           item.dataset.amIconed='';const first=item.firstElementChild;
           // Rich rows (Your Updates: a picture, two lines, a dot) are Encore list rows: their picture is content.
@@ -1088,11 +1087,6 @@
           let icon=text&&[...item.querySelectorAll('svg,img')].find(i=>i.compareDocumentPosition(text)&Node.DOCUMENT_POSITION_FOLLOWING);
           while(icon&&icon.parentElement!==item&&!icon.parentElement.textContent.trim())icon=icon.parentElement;
           icon?.setAttribute('data-am-icon','');
-        }
-        for(const list of tip.querySelectorAll('ul[role="menu"]')){
-          const rows=[...list.querySelectorAll(':scope > li > :is([role^="menuitem"],[role="link"],button)')].filter(row=>!row.querySelector('[data-encore-id="listRow"],[role="search"]'));
-          const icons=rows.some(row=>row.querySelector('[data-am-icon]')||row.hasAttribute('data-am-icon'));
-          for(const row of rows)row.toggleAttribute('data-am-indent',icons&&!row.querySelector('[data-am-icon]'));
         }
         if(!feathered.has(tip)){feathered.add(tip);tip.addEventListener('scroll',event=>featherSoon(event.target),{capture:true,passive:true});}
         // Long lists, as they open: the rows' own list (a ul, or Your Updates' scroller), or the element scrolling it.
@@ -1164,7 +1158,7 @@
   // With the pointer in the submenu its parent row turns grey, as on macOS; back on the parent it is the accent again.
   subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);subAnchor?.classList.add('am-parent');});
   subPopover.addEventListener('pointerleave',()=>{subAnchor?.classList.remove('am-parent');subTimer=setTimeout(closeSubPopover,140);});
-  // Our menus are text only, as macOS draws them; the setting adds an icon to each row, as Spotify's menus have.
+  // Each row of our menus carries its icon, as Spotify's rows do, in Apple Music's icon column (user.css).
   const menuIcons=Object.fromEntries([['Çal','Play','play'],['Sanatçıyı Çal','Play Artist','play'],['Sıraya Ekle','Add to Queue','addQueue'],['Çalma Listesine Ekle','Add to Playlist','plus'],
     ['Albüme Git','Go to Album','disc'],['Sanatçıya Git','Go to Artist','person'],['Bağlantıyı Kopyala','Copy Link','link'],['Şarkı Bağlantısını Kopyala','Copy Song Link','link'],
     ['Sanatçı Bağlantısını Kopyala','Copy Artist Link','link'],['Aç','Open','open'],['Kitaplıktan Çıkar','Remove from Your Library','check'],['Takibi Bırak','Unfollow','check'],
@@ -1186,7 +1180,7 @@
         popover.append(row);continue;
       }
       const item=el('button','am-popover-item'+(entry.submenu?' am-has-submenu':''),entry.label);item.type='button';item.setAttribute('role','menuitem');
-      if(menuIcons[entry.label])item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));
+      if(menuIcons[entry.label]){item.classList.add('am-has-icon');item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));}
       if(entry.submenu){
         item.addEventListener('pointerenter',()=>{clearTimeout(subTimer);openSubPopover(item,entry.submenu);});
         item.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
@@ -1446,24 +1440,25 @@
       ];
     };
   }
+  // A song's menu in Apple Music's groups (macOS 27): the library (Add to Playlist), playing, info (credits), where to
+  // go, the link; rows read as the menu opens (Remove from this Playlist) come last, so nothing moves under the pointer.
+  const menuGroups=(...groups)=>groups.filter(g=>g.length).flatMap((g,i)=>i?['-',...g]:g);
   function trackMenu(extra=[]) {
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artistUri=item.artists?.[0]?.uri||meta.artist_uri;
-    return [
-      {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(item.uri)},
-      {label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(item.uri)},
-      '-',
-      ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
-      ...(artistUri?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artistUri)}]:[]),
-      ...creditsEntry(item.uri),
-      '-',
-      {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{
+    return menuGroups(
+      [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(item.uri)}],
+      [{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(item.uri)}],
+      creditsEntry(item.uri),
+      [...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
+        ...(artistUri?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artistUri)}]:[])],
+      [{label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{
         const link='https://open.spotify.com/'+item.uri.split(':').slice(1).join('/');
         try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}
         catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}
-      }},
-      ...(extra.length?['-',...extra]:[]),
-    ];
+      }}],
+      extra,
+    );
   }
   function subtitleMenu() {
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
@@ -2492,16 +2487,13 @@
           const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
           text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
           playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
-          const songItems=()=>[
-            {label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},
-            {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)},
-            {label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)},
-            '-',
-            ...(song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[]),
-            ...creditsEntry(song.uri),
-            '-',
-            {label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-          ];
+          const songItems=()=>menuGroups(
+            [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)}],
+            [{label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)}],
+            creditsEntry(song.uri),
+            song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[],
+            [{label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}}],
+          );
           const songMore=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(songMore,songItems),'am-song-more');
           row.append(playSong,songMore);
           row.addEventListener('contextmenu',event=>{
@@ -2704,7 +2696,7 @@
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),toggle(T('Menü ikonları (Spotify gibi)','Menu icons (like Spotify)'),'menuIcons'),...glass,numbers,...recents,...colors,...langs]).register();
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();

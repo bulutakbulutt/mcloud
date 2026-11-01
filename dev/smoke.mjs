@@ -216,7 +216,7 @@ try {
 
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     // Liquid Glass: the menu's own filter, its nine-piece map placed for its size (by a ResizeObserver: after a frame's rAF callbacks, before its paint).
     const menuGlass = () => page.evaluate(async () => { for (let n = 0; n < 2; n++) await new Promise(r => requestAnimationFrame(r)); const p = document.getElementById('am-popover'), f = document.getElementById('am-menu-glass-' + p.dataset.amGlass), i = [...f.querySelectorAll('feImage')], br = i.find(e => e.dataset.piece === 'br');
       return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight]; });
@@ -234,7 +234,7 @@ try {
     // The submenu lies over the menu's edge by its padding, its first row level with the parent unless that runs off the
     // window (it does here); with the pointer in it the parent turns grey.
     const flyout = () => page.evaluate(() => { const item = document.querySelector('#am-popover .am-has-submenu').getBoundingClientRect(), sub = document.getElementById('am-popover-sub'); // offsets: its opening animation scales it
-      return [Math.round(sub.offsetLeft - item.right), sub.offsetTop - item.top <= -5, document.querySelector('#am-popover .am-has-submenu').classList.contains('am-parent')]; });
+      return [Math.round(sub.offsetLeft - item.right) || 0, sub.offsetTop - item.top <= -5, document.querySelector('#am-popover .am-has-submenu').classList.contains('am-parent')]; });
     assert.deepEqual(await flyout(), [0, true, false]);
     await page.hover('#am-popover-sub .am-popover-item >> nth=1');
     assert.deepEqual(await flyout(), [0, true, true]);
@@ -247,7 +247,7 @@ try {
     // Right click on player also opens track menu
     await page.click('#am-player', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
@@ -697,7 +697,7 @@ try {
     // Right-click on song row opens context menu
     await page.click('.am-song >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Katkıda Bulunanları Görüntüle', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Çal', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     await page.click('.am-artist-back');
@@ -852,16 +852,15 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
   });
 
-  await check('menu icons only with the setting on', async () => {
-    const icons = () => page.evaluate(() => [...document.querySelectorAll('#am-popover .am-popover-item')].map(i => getComputedStyle(i.querySelector('.am-menu-icon') || i).display));
+  await check('every row of our menus has its icon, in Apple Music\'s icon column', async () => {
     await page.click('.am-more');
-    assert.ok((await icons()).every(d => d !== 'block'), 'text only by default');
+    await page.waitForTimeout(150); // the opening animation scales the menu
+    // The icon centred in a 14px column where text starts (10px in), the label 22px from there.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-popover .am-popover-item')].map(item => {
+      const icon = item.querySelector('.am-menu-icon'), range = document.createRange(); range.selectNodeContents(item.lastChild);
+      const left = item.getBoundingClientRect().left;
+      return icon && [icon.getBoundingClientRect().left - left, icon.getBoundingClientRect().width, range.getBoundingClientRect().left - left].map(Math.round).join(); }).filter(Boolean).every(v => v === '11,12,32')), true);
     await page.keyboard.press('Escape');
-    await page.evaluate(() => document.body.classList.add('am-menu-icons'));
-    await page.click('.am-more');
-    assert.ok((await icons()).every(d => d === 'block'), 'every row of the track menu has its icon');
-    await page.keyboard.press('Escape');
-    await page.evaluate(() => document.body.classList.remove('am-menu-icons'));
   });
 
   await check('menus open at once; rows that need the library arrive after (#59)', async () => {
@@ -949,12 +948,13 @@ try {
     // The sidebar's rows start drags Spotify's pages understand.
     assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
   });
-  await check('Spotify\'s menus show their icons only with the menu icons setting (#59)', async () => {
+  await check('Spotify\'s menus in the theme\'s measure, their icons in Apple Music\'s column (#59)', async () => {
     // Spotify's rows: [icon | label], and a submenu row [icon + label | chevron].
     const shown = () => page.evaluate(() => [...document.querySelectorAll('#mock-tip svg')].map(s => s.getBoundingClientRect().width > 0));
     await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-tip'; tip.setAttribute('data-tippy-root', '');
       const icon = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
-      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><div role="menuitem"><div><div role="search"><input placeholder="Find a playlist"><div><span>${icon}</span></div></div></div></div></li><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li><li><button role="link" disabled><div>${icon}</div><div><span>Report</span></div><div>${icon}</div></button></li><li><button role="menuitem"><span>${icon}Experimental features</span></button></li><li><button><div>${icon}</div><div>Home config</div></button></li><li><button role="menuitem"><div><span>Profile</span></div></button></li><li><button role="menuitem" id="mock-update"><div data-encore-id="listRow"><div class="e-legacy-list-row__header-side"><img width="56" height="56" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div><div class="e-legacy-list-row__header"><div class="e-legacy-list-row__column"><p>New show near you</p></div><div class="e-legacy-list-row__slot"><div></div></div></div></div></button></li></ul>`;
+      // Spotify's rows are flex rows.
+      tip.innerHTML = `<style>#mock-tip :is(button,[role="menuitem"]) { display: flex; align-items: center; border: 0; font: inherit }</style><ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><div role="menuitem"><div><div role="search"><input placeholder="Find a playlist"><div><span>${icon}</span></div></div></div></div></li><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li><li><button role="link" disabled><div>${icon}</div><div><span>Report</span></div><div>${icon}</div></button></li><li><button role="menuitem"><span>${icon}Experimental features</span></button></li><li><button><div>${icon}</div><div>Home config</div></button></li><li><button role="menuitem"><div><span>Profile</span></div></button></li><li><button role="menuitem" id="mock-update"><div data-encore-id="listRow"><div class="e-legacy-list-row__header-side"><img width="56" height="56" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div><div class="e-legacy-list-row__header"><div class="e-legacy-list-row__column"><p>New show near you</p></div><div class="e-legacy-list-row__slot"><div></div></div></div></div></button></li></ul>`;
       document.body.append(tip); });
     await page.waitForFunction(() => document.querySelector('#mock-tip [role="menuitem"][data-am-iconed]'));
     // The search icon is part of its field: it stays, at 12px.
@@ -962,9 +962,10 @@ try {
     // Your Updates rows keep their picture at its size; the unread dot takes the accent.
     assert.deepEqual(await page.evaluate(() => { const row = document.getElementById('mock-update'), img = row.querySelector('img'), dot = row.querySelector('[class*="list-row__slot"] > div');
       return [getComputedStyle(img.parentElement).display !== 'none' && img.getBoundingClientRect().width, getComputedStyle(dot).backgroundColor === getComputedStyle(document.body).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)]; }), [56, true]);
-    // Spicetify's rows hold the icon and the label in one part; its icon goes too.
-    assert.deepEqual(await shown(), [false, true, false, false, false, true, false, false]);
-    // Spicetify's own rows are bare buttons: same measure, icon hidden too.
+    // Every leading icon shows (Spicetify's rows hold the icon and the label in one part); a submenu's chevron gives way
+    // to the theme's ›.
+    assert.deepEqual(await shown(), [true, true, true, false, true, true, true, true]);
+    // Spicetify's own rows are bare buttons: same measure.
     assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Home config')).padding), '3px 10px');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [role="link"]')).padding), '3px 10px');
     // "Find a playlist" as a macOS search field.
@@ -974,12 +975,11 @@ try {
     // In the theme's menu measure: 13px labels on 21px rows, separators as the theme's.
     assert.deepEqual(await page.evaluate(() => { const item = document.querySelector('#mock-tip [role="menuitem"]'), sep = document.querySelector('#mock-tip ul > div');
       return [getComputedStyle(item).padding, getComputedStyle(item.querySelector('span')).fontSize, getComputedStyle(sep).height, getComputedStyle(sep).marginLeft]; }), ['3px 10px', '13px', '1px', '11px']);
-    await page.evaluate(() => document.body.classList.add('am-menu-icons'));
-    assert.deepEqual(await shown(), [true, true, true, false, true, true, true, true]);
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [data-am-icon]')).width), '16px');
-    // With icons on, a row without one lines up with the rest.
-    assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Profile')).paddingLeft), '36px');
-    await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });
+    // As in Apple Music's menus: icons at 12px in a 14px column where a plain row's text starts, the label 22px from
+    // there; a row without an icon is not indented.
+    assert.deepEqual(await page.evaluate(() => { const slot = document.querySelector('#mock-tip [data-am-icon]'), at = sel => [...document.querySelectorAll('#mock-tip span')].find(n => n.textContent === sel).getBoundingClientRect().left;
+      return [getComputedStyle(slot).width, slot.querySelector('svg').getBoundingClientRect().width, Math.round(at('Add to queue') - at('Profile'))]; }), ['14px', 12, 22]);
+    await page.evaluate(() => document.getElementById('mock-tip').remove());
   });
 
   await check('a scrolling menu list feathers out at its edge (#59)', async () => {
@@ -1017,7 +1017,7 @@ try {
       document.querySelector('#mock-sheet-menu .mock-slot').append(tip); });
     await page.waitForFunction(() => document.querySelector('#mock-sheet-menu [data-tippy-root]')?.dataset.amGlass !== undefined);
     assert.deepEqual(await page.evaluate(() => { const row = document.querySelector('#mock-sheet-menu [role="menuitemradio"]'), style = getComputedStyle(row);
-      return [style.paddingTop, style.paddingLeft, row.querySelector('svg').getBoundingClientRect().width]; }), ['3px', '10px', 0]);
+      return [style.paddingTop, style.paddingLeft, Math.round(row.querySelector('svg').getBoundingClientRect().width)]; }), ['3px', '10px', 12]);
     await page.evaluate(() => document.getElementById('mock-sheet-menu').remove());
   });
 
