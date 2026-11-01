@@ -714,9 +714,9 @@ try {
       const two = open('Keyboard Shortcuts', 'Basic'); out.push(sheet(two), sheet(two.firstChild)); two.close(); two.remove(); return out; }), [false, true, 'rgba(0, 0, 0, 0.35)', true, false]);
     // Credits' Encore list rows: a grey caption over one rounded group, a hairline between rows.
     assert.deepEqual(await page.evaluate(() => { const d = document.createElement('dialog'), card = document.createElement('div'), sec = document.createElement('div');
-      sec.innerHTML = '<span data-encore-id="text">Artist</span><div data-encore-id="listRow">A</div><div data-encore-id="listRow">B</div>'; card.append(sec); d.append(card); document.querySelector('.Root').append(d); d.showModal();
-      const [cap, a, b] = sec.children, cs = n => getComputedStyle(n), out = [cs(cap).textTransform, cs(a).borderTopLeftRadius, cs(a).borderBottomLeftRadius, cs(b).borderTopLeftRadius, cs(b).borderBottomLeftRadius, /linear-gradient/.test(cs(b).backgroundImage)];
-      d.close(); d.remove(); return out; }), ['uppercase', '10px', '0px', '0px', '10px', true]);
+      sec.innerHTML = '<span data-encore-id="text">Artist</span><div data-encore-id="listRow">A<button data-encore-id="buttonSecondary">Follow</button></div><div data-encore-id="listRow">B</div>'; card.append(sec); d.append(card); document.querySelector('.Root').append(d); d.showModal();
+      const [cap, a, b] = sec.children, cs = n => getComputedStyle(n), out = [cs(cap).textTransform, cs(a).borderTopLeftRadius, cs(a).borderBottomLeftRadius, cs(b).borderTopLeftRadius, cs(b).borderBottomLeftRadius, /linear-gradient/.test(cs(b).backgroundImage), cs(a.querySelector('button')).animationDelay];
+      d.close(); d.remove(); return out; }), ['uppercase', '10px', '0px', '0px', '10px', true, '0.18s']);
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-song');
     await page.click('.am-song >> nth=1', { button: 'right' });

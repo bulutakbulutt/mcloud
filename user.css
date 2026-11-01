@@ -538,6 +538,10 @@ dialog[open] :is(:not([data-encore-id="listRow"]) + [data-encore-id="listRow"],[
 dialog[open] [data-encore-id="listRow"]:not(:has(+ [data-encore-id="listRow"])) {border-bottom-left-radius:10px!important;border-bottom-right-radius:10px!important}
 dialog[open] [data-encore-id="listRow"] [data-encore-id="text"]:not(p *,.encore-internal-color-text-subdued) {font-size:15px!important;font-weight:400!important;color:#f5f5f7!important}
 dialog[open] [data-encore-id="listRow"] :is([data-encore-id="listRowSubtitle"],.encore-internal-color-text-subdued) {font-size:13px!important;color:#ffffff80!important}
+/* Follow / Following in the credits: Spotify draws "Follow" until it has read the follow state (~100ms on a first open,
+   measured), then "Following". The button waits that out unseen (keeping its place) and fades in. */
+@keyframes am-follow-in {from{opacity:0}}
+dialog[open] [data-encore-id="listRow"] [data-encore-id="buttonSecondary"] {animation:am-follow-in .12s ease-out .18s both}
 /* Report error, under the groups: a link lined up with the rows' text, as Apple's links under a list. */
 dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] {margin:10px 0 0 16px!important;padding:0!important;min-block-size:0!important;gap:5px!important;font-size:13px!important;font-weight:500!important;color:var(--am-accent)!important}
 dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] svg {width:12px!important;height:12px!important;fill:currentColor!important}
