@@ -307,10 +307,18 @@ try {
     assert.equal(await heading().evaluate(h => getComputedStyle(h, '::before').content), 'none');
     assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'), h = document.querySelector('#am-sidebar .am-floating'); return !!n.querySelector('.am-heading-spacer') && /gradient/.test(getComputedStyle(n).maskImage || getComputedStyle(n).webkitMaskImage) && Math.abs(n.getBoundingClientRect().top + parseFloat(n.style.getPropertyValue('--am-mask-edge')) - h.getBoundingClientRect().bottom - 4) <= 1; }), 'the scroll area fades out under the heading');
     await shot('sidebar-lists-stuck');
-    // Closing from deep in the list scrolls back to where the short list rests, then folds in place.
+    // Closing from deep in the list scrolls back to where the short list rests, then folds in place. The scroll only
+    // decelerates (an ease-in-out read as linear on long lists): its first frame moves the most.
+    await page.evaluate(() => {
+      const n = document.querySelector('#am-sidebar .am-navigation'), steps = window.__amSteps = []; let last = n.scrollTop;
+      const tick = () => { if (document.querySelector('#am-sidebar .am-list-more')) return; if (n.scrollTop !== last) steps.push(last - n.scrollTop); last = n.scrollTop; requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    });
     await page.click('#am-sidebar .am-nav-less');
     assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'); return n.classList.contains('am-closing') || n.getAnimations({ subtree: true }).length > 0; }), 'closing animates');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7 && !document.querySelector('#am-sidebar .am-floating'));
+    const steps = await page.evaluate(() => window.__amSteps);
+    assert.ok(steps.length > 3 && steps[0] >= Math.max(...steps.slice(1)) * .8, `the scroll back only decelerates (${steps})`);
     assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
     assert.ok(await page.evaluate(() => !document.querySelector('#am-sidebar .am-heading-spacer') && !document.querySelector('#am-sidebar .am-navigation').classList.contains('am-masked')), 'back in the list');
     await page.waitForFunction(() => document.activeElement?.classList?.contains('am-list-more'));

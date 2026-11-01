@@ -176,6 +176,27 @@
   const listMore = button(T('Tümünü Göster','Show All'), 'chevron', () => toggleLists(listMore), 'am-nav-row am-list-more'); listMore.append(el('span', '', T('Tümünü Göster','Show All'))); listMore.setAttribute('aria-expanded', 'false');
   const listLess = el('button', 'am-nav-less', T('Daha Az Göster','Show Less')); listLess.type = 'button'; listLess.setAttribute('aria-expanded', 'true'); listLess.hidden = true;
   listLess.addEventListener('click', () => toggleLists(listLess)); listsHeading.append(listLess);
+  // Hovering or focusing Show Less loads the artwork closing will show, so a click starts the scroll at once.
+  for (const type of ['pointerenter', 'focus']) listLess.addEventListener(type, () => { if (settings.lists && !listToggling) closingScroll(); });
+  // Closing from deep in the list scrolls back to where the short list will rest. Scrolled all the way, a long list
+  // (203 playlists: 6240px in 450ms) jumped more than a screen a frame and slowed down only in its last few, which read
+  // as linear; the scroll now starts at most two screens above where it lands and only decelerates, like the end of a
+  // fling, the same at any length. The rows it shows on the way get their artwork here: set at the click, the first
+  // frames after the jump showed empty squares and stalled.
+  function closingScroll() {
+    const rows = [...listBody.children].filter(b => !b.classList.contains('am-list-ghost')), rowHeight = rows[0]?.offsetHeight || 32;
+    const pinned = listItems.filter(i => i.pinned).length, kept = pinned + Math.min(listItems.length - pinned, settings.recent) + 1;
+    const shrunkMax = Math.max(0, nav.scrollHeight - Math.max(0, rows.length - kept) * rowHeight - nav.clientHeight);
+    const headingTop = allLists.getBoundingClientRect().top - 4 - listsHeading.offsetHeight, navTop = nav.getBoundingClientRect().top;
+    const target = listsHeading.classList.contains('am-stuck') ? nav.scrollTop + headingTop - navTop - 10 : nav.scrollTop;
+    const from = nav.scrollTop, to = Math.max(0, Math.min(target, shrunkMax)), span = 2 * nav.clientHeight;
+    const start = Math.abs(from - to) > span ? to + Math.sign(from - to) * span : from, art = [];
+    for (const b of rows) {
+      const y = b.getBoundingClientRect().top - navTop + from;
+      if (y > Math.min(to, start) - rowHeight && y < Math.max(to, start) + nav.clientHeight) for (const img of b.querySelectorAll('img[data-src]')) { if (!img.hasAttribute('src')) img.src = img.dataset.src; art.push(img); }
+    }
+    return { from, to, start, span, art };
+  }
   function toggleLists(from) {
     if (listToggling) return;
     const closing = settings.lists;
@@ -186,28 +207,22 @@
     };
     if (!closing) { if (listComplete) { renderLists(true, true); focusAfter(); } else refreshLists(true, true, focusAfter); return; }
     // Closing mirrors opening: the rows that go fade out in place and Show All comes back (renderLists). From deep in
-    // the list the sidebar first scrolls back, like a tap on the status bar on iOS, to where the short list will rest
-    // (so nothing jumps when it shrinks), then folds; fading the whole sidebar out and in left a blank frame.
-    const rows = [...listBody.children].filter(b => !b.classList.contains('am-list-ghost')), rowHeight = rows[0]?.offsetHeight || 32;
-    const pinned = listItems.filter(i => i.pinned).length, kept = pinned + Math.min(listItems.length - pinned, settings.recent) + 1;
-    const shrunkMax = Math.max(0, nav.scrollHeight - Math.max(0, rows.length - kept) * rowHeight - nav.clientHeight);
-    const headingTop = allLists.getBoundingClientRect().top - 4 - listsHeading.offsetHeight, navTop = nav.getBoundingClientRect().top;
-    const target = listsHeading.classList.contains('am-stuck') ? nav.scrollTop + headingTop - navTop - 10 : nav.scrollTop;
-    const from0 = nav.scrollTop, to = Math.max(0, Math.min(target, shrunkMax));
+    // the list the sidebar first scrolls back (closingScroll), like a tap on the status bar on iOS, so nothing jumps
+    // when it shrinks, then folds; fading the whole sidebar out and in left a blank frame.
+    const scroll = closingScroll(), { to, start } = scroll;
     const fold = () => { renderLists(true, true); focusAfter(); listToggling = false; nav.classList.remove('am-closing'); };
-    if (Math.abs(from0 - to) < 1 || document.hidden || reducedMotion.matches) { nav.scrollTop = to; return fold(); }
-    // The rows that stay load their artwork now, so it is there when the scroll arrives.
-    for (const b of rows.slice(0, kept - 1)) for (const img of b.querySelectorAll('img[data-src]:not([src])')) img.src = img.dataset.src;
+    if (Math.abs(scroll.from - to) < 1 || document.hidden || reducedMotion.matches) { nav.scrollTop = to; return fold(); }
     listToggling = true; nav.classList.add('am-closing'); listArt?.disconnect();
-    const duration = Math.min(450, 250 + Math.abs(from0 - to) / 30), t0 = performance.now();
-    const ease = t => t < .5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
+    const duration = 300 + 200 * Math.abs(start - to) / scroll.span, ease = t => 1 - (1 - t) ** 3;
+    let t0 = 0;
     const step = now => {
-      const t = Math.min(1, (now - t0) / duration); nav.scrollTop = from0 + (to - from0) * ease(t);
+      t0 ||= now; const t = Math.min(1, (now - t0) / duration); nav.scrollTop = start + (to - start) * ease(t);
       if (t < 1) return requestAnimationFrame(step);
       for (const img of listBody.querySelectorAll('img[data-src]')) observeLazy(listArt, img);
       syncStuck(); fold();
     };
-    requestAnimationFrame(step);
+    // Artwork not decoded yet (a click with no hover before it) holds the start for at most 150ms.
+    Promise.race([Promise.allSettled(scroll.art.map(img => img.decode())), new Promise(r => setTimeout(r, 150))]).then(() => requestAnimationFrame(step));
   }
   // While the list is open the heading sticks to the top of the sidebar. Once stuck it leaves the scrolling content
   // for the sidebar itself (a spacer keeps its place) and the scroll area fades out under it with a mask of its own,
