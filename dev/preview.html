@@ -22,13 +22,22 @@
   .mock-header {position:absolute;left:0;right:0;top:0;height:200px;z-index:-1}
   .mock-shelf {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:16px;overflow-x:auto;scroll-snap-type:inline mandatory}
   .mock-shelf > div {height:160px;border-radius:8px;scroll-snap-align:start;background:linear-gradient(135deg,#3a7bd5,#c33764)}
+  .mock-sd-host {margin:4px 0;padding:8px;max-height:398px;overflow:hidden auto;border-radius:8px;background:rgb(56,56,59)}
+  .mock-sd-hint {height:24px;font-size:12px}
+  .mock-sd-row {position:relative;display:grid;grid-template-columns:48px 1fr;gap:8px 12px;height:56px;padding:4px 4px 4px 8px;border-radius:6px}
+  .mock-sd-rich {height:64px;padding:8px 4px 8px 8px}
+  .mock-sd-row:hover {background:#ffffff1a}
+  .mock-sd-icon,.mock-sd-art {position:relative;width:48px;height:48px;border-radius:50%;overflow:hidden;background:#1e1e1e}
+  .mock-sd-art {border-radius:4px}.mock-sd-art.mock-sd-round {border-radius:50%}.mock-sd-art img {width:48px;height:48px}
+  .mock-sd-play {position:absolute;inset:0}.mock-sd-bold {font-weight:700;color:#dedede}
+  .mock-sd-row [data-encore-id="listRowTitle"] {margin:0;font-size:16px}.mock-sd-row [data-encore-id="listRowSubtitle"] {margin:0;font-size:14px;color:#969696}
 </style>
 </head>
 <body class="encore-dark-theme">
 <div id="main"><div class="Root"><div class="layout">
   <div id="global-nav-bar" style="grid-area:global-nav;display:flex">
     <div><button aria-label="Geri">‹</button><button aria-label="İleri">›</button></div>
-    <div><div role="search"><input placeholder="Ne çalmak istiyorsun?"></div></div>
+    <div><form role="search" onsubmit="return false" style="position:relative"><div style="position:absolute;left:0;top:50%;translate:0 -50%"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="10.5" cy="10.5" r="7.5"/></svg></div><input placeholder="Ne çalmak istiyorsun?" style="box-sizing:border-box"></form></div>
     <div><button aria-label="Yenilikler" onclick="Spicetify.Platform.History.push('/content-feed')">N</button><button aria-label="Dinleme etkinliği" data-restore-focus-key="buddy_feed" onclick="mockPanel(this)">F</button><button data-testid="user-widget-link" aria-label="Profil" onclick="window.__mockState.accountMenu=(window.__mockState.accountMenu||0)+1">E</button></div>
   </div>
   <div class="left"></div>
@@ -63,9 +72,14 @@
   }
   // Typing in the search field opens Spotify's live results under it (#search-dropdown, absolute inside the toolbar's
   // form); a click elsewhere closes them.
+  // Its markup follows Spotify 1.3.6: an OverlayScrollbars box with a keyboard hint, Encore list rows (queries with a
+  // magnifier and the typed part in bold, then results with artwork, a title and a "Song • Artist" subtitle, like and
+  // play buttons) and a "View all" button. Encore's class names carry a version, as Spotify's do.
+  const mockQuery = (q, rest) => `<div role="row" data-encore-id="listRow" aria-selected="false" class="e-10860-legacy-box mock-sd-row"><div class="e-10860-legacy-list-row__header-side"><a href="#"><div class="mock-sd-icon"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7.5"/></svg></div></a></div><div class="e-10860-legacy-list-row__header"><div class="e-10860-legacy-list-row__column"><div role="gridcell"><a href="#"><p data-encore-id="listRowTitle"><span class="e-10860-line-clamp"><span class="encore-internal-color-text-subdued">${q ? `<span class="mock-sd-bold">${q}</span>` : ''}${rest}</span></span></p></a></div></div></div></div>`;
+  const mockResult = (id, title, type, by, href) => `<div role="row" data-encore-id="listRow" draggable="true" aria-selected="false" class="e-10860-legacy-box mock-sd-row mock-sd-rich"><div class="e-10860-legacy-list-row__header-side"><div class="e-10860-legacy-list-row__header-side-flex"><div><div class="mock-sd-art${href.startsWith('/artist/') ? ' mock-sd-round' : ''}"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAMMzN////yH5BAAAAAAALAAAAAABAAEAAAICRAEAOw=="></div><div role="gridcell" id="${id}-play" class="mock-sd-play"><button aria-label="Çal">▶</button></div></div></div></div><div class="e-10860-legacy-list-row__header"><div class="e-10860-legacy-list-row__column"><div role="gridcell" id="${id}-title"><a href="${href}"><span data-encore-id="listRowTitle"><span class="e-10860-line-clamp">${title}</span></span></a></div><p data-encore-id="listRowSubtitle"><span class="e-10860-line-clamp"><span><span class="mock-sd-type">${by ? '<svg viewBox="0 0 16 16"><rect width="16" height="14"/></svg>' : ''}</span><span>${type}</span></span>${by ? ` • <span><a href="/artist/a">${by}</a></span>` : ''}</span></p></div><div class="e-10860-legacy-list-row__slot"><div role="gridcell" id="${id}-save"><button aria-label="Beğenilenlere ekle">♡</button></div></div></div></div>`;
   addEventListener('input', event => {
     const form = event.target.closest?.('#global-nav-bar [role="search"]');
-    if (form && !document.getElementById('search-dropdown')) form.insertAdjacentHTML('beforeend', '<div id="search-dropdown" style="position:absolute;top:100%;left:0;width:100%;height:300px;z-index:7;background:#2a2a2a">Sonuçlar</div>');
+    if (form && !document.getElementById('search-dropdown')) form.insertAdjacentHTML('beforeend', `<div id="search-dropdown" role="listbox" style="position:absolute;top:100%;left:0;width:100%;z-index:7"><div class="mock-sd-host" data-overlayscrollbars="host"><div data-overlayscrollbars-viewport><div class="mock-sd-hint">↑↓ Gezin · Enter Ara</div><ul role="grid" data-encore-id="typeList">${mockQuery('sen', 'a')}${mockQuery('', 'şena')}${mockResult('r1', 'Sena', 'Şarkı', 'Sanatçı', '/track/1')}${mockResult('r2', 'Sena Şener', 'Sanatçı', '', '/artist/2')}${mockResult('r3', 'Sena II', 'Albüm', 'Sanatçı', '/album/3')}</ul><button data-encore-id="buttonSecondary">“sena” için tüm sonuçları gör</button></div></div></div>`);
   });
   addEventListener('mousedown', event => { if (!event.target.closest?.('#global-nav-bar [role="search"]')) document.getElementById('search-dropdown')?.remove(); });
 </script>

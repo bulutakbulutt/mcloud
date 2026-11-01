@@ -788,7 +788,7 @@ try {
     await page.fill('.am-library-filter', '');
     // Spotify's live search results open under the toolbar, over the library rather than under it.
     await page.fill('#global-nav-bar input', 'sena');
-    const results = await page.evaluate(() => { const r = document.getElementById('search-dropdown').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.id; });
+    const results = await page.evaluate(() => { const r = document.getElementById('search-dropdown').getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('#search-dropdown')?.id; });
     assert.equal(results, 'search-dropdown');
     await page.fill('#global-nav-bar input', '');
     await page.mouse.click(700, 500);
@@ -803,6 +803,42 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
   });
   await shot('library');
+
+  await check('search results as macOS 27 Music\'s suggestions', async () => {
+    await page.fill('#global-nav-bar input', 'sena');
+    const look = await page.evaluate(() => {
+      const box = document.querySelector('#search-dropdown > :first-child'), input = document.querySelector('#global-nav-bar input');
+      const rows = [...box.querySelectorAll('[role="row"]')], css = (e, p, pseudo) => getComputedStyle(e, pseudo)[p];
+      const sub = rows[2].querySelector('[data-encore-id="listRowSubtitle"] > [class*="line-clamp"]');
+      const typed = rows[0].querySelector('[class*="color-text-subdued"]');
+      return {
+        // 1pt under the field's 3pt ring, the glass's blur and Apple's colour steps (#am-search-glass).
+        gap: Math.round(box.getBoundingClientRect().top - input.getBoundingClientRect().bottom), radius: css(box, 'borderRadius'),
+        glass: css(box, 'backdropFilter'), tone: !!document.querySelector('#am-search-glass feColorMatrix'),
+        hint: css(box.querySelector('[data-overlayscrollbars-viewport] > div'), 'display'),
+        heights: rows.map(r => r.offsetHeight).join(), gaps: rows.map(r => css(r, 'marginTop')).join(),
+        line: [css(rows[2], 'content', '::before'), css(rows[2], 'top', '::before'), css(rows[1], 'content', '::before')].join(),
+        art: rows.slice(2).map(r => { const a = r.querySelector('img').parentElement; return a.offsetWidth + '/' + css(a, 'borderRadius'); }).join(),
+        typed: [css(typed, 'color'), css(typed.firstElementChild, 'color'), css(typed.firstElementChild, 'fontWeight'), css(rows[1].querySelector('[class*="color-text-subdued"]'), 'color')].join(),
+        dot: [css(sub, 'fontSize'), css(sub.lastElementChild, 'content', '::before'), css(sub.querySelector('svg'), 'display')].join(),
+        hidden: [css(rows[2].querySelector('[id$="-play"]'), 'display'), css(rows[2].querySelector('[class*="list-row__slot"]'), 'display')].join(),
+      };
+    });
+    assert.deepEqual(look, {
+      gap: 4, radius: '13px', glass: 'blur(21px) url("#am-search-glass")', tone: true, hint: 'none',
+      heights: '24,24,52,52,52', gaps: '0px,0px,11px,11px,11px', line: '"",-6px,none',
+      art: '46/5px,46/50%,46/5px', typed: 'rgba(255, 255, 255, 0.55),rgba(255, 255, 255, 0.85),400,rgba(255, 255, 255, 0.85)',
+      dot: '0px,"\u00a0·\u00a0",none', hidden: 'none,none',
+    });
+    // The selection is the accent, 5pt in from the sides; the field shows Apple's focus ring.
+    await page.hover('#search-dropdown [role="row"] >> nth=3');
+    assert.deepEqual(await page.evaluate(() => { const r = document.querySelectorAll('#search-dropdown [role="row"]')[3], a = getComputedStyle(r, '::after');
+      return [a.backgroundColor, a.left, a.right, getComputedStyle(r.querySelector('[data-encore-id="listRowTitle"]')).color, getComputedStyle(document.querySelector('#global-nav-bar input')).boxShadow.includes('0px 0px 0px 3px')]; }),
+      ['rgb(250, 45, 72)', '5px', '5px', 'rgb(255, 255, 255)', true]);
+    await shot('search-results');
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+  });
 
   await check('the toolbar Home leaves a library view (#59)', async () => {
     // Library views are /?am-library=…; Spotify's Home does nothing where the path is already '/'.
