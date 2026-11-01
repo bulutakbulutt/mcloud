@@ -216,21 +216,27 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
 body.am-resizing {cursor:col-resize;user-select:none}
 body.am-resizing * {transition:none!important}
 .am-navigation {flex:1;overflow:auto;scrollbar-width:none;padding:0 0 20px}
+/* While rows run on under the account row (.am-more-below, theme.js) they fade out above it instead of being cut at
+   its edge, and a hairline sets the row off. */
+#am-sidebar .am-navigation.am-more-below {-webkit-mask-image:linear-gradient(to top,transparent,#000 16px);mask-image:linear-gradient(to top,transparent,#000 16px)}
+#am-sidebar .am-navigation.am-more-below ~ .am-account {box-shadow:0 -1px #ffffff14}
+.am-nav-end {height:1px}
 #am-sidebar .am-nav-row {display:flex;align-items:center;gap:10px;height:32px;width:100%;padding:0 16px;border-radius:8px;white-space:nowrap;font-weight:500;color:#f2f2f2}
 .am-nav-row svg {width:18px;height:18px;color:var(--am-accent);flex-shrink:0}
 #am-sidebar .am-nav-row:hover{background:#ffffff0d}
 #am-sidebar .am-nav-row.am-selected{background:#ffffff1f;font-weight:650}
-/* Account chip in the bottom-left corner, as in Apple Music. */
-#am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;flex-shrink:0}
+/* Account chip in the bottom-left corner, as in Apple Music. The avatar is centred on the icon column and the name
+   starts on the text column; the right padding puts the friends button on the pin column above. */
+#am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;padding:6px 7px 0 0;flex-shrink:0;box-shadow:0 -1px #ffffff00;transition:box-shadow .2s}
 #am-sidebar .am-account-button {display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:#a9a9a9;flex-shrink:0;transition:background-color .15s,color .15s}
 #am-sidebar .am-account-button svg {width:18px;height:18px}
 #am-sidebar .am-account-button:hover {background:#ffffff0d;color:#f2f2f2}
 #am-sidebar .am-account-button.am-active {color:var(--am-accent-focus)}
 /* The chip gives way first (its name ellipsizes), so the two buttons stay inside a narrow sidebar. */
-#am-sidebar .am-profile {display:flex;align-items:center;gap:10px;flex:1 1 auto;width:auto;min-width:0;margin:0;padding:6px 8px;border-radius:8px;font-weight:600;color:#f2f2f2}
+#am-sidebar .am-profile {display:flex;align-items:center;gap:7px;flex:1 1 auto;width:auto;min-width:0;margin:0;padding:6px 8px 6px 13px;border-radius:8px;font-weight:600;color:#f2f2f2}
 #am-sidebar .am-profile[hidden] {display:none}
 #am-sidebar .am-profile:hover {background:#ffffff0d}
-.am-avatar {position:relative;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
+.am-avatar {position:relative;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
 .am-avatar img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .am-profile-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:#ffffff5c;margin:16px 6px 4px}
@@ -265,6 +271,7 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-nav-heading.am-floating {position:absolute;margin:0;z-index:3}
 #am-sidebar .am-heading-spacer {visibility:hidden}
 #am-sidebar .am-navigation.am-masked {-webkit-mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px));mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px))}
+#am-sidebar .am-navigation.am-masked.am-more-below {-webkit-mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px),#000 calc(100% - 16px),transparent);mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px),#000 calc(100% - 16px),transparent)}
 #am-sidebar .am-nav-less {height:20px;margin:-4px 4px -4px auto;padding:0 8px;border-radius:10px;background:#ffffff0f;color:#ffffff8c;font:inherit;font-size:11px;font-weight:600;white-space:nowrap;transition:background-color .15s,color .15s}
 #am-sidebar .am-nav-less[hidden] {display:none}
 #am-sidebar .am-nav-less:hover {background:#ffffff1f;color:#f2f2f2}
