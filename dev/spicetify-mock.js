@@ -13,8 +13,8 @@
   library.push({ uri: 'spotify:collection:tracks', type: 'liked-songs', name: 'Beğenilen Şarkılar', pinned: true, images: [] });
   const folders = { 'spotify:folder:ruh': ['Neşeli', 'Hüzünlü'].map((n, i) => ({ uri: 'spotify:playlist:f' + i, type: 'playlist', name: n, images: [{ url: art(300 + i * 30, '♪') }], owner: { displayName: 'emir' } })) };
   window.__mockLibrary = library;
-  // Spotify's library and rootlist emit 'update' through an emitter behind getEvents().
-  const emitter = { listeners: [], addListener(name, fn) { if (name === 'update') this.listeners.push(fn); }, removeListener() {}, emit() { this.listeners.forEach(fn => fn({})); } };
+  // Spotify's library and rootlist emit 'update' (and the library 'update_pin') through an emitter behind getEvents().
+  const emitter = { listeners: {}, addListener(name, fn) { (this.listeners[name] ||= []).push(fn); }, removeListener() {}, emit(name = 'update') { (this.listeners[name] || []).forEach(fn => fn({})); } };
   let created = 0;
   const createItem = type => async (name, location) => {
     const uri = `spotify:${type}:new${++created}`;
@@ -26,6 +26,8 @@
   window.__menus = [];
   window.Spicetify = {
     showNotification: m => { (window.__notes ||= []).push(m); },
+    // notistack's provider; the theme closes a snackbar it retold by the id on its React fiber.
+    Snackbar: { closeSnackbar: id => { (window.__closedSnacks ||= []).push(id); }, handleExitedSnack: () => {} },
     Menu: {
       Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } },
       SubMenu: class { constructor(name, items) { Object.assign(this, { name, items }); } register() { window.__menus.push(this); } deregister() {} },
@@ -114,7 +116,11 @@
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
     contains: async (...uris) => uris.map(() => true),
-    pin: async (uri, where) => { (window.__pins ||= []).push([uri, where]); },
+    // As Spotify's: the item is pinned at the line and only update_pin is emitted.
+    pin: async (uri, where) => { (window.__pins ||= []).push([uri, where]);
+      const at = library.findIndex(i => i.uri === uri), [item] = at < 0 ? [] : library.splice(at, 1); if (!item) return;
+      const target = library.findIndex(i => i.uri === (where?.before || where?.after)?.uri); item.pinned = true;
+      library.splice(target < 0 ? 0 : target + (where?.after ? 1 : 0), 0, item); emitter.emit('update_pin'); },
     unpin: async uri => { (window.__unpins ||= []).push(uri); },
     getIsPinned: async (...uris) => uris.map(u => !!library.find(i => i.uri === u)?.pinned),
   });

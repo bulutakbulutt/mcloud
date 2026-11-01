@@ -414,58 +414,63 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 /* Spotify's: the glass behind the list (theme.js puts it on the root, which its transform already makes the stacking
    context and the submenus' containing block); a list the theme has not reached keeps a plain box. */
 [data-tippy-root][data-am-glass]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
-body > [data-tippy-root] ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
-body > [data-tippy-root] ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {border-radius:8px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {border-radius:8px!important}
 /* Spotify's menus in the theme's (macOS) measure, so right-click menus read the same everywhere: 13px labels on 21px
    rows (Spotify's: 14px on 40px), the same inset and separators. A row that opens a page outside (Report) is a
    role="link" row, the others role="menuitem…". Separators are empty divs in the list; submenus nested in a list
-   are [data-tippy-root] divs and keep their own layout. */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:10px!important}
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(span,p) {font-size:13px!important;line-height:normal!important}
+   are [data-tippy-root] divs and keep their own layout. A few menus open inside a sheet (Shared with's Listener ▾). */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:10px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(span,p) {font-size:13px!important;line-height:normal!important}
 /* Icons stay small, so a row keeps the 21px of a label (Spicetify's rows drew a 24px check). */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(svg,img):not([data-encore-id="listRow"] *) {max-width:16px!important;max-height:16px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(svg,img):not([data-encore-id="listRow"] *) {max-width:16px!important;max-height:16px!important}
 /* Your Updates (profile menu): the unread dot in the accent, white on the highlighted row. Spotify drew it in its
    notification colour, the scheme's dark grey (color.ini), which other banners use too. It is the empty element in
    the Encore list row's trailing slot. */
-body > [data-tippy-root] [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {width:8px!important;height:8px!important;border-radius:50%!important;background:var(--am-accent)!important}
-body > [data-tippy-root] [role^="menuitem"]:is(:hover,:focus-visible) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {background:#fff!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {width:8px!important;height:8px!important;border-radius:50%!important;background:var(--am-accent)!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role^="menuitem"]:is(:hover,:focus-visible) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {background:#fff!important}
 /* A long list (Add to playlist, Your Updates) scrolls inside its glass and feathers out at the edges it can scroll past:
    theme.js gives the rows within 20px of such an edge a gradient (--am-mask) that fades their text to nothing there,
    instead of slicing it. On the rows, not the list: a mask on the list would also cut the submenus nested in it. */
-body > [data-tippy-root] :is([role^="menuitem"],li > [role="link"],li > button),.am-popover-item {-webkit-mask-image:var(--am-mask,none);mask-image:var(--am-mask,none)}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) :is([role^="menuitem"],li > [role="link"],li > button),.am-popover-item {-webkit-mask-image:var(--am-mask,none);mask-image:var(--am-mask,none)}
 /* With menu icons on, a row without one lines its label up with the rows that have one (Spotify's profile menu mixes
    Spicetify's icon rows with its own plain ones). */
-body.am-menu-icons > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[data-am-indent] {padding-left:36px!important}
+body.am-menu-icons :is(:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]),:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[data-am-indent] {padding-left:36px!important}
 /* "Opens outside" marks (Account, Support, Report) are smaller and quieter than the labels: Spotify's external-link
    icon carries an aria-label, a check does not. */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) > :last-child:not(:first-child) svg[aria-label] {width:11px!important;height:11px!important;opacity:.5}
-body > [data-tippy-root] ul[role="menu"] > div:empty:not([data-tippy-root]) {height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) > :last-child:not(:first-child) svg[aria-label] {width:11px!important;height:11px!important;opacity:.5}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:empty:not([data-tippy-root]),:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:not([data-tippy-root]) > div:empty {width:auto!important;height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
+/* Spotify gives a long submenu's list (Add to playlist, Move to folder) a height counted in its own rows, 40px each with
+   a 32px search, so ours left that much empty glass under the last row. Counted in the theme's rows instead (a
+   separator is 1px between 5px margins); past 50vh the menu scrolls, as Spotify's does. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) {--context-menu-submenu-item-height:21px;--context-menu-submenu-filter-height:30px;--context-menu-submenu-divider-height:11px}
 /* Rows answer as the theme's do: the accent under the pointer, grey while their submenu is open, the thin › for a
    submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
-body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
 /* A submenu row keeps its icon inside the label, with a wider gap than the other rows' 10px. */
-body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:10px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:10px!important}
 /* "Find a playlist" (Add to playlist's submenu) as a macOS search field: 24px, 7px corners, a 12px magnifier, the
    accent ring while typing. Its icon and clear button are overlays the height of the field. */
-body > [data-tippy-root] [role^="menuitem"]:has([role="search"]) {background:none!important;padding:3px 5px 5px!important;cursor:default}
-body > [data-tippy-root] [role="search"] {height:24px!important;width:100%!important}
-body > [data-tippy-root] [role="search"] > div {height:24px!important}
-body > [data-tippy-root] [role="search"] > div > span {padding:6px 8px!important}
-body > [data-tippy-root] [role="search"] svg {width:12px!important;height:12px!important}
-body > [data-tippy-root] [role="search"] button {width:24px!important;height:24px!important;padding:6px!important}
-body > [data-tippy-root] [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:#ffffff17!important;box-shadow:none!important;color:#f2f2f2!important;font-size:13px!important;line-height:24px!important;outline:0!important}
-body > [data-tippy-root] [role="search"] input::placeholder {color:#ffffff73!important}
-body > [data-tippy-root] [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
-body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role^="menuitem"]:has([role="search"]) {background:none!important;padding:3px 5px 5px!important;cursor:default}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] {height:24px!important;width:100%!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] > div {height:24px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] > div > span {padding:6px 8px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] svg {width:12px!important;height:12px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] button {width:24px!important;height:24px!important;padding:6px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:#ffffff17!important;box-shadow:none!important;color:#f2f2f2!important;font-size:13px!important;line-height:24px!important;outline:0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input::placeholder {color:#ffffff73!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) svg {fill:currentColor!important}
-body:not(.am-menu-icons) > [data-tippy-root] [data-am-icon] {display:none!important}
-/* With icons on, every icon takes a 16px slot, so labels line up whatever the icon's own width (Turn on mix's is narrower). */
-body.am-menu-icons > [data-tippy-root] [data-am-icon] {flex:0 0 16px!important;width:16px!important;display:inline-flex!important;justify-content:center}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) svg {fill:currentColor!important}
+body:not(.am-menu-icons) :is(:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]),:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-icon] {display:none!important}
+/* With icons on, every icon takes a 16px slot, so labels line up whatever the icon's own width (Turn on mix's is narrower);
+   it is a label's height, so rows stay 21px, as the submenu heights above count them. */
+body.am-menu-icons :is(:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]),:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-icon] {flex:0 0 16px!important;width:16px!important;height:15px!important;display:inline-flex!important;align-items:center;justify-content:center}
 body.am-liquid:not(.am-solid) [data-am-glass] {--am-menu-fill:transparent}
 body.am-liquid:not(.am-solid) [data-am-glass="0"] {--am-menu-filter:url(#am-menu-glass-0)}
 body.am-liquid:not(.am-solid) [data-am-glass="1"] {--am-menu-filter:url(#am-menu-glass-1)}

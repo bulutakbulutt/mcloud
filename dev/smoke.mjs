@@ -919,8 +919,15 @@ try {
     assert.deepEqual(await page.evaluate(i => { const row = document.querySelectorAll('#am-sidebar .am-nav-row')[i], b = row.getBoundingClientRect(), dt = new DataTransfer(); dt.setData('text/x-spotify-albums', 'spotify:album:7');
       const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: b.left + 20, clientY: b.top + b.height / 2 }, over = new DragEvent('dragover', opts); row.dispatchEvent(over); row.dispatchEvent(new DragEvent('drop', opts)); return over.defaultPrevented; }, albums), true);
     await page.waitForFunction(() => window.__libraryAdds?.includes('spotify:album:7'));
+    // The pointer stays over the sidebar after a drop, where rows otherwise hold still; your own move shows at once.
+    await page.hover('#am-sidebar .am-list-row[title="Koşu"]');
     assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Sabah Kahvesi"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }, 'top'), [true, 'am-drop-before']);
     await page.waitForFunction(() => JSON.stringify(window.__pins?.at(-1)) === JSON.stringify(['spotify:playlist:2', { before: { uri: 'spotify:playlist:0' } }]));
+    // Spotify tells of a pin only through update_pin. Then the library is put back.
+    await page.waitForFunction(() => [...document.querySelectorAll('#am-sidebar .am-list-row')].filter(r => r.querySelector('.am-list-pin')).map(r => r.title).join().includes('Odak,Sabah Kahvesi'));
+    await page.evaluate(() => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(i => i.uri === 'spotify:playlist:2'), 1); item.pinned = false; l.splice(l.findIndex(i => i.uri === 'spotify:playlist:1') + 1, 0, item); window.__libraryUpdate(); });
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => !document.querySelector('#am-sidebar .am-list-row[title="Odak"] .am-list-pin'));
     // A playlist onto the middle of a folder goes into it, at its top.
     assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Ruh Hali"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }), [true, 'am-drop-into']);
     await page.waitForFunction(() => JSON.stringify(window.__rootlistMoves?.at(-1)) === JSON.stringify(['spotify:playlist:2', { after: { uri: 'spotify:folder:ruh' } }]));
@@ -973,21 +980,50 @@ try {
     // Scrolled, the top edge feathers too.
     await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => b.style.getPropertyValue('--am-mask').startsWith('linear-gradient(transparent')));
     await page.evaluate(() => document.getElementById('mock-scroll-tip').remove());
+    // Spotify counts a submenu list's height in its own rows (40px, a 32px search); in the theme's rows it ends at the
+    // last one: a search, Create, a separator and three folders.
+    assert.deepEqual(await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-folder-tip'; tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<style>.mock-section{height:calc(var(--context-menu-submenu-length) * var(--context-menu-submenu-item-height,40px) + var(--context-menu-submenu-item-height,40px) + var(--context-menu-submenu-filter-height,32px) + var(--context-menu-submenu-divider-count,0) * var(--context-menu-submenu-divider-height,0px))}</style>'
+        + '<ul role="menu" style="display:block;margin:0;padding:0;list-style:none"><div class="mock-section" style="--context-menu-submenu-length:3;--context-menu-submenu-divider-count:1">'
+        + '<li><div role="menuitem"><div><div role="search"><input></div></div></div></li><li><button role="menuitem" style="display:flex;border:0;font:inherit"><span>Create folder</span></button></li><div></div>'
+        + ['a', 'b', 'c'].map(n => `<li><button role="menuitem" style="display:flex;border:0;font:inherit"><span>${n}</span></button></li>`).join('') + '</div></ul>';
+      document.body.append(tip); const section = tip.querySelector('.mock-section'), last = section.lastElementChild;
+      const height = section.getBoundingClientRect().height, content = last.getBoundingClientRect().bottom - section.getBoundingClientRect().top; tip.remove();
+      return [height < 140, Math.abs(height - content) <= 6]; }), [true, true], 'Spotify\'s count would be 192px (the preview\'s font is a little taller than the client\'s)');
+  });
+
+  await check('a Spotify menu that opens inside a sheet gets the theme\'s menu (#59)', async () => {
+    // Shared with: the Listener ▾ menu (Leave playlist) is a [data-tippy-root] inside the react-modal's dialog.
+    await page.evaluate(() => { const portal = document.createElement('div'); portal.className = 'ReactModalPortal'; portal.id = 'mock-sheet-menu';
+      portal.innerHTML = '<div><div role="dialog" tabindex="-1"><div data-testid="playlist-permissions-modal"><button>Listener</button><div class="mock-slot"></div></div></div></div>'; document.body.append(portal);
+      portal.querySelector('[role="dialog"]').focus(); });
+    await page.waitForTimeout(50);
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<div><ul role="menu"><li><button role="menuitemradio" style="padding:8px 8px 8px 12px"><div><svg width="16" height="16"></svg></div><div><span>Leave playlist</span></div></button></li></ul></div>';
+      document.querySelector('#mock-sheet-menu .mock-slot').append(tip); });
+    await page.waitForFunction(() => document.querySelector('#mock-sheet-menu [data-tippy-root]')?.dataset.amGlass !== undefined);
+    assert.deepEqual(await page.evaluate(() => { const row = document.querySelector('#mock-sheet-menu [role="menuitemradio"]'), style = getComputedStyle(row);
+      return [style.paddingTop, style.paddingLeft, row.querySelector('svg').getBoundingClientRect().width]; }), ['3px', '10px', 0]);
+    await page.evaluate(() => document.getElementById('mock-sheet-menu').remove());
   });
 
   await check('Spotify\'s snackbars come up as the theme\'s glass toast, with their button (#59)', async () => {
     await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer';
       c.innerHTML = '<div class="notistack-Snackbar"><div role="alert"><div><span data-encore-id="text">Removed from Your Library.</span><button>Undo</button></div></div></div>';
-      c.querySelector('button').onclick = () => { window.__undo = true; }; document.querySelector('.mock-snackbar-host').append(c); });
+      c.querySelector('button').onclick = () => { window.__undo = true; }; c.firstChild.__reactFiber$mock = { memoizedProps: {}, return: { memoizedProps: { open: true, id: 'undo' } } };
+      document.querySelector('.mock-snackbar-host').append(c); });
     await page.waitForFunction(() => document.querySelector('.am-toasts > .am-toast-show:last-child')?.firstChild?.textContent === 'Removed from Your Library.');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.notistack-SnackbarContainer')).visibility), 'hidden');
     await page.click('.am-toasts > :last-child .am-toast-action');
     assert.ok(await page.evaluate(() => window.__undo));
+    assert.deepEqual(await page.evaluate(() => window.__closedSnacks), ['undo'], 'one with a button closes with our toast, after its click');
     await page.evaluate(() => document.querySelector('.notistack-SnackbarContainer').remove());
     // Two at once stack: the newest at the bottom, the other above it, apart.
     await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer'; document.querySelector('.mock-snackbar-host').append(c);
-      for (const m of ['Added to queue', 'Added to Your Library.']) { const s = document.createElement('div'); s.className = 'notistack-Snackbar'; s.innerHTML = `<div role="alert"><span data-encore-id="text">${m}</span></div>`; c.append(s); } });
+      for (const m of ['Added to queue', 'Added to Your Library.']) { const s = document.createElement('div'); s.className = 'notistack-Snackbar'; s.innerHTML = `<div role="alert"><span data-encore-id="text">${m}</span></div>`; s.__reactFiber$mock = { memoizedProps: { open: true, id: m } }; c.append(s); } });
     await page.waitForFunction(() => document.querySelectorAll('.am-toasts > .am-toast-show').length >= 2);
+    // Closed at once, so Spotify's provider (preventDuplicate) shows the next one with the same text right away.
+    assert.deepEqual(await page.evaluate(() => window.__closedSnacks.slice(1)), ['Added to queue', 'Added to Your Library.']);
     await page.waitForTimeout(350);
     assert.ok(await page.evaluate(() => { const [a, b] = [...document.querySelectorAll('.am-toasts > .am-toast-show')].slice(-2), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
       return a.textContent === 'Added to queue' && b.textContent === 'Added to Your Library.' && ra.bottom <= rb.top; }), 'the newest sits under the older one, without overlap');

@@ -75,25 +75,32 @@
   // (never over one another), each with its own lens (#am-glass-toast, -1, -2) drawn at its size.
   const toasts=el('div','am-toasts');document.body.append(toasts);
   const toastSlots=[0,1,2].map(i=>{const t=el('div','am-toast');t.dataset.slot=i;t.setAttribute('role','status');t.setAttribute('aria-live','polite');toasts.append(t);return {t,timer:0,at:0};});
-  function hideToast(slot) { clearTimeout(slot.timer);slot.t.classList.replace('am-toast-show','am-toast-leaving');slot.timer=setTimeout(()=>slot.t.classList.remove('am-toast-leaving'),260); }
-  // action: {label, run}, a button in the toast (Spotify's Undo or Change), which then stays a little longer.
-  function notify(message,action) {
+  function hideToast(slot) { clearTimeout(slot.timer);slot.done?.();slot.done=null;slot.t.classList.replace('am-toast-show','am-toast-leaving');slot.timer=setTimeout(()=>slot.t.classList.remove('am-toast-leaving'),260); }
+  // action: {label, run}, a button in the toast (Spotify's Undo or Change), which then stays a little longer; done runs
+  // when the toast goes.
+  function notify(message,action,done) {
     // A free slot, else the oldest; it goes to the bottom of the stack and the others step up.
     const slot=toastSlots.find(s=>!s.t.classList.contains('am-toast-show')&&!s.t.classList.contains('am-toast-leaving'))||toastSlots.reduce((a,b)=>a.at<b.at?a:b),t=slot.t;
-    clearTimeout(slot.timer);t.classList.remove('am-toast-show','am-toast-leaving');t.replaceChildren(message);t.classList.toggle('am-toast-has-action',!!action);
+    clearTimeout(slot.timer);slot.done?.();slot.done=done;t.classList.remove('am-toast-show','am-toast-leaving');t.replaceChildren(message);t.classList.toggle('am-toast-has-action',!!action);
     if(action){const b=el('button','am-toast-action',action.label);b.type='button';b.onclick=()=>{hideToast(slot);action.run();};t.append(b);}
     slot.at=performance.now();toasts.append(t);void t.offsetWidth;t.classList.add('am-toast-show');slot.timer=setTimeout(()=>hideToast(slot),action?5000:2600);
   }
   // Spotify's own snackbars (Added to Your Library, Added to queue, Playlist has been made private, …) come up as the
   // theme's glass toast (issue #59). notistack mounts its list in an empty child of the layout (bindLayout watches
-  // those, childList only); each new snackbar is read, hidden by user.css and retold, with its button.
+  // those, childList only); each new snackbar is read, hidden by user.css and retold, with its button. Spotify's provider
+  // drops a snackbar whose text is still up (preventDuplicate), so a second "Link copied" waited for the first to go:
+  // the hidden one is closed once retold, or with our toast when it carries a button (its click needs it mounted), and
+  // taken out at once rather than after its exit transition (~0.7s, during which the same text was still dropped).
   const snackbars=new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes){if(n.nodeType!==1)continue;
     if(n.matches('.notistack-SnackbarContainer'))snackbars.observe(n,{childList:true,subtree:true});
     for(const snack of n.matches('.notistack-Snackbar')?[n]:n.querySelectorAll('.notistack-Snackbar'))retell(snack);}});
   function retell(snack) {
     const alert=snack.querySelector('[role="alert"]')||snack,button=alert.querySelector('button');if(snack.dataset.amTold!==undefined)return;
     const text=[...alert.querySelectorAll('[data-encore-id="text"]')].filter(t=>!t.closest('button')&&!t.parentElement.closest('[data-encore-id="text"]')).map(t=>t.textContent.trim()).filter(Boolean).join(' ');
-    if(!text)return;snack.dataset.amTold='';notify(text,button&&{label:button.textContent.trim(),run:()=>button.click()});
+    if(!text)return;snack.dataset.amTold='';
+    const close=()=>{const fiber=Object.keys(snack).find(k=>k.startsWith('__reactFiber'));
+      for(let f=snack[fiber],i=0;f&&i<10;f=f.return,i++){const p=f.memoizedProps;if(p&&'open' in p&&p.id!==undefined){try{S.Snackbar?.closeSnackbar?.(p.id);S.Snackbar?.handleExitedSnack?.(null,p.id);}catch{}return;}}};
+    if(button)notify(text,{label:button.textContent.trim(),run:()=>button.click()},close);else{notify(text);close();}
   }
   function button(label, icon, fn, cls = '') {
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
@@ -418,7 +425,8 @@
   }
   if (S.Platform.LibraryAPI?.getContents) {
     for (const api of [S.Platform.LibraryAPI, Rootlist]) {
-      try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => { menuExtras.cache?.clear(); scheduleLists(); }, {}); } catch {}
+      // Pins (pinned, unpinned, moved) come as update_pin, not update.
+      try { const events = api?.getEvents?.(); for (const type of ['update', 'update_pin']) (events?._emitter || events)?.addListener?.(type, () => { menuExtras.cache?.clear(); scheduleLists(); }, {}); } catch {}
     }
     // Playing a playlist moves it to the top of Recents within ~0.15s (Spotify's own sidebar follows ~0.05s later), but
     // no library event says so: look 0.1s after the context changes, and again at 0.4, 1.5, 5 and 15s while it does
@@ -1055,12 +1063,13 @@
       slot.node=node;node.dataset.amGlass=slot.i;slot.watch.observe(node);place(slot);
     };
     // Spotify's menus: each list in a [data-tippy-root] of its own, appended to body or, for some submenus (Add to
-    // playlist), inside the parent menu's list. The glass goes on the root (user.css draws it in its ::before), never
-    // on the list: a backdrop-filter makes the list the containing block of a submenu inside it, which its scrolling
-    // then clipped away. Lists can be replaced inside a root.
+    // playlist), inside the parent menu's list; a few open inside a sheet (Shared with's Listener ▾: Leave playlist),
+    // which is watched from when it takes focus, as it does on opening. The glass goes on the root (user.css draws it
+    // in its ::before), never on the list: a backdrop-filter makes the list the containing block of a submenu inside
+    // it, which its scrolling then clipped away. Lists can be replaced inside a root.
     const sync=()=>{
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
-      for(const tip of document.querySelectorAll('body > [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
+      for(const tip of document.querySelectorAll('body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
         for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
         // Spotify's (and Spicetify's) leading icons, which user.css shows only with the menu icons setting, as in the
         // theme's menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first
@@ -1109,6 +1118,7 @@
     const featherQueue=new Set();let featherFrame=0;
     function featherSoon(list) { if(!list||list.nodeType!==1)return;featherQueue.add(list);featherFrame||=requestAnimationFrame(()=>{featherFrame=0;for(const l of featherQueue)if(l.isConnected)feather(l);featherQueue.clear();}); }
     const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
+    document.addEventListener('focusin',event=>{const sheet=event.target.closest?.('dialog,[role="dialog"]');if(sheet&&!watched.has(sheet)){watched.add(sheet);tips.observe(sheet,{childList:true,subtree:true});}},true);
     return {attach,sync,featherSoon};
   })();
   // One shared popover serves the "…" track menu and the profile menu, with an optional flyout submenu.
@@ -1311,12 +1321,14 @@
           if(uriType(uri)==='folder')await Rootlist.moveFolder({uri},where);
           else if((await Rootlist.contains([uri]).catch(()=>[true]))[0])await Rootlist.move([{uri}],where);else await Rootlist.add([uri],where);
         }
-        notify(T(`"${action.name}" klasörüne taşındı.`,`Moved to "${action.name}".`));
+        notify(T(`"${action.name}" klasörüne taşındı.`,`Moved to "${action.name}".`));refreshLists(true,true);
       } else {
         // As Spotify's sidebar does: an album, artist or show not yet in the library is saved first, then pinned at the
         // line. Playlists and folders are not (LibraryAPI.contains says false for those in the rootlist).
         const L=S.Platform.LibraryAPI;
         for(const uri of uris.filter(u=>u!==action.uri)){if(!['playlist','folder'].includes(uriType(uri))){const [saved]=await L.contains(uri).catch(()=>[true]);if(!saved)await L.add({uris:[uri],silent:true});}await L.pin(uri,action.where);}
+        // Your own move shows at once: the sidebar otherwise holds its rows still while the pointer is over it.
+        refreshLists(true,true);
       }
     }catch{notify(T('Buraya bırakılamadı.','Couldn\'t drop it here.'));}
   }
