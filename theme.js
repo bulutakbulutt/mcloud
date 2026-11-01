@@ -106,6 +106,13 @@
   const formatTime=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
   // Windows draws its caption buttons over the top-right corner of the window.
   document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
+  // A control clicked with the mouse keeps focus, and Chromium draws its :focus-visible ring once any key is pressed
+  // (Space for play/pause). Focus that arrives without a key since the last pointer press gets .am-mouse-focus, which
+  // hides the ring; text fields keep theirs.
+  let keyFocus=false;
+  document.addEventListener('pointerdown',()=>{keyFocus=false;},true);
+  document.addEventListener('keydown',()=>{keyFocus=true;},true);
+  document.addEventListener('focusin',event=>{const t=event.target;if(t instanceof Element&&t.closest('[id^="am-"],#global-nav-bar')&&!t.matches('input:not([type=range]),textarea'))t.classList.toggle('am-mouse-focus',!keyFocus);},true);
   let main, root, nativeNav, currentMode = 'native';
   function bindLayout() {
     root = document.querySelector('.Root');
