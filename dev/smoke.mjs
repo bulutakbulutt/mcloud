@@ -325,10 +325,21 @@ try {
     assert.equal(await heading().evaluate(h => getComputedStyle(h, '::before').content), 'none');
     assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'), h = document.querySelector('#am-sidebar .am-floating'); return !!n.querySelector('.am-heading-spacer') && /gradient/.test(getComputedStyle(n).maskImage || getComputedStyle(n).webkitMaskImage) && Math.abs(n.getBoundingClientRect().top + parseFloat(n.style.getPropertyValue('--am-mask-edge')) - h.getBoundingClientRect().bottom - 4) <= 1; }), 'the scroll area fades out under the heading');
     await shot('sidebar-lists-stuck');
-    // Closing from deep in the list scrolls back to where the short list rests, then folds in place.
+    // Closing from deep in the list scrolls back to where the short list rests, then folds in place. The scroll only
+    // decelerates (an ease-in-out read as linear on long lists): a quarter of the way through its time it is well
+    // past a quarter of the way.
+    await page.evaluate(() => {
+      const n = document.querySelector('#am-sidebar .am-navigation'), samples = window.__amSamples = [];
+      const tick = () => { if (document.querySelector('#am-sidebar .am-list-more')) return; samples.push([performance.now(), n.scrollTop]); requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    });
     await page.click('#am-sidebar .am-nav-less');
     assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'); return n.classList.contains('am-closing') || n.getAnimations({ subtree: true }).length > 0; }), 'closing animates');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 7 && !document.querySelector('#am-sidebar .am-floating'));
+    const samples = await page.evaluate(() => window.__amSamples), from = samples[0][1], to = samples.at(-1)[1];
+    const t0 = samples[samples.findIndex(s => s[1] !== from) - 1][0], quarter = t0 + (samples.find(s => s[1] === to)[0] - t0) / 4;
+    const at = samples.reduce((a, s) => Math.abs(s[0] - quarter) < Math.abs(a[0] - quarter) ? s : a), done = (from - at[1]) / (from - to);
+    assert.ok(from - to > 50 && done > .3, `the scroll back only decelerates (${Math.round(done * 100)}% done a quarter of the way)`);
     assert.equal(await heading().evaluate(h => Math.round(h.nextElementSibling.getBoundingClientRect().top - h.getBoundingClientRect().bottom)), 4);
     assert.ok(await page.evaluate(() => !document.querySelector('#am-sidebar .am-heading-spacer') && !document.querySelector('#am-sidebar .am-navigation').classList.contains('am-masked')), 'back in the list');
     await page.waitForFunction(() => document.activeElement?.classList?.contains('am-list-more'));
