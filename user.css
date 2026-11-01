@@ -368,7 +368,29 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;border-radius:12px;border:1px solid #ffffff1f;background:#2c2c2ef0;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 12px 32px #0007;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
+/* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
+   macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
+   and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
+   1pt brighter, strongest along top and bottom. Without Liquid Glass menus stay frosted, in Eco solid. */
+:is(#am-popover,#am-popover-sub),[data-tippy-root][data-am-glass]::before {border:0;border-radius:13px;background:var(--am-menu-fill,#2c2c2ef0);backdrop-filter:var(--am-menu-filter,blur(24px));-webkit-backdrop-filter:var(--am-menu-filter,blur(24px));
+ box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 14px 36px #00000080}
+/* Spotify's: the glass behind the list (theme.js puts it on the root, which its transform already makes the stacking
+   context and the submenus' containing block); a list the theme has not reached keeps a plain box. */
+[data-tippy-root][data-am-glass]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
+body > [data-tippy-root] ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
+body > [data-tippy-root] ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
+body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] {border-radius:8px!important}
+/* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
+body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] svg {fill:currentColor!important}
+body.am-liquid:not(.am-solid) [data-am-glass] {--am-menu-fill:transparent}
+body.am-liquid:not(.am-solid) [data-am-glass="0"] {--am-menu-filter:url(#am-menu-glass-0)}
+body.am-liquid:not(.am-solid) [data-am-glass="1"] {--am-menu-filter:url(#am-menu-glass-1)}
+body.am-liquid:not(.am-solid) [data-am-glass="2"] {--am-menu-filter:url(#am-menu-glass-2)}
+body.am-liquid:not(.am-solid) [data-am-glass="3"] {--am-menu-filter:url(#am-menu-glass-3)}
+body.am-liquid:not(.am-solid) [data-am-glass="4"] {--am-menu-filter:url(#am-menu-glass-4)}
+body.am-liquid:not(.am-solid) [data-am-glass="5"] {--am-menu-filter:url(#am-menu-glass-5)}
+body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
@@ -380,18 +402,18 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
    :has(): every inline style write anywhere (Spicy Lyrics animates its words every frame) then restyles the page. */
 .ReactModalPortal [role="dialog"]:has(> div > [role="img"]) {transform:none!important;opacity:1!important;animation:am-artwork-in .3s ease-out 30ms backwards}
 @keyframes am-artwork-in {from{scale:.6}}
-.am-popover-item {display:block;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-popover-item {display:block;width:100%;padding:3px 10px;line-height:18px;border:0;border-radius:8px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-popover-item:hover,.am-popover-item:focus-visible,.am-popover-item.am-active {background:var(--am-accent);color:white;outline:0}
+.am-popover-item.am-active.am-parent {background:#ffffff1f;color:inherit}
 .am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
 .am-popover-item.am-has-submenu::after {content:'›';font-size:15px;line-height:1;opacity:.6;margin-left:8px}
-.am-popover-separator {height:1px;margin:5px 8px;background:#ffffff1a}
+.am-popover-separator {height:1px;margin:5px 11px;background:#ffffff24}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
-.am-swatch.am-selected {box-shadow:0 0 0 2px #2c2c2e,0 0 0 4px #f2f2f2}
+.am-swatch.am-selected {outline:2px solid #f2f2f2;outline-offset:2px}
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
-body.am-solid :is(#am-popover,#am-popover-sub) {background:#2c2c2e;backdrop-filter:none}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"]{animation:none}}
 
 

@@ -938,10 +938,79 @@
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
   glassLens('am-glass-toast',toast,glassStates.focused);
+  // Menus (ours and Spotify's): macOS 27's NSMenu, fitted over 45° stripes (research/menus/REPORT.md §9-11). The page
+  // blurs (6.8pt) and bends near the rim: the edge shows the page ~29pt inward at 3pt from it, nothing moves past 18pt,
+  // and the bend turns over the last 40pt before each corner (fitted; a bend square to the edge missed twice as much).
+  // No darken halo: it brought the fit closer over stripes but changed real pages by ~1/255 on average, for half the
+  // lens's extra cost while the page moved under a menu. Then Apple's tone (below); the rim is CSS shadows (user.css).
+  // Each open menu has one filter on its own backdrop-filter, as the toast does. Its map is nine pieces: four corners at
+  // device resolution, four one-pixel edges stretched along the menu, a neutral flood between; drawn once per screen
+  // scale and corner size, so opening a menu only places them.
+  const menuGlass=(()=>{
+    const at=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,15,18],bend=[46,41,34,29,24.2,20.6,17.5,14.8,12.35,10.1,8.2,6.5,5.15,3.9,1.95,0],peak=46,radius=13,turn=40;
+    const shiftAt=d=>{if(d>=18)return 0;let i=0;while(d>at[i+1])i++;return bend[i]+(bend[i+1]-bend[i])*(d-at[i])/(at[i+1]-at[i]);};
+    const parts=['tl','t','tr','l','r','bl','b','br'],drawn=new Map(),slots=[],watched=new WeakSet();
+    // Apple's menu tone, measured over flat greys and colours (REPORT.md §12): by luminance 0 -> 32, 63 -> 82, 127 -> 122,
+    // 191 -> 143, 255 -> 146, the colour around it kept (x1.05), no channel under 32. Colour steps only, which Skia folds
+    // into one pass reading the bent page once: luminance rides in alpha as L/2 + 1/2 through the table (a colour stored
+    // premultiplied by an alpha near 0 would be lost) and is added back. 4.2 from Apple over 16 surfaces, the CSS fill 19.6.
+    const tone=(()=>{
+      const pts=[[0,32],[31,57],[63,82],[95,105],[127,122],[159,135],[191,143],[223,147],[255,146]],k=[.2126,.7152,.0722],g=1.05;
+      const T=L=>{let i=0;while(i<pts.length-2&&L>pts[i+1][0])i++;const [a,ta]=pts[i],[b,tb]=pts[i+1];return ta+(tb-ta)*(L-a)/(b-a);};
+      const U=Array.from({length:65},(_,i)=>{const L=Math.max(0,i/32-1)*255;return (T(L)-L)/255;}),lo=Math.min(...U),s=Math.max(...U)-lo,f=v=>v.toFixed(4);
+      const row=c=>k.map((v,j)=>f((j===c?g:0)+(1-g)*v)).join(' ')+' 0 0',add=` ${f(2*s)} ${f(lo-s)}`,floor=`type="table" tableValues="${[32/255,32/255,.25,.375,.5,.625,.75,.875,1].map(f).join(' ')}"`;
+      return `<feColorMatrix values="${row(0)} ${row(1)} ${row(2)} ${k.map(v=>f(v/2)).join(' ')} 0 .5"/><feComponentTransfer><feFuncA type="table" tableValues="${U.map(u=>f(.5+.5*(u-lo)/s)).join(' ')}"/></feComponentTransfer>`
+        +`<feColorMatrix values="1 0 0${add} 0 1 0${add} 0 0 1${add} 0 0 0 0 1"/><feComponentTransfer><feFuncR ${floor}/><feFuncG ${floor}/><feFuncB ${floor}/></feComponentTransfer>`;
+    })();
+    // The pieces of a box 2C + 1 device pixel wide and high: its corners and the single pixels between them.
+    const pieces=(k,C)=>{
+      const key=k+'/'+C;if(drawn.has(key))return drawn.get(key);
+      const N=Math.round(C*k),S=2*N+1,w=S/k,canvas=document.createElement('canvas'),context=canvas.getContext('2d'),image=context.createImageData(S,S),m=image.data;
+      for(let y=0;y<S;y++)for(let x=0;x<S;x++){
+        const px=(x+.5)/k,py=(y+.5)/k,qx=Math.abs(px-w/2)-(w/2-radius),qy=Math.abs(py-w/2)-(w/2-radius);
+        const d=radius-Math.hypot(Math.max(qx,0),Math.max(qy,0))-Math.min(Math.max(qx,qy),0);
+        // Inward: toward the box inset by C, so the direction turns over the last C before a corner.
+        const dx=Math.min(w-C,Math.max(C,px))-px,dy=Math.min(w-C,Math.max(C,py))-py,length=Math.hypot(dx,dy),t=length?shiftAt(Math.max(0,d))/peak/length:0;
+        const i=(y*S+x)*4,xv=Math.round(128+127*t*dx),yv=(128+127*t*dy)/255;
+        m[i]=m[i+1]=xv;m[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));m[i+3]=255;
+      }
+      // putImageData: Chrome left the last rows of a one-pixel-wide drawImage cut transparent.
+      const cut=(sx,sy,sw,sh)=>{canvas.width=sw;canvas.height=sh;context.putImageData(image,-sx,-sy,sx,sy,sw,sh);return canvas.toDataURL();};
+      const p={N,tl:cut(0,0,N,N),t:cut(N,0,1,N),tr:cut(N+1,0,N,N),l:cut(0,N,N,1),r:cut(N+1,N,N,1),bl:cut(0,N+1,N,N),b:cut(N,N+1,1,N),br:cut(N+1,N+1,N,N)};
+      drawn.set(key,p);return p;
+    };
+    // size: the ResizeObserver's border box, unrounded and unscaled (offsetWidth rounds; the opening animation scales).
+    const place=(slot,size)=>{
+      const w=size?size.inlineSize:slot.node?.offsetWidth,h=size?size.blockSize:slot.node?.offsetHeight,k=devicePixelRatio||1;if(!w||!h)return;
+      const p=pieces(k,Math.max(1,Math.min(turn,Math.floor(Math.min(w,h)/2*k)/k))),c=p.N/k;
+      const box={tl:[0,0,c,c],t:[c,0,w-2*c,c],tr:[w-c,0,c,c],l:[0,c,c,h-2*c],r:[w-c,c,c,h-2*c],bl:[0,h-c,c,c],b:[c,h-c,w-2*c,c],br:[w-c,h-c,c,c]};
+      for(const image of slot.images){const part=image.dataset.piece;image.setAttribute('href',p[part]);box[part].forEach((v,n)=>image.setAttribute(['x','y','width','height'][n],Math.max(0,v)));}
+    };
+    const attach=node=>{
+      let slot=slots.find(s=>!s.node);
+      if(!slot){
+        slot={i:slots.length};slots.push(slot);
+        glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="6.8" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
+        slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
+      }
+      slot.node=node;node.dataset.amGlass=slot.i;slot.watch.observe(node);place(slot);
+    };
+    // Spotify's menus: each list in a [data-tippy-root] of its own, appended to body or, for some submenus (Add to
+    // playlist), inside the parent menu's list. The glass goes on the root (user.css draws it in its ::before), never
+    // on the list: a backdrop-filter makes the list the containing block of a submenu inside it, which its scrolling
+    // then clipped away. Lists can be replaced inside a root.
+    const sync=()=>{
+      for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
+      for(const tip of document.querySelectorAll('body > [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
+        for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}}
+    };
+    const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
+    return {attach,sync};
+  })();
   // One shared popover serves the "…" track menu and the profile menu, with an optional flyout submenu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.tabIndex=-1;popover.hidden=true;
   const subPopover=el('div','am-popover am-popover-sub');subPopover.id='am-popover-sub';subPopover.setAttribute('role','menu');subPopover.tabIndex=-1;subPopover.hidden=true;
-  document.body.append(popover,subPopover);
+  document.body.append(popover,subPopover);menuGlass.attach(popover);menuGlass.attach(subPopover);
   for(const p of [popover,subPopover]){
     p.addEventListener('keydown',event=>{
       const items=[...p.querySelectorAll('.am-popover-item')];const index=items.indexOf(document.activeElement);
@@ -950,12 +1019,12 @@
     });
   }
   let popoverAnchor=null,subAnchor=null,subTimer=null;
-  function closeSubPopover(){clearTimeout(subTimer);subTimer=null;if(subPopover.hidden)return;subPopover.hidden=true;subPopover.replaceChildren();subAnchor?.classList.remove('am-active');subAnchor=null;}
+  function closeSubPopover(){clearTimeout(subTimer);subTimer=null;if(subPopover.hidden)return;subPopover.hidden=true;subPopover.replaceChildren();subAnchor?.classList.remove('am-active','am-parent');subAnchor=null;}
   function closePopover(){closeSubPopover();if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popoverAnchor?.setAttribute?.('aria-expanded','false');popoverAnchor=null;}
   function openSubPopover(item,buildSub) {
     clearTimeout(subTimer);
     if(subAnchor===item&&!subPopover.hidden)return;
-    subAnchor?.classList.remove('am-active');
+    subAnchor?.classList.remove('am-active','am-parent');
     subAnchor=item;item.classList.add('am-active');
     subPopover.replaceChildren();
     const entries=typeof buildSub==='function'?buildSub():buildSub;
@@ -967,13 +1036,15 @@
     }
     subPopover.hidden=false;
     const itemRect=item.getBoundingClientRect(),subW=subPopover.offsetWidth,subH=subPopover.offsetHeight;
+    // As macOS: over the menu's edge by its 5px padding, the first row level with the parent row.
     const placeRight=innerWidth-itemRect.right>=subW+12||itemRect.left<subW+12;
-    subPopover.style.left=Math.round(placeRight?itemRect.right+4:itemRect.left-subW-4)+'px';
-    const top=Math.max(8,Math.min(itemRect.top-4,innerHeight-subH-8));
+    subPopover.style.left=Math.round(placeRight?itemRect.right:itemRect.left-subW)+'px';
+    const top=Math.max(8,Math.min(itemRect.top-5,innerHeight-subH-8));
     subPopover.style.top=Math.round(top)+'px';subPopover.style.bottom='';
   }
-  subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);});
-  subPopover.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
+  // With the pointer in the submenu its parent row turns grey, as on macOS; back on the parent it is the accent again.
+  subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);subAnchor?.classList.add('am-parent');});
+  subPopover.addEventListener('pointerleave',()=>{subAnchor?.classList.remove('am-parent');subTimer=setTimeout(closeSubPopover,140);});
   function renderPopoverEntries(entries) {
     popover.replaceChildren();
     for(const entry of entries){

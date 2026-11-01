@@ -217,6 +217,12 @@ try {
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
     assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    // Liquid Glass: the menu's own filter, its nine-piece map placed for its size (by a ResizeObserver: after a frame's rAF callbacks, before its paint).
+    const menuGlass = () => page.evaluate(async () => { for (let n = 0; n < 2; n++) await new Promise(r => requestAnimationFrame(r)); const p = document.getElementById('am-popover'), f = document.getElementById('am-menu-glass-' + p.dataset.amGlass), i = [...f.querySelectorAll('feImage')], br = i.find(e => e.dataset.piece === 'br');
+      return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight]; });
+    const [filter, pieces, mapped, right, bottom, width, height] = await menuGlass();
+    assert.deepEqual([filter, pieces, mapped, right, bottom], ['url("#am-menu-glass-0")', 8, true, width, height]);
+    await page.waitForTimeout(150); // the opening animation scales the menu, and the submenu is placed from its rows
     // Hover submenu test: hovering 'Çalma Listesine Ekle' opens the flyout submenu to the right
     await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
     assert.ok(await page.locator('#am-popover-sub').isVisible());
@@ -225,6 +231,14 @@ try {
     await page.waitForFunction(() => [...document.querySelectorAll('#am-popover-sub .am-popover-item')].some(b => b.textContent === 'Neşeli'));
     const targets = await page.locator('#am-popover-sub .am-popover-item').allTextContents();
     assert.ok(targets.includes('Sabah Kahvesi') && !targets.includes('Haftalık Keşif') && !targets.includes('Yükleniyor…'), targets.join());
+    // The submenu lies over the menu's edge by its padding, its first row level with the parent unless that runs off the
+    // window (it does here); with the pointer in it the parent turns grey.
+    const flyout = () => page.evaluate(() => { const item = document.querySelector('#am-popover .am-has-submenu').getBoundingClientRect(), sub = document.getElementById('am-popover-sub'); // offsets: its opening animation scales it
+      return [Math.round(sub.offsetLeft - item.right), sub.offsetTop - item.top <= -5, document.querySelector('#am-popover .am-has-submenu').classList.contains('am-parent')]; });
+    assert.deepEqual(await flyout(), [0, true, false]);
+    await page.hover('#am-popover-sub .am-popover-item >> nth=1');
+    assert.deepEqual(await flyout(), [0, true, true]);
+    await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover-sub').isHidden());
     assert.equal(await page.evaluate(() => document.activeElement?.textContent), 'Çalma Listesine Ekle', 'Escape returns focus to the submenu item');
@@ -472,6 +486,9 @@ try {
     // The menu's new row comes first, as the column does, and starts checked.
     await page.click('.mock-columns');
     await page.waitForSelector('.am-column-number');
+    // Spotify's menu: the glass on its root, never on the list (a submenu inside the list would be clipped).
+    assert.deepEqual(await page.evaluate(() => { const ul = document.querySelector('[data-tippy-root] ul[role="menu"]'), root = ul.closest('[data-tippy-root]');
+      return [/^\d+$/.test(root.dataset.amGlass), 'amGlassList' in ul.dataset, getComputedStyle(ul).backdropFilter, getComputedStyle(root, '::before').backdropFilter.startsWith('url(')]; }), [true, true, 'none', true]);
     assert.deepEqual(await page.$$eval('#context-menu li', l => l.map(e => e.textContent)), ['Sütunlar', 'Parça numarası', 'Albüm']);
     assert.equal(await page.getAttribute('.am-column-number button', 'aria-checked'), 'true');
     await page.click('.am-column-number button');
