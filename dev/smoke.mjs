@@ -696,6 +696,12 @@ try {
     await page.click('.am-more');
     await page.click('#am-popover .am-popover-item:has-text("Katkıda Bulunanları Görüntüle")');
     assert.deepEqual(await page.evaluate(() => window.__dispatched?.at(-1)), { type: 'SHOW_TRACK_CREDITS', isOpen: true, trackUri: 'spotify:track:1' });
+    // Spotify's dialogs are <dialog> elements in .Root; the card (the dialog's only child, as in Credits, or the dialog
+    // itself when it holds a header and a body, as Keyboard Shortcuts does) is a frosted sheet, and only the card.
+    assert.deepEqual(await page.evaluate(() => { const sheet = n => { const cs = getComputedStyle(n); return cs.borderRadius === '16px' && /blur\(40px\)/.test(cs.backdropFilter); };
+      const open = (...parts) => { const d = document.createElement('dialog'); d.append(...parts.map(t => Object.assign(document.createElement('div'), { textContent: t }))); document.querySelector('.Root').append(d); d.showModal(); return d; };
+      const one = open('Credits'), out = [sheet(one), sheet(one.firstChild), getComputedStyle(one, '::backdrop').backgroundColor]; one.close(); one.remove();
+      const two = open('Keyboard Shortcuts', 'Basic'); out.push(sheet(two), sheet(two.firstChild)); two.close(); two.remove(); return out; }), [false, true, 'rgba(0, 0, 0, 0.35)', true, false]);
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-song');
     await page.click('.am-song >> nth=1', { button: 'right' });
