@@ -306,7 +306,7 @@
   function listRow(item) {
     const sig = JSON.stringify(item), kept = listRows.get(item.uri);
     if (kept?.sig === sig) return kept;
-    const b = el('button', 'am-nav-row am-list-row'); b.type = 'button'; b.title = item.name; b.dataset.uri = item.uri;
+    const b = el('button', 'am-nav-row am-list-row'); b.type = 'button'; b.title = item.name; b.dataset.uri = item.uri; b.draggable = true;
     const art = el('span', 'am-list-art'), icon = item.type === 'folder' ? 'folder' : 'playlist';
     if (item.image) {
       const img = el('img', ''); img.alt = ''; img.decoding = 'async'; img.dataset.src = item.image;
@@ -709,7 +709,7 @@
         for(;rendered<end;rendered++){
         const item=items[rendered];
         const b=el('button','am-library-card');b.type='button';b.setAttribute('aria-label',item.name||T('Adsız','Untitled'));
-        b.dataset.uri=item.uri;b.dataset.kind=kind;b.dataset.folder=String(item.type==='folder');
+        b.dataset.uri=item.uri;b.dataset.kind=kind;b.dataset.folder=String(item.type==='folder');b.draggable=true;
         const art=el('span','am-library-art');
         art.dataset.icon=item.type==='artist'?'artist':item.type==='album'?'album':'music';
         const src=item.imageUrl;
@@ -1165,6 +1165,68 @@
   const loadAddTargets=()=>addLoading||=Promise.resolve(Rootlist?.getContents?.({flatten:true}))
     .then(r=>{addTargets=(r?.items||[]).filter(i=>i.type==='playlist'&&i.canAdd);}).catch(()=>{addTargets=[];}).finally(()=>{addLoading=null;});
   try{const events=Rootlist?.getEvents?.();(events?._emitter||events)?.addListener?.('update',()=>{addTargets=null;},{});}catch{}
+  // Drag and drop with Spotify's own drag data (text/x-spotify-<type>s and open.spotify.com links), so items move
+  // between Spotify's pages and the theme's both ways (issue #59). On the sidebar: songs and albums dropped on a playlist
+  // you can add to add their songs, anything dropped on the Library rows is saved, and a playlist, folder, album or
+  // artist dropped at the top or bottom edge of a pinned row (anywhere on it, if it takes no songs) is pinned there.
+  const uriType=uri=>/:folder:/.test(uri)?'folder':uri.split(':')[1];
+  const linkOf=uri=>'https://open.spotify.com/'+uri.split(':').slice(1).join('/');
+  function setDrag(event,uris) {
+    const dt=event.dataTransfer,groups={};if(!dt||!uris.length)return;
+    for(const uri of uris)(groups[uriType(uri)]||=[]).push(uri);
+    dt.effectAllowed='copyMove';dt.setData('text/uri-list',uris.filter(u=>uriType(u)!=='folder').map(linkOf).join('\n'));dt.setData('text/plain',uris.map(linkOf).join('\n'));
+    for(const [type,list] of Object.entries(groups))dt.setData(`text/x-spotify-${type}s`,list.join(','));
+  }
+  // dragover can read only the types; the URIs come with the drop.
+  const dragKinds=dt=>new Set([...dt?.types||[]].map(t=>t.match(/^text\/x-spotify-(track|album|artist|playlist|episode|show|folder)s$/)?.[1]).filter(Boolean));
+  function droppedUris(dt) {
+    const uris=[...dt.types].filter(t=>/^text\/x-spotify-(track|album|artist|playlist|episode|show|folder)s$/.test(t)).flatMap(t=>dt.getData(t).split(/[\s,]+/)).filter(u=>/^spotify:/.test(u));
+    if(uris.length)return uris;
+    return (dt.getData('text/uri-list')||'').split(/\s+/).map(l=>l.match(/open\.spotify\.com\/(?:intl-[\w-]+\/)?(track|album|artist|playlist|episode|show)\/(\w+)/)).filter(Boolean).map(m=>`spotify:${m[1]}:${m[2]}`);
+  }
+  const libraryDrops=new Set(['/collection','/collection/artists','/collection/albums','/collection/tracks']);
+  function dropAction(target,dt,y) {
+    const row=target.closest?.('.am-nav-row'),kinds=dragKinds(dt);
+    if(!row||!nav.contains(row)||row.classList.contains('am-list-ghost')||!kinds.size&&!dt.types.includes('text/uri-list'))return null;
+    if(!row.dataset.uri)return libraryDrops.has(navItems.find(n=>n.b===row)?.key)&&!kinds.has('folder')?{kind:'library'}:null;
+    const item=listItems.find(i=>i.uri===row.dataset.uri);if(!item)return null;
+    if(!addTargets)loadAddTargets();
+    const box=row.getBoundingClientRect(),mid=box.top+box.height/2,songs=!kinds.size||['track','album','episode'].some(k=>kinds.has(k));
+    const addable=item.type==='playlist'&&songs&&!!addTargets?.some(t=>t.uri===item.uri);
+    if(item.pinned&&['playlist','folder','album','artist','show'].some(k=>kinds.has(k))&&(!addable||Math.abs(y-mid)>box.height/4))
+      return {kind:'pin',uri:item.uri,where:y<mid?{before:{uri:item.uri}}:{after:{uri:item.uri}}};
+    return addable?{kind:'add',uri:item.uri,name:item.name}:null;
+  }
+  async function dropOn(action,dt) {
+    const uris=droppedUris(dt);if(!uris.length)return;
+    try{
+      if(action.kind==='library'){await S.Platform.LibraryAPI.add({uris:uris.filter(u=>uriType(u)!=='folder')});notify(T('Arşive eklendi.','Added to Library.'));}
+      else if(action.kind==='add'){
+        const songs=(await Promise.all(uris.map(queueUris))).flat().filter(u=>/^spotify:(track|episode):/.test(u||''));if(!songs.length)throw 0;
+        await S.Platform.PlaylistAPI.add(action.uri,songs,{});notify(T(`"${action.name}" listesine eklendi.`,`Added to "${action.name}".`));
+      } else {
+        // As Spotify's sidebar does: an album, artist or show not yet in the library is saved first, then pinned at the
+        // line. Playlists and folders are not (LibraryAPI.contains says false for those in the rootlist).
+        const L=S.Platform.LibraryAPI;
+        for(const uri of uris.filter(u=>u!==action.uri)){if(!['playlist','folder'].includes(uriType(uri))){const [saved]=await L.contains(uri).catch(()=>[true]);if(!saved)await L.add({uris:[uri]});}await L.pin(uri,action.where);}
+      }
+    }catch{notify(T('Buraya bırakılamadı.','Couldn\'t drop it here.'));}
+  }
+  let dropRow=null;
+  const clearDrop=()=>{dropRow?.classList.remove('am-drop-into','am-drop-before','am-drop-after');dropRow=null;};
+  nav.addEventListener('dragover',event=>{
+    const action=dropAction(event.target,event.dataTransfer,event.clientY);if(!action){clearDrop();return;}
+    event.preventDefault();event.dataTransfer.dropEffect=action.kind==='pin'?'move':'copy';
+    const row=event.target.closest('.am-nav-row'),cls=action.kind!=='pin'?'am-drop-into':action.where.before?'am-drop-before':'am-drop-after';
+    if(dropRow!==row||!row.classList.contains(cls)){clearDrop();dropRow=row;row.classList.add(cls);}
+  });
+  nav.addEventListener('dragleave',event=>{if(dropRow&&!dropRow.contains(event.relatedTarget))clearDrop();});
+  nav.addEventListener('drop',event=>{const action=dropAction(event.target,event.dataTransfer,event.clientY);clearDrop();if(!action)return;event.preventDefault();dropOn(action,event.dataTransfer);});
+  document.addEventListener('dragend',clearDrop,true);
+  // Drag sources: the sidebar's playlists and folders, the library's cards, the playing song (artwork and title).
+  nav.addEventListener('dragstart',event=>{const row=event.target.closest?.('.am-list-row[data-uri]');if(row)setDrag(event,[row.dataset.uri]);});
+  libraryView.addEventListener('dragstart',event=>{const card=event.target.closest?.('.am-library-card');if(card?.dataset.uri)setDrag(event,[card.dataset.uri]);});
+  for(const node of [fullscreenButton,title.root]){node.draggable=true;node.addEventListener('dragstart',event=>{const uri=S.Player.data?.item?.uri;if(uri)setDrag(event,[uri]);else event.preventDefault();});}
   // What Spotify's own menu offers on library items (issue #59): remove an album, artist or followed playlist from the
   // library; your own playlist can be deleted (confirmed in a submenu) and shown on or hidden from your profile. The
   // item's state is read as its menu opens (a few ms), so the labels match it.
@@ -1817,6 +1879,7 @@
   // Artist pages are redrawn after Apple Music from Spotify's own artist query.
   // Any missing API or failed request falls back to Spotify's native page.
   const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label',T('Sanatçı','Artist'));document.body.append(artistView);
+  artistView.addEventListener('dragstart',event=>{const node=event.target.closest?.('[draggable="true"][data-uri]');if(node)setDrag(event,[node.dataset.uri]);});
   artistView.addEventListener('contextmenu',async event=>{
     if(event.defaultPrevented||popover.contains(event.target))return;
     event.preventDefault();
@@ -2093,7 +2156,7 @@
   }
   function releaseCard(release,{subtitle,round}={}) {
     if(!release?.uri)return null;
-    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';card.dataset.uri=release.uri;
+    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';card.dataset.uri=release.uri;card.draggable=true;
     const art=el('span','am-card-art');art.append(lazyImage(artistImage(release.coverArt||release.visuals?.avatarImage||release.images?.items?.[0])));
     card.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
     if(subtitle)card.append(el('span','am-card-sub',subtitle));
@@ -2267,7 +2330,7 @@
         const block=el('div','am-latest');
         block.append(el('h2','am-shelf-title',T('Son Çıkan','Latest Release')));
         const card=el('div','am-latest-card');
-        const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
+        const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.dataset.uri=latest.uri;cover.draggable=true;cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
         cover.addEventListener('contextmenu',event=>{
           event.preventDefault();event.stopPropagation();
           const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
@@ -2290,7 +2353,7 @@
         block.append(el('h2','am-shelf-title',T('Popüler Şarkılar','Top Songs')));
         const grid=el('div','am-song-grid');
         for(const song of topTracks){
-          const row=el('div','am-song');
+          const row=el('div','am-song');row.dataset.uri=song.uri;row.draggable=true;
           const playSong=el('button','am-song-main');playSong.type='button';playSong.title=song.name||'';
           playSong.addEventListener('click',()=>playArtist(uri,song.uri));
           const text=el('span','am-song-text');

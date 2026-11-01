@@ -876,6 +876,30 @@ try {
     assert.deepEqual(await page.evaluate(() => window.__playlistRemoves), [{ uri, items: [{ uri: 'spotify:track:1', uid: 'u1' }] }]);
     await page.evaluate(() => { Spicetify.Player.data.context = window.__ctx; delete Spicetify.Player.data.item.uid; });
   });
+  await check('drag and drop onto the sidebar, with Spotify\'s drag data (#59)', async () => {
+    // A drag as Spotify's pages start one; edge: 'top' drops on a row's top edge, else its middle.
+    const drop = (sel, data, edge) => page.evaluate(([sel, data, edge]) => { const row = [...document.querySelectorAll(sel)].find(n => n.offsetParent), b = row.getBoundingClientRect(), dt = new DataTransfer();
+      for (const [k, v] of Object.entries(data)) dt.setData(k, v);
+      const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: b.left + 20, clientY: edge === 'top' ? b.top + 2 : b.top + b.height / 2 }, over = new DragEvent('dragover', opts);
+      row.dispatchEvent(over); const seen = [over.defaultPrevented, ['am-drop-into', 'am-drop-before', 'am-drop-after'].find(c => row.classList.contains(c)) || '']; row.dispatchEvent(new DragEvent('drop', opts)); return seen; }, [sel, data, edge]);
+    const track = { 'text/uri-list': 'https://open.spotify.com/track/9', 'text/x-spotify-tracks': 'spotify:track:9' };
+    await drop('#am-sidebar .am-list-row[title="Odak"]', track);   // the first dragover loads the playlists you can add to
+    await page.waitForTimeout(100);
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Odak"]', track), [true, 'am-drop-into']);
+    await page.waitForFunction(() => window.__playlistAdds?.some(a => a.playlistUri === 'spotify:playlist:2' && a.uris.join() === 'spotify:track:9'));
+    // A drag without Spotify's data is left alone; an album onto Albums saves it; a playlist onto a pinned row's top
+    // edge is pinned above it.
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Odak"]', { 'text/plain': 'hello' }), [false, '']);
+    const albums = await page.evaluate(() => [...document.querySelectorAll('#am-sidebar .am-nav-row')].findIndex(n => n.textContent === 'Albümler'));
+    assert.deepEqual(await page.evaluate(i => { const row = document.querySelectorAll('#am-sidebar .am-nav-row')[i], b = row.getBoundingClientRect(), dt = new DataTransfer(); dt.setData('text/x-spotify-albums', 'spotify:album:7');
+      const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: b.left + 20, clientY: b.top + b.height / 2 }, over = new DragEvent('dragover', opts); row.dispatchEvent(over); row.dispatchEvent(new DragEvent('drop', opts)); return over.defaultPrevented; }, albums), true);
+    await page.waitForFunction(() => window.__libraryAdds?.includes('spotify:album:7'));
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Sabah Kahvesi"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }, 'top'), [true, 'am-drop-before']);
+    await page.waitForFunction(() => JSON.stringify(window.__pins?.at(-1)) === JSON.stringify(['spotify:playlist:2', { before: { uri: 'spotify:playlist:0' } }]));
+    assert.equal(await page.locator('#am-sidebar .am-drop-into, #am-sidebar .am-drop-before').count(), 0);
+    // The sidebar's rows start drags Spotify's pages understand.
+    assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
+  });
   await shot('library');
 
   await check('the toolbar Home leaves a library view (#59)', async () => {

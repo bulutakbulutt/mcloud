@@ -272,6 +272,12 @@ body.am-resizing * {transition:none!important}
 .am-list-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .am-list-pin {display:grid;flex-shrink:0;color:#ffffff59}
 #am-sidebar .am-list-pin svg {width:12px;height:12px;color:inherit}
+/* Drag and drop onto the sidebar (theme.js): a row taking the drop is ringed in the accent; a pin lands at the line. */
+#am-sidebar .am-nav-row.am-drop-into {box-shadow:inset 0 0 0 2px var(--am-accent)!important}
+#am-sidebar .am-nav-row:is(.am-drop-before,.am-drop-after) {position:relative}
+#am-sidebar .am-nav-row:is(.am-drop-before,.am-drop-after)::before {content:'';position:absolute;left:8px;right:8px;height:2px;border-radius:1px;background:var(--am-accent);pointer-events:none}
+#am-sidebar .am-nav-row.am-drop-before::before {top:-1px}
+#am-sidebar .am-nav-row.am-drop-after::before {bottom:-1px}
 .am-list-row.am-playing::after {content:"";flex-shrink:0;width:14px;height:14px;background:var(--am-accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3z'/%3E%3Cpath d='M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
 #am-sidebar .am-list-more {color:#ffffff8c;font-weight:500}
 #am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}

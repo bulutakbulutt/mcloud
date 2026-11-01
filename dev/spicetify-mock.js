@@ -114,6 +114,7 @@
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
     contains: async (...uris) => uris.map(() => true),
+    pin: async (uri, where) => { (window.__pins ||= []).push([uri, where]); },
   });
   // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
   Object.assign(Spicetify.Platform.PlaylistAPI, {
