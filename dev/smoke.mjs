@@ -809,7 +809,15 @@ try {
     await page.click(row('Sabah Kahvesi'), { button: 'right' });
     await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
     const items = await page.locator('#am-popover .am-popover-item').allTextContents();
-    assert.ok(items.includes('Sil') && items.some(t => /^Profil(den Kaldır|e Ekle)$/.test(t)), items.join());
+    assert.ok(['Ayrıntıları Düzenle', 'Gizli Yap', 'Sil'].every(t => items.includes(t)) && items.some(t => /^Profil(den Kaldır|e Ekle)$/.test(t)), items.join());
+    // Edit details: a small sheet, saved through PlaylistAPI.updateDetails.
+    await page.click('#am-popover .am-popover-item:has-text("Ayrıntıları Düzenle")');
+    await page.fill('#am-edit-details .am-edit-name', 'Sabah Kahvesi 2');
+    await page.click('#am-edit-details .am-edit-save');
+    await page.waitForSelector('#am-edit-details', { state: 'detached' });
+    assert.equal(await page.evaluate(() => window.__details?.at(-1)?.name), 'Sabah Kahvesi 2');
+    await page.click(row('Sabah Kahvesi'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
     await page.hover('#am-popover .am-popover-item:has-text("Sil")');
     await page.click('#am-popover-sub .am-popover-item:has-text("Silinsin")');
     const uri = await page.getAttribute(row('Sabah Kahvesi'), 'data-uri');

@@ -416,6 +416,18 @@ body.am-menu-icons .am-popover-item.am-has-submenu {justify-content:flex-start}
 body.am-menu-icons .am-popover-item.am-has-submenu::after {margin-left:auto}
 body.am-menu-icons .am-popover-item .am-menu-icon {display:block;width:16px;height:16px;flex:none}
 body.am-menu-icons #am-popover .am-popover-item:not(:has(.am-menu-icon)) {padding-left:36px}
+/* Edit details (our menus' playlist action): a small sheet over the window. */
+.am-edit-back {position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#0006;-webkit-app-region:no-drag}
+.am-edit-box {box-sizing:border-box;width:min(420px,calc(100vw - 48px));display:grid;gap:12px;padding:20px;border-radius:16px;background:#2c2c2ef2;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:inset 0 0 0 .5px #ffffff26,0 20px 50px #0009;color:#f2f2f2;font:13px var(--encore-body-font-stack)}
+.am-edit-title {margin:0;font-size:17px;font-weight:600}
+.am-edit-name,.am-edit-desc {box-sizing:border-box;width:100%;padding:8px 10px;border:0;border-radius:8px;background:#ffffff14;color:inherit;font:inherit;outline:0}
+.am-edit-name:focus-visible,.am-edit-desc:focus-visible {box-shadow:0 0 0 2px var(--am-accent-focus)}
+.am-edit-desc {min-height:96px;resize:vertical}
+.am-edit-actions {display:flex;justify-content:flex-end;gap:8px}
+.am-edit-actions button {padding:6px 16px;border:0;border-radius:999px;font:inherit;cursor:pointer}
+.am-edit-cancel {background:#ffffff1f;color:inherit}
+.am-edit-save {background:var(--am-accent);color:#fff}
+body.am-solid .am-edit-box {background:#2c2c2e;backdrop-filter:none;-webkit-backdrop-filter:none}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
 .am-swatch.am-selected {outline:2px solid #f2f2f2;outline-offset:2px}

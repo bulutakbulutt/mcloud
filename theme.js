@@ -36,6 +36,9 @@
     trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
     minus:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
     open:'<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
+    edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',
+    lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -1071,7 +1074,8 @@
   const menuIcons=Object.fromEntries([['Çal','Play','play'],['Sanatçıyı Çal','Play Artist','play'],['Sıraya Ekle','Add to Queue','queue'],['Çalma Listesine Ekle','Add to Playlist','plus'],
     ['Albüme Git','Go to Album','disc'],['Sanatçıya Git','Go to Artist','person'],['Bağlantıyı Kopyala','Copy Link','link'],['Şarkı Bağlantısını Kopyala','Copy Song Link','link'],
     ['Sanatçı Bağlantısını Kopyala','Copy Artist Link','link'],['Aç','Open','open'],['Kitaplıktan Çıkar','Remove from Your Library','check'],['Takibi Bırak','Unfollow','check'],
-    ['Profilden Kaldır','Remove from Profile','profile'],['Profile Ekle','Add to Profile','profile'],['Sil','Delete','trash'],['Bu Listeden Çıkar','Remove from this Playlist','minus']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
+    ['Profilden Kaldır','Remove from Profile','profile'],['Profile Ekle','Add to Profile','profile'],['Sil','Delete','trash'],['Bu Listeden Çıkar','Remove from this Playlist','minus'],
+    ['Ayrıntıları Düzenle','Edit Details','edit'],['Gizli Yap','Make Private','lock'],['Herkese Açık Yap','Make Public','lock'],['Bu Sanatçıyı Çalma','Don\'t Play This Artist','ban'],['Bu Sanatçıya İzin Ver','Allow This Artist','ban']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
   function renderPopoverEntries(entries) {
     popover.replaceChildren();
     for(const entry of entries){
@@ -1167,10 +1171,15 @@
     if(type==='playlist'){
       const meta=await S.Platform.PlaylistAPI?.getMetadata?.(uri).catch(()=>null);if(!meta)return [];
       if(!meta.isOwnedBySelf)return meta.isSaved&&L?.remove?[removal(T('Kitaplıktan Çıkar','Remove from Your Library'))]:[];
-      const name=meta.name||T('Bu liste','This playlist');
+      const name=meta.name||T('Bu liste','This playlist'),Perm=S.Platform.PlaylistPermissionsAPI,priv=meta.permissions?.isPrivate;
       return [
+        ...(meta.canEditMetadata&&S.Platform.PlaylistAPI?.updateDetails?[{label:T('Ayrıntıları Düzenle','Edit Details'),action:()=>editDetails(uri,meta)}]:[]),
         ...(Rootlist?.setPublishedState?[{label:meta.isPublished?T('Profilden Kaldır','Remove from Profile'):T('Profile Ekle','Add to Profile'),action:async()=>{
           try{await Rootlist.setPublishedState(uri,!meta.isPublished);notify(meta.isPublished?T('Profilden kaldırıldı.','Removed from your profile.'):T('Profile eklendi.','Added to your profile.'));}
+          catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}]:[]),
+        // Spotify's Make private: no one else can open it, and it leaves your profile.
+        ...(meta.permissions?.canAdministratePermissions&&Perm?.setBasePermission?[{label:priv?T('Herkese Açık Yap','Make Public'):T('Gizli Yap','Make Private'),action:async()=>{
+          try{if(!priv&&meta.isPublished)await Rootlist?.setPublishedState?.(uri,false);await Perm.setBasePermission(uri,priv?'VIEWER':'BLOCKED');notify(priv?T('Liste herkese açık.','The playlist is public.'):T('Liste gizli.','The playlist is private.'));}
           catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}]:[]),
         ...(Rootlist?.remove?[{label:T('Sil','Delete'),submenu:[{label:T(`"${name}" Silinsin`,`Delete "${name}"`),action:async()=>{
           try{await Rootlist.remove([{uri}]);notify(T('Çalma listesi silindi.','Playlist deleted.'));}catch{notify(T('Silinemedi.','Couldn\'t delete it.'));}}}]}]:[]),
@@ -1178,7 +1187,28 @@
     }
     if(!['album','artist','show','audiobook'].includes(type)||!L?.contains||!L.remove)return [];
     const [saved]=await L.contains(uri).catch(()=>[false]);
-    return saved?[removal(type==='artist'?T('Takibi Bırak','Unfollow'):T('Kitaplıktan Çıkar','Remove from Your Library'))]:[];
+    return [...(saved?[removal(type==='artist'?T('Takibi Bırak','Unfollow'):T('Kitaplıktan Çıkar','Remove from Your Library'))]:[]),...(type==='artist'?await artistBan(uri):[])];
+  }
+  // Spotify's "Don't play this artist": the artist goes into the artistban set (and out of the library); undone the same way.
+  async function artistBan(uri) {
+    const C=S.Platform.CollectionPlatformAPI;if(!C?.contains||!C.add||!C.remove)return [];
+    const [banned]=await C.contains('artistban',[uri]).catch(()=>[undefined]);if(banned===undefined)return [];
+    return [{label:banned?T('Bu Sanatçıya İzin Ver','Allow This Artist'):T('Bu Sanatçıyı Çalma','Don\'t Play This Artist'),action:async()=>{
+      try{if(banned)await C.remove('artistban',[uri]);else{await C.add('artistban',[uri]);await S.Platform.LibraryAPI?.remove?.({uris:[uri],silent:true});}
+        notify(banned?T('Bu sanatçı yeniden çalınabilir.','This artist can play again.'):T('Bu sanatçı çalınmayacak.','This artist won\'t be played.'));}
+      catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}];
+  }
+  // Spotify's Edit details: name and description in a small sheet, saved through PlaylistAPI.updateDetails.
+  function editDetails(uri,meta) {
+    document.getElementById('am-edit-details')?.remove();
+    const back=el('div','am-edit-back'),box=el('form','am-edit-box'),name=el('input','am-edit-name'),desc=el('textarea','am-edit-desc'),row=el('div','am-edit-actions');
+    back.id='am-edit-details';box.setAttribute('role','dialog');box.setAttribute('aria-label',T('Ayrıntıları Düzenle','Edit Details'));
+    name.value=meta.name||'';name.maxLength=100;name.placeholder=T('Ad','Name');desc.value=meta.description||'';desc.maxLength=300;desc.placeholder=T('Açıklama','Description');
+    const cancel=el('button','am-edit-cancel',T('Vazgeç','Cancel')),save=el('button','am-edit-save',T('Kaydet','Save'));cancel.type='button';save.type='submit';
+    row.append(cancel,save);box.append(el('h2','am-edit-title',T('Ayrıntıları Düzenle','Edit Details')),name,desc,row);back.append(box);document.body.append(back);name.focus();name.select();
+    const close=()=>back.remove();cancel.onclick=close;back.addEventListener('pointerdown',e=>{if(e.target===back)close();});box.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();close();}});
+    box.onsubmit=async e=>{e.preventDefault();const n=name.value.trim();if(!n){name.focus();return;}
+      try{await S.Platform.PlaylistAPI.updateDetails(uri,{name:n,description:desc.value.trim()});notify(T('Kaydedildi.','Saved.'));close();}catch{notify(T('Kaydedilemedi.','Couldn\'t save it.'));}};
   }
   // The playing track out of the playlist it plays from, when that playlist is yours to edit (Spotify's "Remove from this
   // playlist"); the row is named by its uid, so a track listed twice loses only this copy.
@@ -1766,15 +1796,16 @@
   // Artist pages are redrawn after Apple Music from Spotify's own artist query.
   // Any missing API or failed request falls back to Spotify's native page.
   const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label',T('Sanatçı','Artist'));document.body.append(artistView);
-  artistView.addEventListener('contextmenu',event=>{
+  artistView.addEventListener('contextmenu',async event=>{
     if(event.defaultPrevented||popover.contains(event.target))return;
     event.preventDefault();
     const id=routePath().replace(/^\/artist\//,'');if(!id)return;
-    const shareLink='https://open.spotify.com/artist/'+id;
-    togglePopover({x:event.clientX,y:event.clientY},()=>[
+    const shareLink='https://open.spotify.com/artist/'+id,at={x:event.clientX,y:event.clientY},extra=await artistBan('spotify:artist:'+id);
+    togglePopover(at,()=>[
       {label:T('Sanatçıyı Çal','Play Artist'),action:()=>playArtist('spotify:artist:'+id)},
       '-',
       {label:T('Sanatçı Bağlantısını Kopyala','Copy Artist Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+      ...(extra.length?['-',...extra]:[]),
     ]);
   });
   // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
