@@ -712,6 +712,10 @@ try {
       const open = (...parts) => { const d = document.createElement('dialog'); d.append(...parts.map(t => Object.assign(document.createElement('div'), { textContent: t }))); document.querySelector('.Root').append(d); d.showModal(); return d; };
       const one = open('Credits'), out = [sheet(one), sheet(one.firstChild), getComputedStyle(one, '::backdrop').backgroundColor]; one.close(); one.remove();
       const two = open('Keyboard Shortcuts', 'Basic'); out.push(sheet(two), sheet(two.firstChild)); two.close(); two.remove(); return out; }), [false, true, 'rgba(0, 0, 0, 0.35)', true, false]);
+    // Spotify's older react-modal windows (Playlist permissions) take the same sheet and dim.
+    assert.deepEqual(await page.evaluate(() => { const portal = document.createElement('div'); portal.className = 'ReactModalPortal';
+      portal.innerHTML = '<div style="position:fixed;inset:0;background-color:rgba(0,0,0,.7)"><div role="dialog"><div data-testid="playlist-permissions-modal">Shared with</div></div></div>'; document.body.append(portal);
+      const card = getComputedStyle(portal.querySelector('[data-testid]')), out = [card.borderRadius, /blur\(40px\)/.test(card.backdropFilter), getComputedStyle(portal.firstElementChild).backgroundColor]; portal.remove(); return out; }), ['16px', true, 'rgba(0, 0, 0, 0.35)']);
     // Credits' Encore list rows: a grey caption over one rounded group, a hairline between rows.
     assert.deepEqual(await page.evaluate(() => { const d = document.createElement('dialog'), card = document.createElement('div'), sec = document.createElement('div');
       sec.innerHTML = '<span data-encore-id="text">Artist</span><div data-encore-id="listRow">A<button data-encore-id="buttonSecondary">Follow</button></div><div data-encore-id="listRow">B</div>'; card.append(sec); d.append(card); document.querySelector('.Root').append(d); d.showModal();

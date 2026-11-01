@@ -512,13 +512,17 @@ body.am-menu-icons #am-popover .am-popover-item:not(:has(.am-menu-icon)) {paddin
    menus' rim. The menus' bending glass let the page's text read through at this size; a heavier blur keeps only its
    colours. Spotify's card is either the dialog's only child (credits) or the dialog itself, holding a header and a body. */
 dialog[open]::backdrop {background:#00000059!important;animation:am-dim-in .24s ease-out}
+/* Older Spotify windows are react-modals (Playlist permissions: "Shared with", from a shared playlist's names): their
+   card (data-testid "…-modal") is the same sheet, their overlay the same light dim. The :has() is on the portal, so
+   only portals test it. */
+.ReactModalPortal:has([role="dialog"] > [data-testid$="modal"]) > div {background-color:#00000059!important;animation:am-dim-bg-in .24s ease-out}
 /* Sheets fade and grow in (Spotify's dialogs opened at once). The sheet animates, never an ancestor: opacity on an
    ancestor would cut its backdrop blur off from the page until the fade ended. */
 @keyframes am-sheet-in {from{opacity:0;transform:scale(.96)}}
 @keyframes am-dim-in {from{opacity:0}}
 @keyframes am-dim-bg-in {from{background-color:transparent}}
 .am-edit-back {animation:am-dim-bg-in .24s ease-out}
-:is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.am-edit-box) {animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1);border-radius:16px!important;background:#28282abf!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
+:is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1);border-radius:16px!important;background:#28282abf!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
  box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 22px 70px #0000008c!important}
 .am-edit-title {margin:0;font-size:17px;font-weight:600}
 .am-edit-name,.am-edit-desc {box-sizing:border-box;width:100%;padding:8px 10px;border:0;border-radius:8px;background:#ffffff14;color:inherit;font:inherit;outline:0}
@@ -528,7 +532,7 @@ dialog[open]::backdrop {background:#00000059!important;animation:am-dim-in .24s 
 .am-edit-actions button {padding:6px 16px;border:0;border-radius:999px;font:inherit;cursor:pointer}
 .am-edit-cancel {background:#ffffff1f;color:inherit}
 .am-edit-save {background:var(--am-accent);color:#fff}
-body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.am-edit-box) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Credits as Apple lists them (iOS, music.apple.com; Music on the Mac has none): grey captions over rounded groups of
    rows, hairlines between rows inset to the text. Encore's listRow ids, not Spotify's hashed classes. */
 dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em;text-transform:uppercase;color:#ffffff80!important}
