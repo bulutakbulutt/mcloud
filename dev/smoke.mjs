@@ -791,6 +791,18 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
   });
 
+  await check('menu icons only with the setting on', async () => {
+    const icons = () => page.evaluate(() => [...document.querySelectorAll('#am-popover .am-popover-item')].map(i => getComputedStyle(i.querySelector('.am-menu-icon') || i).display));
+    await page.click('.am-more');
+    assert.ok((await icons()).every(d => d !== 'block'), 'text only by default');
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => document.body.classList.add('am-menu-icons'));
+    await page.click('.am-more');
+    assert.ok((await icons()).every(d => d === 'block'), 'every row of the track menu has its icon');
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => document.body.classList.remove('am-menu-icons'));
+  });
+
   await check('library actions on playlists and the playing track (#59)', async () => {
     // Your own playlist: on or off your profile, and delete confirmed in a submenu.
     const row = name => `#am-sidebar .am-list-row[title="${name}"]`;

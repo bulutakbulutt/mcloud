@@ -25,6 +25,17 @@
     // stem right of centre and a 7pt foot, edges on the device-pixel grid at 20px (0.6 units = 1 device pixel).
     info:'<circle cx="12.15" cy="5.9" r="1.45" fill="currentColor" stroke="none"/><path d="M8.4 10.2H13.2V19.2H16.2V21H8.1V19.2H11.4V12H8.4Z" fill="currentColor" stroke="none"/>',
     close:'<path d="m6.5 6.5 11 11m0-11-11 11"/>',
+    // Menu icons (the Spotify-style option): the theme's own line drawings, not Spotify's.
+    queue:'<path d="M3 6h12M3 12h12M3 18h7M18 14v7M14.5 17.5h7"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    disc:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>',
+    person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
+    link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+    check:'<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9"/>',
+    profile:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.6 18.4c1.3-1.9 3.2-2.9 5.4-2.9s4.1 1 5.4 2.9"/>',
+    trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+    minus:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
+    open:'<path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/>',
     pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
     next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
     back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
@@ -64,7 +75,7 @@
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true,menuIcons:false};
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -82,6 +93,7 @@
     document.documentElement.style.setProperty('--am-accent-focus',focus);
     document.body.classList.toggle('am-no-artwork',!settings.artwork);
     document.body.classList.toggle('am-liquid',settings.liquid);
+    document.body.classList.toggle('am-menu-icons',settings.menuIcons);
     document.body.classList.toggle('am-no-numbers',!settings.numbers);
     // Glass modes. Over a page that redraws every frame (Spicy Lyrics) each backdrop filter re-runs every frame, so
     // "balanced" draws glass without them there (body.am-balanced), "eco" (and the OS reduced-transparency setting)
@@ -1055,6 +1067,11 @@
   // With the pointer in the submenu its parent row turns grey, as on macOS; back on the parent it is the accent again.
   subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);subAnchor?.classList.add('am-parent');});
   subPopover.addEventListener('pointerleave',()=>{subAnchor?.classList.remove('am-parent');subTimer=setTimeout(closeSubPopover,140);});
+  // Our menus are text only, as macOS draws them; the setting adds an icon to each row, as Spotify's menus have.
+  const menuIcons=Object.fromEntries([['Çal','Play','play'],['Sanatçıyı Çal','Play Artist','play'],['Sıraya Ekle','Add to Queue','queue'],['Çalma Listesine Ekle','Add to Playlist','plus'],
+    ['Albüme Git','Go to Album','disc'],['Sanatçıya Git','Go to Artist','person'],['Bağlantıyı Kopyala','Copy Link','link'],['Şarkı Bağlantısını Kopyala','Copy Song Link','link'],
+    ['Sanatçı Bağlantısını Kopyala','Copy Artist Link','link'],['Aç','Open','open'],['Kitaplıktan Çıkar','Remove from Your Library','check'],['Takibi Bırak','Unfollow','check'],
+    ['Profilden Kaldır','Remove from Profile','profile'],['Profile Ekle','Add to Profile','profile'],['Sil','Delete','trash'],['Bu Listeden Çıkar','Remove from this Playlist','minus']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
   function renderPopoverEntries(entries) {
     popover.replaceChildren();
     for(const entry of entries){
@@ -1070,6 +1087,7 @@
         popover.append(row);continue;
       }
       const item=el('button','am-popover-item'+(entry.submenu?' am-has-submenu':''),entry.label);item.type='button';item.setAttribute('role','menuitem');
+      if(menuIcons[entry.label])item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));
       if(entry.submenu){
         item.addEventListener('pointerenter',()=>{clearTimeout(subTimer);openSubPopover(item,entry.submenu);});
         item.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
@@ -2438,7 +2456,7 @@
     const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
+    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),toggle(T('Menü ikonları (Spotify gibi)','Menu icons (like Spotify)'),'menuIcons'),...glass,numbers,...recents,...colors,...langs]).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();

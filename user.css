@@ -408,6 +408,14 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 .am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
 .am-popover-item.am-has-submenu::after {content:'›';font-size:15px;line-height:1;opacity:.6;margin-left:8px}
 .am-popover-separator {height:1px;margin:5px 11px;background:#ffffff24}
+/* Menu icons (setting, off by default): each row of our menus gets its icon, as Spotify's menus have; rows without one
+   keep their text in line. Hidden otherwise: macOS draws plain menus as text. */
+.am-popover-item .am-menu-icon {display:none}
+body.am-menu-icons .am-popover-item {display:flex;align-items:center;gap:10px}
+body.am-menu-icons .am-popover-item.am-has-submenu {justify-content:flex-start}
+body.am-menu-icons .am-popover-item.am-has-submenu::after {margin-left:auto}
+body.am-menu-icons .am-popover-item .am-menu-icon {display:block;width:16px;height:16px;flex:none}
+body.am-menu-icons #am-popover .am-popover-item:not(:has(.am-menu-icon)) {padding-left:36px}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
 .am-swatch.am-selected {outline:2px solid #f2f2f2;outline-offset:2px}
