@@ -423,6 +423,13 @@ body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link
    are [data-tippy-root] divs and keep their own layout. */
 body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:10px!important}
 body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) :is(span,p) {font-size:13px!important;line-height:normal!important}
+/* Icons stay small, so a row keeps the 21px of a label (Spicetify's rows drew a 24px check). */
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) :is(svg,img) {max-width:16px!important;max-height:16px!important}
+/* A long list (Add to playlist) scrolls inside its glass: a row cut by the edge fades by how much of it shows, as a
+   feather, instead of being sliced. A scroll-driven opacity on the row's parts, not a mask on the list: a mask would
+   also cut the submenus nested in the list (a folder's). */
+@keyframes am-edge-fade {entry 0%{opacity:0} entry 100%{opacity:1} exit 0%{opacity:1} exit 100%{opacity:0}}
+body > [data-tippy-root] ul[role="menu"] li > :is([role^="menuitem"],[role="link"]) > *,#am-popover-sub .am-popover-item {animation:am-edge-fade linear both;animation-timeline:view()}
 body > [data-tippy-root] ul[role="menu"] > div:empty:not([data-tippy-root]) {height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
 /* Rows answer as the theme's do: the accent under the pointer, grey while their submenu is open, the thin › for a
    submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */

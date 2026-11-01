@@ -691,12 +691,19 @@
   // instead of "Loading your library…" for the 300–400ms LibraryAPI takes. A refresh that only reorders (the playlist
   // just opened moves up in Recents) waits for the next visit rather than shuffling the grid under the pointer.
   const libraryCache=new Map(),librarySet=items=>items.map(i=>i.uri+'\n'+i.name+'\n'+i.imageUrl).sort().join('\n');
+  // A folder's view is titled with its name, as Spotify's folder page and Apple Music's are (it read "All Playlists"):
+  // from the sidebar's rows, or the card it was opened from, remembered for back and forward.
+  const folderNames=new Map();
+  function folderName(uri) {
+    const name=listItems.find(item=>item.uri===uri)?.name||libraryView.querySelector(`.am-library-card[data-uri="${CSS.escape(uri)}"]`)?.getAttribute('aria-label');
+    if(name)folderNames.set(uri,name);return folderNames.get(uri)||libraryLabels.playlists;
+  }
   async function renderLibrary(kind,folder='',refresh=true) {
     const request=++libraryRequest,key=kind+'\n'+folder,cached=libraryCache.get(key);
     libraryKind=kind;libraryFolder=folder;currentMode='library';
     document.body.classList.add('am-ready','am-library-open');document.body.classList.remove('am-search-open');updateNav();
     clearLibrary();
-    libraryView.replaceChildren(el('h1','am-library-title',libraryLabels[kind]));
+    libraryView.replaceChildren(el('h1','am-library-title',folder?folderName(folder):libraryLabels[kind]));
     const status=el('p','am-library-status',cached?'':T('Kitaplığın yükleniyor…','Loading your library…'));libraryView.append(status);
     try {
       const all=cached||await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
@@ -1055,11 +1062,17 @@
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
       for(const tip of document.querySelectorAll('body > [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
         for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
-        // Spotify's leading icons, which user.css shows only with the menu icons setting, as in the theme's menus: the
-        // first of a row's parts when it holds no text, or the icon before a submenu row's label (its chevron is last).
+        // Spotify's (and Spicetify's) leading icons, which user.css shows only with the menu icons setting, as in the
+        // theme's menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first
+        // icon before the label's text, taken with its wrappers up to the one that holds text. Trailing icons (submenu
+        // chevrons, checks, "opens outside") stay.
         for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"]):not([data-am-iconed])')){
-          item.dataset.amIconed='';const first=item.firstElementChild;if(!first||first===item.lastElementChild)continue;
-          if(!first.textContent.trim())first.dataset.amIcon='';else[...first.children].find(c=>!c.textContent.trim()&&(c.matches('svg')||c.querySelector('svg')))?.setAttribute('data-am-icon','');
+          item.dataset.amIconed='';const first=item.firstElementChild;
+          if(first&&first!==item.lastElementChild&&!first.textContent.trim()){first.dataset.amIcon='';continue;}
+          const text=document.createTreeWalker(item,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.data.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}).nextNode();
+          let icon=text&&[...item.querySelectorAll('svg,img')].find(i=>i.compareDocumentPosition(text)&Node.DOCUMENT_POSITION_FOLLOWING);
+          while(icon&&icon.parentElement!==item&&!icon.parentElement.textContent.trim())icon=icon.parentElement;
+          icon?.setAttribute('data-am-icon','');
         }}
     };
     const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
