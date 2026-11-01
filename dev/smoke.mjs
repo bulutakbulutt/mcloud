@@ -204,6 +204,16 @@ try {
     await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
   });
 
+  await check('a clicked control shows no focus ring when a key is pressed, Tab focus does', async () => {
+    const ring = () => page.evaluate(() => { const a = document.activeElement; return [a.matches(':focus-visible'), getComputedStyle(a).outlineStyle]; });
+    await page.click('.am-star');
+    await page.keyboard.press('Shift');
+    assert.deepEqual(await ring(), [true, 'none'], 'clicked star');
+    await page.keyboard.press('Tab');
+    assert.deepEqual(await ring(), [true, 'solid'], 'tabbed control');
+    await page.click('.am-star');
+  });
+
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
     assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);

@@ -195,6 +195,7 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
 #am-sidebar *,#am-player * {box-sizing:border-box}
 #am-sidebar button,#am-player button {appearance:none;font:inherit;letter-spacing:inherit;border:0;color:inherit;cursor:pointer;background:none;text-align:left;padding:0;min-width:0}
 #am-sidebar button:focus-visible,#am-player button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:3px}
+.am-mouse-focus:focus-visible {outline:0!important}
 /* Sidebar after Apple Music on macOS 26: a dark material over the blurred page that lets about a quarter of it
    through. Over a dark page that reads as nearly the page's colour; over colour (artist tints, playlist headers,
    artwork) it stays a deep version of it instead of taking it on (macOS 26 screenshots: page (46,39,39) gives
