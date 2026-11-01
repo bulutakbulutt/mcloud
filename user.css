@@ -411,7 +411,7 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .1s ease-out}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
@@ -498,13 +498,9 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
-/* Menus show on their first frame (from 30% opacity) and settle within 0.1s: right-clicks must feel instant. */
-@keyframes am-pop {from{opacity:.3;transform:translateY(3px) scale(.985)}}
-/* Spotify's menus and submenus (Add to playlist) came up in one frame; they fade in as the theme's do. The glass layer and
-   the list fade separately (opacity on the root would cut the glass off from the page while fading), and only in
-   opacity: a transform would make a list the containing block of the submenu nested in it. */
+/* Menus, ours and Spotify's, open on their first frame with no fade, as macOS's do. A fade from 30% left their glass
+   see-through for 0.1s, so moving between submenus flashed the page sharp behind each new one. */
 @keyframes am-fade-in {from{opacity:.3}}
-[data-tippy-root][data-am-glass]::before,[data-tippy-root] ul[role="menu"][data-am-glass-list] {animation:am-fade-in .09s ease-out}
 /* Rows that join an open menu (its library rows, read after it opened) fade in rather than pop. */
 .am-popover-late {animation:am-fade-in .12s ease-out}
 /* Spotify's modals (artwork viewer, dialogs) portal into body without a z-index, under the sidebar and player. */
@@ -576,7 +572,7 @@ dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] svg 
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back,[data-tippy-root][data-am-glass]::before,[data-tippy-root] ul[role="menu"][data-am-glass-list]{animation:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back{animation:none}}
 
 
 body:not(.am-library-open) #am-library {display:none!important}
