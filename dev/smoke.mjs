@@ -327,6 +327,11 @@ try {
     // "+" on the heading sits over the pin column.
     const centre = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return Math.round(r.left + r.width / 2); });
     assert.equal(await centre('#am-sidebar .am-nav-add svg'), await centre(rows + ' .am-list-pin svg'));
+    // The account row keeps the same columns: avatar on the artwork, name on the names, friends on the pins.
+    await page.waitForSelector('#am-sidebar .am-profile:not([hidden])');
+    assert.equal(await centre('#am-sidebar .am-avatar'), await centre(rows + ' .am-list-art'));
+    assert.equal(await left('#am-sidebar .am-profile-name'), await left(rows + ' .am-list-name'));
+    assert.equal(await centre('#am-sidebar .am-account-button:last-child svg'), await centre(rows + ' .am-list-pin svg'));
     await shot('sidebar-lists');
     await page.click('#am-sidebar .am-list-more');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row').length === 11);
@@ -350,6 +355,15 @@ try {
     assert.equal(await heading().evaluate(h => getComputedStyle(h, '::before').content), 'none');
     assert.ok(await page.evaluate(() => { const n = document.querySelector('#am-sidebar .am-navigation'), h = document.querySelector('#am-sidebar .am-floating'); return !!n.querySelector('.am-heading-spacer') && /gradient/.test(getComputedStyle(n).maskImage || getComputedStyle(n).webkitMaskImage) && Math.abs(n.getBoundingClientRect().top + parseFloat(n.style.getPropertyValue('--am-mask-edge')) - h.getBoundingClientRect().bottom - 4) <= 1; }), 'the scroll area fades out under the heading');
     await shot('sidebar-lists-stuck');
+    // At the end of the list nothing runs under the account row: no fade, no hairline. Scrolled up, the rows fade out
+    // above it and the hairline shows.
+    const hairline = state => page.waitForFunction(on => document.querySelector('#am-sidebar .am-navigation').classList.contains('am-more-below') === on && getComputedStyle(document.querySelector('#am-sidebar .am-account')).boxShadow.includes(on ? '0.08' : 'rgba(255, 255, 255, 0)'), state, { timeout: 2000 });
+    await hairline(false);
+    await page.$eval('#am-sidebar .am-navigation', n => { n.scrollTop -= 80; });
+    await hairline(true);
+    assert.match(await page.$eval('#am-sidebar .am-navigation', n => getComputedStyle(n).maskImage), /100% - 16px/);
+    await page.$eval('#am-sidebar .am-navigation', n => { n.scrollTop = n.scrollHeight; });
+    await hairline(false);
     // Closing from deep in the list scrolls back to where the short list rests, then folds in place. The scroll only
     // decelerates (an ease-in-out read as linear on long lists): a quarter of the way through its time it is well
     // past a quarter of the way.

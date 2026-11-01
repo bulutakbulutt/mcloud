@@ -310,6 +310,10 @@
     focused?.focus({ preventScroll: true });
   }
   nav.addEventListener('scroll', () => { if (!stuckFrame && listsHeading.classList.contains('am-lists-open')) stuckFrame = requestAnimationFrame(syncStuck); }, { passive: true });
+  // The bottom fade and the account row's hairline show only while rows run on under it, like a macOS scroll edge.
+  // A marker after the last row tracks that through scrolling, list changes and resizes without a scroll handler.
+  const navEnd = el('div', 'am-nav-end'); nav.append(navEnd);
+  if (typeof IntersectionObserver === 'function') new IntersectionObserver(([e]) => nav.classList.toggle('am-more-below', !e.isIntersecting && e.boundingClientRect.top > e.rootBounds.bottom), { root: nav, rootMargin: '0px 0px -16px 0px' }).observe(navEnd);
   function listImage(item) {
     const sizes = [...(item.images?.items || item.images || item.image?.sources || [])].filter(i => i?.url).sort((a, b) => (a.width || 0) - (b.width || 0));
     // Rows show 22px artwork: the smallest size that stays sharp at 2x (mosaics come in 60, 300 and 640).
