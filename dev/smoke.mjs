@@ -6,6 +6,7 @@
 import { chromium } from 'playwright';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -192,7 +193,7 @@ try {
     assert.equal(await page.evaluate(() => { const c = s => { const r = document.querySelector(s).getBoundingClientRect(); return Math.round((r.left + r.width / 2) * 10); }; return c('.mock-pill svg') - c('.mock-mix-button svg'); }), 0);
     await page.click('.mock-add');
     await page.waitForFunction(() => document.body.classList.contains('am-panel-open'));
-    assert.ok(await page.evaluate(() => { const a = document.querySelector('.am-native-right aside[aria-label="Çalma listesine ekle"]'); return a.classList.contains('am-friends-sheet') && a.getBoundingClientRect().width > 0; }), 'Add to playlist shows as the sheet');
+    assert.ok(await page.evaluate(() => { const a = document.querySelector('.am-native-right aside[aria-label="Çalma listesine ekle"]'); return a.hasAttribute('data-am-sheet') && a.getBoundingClientRect().width > 0; }), 'Add to playlist shows as the sheet');
     await page.click('.am-native-right aside[aria-label="Çalma listesine ekle"] button[aria-label="Kapat"]');
     await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
     await page.evaluate(() => { document.querySelector('.mock-capsule').remove(); delete window.__mockAddClose; document.querySelector('.main-view-container__scroll-node > [data-overlayscrollbars-viewport]').scrollTop = 0; });
@@ -201,6 +202,16 @@ try {
   await check('star toggles Liked Songs', async () => {
     await page.click('.am-star');
     await page.waitForFunction(() => window.__mockState.liked && document.querySelector('.am-star').classList.contains('am-active'));
+  });
+
+  await check('a clicked control shows no focus ring when a key is pressed, Tab focus does', async () => {
+    const ring = () => page.evaluate(() => { const a = document.activeElement; return [a.matches(':focus-visible'), getComputedStyle(a).outlineStyle]; });
+    await page.click('.am-star');
+    await page.keyboard.press('Shift');
+    assert.deepEqual(await ring(), [true, 'none'], 'clicked star');
+    await page.keyboard.press('Tab');
+    assert.deepEqual(await ring(), [true, 'solid'], 'tabbed control');
+    await page.click('.am-star');
   });
 
   await check('track menu and profile corner', async () => {
@@ -932,6 +943,15 @@ try {
     const dialog = await page.$eval('#mock-artwork [role="dialog"]', e => [getComputedStyle(e).transform, getComputedStyle(e).animationName]);
     assert.deepEqual(dialog, ['none', 'am-artwork-in']);
     await page.evaluate(() => document.getElementById('mock-artwork').remove());
+  });
+
+  await check('no :has() in user.css tests inline style', async () => {
+    // Spicy Lyrics writes inline styles every frame. With `style` inside a :has() argument each write re-matched the
+    // writer's ancestors up to <html>, ~1700 elements restyled per frame instead of a few (issue #53).
+    const css = fs.readFileSync(path.join(here, '..', 'user.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const args = [...css.matchAll(/:has\(/g)].map(m => { let depth = 0, i = m.index + 4; do { depth += css[i] === '(' ? 1 : css[i] === ')' ? -1 : 0; i++; } while (depth && i < css.length); return css.slice(m.index, i); });
+    assert.ok(args.length > 0);
+    assert.deepEqual(args.filter(a => /\[style\b/.test(a)), []);
   });
 
   await check('watch feed sits between the sidebar and the player', async () => {

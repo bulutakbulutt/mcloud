@@ -106,6 +106,13 @@
   const formatTime=ms=>{const s=Math.max(0,Math.floor(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
   // Windows draws its caption buttons over the top-right corner of the window.
   document.body.classList.toggle('am-windows',/Windows/.test(navigator.userAgent));
+  // A control clicked with the mouse keeps focus, and Chromium draws its :focus-visible ring once any key is pressed
+  // (Space for play/pause). Focus that arrives without a key since the last pointer press gets .am-mouse-focus, which
+  // hides the ring; text fields keep theirs.
+  let keyFocus=false;
+  document.addEventListener('pointerdown',()=>{keyFocus=false;},true);
+  document.addEventListener('keydown',()=>{keyFocus=true;},true);
+  document.addEventListener('focusin',event=>{const t=event.target;if(t instanceof Element&&t.closest('[id^="am-"],#global-nav-bar')&&!t.matches('input:not([type=range]),textarea'))t.classList.toggle('am-mouse-focus',!keyFocus);},true);
   let main, root, nativeNav, currentMode = 'native';
   function bindLayout() {
     root = document.querySelector('.Root');
@@ -1618,8 +1625,9 @@
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement);
     document.body.classList.toggle('am-panel-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
-    feed.classList.add('am-friends-sheet');
-    if(friendPane?.contains(feed)){for(let n=feed;n&&n!==friendPane;n=n.parentElement)n.classList.add('am-friends-fill');return;}
+    const mark=(n,name)=>{if(!n.hasAttribute(name))n.setAttribute(name,'');};
+    mark(feed,'data-am-sheet');
+    if(friendPane?.contains(feed)){for(let n=feed;n&&n!==friendPane;n=n.parentElement)mark(n,'data-am-fill');return;}
     friendPane?.classList.remove('am-native-panel-open');
     friendPane=feed.closest('.am-native-sidebar,.am-native-right');
     if(!friendPane){
@@ -1632,7 +1640,7 @@
     }
     friendPane ||= feed.parentElement;
     friendPane?.classList.add('am-native-panel-open');
-    for(let n=feed;n&&n!==friendPane;n=n.parentElement)n.classList.add('am-friends-fill');
+    for(let n=feed;n&&n!==friendPane;n=n.parentElement)mark(n,'data-am-fill');
   }
   let observedSpicyPage=null;
   const spicyObserver=new MutationObserver(syncSpicyControls);
