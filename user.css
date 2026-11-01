@@ -425,10 +425,12 @@ body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] :is(span,p) {font-si
 body > [data-tippy-root] ul[role="menu"] > div:empty:not([data-tippy-root]) {height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
 /* Rows answer as the theme's do: the accent under the pointer, grey while their submenu is open, the thin › for a
    submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"]):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"]):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
+body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"],:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
+body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"],:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
 body > [data-tippy-root] ul[role="menu"] [role^="menuitem"][aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
+/* A submenu row keeps its icon inside the label, with a wider gap than the other rows' 10px. */
+body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:10px!important}
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
 body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] svg {fill:currentColor!important}
