@@ -431,6 +431,17 @@ body > [data-tippy-root] ul[role="menu"] [role^="menuitem"][aria-expanded="true"
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
 /* A submenu row keeps its icon inside the label, with a wider gap than the other rows' 10px. */
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:10px!important}
+/* "Find a playlist" (Add to playlist's submenu) as a macOS search field: 24px, 7px corners, a 12px magnifier, the
+   accent ring while typing. Its icon and clear button are overlays the height of the field. */
+body > [data-tippy-root] [role^="menuitem"]:has([role="search"]) {background:none!important;padding:3px 5px 5px!important;cursor:default}
+body > [data-tippy-root] [role="search"] {height:24px!important;width:100%!important}
+body > [data-tippy-root] [role="search"] > div {height:24px!important}
+body > [data-tippy-root] [role="search"] > div > span {padding:6px 8px!important}
+body > [data-tippy-root] [role="search"] svg {width:12px!important;height:12px!important}
+body > [data-tippy-root] [role="search"] button {width:24px!important;height:24px!important;padding:6px!important}
+body > [data-tippy-root] [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:#ffffff17!important;box-shadow:none!important;color:#f2f2f2!important;font-size:13px!important;line-height:24px!important;outline:0!important}
+body > [data-tippy-root] [role="search"] input::placeholder {color:#ffffff73!important}
+body > [data-tippy-root] [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
 body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] svg {fill:currentColor!important}
