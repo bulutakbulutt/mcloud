@@ -894,7 +894,13 @@
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
   glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
-    +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>';
+    +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
+    // Save to Your Library plays a Lottie animation with Spotify's greens baked into the file. #am-accent-swap masks
+    // the green (3 × (G − R): greys, the white plus and the dark tick have G = R) and floods it with the accent. A mask
+    // rather than a colour matrix: on a P3 display the filter sees #1ed760 as #64ce6c (measured on macOS).
+    +'<filter id="am-accent-swap" color-interpolation-filters="sRGB"><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3 3 0 0 0" result="green"/>'
+    +'<feFlood/><feComposite in2="green" operator="in"/><feComposite in2="SourceAlpha" operator="in" result="tint"/>'
+    +'<feComposite in="SourceGraphic" in2="green" operator="out" result="rest"/><feComposite in="tint" in2="rest" operator="arithmetic" k2="1" k3="1"/></filter>';
   document.body.append(glass);
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
   const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;

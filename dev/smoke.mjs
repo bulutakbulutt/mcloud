@@ -47,6 +47,24 @@ try {
       const value = [getComputedStyle(img).filter, getComputedStyle(document.querySelector('#am-accent-fill feFlood')).floodColor]; img.remove(); return value;
     });
     assert.deepEqual(equaliser, ['url("#am-accent-fill")', 'rgb(250, 45, 72)']);
+    // And Save to Your Library's tick: a Lottie animation in a shadow root, as Spotify mounts it, with green baked in.
+    // Its green turns into the accent; its white plus and dark tick stay.
+    const box = await page.evaluate(() => {
+      const b = document.body.appendChild(document.createElement('button')); b.id = 'mock-save';
+      b.style.cssText = 'position:fixed;left:600px;top:300px;padding:0;border:0;background:#1f1f1f;z-index:99';
+      b.innerHTML = '<span><div style="position: relative; pointer-events: none; width: 48px; height: 16px;"><div></div></div></span>';
+      b.querySelector('div > div').attachShadow({ mode: 'open' }).innerHTML = '<div style="display:flex"><i style="width:16px;height:16px;background:#1ed760"></i><i style="width:16px;height:16px;background:#fff"></i><i style="width:16px;height:16px;background:#121212"></i></div>';
+      const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, width: 48, height: 16 };
+    });
+    const shot = await page.screenshot({ clip: box });
+    const pixels = await page.evaluate(async png => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + png; await img.decode();
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const x = c.getContext('2d'); x.drawImage(img, 0, 0);
+      document.getElementById('mock-save').remove();
+      return [8, 24, 40].map(px => [...x.getImageData(px * img.width / 48, img.height / 2, 1, 1).data.slice(0, 3)]);
+    }, shot.toString('base64'));
+    const expected = [[250, 45, 72], [255, 255, 255], [18, 18, 18]];
+    assert.ok(pixels.every((c, i) => c.every((v, j) => Math.abs(v - expected[i][j]) <= 4)), JSON.stringify(pixels));
   });
 
   await check('photo header takes its colour from the bottom edge and fades into it', async () => {

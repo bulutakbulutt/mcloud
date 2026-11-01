@@ -172,8 +172,11 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:#ffffff66}
 /* Spotify's playing equaliser is a green GIF; #am-accent-fill (theme.js) fills its shape with the accent. */
-#am-accent-fill feFlood {flood-color:var(--am-accent)}
+:is(#am-accent-fill,#am-accent-swap) feFlood {flood-color:var(--am-accent)}
 img[src*="equaliser-animated-green"] {filter:url(#am-accent-fill)}
+/* Save to Your Library's tick is a Lottie animation in a shadow root (no selector reaches it) with green baked in;
+   #am-accent-swap on its host turns the green into the accent. */
+button div[style*="pointer-events: none"] > div:empty {filter:url(#am-accent-swap)}
 /* Track numbers off (theme.js, settings.numbers): Spotify's index column folds to nothing (its own variable) and the
    title column moves into its place. Rows with artwork keep the play button and playing indicator, on the artwork as
    in Apple Music; rows without it (albums, compact lists) show the playing track by its accent title alone. */
