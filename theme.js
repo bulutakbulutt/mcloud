@@ -978,6 +978,14 @@
     +'<filter id="am-accent-swap" color-interpolation-filters="sRGB"><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3 3 0 0 0" result="green"/>'
     +'<feFlood/><feComposite in2="green" operator="in"/><feComposite in2="SourceAlpha" operator="in" result="tint"/>'
     +'<feComposite in="SourceGraphic" in2="green" operator="out" result="rest"/><feComposite in="tint" in2="rest" operator="arithmetic" k2="1" k3="1"/></filter>';
+  // Spotify's live search results take macOS 27 Music's suggestions glass, fitted to the user's screenshot over the same
+  // page: user.css blurs the page 21pt, then this matrix moves every colour to one dark level by luminance (44 + .044 L)
+  // and keeps its colour, raised and clipped, so the panel stays dark under bright tiles yet carries their hue. Checked
+  // in the macOS client over that page: 1.55 from Apple, colour 1.00 and lightness 46.6 against Apple's 46.7 (a blur and
+  // saturate with a tint got 8.2 and 0.75). The gain is 1.14 there because Spotify filters in Display P3 on macOS; in
+  // sRGB (headless Chromium, most Windows screens) 1.078 matched, so this one gives a little more colour there.
+  const searchTone=(()=>{const k=[.2126,.7152,.0722],a=43.7/255,b=.044,g=1.14;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';})();
+  glass.insertAdjacentHTML('beforeend',`<filter id="am-search-glass" color-interpolation-filters="sRGB"><feColorMatrix values="${searchTone}"/></filter>`);
   document.body.append(glass);
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
   const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
