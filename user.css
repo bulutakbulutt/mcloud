@@ -396,7 +396,8 @@ body.am-solid :is(#am-popover,#am-popover-sub) {background:#2c2c2e;backdrop-filt
 
 
 body:not(.am-library-open) #am-library {display:none!important}
-body.am-library-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
+/* opacity too: Spotify's adaptive titles set visibility:visible and showed through once a sheet lifted #main. */
+body.am-library-open .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 #am-library {box-sizing:border-box;position:fixed;inset:var(--am-page-top) 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:24px var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
 .am-library-title {font-size:28px;letter-spacing:-.04em;margin:0 0 8px;font-weight:650}
 .am-library-status {font-size:13px;color:var(--am-sub);margin:0 0 24px}
@@ -553,14 +554,17 @@ body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-op
 body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
 body:is(.am-panel-open,.am-library-open:has(#search-dropdown)) :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
-/* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. */
-body.am-ready .am-friends-sheet {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
+/* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
+   React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
+body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
-body.am-ready .am-native-panel-open .am-friends-fill {
+body.am-ready .am-native-panel-open [data-am-fill] {
  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
 }
+/* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. */
+body.am-ready [data-am-sheet] :has(> * > [class*="tab-list__container"]) > button {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
@@ -571,8 +575,10 @@ body.am-tinted .am-nav-heading {color:#ffffff73}
 body.am-tinted #am-sidebar {background:color-mix(in srgb,color-mix(in srgb,var(--am-tint-top) 34%,#161616) 85%,transparent)}
 body.am-tinted #am-sidebar-glow {display:none}
 body:not(.am-artist-open) #am-artist {display:none!important}
-body.am-artist-open .am-native-main {visibility:hidden!important;pointer-events:none!important}
+body.am-artist-open .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:none!important}
+/* The page has its own glass buttons; the toolbar's glass showed as empty capsules once a sheet lifted #main. */
+body.am-artist-open #am-toolbar-glass {display:none!important}
 /* The artist page fills the window under the glass sidebar; its content starts beside it. */
 #am-artist {box-sizing:border-box;position:fixed;inset:0;z-index:10;overflow:auto;overflow-x:hidden;color:white;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:none}
 #am-artist *,#am-artist *::before {box-sizing:border-box}
