@@ -1057,7 +1057,7 @@
         for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
         // Spotify's leading icons, which user.css shows only with the menu icons setting, as in the theme's menus: the
         // first of a row's parts when it holds no text, or the icon before a submenu row's label (its chevron is last).
-        for(const item of tip.querySelectorAll('[role^="menuitem"]:not([data-am-iconed])')){
+        for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"]):not([data-am-iconed])')){
           item.dataset.amIconed='';const first=item.firstElementChild;if(!first||first===item.lastElementChild)continue;
           if(!first.textContent.trim())first.dataset.amIcon='';else[...first.children].find(c=>!c.textContent.trim()&&(c.matches('svg')||c.querySelector('svg')))?.setAttribute('data-am-icon','');
         }}

@@ -416,18 +416,19 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 [data-tippy-root][data-am-glass]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
 body > [data-tippy-root] ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
 body > [data-tippy-root] ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] {border-radius:8px!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) {border-radius:8px!important}
 /* Spotify's menus in the theme's (macOS) measure, so right-click menus read the same everywhere: 13px labels on 21px
-   rows (Spotify's: 14px on 40px), the same inset and separators. Separators are empty divs in the list; submenus
-   nested in a list are [data-tippy-root] divs and keep their own layout. */
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:10px!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] :is(span,p) {font-size:13px!important;line-height:normal!important}
+   rows (Spotify's: 14px on 40px), the same inset and separators. A row that opens a page outside (Report) is a
+   role="link" row, the others role="menuitem…". Separators are empty divs in the list; submenus nested in a list
+   are [data-tippy-root] divs and keep their own layout. */
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:10px!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) :is(span,p) {font-size:13px!important;line-height:normal!important}
 body > [data-tippy-root] ul[role="menu"] > div:empty:not([data-tippy-root]) {height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
 /* Rows answer as the theme's do: the accent under the pointer, grey while their submenu is open, the thin › for a
    submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"],:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"]:not([aria-disabled="true"],:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"][aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"])[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
 /* A submenu row keeps its icon inside the label, with a wider gap than the other rows' 10px. */
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:10px!important}
@@ -444,7 +445,7 @@ body > [data-tippy-root] [role="search"] input::placeholder {color:#ffffff73!imp
 body > [data-tippy-root] [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
 body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] svg {fill:currentColor!important}
+body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"]) svg {fill:currentColor!important}
 body:not(.am-menu-icons) > [data-tippy-root] [data-am-icon] {display:none!important}
 body.am-liquid:not(.am-solid) [data-am-glass] {--am-menu-fill:transparent}
 body.am-liquid:not(.am-solid) [data-am-glass="0"] {--am-menu-filter:url(#am-menu-glass-0)}
