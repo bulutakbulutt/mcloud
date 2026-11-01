@@ -418,7 +418,7 @@
   }
   if (S.Platform.LibraryAPI?.getContents) {
     for (const api of [S.Platform.LibraryAPI, Rootlist]) {
-      try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => scheduleLists(), {}); } catch {}
+      try { const events = api?.getEvents?.(); (events?._emitter || events)?.addListener?.('update', () => { menuExtras.cache?.clear(); scheduleLists(); }, {}); } catch {}
     }
     // Playing a playlist moves it to the top of Recents within ~0.15s (Spotify's own sidebar follows ~0.05s later), but
     // no library event says so: look 0.1s after the context changes, and again at 0.4, 1.5, 5 and 15s while it does
@@ -488,14 +488,18 @@
     if (box.top < view.top || box.bottom > view.bottom) nav.scrollTop += box.top - view.top - 40;
     input.focus({ preventScroll: true }); input.select();
   }
-  nav.addEventListener('contextmenu', async event => {
+  nav.addEventListener('contextmenu', event => {
     const row = event.target.closest?.('.am-list-row');
     if (!row || !listBody.contains(row)) return;
     event.preventDefault();
-    // Folders have no playable context or public link.
-    const uri = row.dataset.uri; if (!uri || /:folder:/.test(uri)) return;
-    const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/'), at = { x: event.clientX, y: event.clientY }, extra = await libraryEntries(uri);
-    togglePopover(at, () => [
+    const uri = row.dataset.uri; if (!uri) return;
+    // Folders have no playable context or public link: they open, or take a new playlist, as in the library.
+    if (/:folder:/.test(uri)) return togglePopover({ x: event.clientX, y: event.clientY }, [
+      { label: T('Klasörü Aç','Open Folder'), action: () => openLibrary('playlists', uri) },
+      ...(Rootlist?.createPlaylist ? [{ label: T('Yeni Çalma Listesi','New Playlist'), action: () => nameNewItem('playlist') }] : []),
+    ]);
+    const shareLink = 'https://open.spotify.com/' + uri.split(':').slice(1).join('/'), at = { x: event.clientX, y: event.clientY };
+    openMenu(at, extra => [
       { label: T('Çal','Play'), action: () => { if (S.Player.playUri) S.Player.playUri(uri); else go('/' + uri.split(':').slice(1).join('/')); } },
       ...(canQueue(uri) ? [{ label: T('Sıraya Ekle','Add to Queue'), action: () => enqueueTrack(uri) }] : []),
       '-',
@@ -504,7 +508,7 @@
         catch { notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.')); }
       }},
       ...(extra.length ? ['-', ...extra] : []),
-    ]);
+    ], menuExtras('lib:' + uri, () => libraryEntries(uri)));
   });
   if (Rootlist?.createPlaylist) {
     const add = button(T('Yeni çalma listesi veya klasör','New playlist or folder'), 'plus', () => togglePopover(add, () => [
@@ -624,13 +628,13 @@
     if(folder==='true')openLibrary(kind,uri);
     else go('/'+uri.split(':').slice(1).join('/'));
   });
-  libraryView.addEventListener('contextmenu',async event=>{
+  libraryView.addEventListener('contextmenu',event=>{
     const card=event.target.closest?.('.am-library-card');
     if(!card||!libraryView.contains(card))return;
     event.preventDefault();
     const {uri,kind,folder}=card.dataset;if(!uri)return;
-    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/'),at={x:event.clientX,y:event.clientY},extra=folder==='true'?[]:await libraryEntries(uri);
-    togglePopover(at,()=>{
+    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/'),at={x:event.clientX,y:event.clientY};
+    openMenu(at,extra=>{
       if(folder==='true')return [
         {label:T('Klasörü Aç','Open Folder'),action:()=>openLibrary(kind,uri)},
         ...(Rootlist?.createPlaylist?[{label:T('Yeni Çalma Listesi','New Playlist'),action:()=>nameNewItem('playlist')}]:[]),
@@ -643,7 +647,7 @@
         {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
         ...(extra.length?['-',...extra]:[]),
       ];
-    });
+    },folder==='true'?null:menuExtras('lib:'+uri,()=>libraryEntries(uri)));
   });
   libraryView.addEventListener('error',event=>{
     const img=event.target;
@@ -1085,7 +1089,7 @@
     for(const entry of entries){
       if(entry==='-'){subPopover.append(el('div','am-popover-separator'));continue;}
       const btn=el('button','am-popover-item',entry.label);btn.type='button';btn.setAttribute('role','menuitem');
-      btn.onclick=()=>{closePopover();entry.action?.();};
+      btn.onclick=()=>{closePopover();Promise.resolve(entry.action?.()).finally(()=>menuExtras.cache?.clear());};
       subPopover.append(btn);
     }
     subPopover.hidden=false;
@@ -1128,10 +1132,27 @@
         item.onclick=e=>{e.stopPropagation();openSubPopover(item,entry.submenu);};
       } else {
         item.addEventListener('pointerenter',()=>{subTimer=setTimeout(closeSubPopover,60);});
-        item.onclick=()=>{closePopover();entry.action?.();};
+        item.onclick=()=>{closePopover();Promise.resolve(entry.action?.()).finally(()=>menuExtras.cache?.clear());};
       }
       popover.append(item);
     }
+  }
+  // Menu rows that depend on library state (saved, yours, banned, …) are read ahead on hover and kept until the library
+  // or your playlists change (or an action ran), so a right-click opens at once: waiting for them took 70–170ms.
+  function menuExtras(key,load) {
+    const cache=menuExtras.cache||(menuExtras.cache=new Map());let hit=cache.get(key);
+    if(!hit||Date.now()-hit.time>60e3){const entry={time:Date.now()};entry.promise=Promise.resolve().then(load).catch(()=>[]).then(value=>entry.value=value||[]);cache.set(key,hit=entry);}
+    return hit;
+  }
+  function warmMenu(load) { clearTimeout(warmMenu.timer);warmMenu.timer=setTimeout(load,40); }
+  // build(extra) makes the rows: the menu opens with what is known and, if the rest was not read yet, redraws in place.
+  function openMenu(anchor,build,hit) {
+    togglePopover(anchor,()=>build(hit?.value||[]));
+    if(hit&&hit.value===undefined)hit.promise.then(extra=>{
+      if(popoverAnchor!==anchor||popover.hidden||!extra.length)return;
+      const shown=new Set([...popover.children].map(row=>row.textContent));closeSubPopover();renderPopoverEntries(build(extra));placePopover(anchor);
+      for(const row of popover.children)if(!shown.has(row.textContent))row.classList.add('am-popover-late');
+    });
   }
   function togglePopover(anchor,build) {
     if(popoverAnchor===anchor){closePopover();return;}
@@ -1139,6 +1160,9 @@
     const entries=typeof build==='function'?build():build;if(!entries?.length)return;
     renderPopoverEntries(entries);
     popoverAnchor=anchor;anchor.setAttribute?.('aria-expanded','true');popover.hidden=false;
+    placePopover(anchor);popover.focus({preventScroll:true});
+  }
+  function placePopover(anchor) {
     const width=popover.offsetWidth,height=popover.offsetHeight;
     if(typeof anchor.x==='number'){
       popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,anchor.x)))+'px';
@@ -1153,7 +1177,6 @@
       popover.style.top=below?Math.round(rect.bottom+8)+'px':'';
       popover.style.bottom=below?'':Math.round(innerHeight-rect.top+10)+'px';
     }
-    popover.focus({preventScroll:true});
   }
   document.addEventListener('pointerdown',event=>{
     if(!popover.hidden&&!popover.contains(event.target)&&!subPopover.contains(event.target)&&(!popoverAnchor?.contains||!popoverAnchor.contains(event.target)))closePopover();
@@ -1341,7 +1364,12 @@
       try{await S.Platform.PlaylistAPI.remove(context,[{uri:item.uri,uid:item.uid}]);notify(T('Listeden çıkarıldı.','Removed from the playlist.'));}
       catch{notify(T('Listeden çıkarılamadı.','Couldn\'t remove it from the playlist.'));}}}];
   }
-  const openTrackMenu=async anchor=>{const extra=await playlistRemoval();togglePopover(anchor,()=>trackMenu(extra));};
+  const removalKey=()=>'rm:'+S.Player.data?.context?.uri+'|'+S.Player.data?.item?.uid;
+  const openTrackMenu=anchor=>openMenu(anchor,extra=>trackMenu(extra),menuExtras(removalKey(),playlistRemoval));
+  // Read a hovered item's menu rows ahead, after a short rest (sweeping the pointer over a list reads nothing).
+  nav.addEventListener('pointerover',event=>{const uri=event.target.closest?.('.am-list-row[data-uri]')?.dataset.uri;if(uri&&!/:folder:/.test(uri))warmMenu(()=>menuExtras('lib:'+uri,()=>libraryEntries(uri)));},{passive:true});
+  libraryView.addEventListener('pointerover',event=>{const card=event.target.closest?.('.am-library-card');if(card?.dataset.uri&&card.dataset.folder!=='true')warmMenu(()=>menuExtras('lib:'+card.dataset.uri,()=>libraryEntries(card.dataset.uri)));},{passive:true});
+  player.addEventListener('pointerenter',()=>warmMenu(()=>menuExtras(removalKey(),playlistRemoval)));
   function playlistSubmenu(trackUri) {
     if(!addTargets)loadAddTargets();
     return () => {
@@ -1919,18 +1947,19 @@
   // Any missing API or failed request falls back to Spotify's native page.
   const artistView=el('section','');artistView.id='am-artist';artistView.setAttribute('aria-label',T('Sanatçı','Artist'));document.body.append(artistView);
   artistView.addEventListener('dragstart',event=>{const node=event.target.closest?.('[draggable="true"][data-uri]');if(node)setDrag(event,[node.dataset.uri]);});
-  artistView.addEventListener('contextmenu',async event=>{
+  artistView.addEventListener('contextmenu',event=>{
     if(event.defaultPrevented||popover.contains(event.target))return;
     event.preventDefault();
     const id=routePath().replace(/^\/artist\//,'');if(!id)return;
-    const shareLink='https://open.spotify.com/artist/'+id,at={x:event.clientX,y:event.clientY},extra=[...await artistBan('spotify:artist:'+id),...artistRadio('spotify:artist:'+id)];
-    togglePopover(at,()=>[
+    const shareLink='https://open.spotify.com/artist/'+id,at={x:event.clientX,y:event.clientY},uri='spotify:artist:'+id;
+    openMenu(at,ban=>{const extra=[...ban,...artistRadio(uri)];return [
       {label:T('Sanatçıyı Çal','Play Artist'),action:()=>playArtist('spotify:artist:'+id)},
       '-',
       {label:T('Sanatçı Bağlantısını Kopyala','Copy Artist Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
       ...(extra.length?['-',...extra]:[]),
-    ]);
+    ];},menuExtras('ban:'+uri,()=>artistBan(uri)));
   });
+  artistView.addEventListener('pointerover',()=>{const id=routePath().replace(/^\/artist\//,'');if(id&&!/\//.test(id))warmMenu(()=>menuExtras('ban:spotify:artist:'+id,()=>artistBan('spotify:artist:'+id)));},{passive:true});
   // Windows draws a classic scrollbar that takes a column of the page and cuts the artwork short; this thin
   // overlay thumb, as on macOS, shows while scrolling or hovered and can be dragged.
   // host: where the thumb lives; the page's thumbs are fixed to the window, the ⓘ sheet's sits inside its card.

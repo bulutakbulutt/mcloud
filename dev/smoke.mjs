@@ -724,6 +724,7 @@ try {
     assert.equal(await page.evaluate(() => window.__dispatched.at(-1).trackUri), 'spotify:track:t1');
     // Radio: Spotify's server names a playlist made from the artist; the theme opens it.
     await page.click('.am-artist-name', { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Bu Sanatçıyı Çalma")');
     assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sanatçıyı Çal', 'Sanatçı Bağlantısını Kopyala', 'Bu Sanatçıyı Çalma', 'Sanatçı Radyosuna Git']);
     await page.click('#am-popover .am-popover-item:has-text("Sanatçı Radyosuna Git")');
     await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/playlist/radio');
@@ -826,6 +827,7 @@ try {
     await page.click('.am-library-card >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
     // Spotify's own menu offers removal for a saved album (#59).
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
     assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala', 'Kitaplıktan Çıkar']);
     await page.click('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
     assert.equal(await page.evaluate(() => window.__libraryRemoves.at(-1)), await page.evaluate(() => document.querySelector('.am-library-card').dataset.uri));
@@ -842,6 +844,20 @@ try {
     assert.ok((await icons()).every(d => d === 'block'), 'every row of the track menu has its icon');
     await page.keyboard.press('Escape');
     await page.evaluate(() => document.body.classList.remove('am-menu-icons'));
+  });
+
+  await check('menus open at once; rows that need the library arrive after (#59)', async () => {
+    // Spotify slow to answer: the menu is up within the right-click, its library rows join when they come.
+    assert.deepEqual(await page.evaluate(() => { window.__apiDelay = 400; const row = document.querySelector('#am-sidebar .am-list-row[title="Yol Şarkıları"]'), b = row.getBoundingClientRect();
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 20, clientY: b.top + 5 }));
+      const items = [...document.querySelectorAll('#am-popover .am-popover-item')].map(i => i.textContent); return [!document.getElementById('am-popover').hidden, items.includes('Çal'), items.includes('Sil')]; }), [true, true, false]);
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
+    await page.evaluate(() => { window.__apiDelay = 0; });
+    await page.keyboard.press('Escape');
+    // A folder has a menu too.
+    await page.click('#am-sidebar .am-list-row[title="Ruh Hali"]', { button: 'right' });
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Klasörü Aç', 'Yeni Çalma Listesi']);
+    await page.keyboard.press('Escape');
   });
 
   await check('library actions on playlists and the playing track (#59)', async () => {

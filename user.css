@@ -404,7 +404,7 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .1s ease-out}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
@@ -457,7 +457,15 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
-@keyframes am-pop {from{opacity:0;transform:translateY(4px) scale(.98)}}
+/* Menus show on their first frame (from 30% opacity) and settle within 0.1s: right-clicks must feel instant. */
+@keyframes am-pop {from{opacity:.3;transform:translateY(3px) scale(.985)}}
+/* Spotify's menus and submenus (Add to playlist) came up in one frame; they fade in as the theme's do. The glass layer and
+   the list fade separately (opacity on the root would cut the glass off from the page while fading), and only in
+   opacity: a transform would make a list the containing block of the submenu nested in it. */
+@keyframes am-fade-in {from{opacity:.3}}
+[data-tippy-root][data-am-glass]::before,[data-tippy-root] ul[role="menu"][data-am-glass-list] {animation:am-fade-in .09s ease-out}
+/* Rows that join an open menu (its library rows, read after it opened) fade in rather than pop. */
+.am-popover-late {animation:am-fade-in .12s ease-out}
 /* Spotify's modals (artwork viewer, dialogs) portal into body without a z-index, under the sidebar and player. */
 .ReactModalPortal > * {z-index:65}
 /* The artwork viewer grows from its centre instead of Spotify's rise from below. Its fade is left to the backdrop
@@ -521,7 +529,7 @@ dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] svg 
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back{animation:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back,[data-tippy-root][data-am-glass]::before,[data-tippy-root] ul[role="menu"][data-am-glass-list]{animation:none}}
 
 
 body:not(.am-library-open) #am-library {display:none!important}
@@ -676,13 +684,14 @@ body.am-ready .am-native-panel-open {
 body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
 /* Native panels share Spotify's stacking context; lift it over the custom views. So do the search field's live
-   results (#search-dropdown, inside the toolbar), which the library hid while typing. */
-body:is(.am-panel-open,.am-library-open:has(#search-dropdown)) #main {z-index:30!important}
+   results (#search-dropdown, inside the toolbar), which the library hid while typing. The :has() is on #main, not
+   body: on body, every element added anywhere (a menu's rows) re-checked it and restyled the page (~6ms a menu). */
+body.am-panel-open #main,body.am-library-open #main:has(#search-dropdown) {z-index:30!important}
 /* Lifted, Spotify's transparent layout covers the library and artist views; let clicks through to them. */
-body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-open:has(#search-dropdown) #main {pointer-events:none}
-body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-open #main:has(#search-dropdown) {pointer-events:none}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
-body:is(.am-panel-open,.am-library-open:has(#search-dropdown)) :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
+body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#search-dropdown),body.am-library-open #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
@@ -692,8 +701,10 @@ body.am-ready .am-native-panel-open [data-am-fill] {
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
 }
-/* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. */
-body.am-ready [data-am-sheet] :has(> * > [class*="tab-list__container"]) > button {display:none!important}
+/* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. The :has()
+   is on the button: with a bare :has() subject Chromium tests every element against it, and any element added
+   anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
+body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}

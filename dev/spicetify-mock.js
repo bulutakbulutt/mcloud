@@ -120,7 +120,7 @@
   });
   // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
   Object.assign(Spicetify.Platform.PlaylistAPI, {
-    getMetadata: async uri => { const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', description: '', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own, canEditMetadata: own, permissions: { canAdministratePermissions: own, isPrivate: false } }; },
+    getMetadata: async uri => { await new Promise(r => setTimeout(r, window.__apiDelay || 0)); const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', description: '', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own, canEditMetadata: own, permissions: { canAdministratePermissions: own, isPrivate: false } }; },
     updateDetails: async (uri, details) => { (window.__details ||= []).push({ uri, ...details }); },
     remove: async (uri, items) => { (window.__playlistRemoves ||= []).push({ uri, items }); },
   });
