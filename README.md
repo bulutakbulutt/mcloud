@@ -171,7 +171,9 @@ mcloud is free and open source under the [MIT License](LICENSE). The embedded In
 ## Special thanks
 
 Thanks to the Spicetify community for providing such a great platform.
-Thanks also to emribilemir and f0rknturkoglu for their contributions.
+Thanks also to [emribilemir](https://github.com/emribilemir) and [f0rknturkoglu](https://github.com/f0rknturkoglu) for their contributions.
+
+The Liquid Glass in mcloud is built on [Liquid Glass research](https://github.com/emribilemir/liquid-glass-research), which was developed alongside the theme: it measures macOS's own glass and fits the filters used by the player, the toolbar buttons and the menus.
 
 Thanks to [m8tec](https://github.com/m8tec) for [Apple Music Animated Artworks](https://github.com/m8tec/apple-music-animated-artworks). Its API is what will bring Apple Music's animated covers to mcloud, and m8tec kindly let us use it.
 
