@@ -864,6 +864,12 @@ try {
     }
     assert.equal(await page.evaluate(() => window.__hrefSets), 0);
     assert.ok(slots[0] !== slots[1] && slots[0] === slots[2] && slots[1] === slots[3], slots.join());
+    // Spotify puts a closed submenu back when it opens again, still marked with a slot another menu took meanwhile:
+    // it gets a slot of its own again.
+    assert.ok(await page.evaluate(async () => { const frame = () => new Promise(r => requestAnimationFrame(r)), make = () => { const tip = document.createElement('div'); tip.setAttribute('data-tippy-root', ''); tip.innerHTML = '<ul role="menu"><li><button role="menuitem"><span>Row</span></button></li></ul>'; return tip; };
+      const a = make(); document.body.append(a); await frame(); const was = a.dataset.amGlass; a.remove(); await frame();
+      const b = make(); document.body.append(b); await frame(); document.body.append(a); await frame();
+      const own = a.dataset.amGlass !== b.dataset.amGlass && b.dataset.amGlass === was; a.remove(); b.remove(); return own; }));
   });
 
   await check('every row of our menus has its icon, in Apple Music\'s icon column', async () => {

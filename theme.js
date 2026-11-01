@@ -1084,7 +1084,9 @@
     const sync=()=>{
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
       for(const tip of document.querySelectorAll('body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
-        for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
+        // Spotify puts a closed submenu (Add to playlist) back when it opens again, still marked with a slot another
+        // menu took meanwhile: its glass then drew that menu's map. A root is attached whenever its slot is not its own.
+        for(const menu of tip.querySelectorAll('ul[role="menu"]')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(slots[root.dataset.amGlass]?.node!==root)attach(root);}
         // Spotify's (and Spicetify's) leading icons, which user.css sets in Apple Music's icon column, as in the theme's
         // menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first icon
         // before the label's text, taken with its wrappers up to the one that holds text. Trailing icons (submenu
