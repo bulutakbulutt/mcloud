@@ -979,6 +979,14 @@ try {
     // there; a row without an icon is not indented.
     assert.deepEqual(await page.evaluate(() => { const slot = document.querySelector('#mock-tip [data-am-icon]'), at = sel => [...document.querySelectorAll('#mock-tip span')].find(n => n.textContent === sel).getBoundingClientRect().left;
       return [getComputedStyle(slot).width, slot.querySelector('svg').getBoundingClientRect().width, Math.round(at('Add to queue') - at('Profile'))]; }), ['14px', 12, 22]);
+    // Liked Songs rows take the theme's star for Spotify's purple tile, filled when the row removes the song.
+    assert.deepEqual(await page.evaluate(async () => {
+      const rows = ['Remove from Liked Songs', 'Add to Liked Songs'].map(label => { const li = document.createElement('li');
+        li.innerHTML = `<button role="menuitem"><div><img src="https://misc.scdn.co/liked-songs/liked-songs-64.jpg" width="16" height="16"></div><div><span>${label}</span></div></button>`; document.querySelector('#mock-tip ul').append(li); return li; });
+      await new Promise(r => requestAnimationFrame(r));
+      const out = rows.map(li => { const slot = li.querySelector('[data-am-liked]'), before = getComputedStyle(slot, '::before'), mask = before.maskImage || before.webkitMaskImage;
+        return [slot.dataset.amLiked, getComputedStyle(slot.querySelector('img')).display, mask.includes("fill='black'")]; });
+      rows.forEach(li => li.remove()); return out; }), [['on', 'none', true], ['off', 'none', false]]);
     // A submenu opening down from its row (anchored by its top) rises by the list's padding, so its first row is level
     // with the parent row; one anchored by its bottom (pushed up to fit) stays.
     assert.deepEqual(await page.evaluate(() => ['inset: 0px auto auto 0px', 'inset: auto auto 0px 0px'].map(inset => { const sub = document.createElement('div'); sub.setAttribute('data-tippy-root', ''); sub.style.cssText = 'position: absolute; ' + inset;

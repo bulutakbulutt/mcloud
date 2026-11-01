@@ -107,7 +107,7 @@
       relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
     },
   };
-  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr' };
+  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
   Spicetify.GraphQL = {
     Definitions: { queryArtistOverview: { name: 'queryArtistOverview' } },
     Request: async (def, vars) => (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
