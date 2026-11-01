@@ -955,6 +955,7 @@ try {
       return [getComputedStyle(item).padding, getComputedStyle(item.querySelector('span')).fontSize, getComputedStyle(sep).height, getComputedStyle(sep).marginLeft]; }), ['3px 10px', '13px', '1px', '11px']);
     await page.evaluate(() => document.body.classList.add('am-menu-icons'));
     assert.deepEqual(await shown(), [true, true, true, false, true, true, true, true]);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [data-am-icon]')).width), '16px');
     // With icons on, a row without one lines up with the rest.
     assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Profile')).paddingLeft), '36px');
     await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });

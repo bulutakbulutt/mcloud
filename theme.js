@@ -1093,7 +1093,8 @@
       const box=list.getBoundingClientRect();
       for(const row of list.querySelectorAll(featherRows)){
         if(row.parentElement.closest(featherRows))continue;
-        const r=row.getBoundingClientRect(),seen=r.height?Math.max(0,Math.min(r.bottom,box.bottom)-Math.max(r.top,box.top))/r.height:1,value=seen>.98?'':seen.toFixed(2);
+        // Squared, so a half-cut row is a quarter there: a feather rather than a dimmed row.
+        const r=row.getBoundingClientRect(),seen=r.height?Math.max(0,Math.min(r.bottom,box.bottom)-Math.max(r.top,box.top))/r.height:1,value=seen>.98?'':(seen*seen).toFixed(2);
         if(row.style.getPropertyValue('--am-seen')!==value)value?row.style.setProperty('--am-seen',value):row.style.removeProperty('--am-seen');
       }
     }

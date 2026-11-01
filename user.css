@@ -464,6 +464,8 @@ body > [data-tippy-root] ul[role="menu"] [aria-expanded] > :last-child:not(:firs
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
 body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) svg {fill:currentColor!important}
 body:not(.am-menu-icons) > [data-tippy-root] [data-am-icon] {display:none!important}
+/* With icons on, every icon takes a 16px slot, so labels line up whatever the icon's own width (Turn on mix's is narrower). */
+body.am-menu-icons > [data-tippy-root] [data-am-icon] {flex:0 0 16px!important;width:16px!important;display:inline-flex!important;justify-content:center}
 body.am-liquid:not(.am-solid) [data-am-glass] {--am-menu-fill:transparent}
 body.am-liquid:not(.am-solid) [data-am-glass="0"] {--am-menu-filter:url(#am-menu-glass-0)}
 body.am-liquid:not(.am-solid) [data-am-glass="1"] {--am-menu-filter:url(#am-menu-glass-1)}
