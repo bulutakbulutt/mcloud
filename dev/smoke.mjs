@@ -691,6 +691,16 @@ try {
   });
   await shot('artist');
 
+  await check('profiles: Apple Music\'s header (#59)', async () => {
+    // Spotify's profile markup (section > div > entity-header with user-image; the action bar in wrappers after it).
+    assert.deepEqual(await page.evaluate(() => { const host = document.querySelector('.am-native-main'), sec = document.createElement('section');
+      sec.innerHTML = '<div><div data-testid="entity-header"><div style="background-color: rgb(176, 8, 16)"></div><div class="main-entityHeader-contentWrapper"><div class="main-entityHeader-imageContainer"><div data-testid="user-image"></div></div><div class="main-entityHeader-headerText"><span class="encore-text-body-small">Profile</span><span><h1>Leo</h1></span><div><span>48 Followers</span></div></div></div></div>'
+        + '<div><div><div data-testid="action-bar"><div data-testid="action-bar-row"><button data-encore-id="buttonSecondary">Follow</button><button data-encore-id="buttonTertiary">…</button></div></div></div></div></div>';
+      host.append(sec); const cs = s => getComputedStyle(sec.querySelector(s));
+      const out = [cs('[data-testid="entity-header"] > [style]').display, cs('.main-entityHeader-headerText > span').display, cs('h1').fontSize, cs('[data-encore-id="buttonTertiary"]').borderRadius, cs('[data-encore-id="buttonSecondary"]').backgroundColor === getComputedStyle(document.body).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)];
+      sec.remove(); return out; }), ['none', 'none', '28px', '50%', true]);
+  });
+
   await check('View Credits opens Spotify\'s dialog; Go to Artist Radio opens the radio playlist (#59)', async () => {
     // Credits: the action Spotify's own track menu dispatches to its store, for the song the menu is about.
     await page.click('.am-more');
