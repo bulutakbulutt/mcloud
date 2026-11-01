@@ -1554,8 +1554,9 @@
       ||document.querySelector('[data-testid^="buddy-feed-"]')?.parentElement);
     document.body.classList.toggle('am-panel-open',!!feed);
     if(!feed){friendPane?.classList.remove('am-native-panel-open');friendPane=null;return;}
-    feed.classList.add('am-friends-sheet');
-    if(friendPane?.contains(feed)){for(let n=feed;n&&n!==friendPane;n=n.parentElement)n.classList.add('am-friends-fill');return;}
+    const mark=(n,name)=>{if(!n.hasAttribute(name))n.setAttribute(name,'');};
+    mark(feed,'data-am-sheet');
+    if(friendPane?.contains(feed)){for(let n=feed;n&&n!==friendPane;n=n.parentElement)mark(n,'data-am-fill');return;}
     friendPane?.classList.remove('am-native-panel-open');
     friendPane=feed.closest('.am-native-sidebar,.am-native-right');
     if(!friendPane){
@@ -1568,7 +1569,7 @@
     }
     friendPane ||= feed.parentElement;
     friendPane?.classList.add('am-native-panel-open');
-    for(let n=feed;n&&n!==friendPane;n=n.parentElement)n.classList.add('am-friends-fill');
+    for(let n=feed;n&&n!==friendPane;n=n.parentElement)mark(n,'data-am-fill');
   }
   let observedSpicyPage=null;
   const spicyObserver=new MutationObserver(syncSpicyControls);
