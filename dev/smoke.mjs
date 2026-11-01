@@ -219,9 +219,10 @@ try {
     assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     // Liquid Glass: the menu's own filter, its nine-piece map placed for its size (by a ResizeObserver: after a frame's rAF callbacks, before its paint).
     const menuGlass = () => page.evaluate(async () => { for (let n = 0; n < 2; n++) await new Promise(r => requestAnimationFrame(r)); const p = document.getElementById('am-popover'), f = document.getElementById('am-menu-glass-' + p.dataset.amGlass), i = [...f.querySelectorAll('feImage')], br = i.find(e => e.dataset.piece === 'br');
-      return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight]; });
-    const [filter, pieces, mapped, right, bottom, width, height] = await menuGlass();
-    assert.deepEqual([filter, pieces, mapped, right, bottom], ['url("#am-menu-glass-0")', 8, true, width, height]);
+      return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight, p.dataset.amGlass]; });
+    // Its slot is whichever free one already holds pieces of its corner size (they differ between menu heights).
+    const [filter, pieces, mapped, right, bottom, width, height, slot] = await menuGlass();
+    assert.deepEqual([filter, pieces, mapped, right, bottom], [`url("#am-menu-glass-${slot}")`, 8, true, width, height]);
     await page.waitForTimeout(150); // the opening animation scales the menu, and the submenu is placed from its rows
     // Hover submenu test: hovering 'Çalma Listesine Ekle' opens the flyout submenu to the right
     await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
