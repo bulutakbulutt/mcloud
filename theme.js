@@ -1081,9 +1081,13 @@
         for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"],li > button):not([data-am-iconed])')){
           item.dataset.amIconed='';const first=item.firstElementChild;
           // Liked Songs: Spotify's purple tile, the same for adding and removing, becomes the theme's star (as in the
-          // player), filled when the row removes the song, which only its text tells.
+          // player), filled when the row removes the song, which only its text tells. The first menu after a launch
+          // says Add until the song's state arrives, so the row is watched while it lives.
           const likedArt=item.querySelector('img[src*="/liked-songs/"]');
-          if(likedArt&&likedArt.parentElement!==item)likedArt.parentElement.dataset.amLiked=item.textContent.trim()===S.Locale?.get?.('web-player.aligned-curation.tooltips.remove-from-liked-songs')?'on':'off';
+          if(likedArt&&likedArt.parentElement!==item){
+            const slot=likedArt.parentElement,mark=()=>{slot.dataset.amLiked=item.textContent.trim()===S.Locale?.get?.('web-player.aligned-curation.tooltips.remove-from-liked-songs')?'on':'off';};
+            mark();new MutationObserver(mark).observe(item,{childList:true,characterData:true,subtree:true});
+          }
           // Rich rows (Your Updates: a picture, two lines, a dot) are Encore list rows: their picture is content.
           if(item.querySelector('[data-encore-id="listRow"]'))continue;
           if(first&&first!==item.lastElementChild&&!first.textContent.trim()){first.dataset.amIcon='';continue;}

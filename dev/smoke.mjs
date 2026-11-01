@@ -986,7 +986,10 @@ try {
       await new Promise(r => requestAnimationFrame(r));
       const out = rows.map(li => { const slot = li.querySelector('[data-am-liked]'), before = getComputedStyle(slot, '::before'), mask = before.maskImage || before.webkitMaskImage;
         return [slot.dataset.amLiked, getComputedStyle(slot.querySelector('img')).display, mask.includes("fill='black'")]; });
-      rows.forEach(li => li.remove()); return out; }), [['on', 'none', true], ['off', 'none', false]]);
+      // The first menu after a launch says Add until the song's state arrives: the star follows the text.
+      rows[1].querySelector('span').textContent = 'Remove from Liked Songs'; await new Promise(r => setTimeout(r));
+      out.push(rows[1].querySelector('[data-am-liked]').dataset.amLiked);
+      rows.forEach(li => li.remove()); return out; }), [['on', 'none', true], ['off', 'none', false], 'on']);
     // A submenu opening down from its row (anchored by its top) rises by the list's padding, so its first row is level
     // with the parent row; one anchored by its bottom (pushed up to fit) stays.
     assert.deepEqual(await page.evaluate(() => ['inset: 0px auto auto 0px', 'inset: auto auto 0px 0px'].map(inset => { const sub = document.createElement('div'); sub.setAttribute('data-tippy-root', ''); sub.style.cssText = 'position: absolute; ' + inset;
