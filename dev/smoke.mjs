@@ -979,6 +979,10 @@ try {
     // there; a row without an icon is not indented.
     assert.deepEqual(await page.evaluate(() => { const slot = document.querySelector('#mock-tip [data-am-icon]'), at = sel => [...document.querySelectorAll('#mock-tip span')].find(n => n.textContent === sel).getBoundingClientRect().left;
       return [getComputedStyle(slot).width, slot.querySelector('svg').getBoundingClientRect().width, Math.round(at('Add to queue') - at('Profile'))]; }), ['14px', 12, 22]);
+    // A submenu opening down from its row (anchored by its top) rises by the list's padding, so its first row is level
+    // with the parent row; one anchored by its bottom (pushed up to fit) stays.
+    assert.deepEqual(await page.evaluate(() => ['inset: 0px auto auto 0px', 'inset: auto auto 0px 0px'].map(inset => { const sub = document.createElement('div'); sub.setAttribute('data-tippy-root', ''); sub.style.cssText = 'position: absolute; ' + inset;
+      document.querySelector('#mock-tip ul').append(sub); const m = getComputedStyle(sub).marginTop; sub.remove(); return m; })), ['-5px', '0px']);
     await page.evaluate(() => document.getElementById('mock-tip').remove());
   });
 

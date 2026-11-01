@@ -455,6 +455,10 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
+/* A submenu that opens down from its row (popper anchors it by its top) sits 5px higher, so its first row is level
+   with the row it came from, as macOS places them; at the side it already meets that row's highlight. One pushed up
+   to fit the window (anchored by its bottom) stays where popper put it. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [data-tippy-root][style*="inset: 0px auto auto"] {margin-top:-5px!important}
 /* A submenu row keeps its icon inside the label, at the same gap as the other rows. */
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:8px!important}
 /* "Find a playlist" (Add to playlist's submenu) as a macOS search field: 24px, 7px corners, a 12px magnifier, the
