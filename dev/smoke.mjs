@@ -838,6 +838,19 @@ try {
     await shot('search-results');
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+    // Spotify's loading list (six grey placeholders) takes the same glass and Apple's rows: three queries, then results.
+    await page.evaluate(() => mockSearchLoading());
+    assert.deepEqual(await page.evaluate(() => {
+      const box = document.querySelector('#search-suggestions-loading-dropdown > :first-child'), rows = [...box.querySelectorAll('[data-encore-id="listRow"]')];
+      const pic = r => { const p = r.querySelector('[class*="header-side-flex"] > *'), c = getComputedStyle(p); return p.offsetWidth + '/' + c.borderRadius; };
+      return [getComputedStyle(box).backdropFilter, getComputedStyle(box).borderRadius, rows.map(r => r.offsetHeight).join(), rows.map(r => getComputedStyle(r).marginTop).join(),
+        pic(rows[0]), pic(rows[3]), getComputedStyle(rows[3], '::before').content, rows.map(r => r.querySelectorAll('[data-encore-id="text"]')).map(b => [...b].filter(e => e.offsetHeight).length).join()];
+    }), ['blur(21px) url("#am-search-glass")', '13px', '24,24,24,52,52,52', '0px,0px,0px,11px,11px,11px', '12/50%', '46/5px', '""', '1,1,1,2,2,2']);
+    // Over the library, as the results are (the library is still open from the check before).
+    assert.equal(await page.evaluate(() => { const r = document.querySelector('#search-suggestions-loading-dropdown > :first-child').getBoundingClientRect(); return [document.body.classList.contains('am-library-open'), document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('#search-suggestions-loading-dropdown')?.id].join(); }), 'true,search-suggestions-loading-dropdown');
+    await shot('search-loading');
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-suggestions-loading-dropdown'));
   });
 
   await check('the toolbar Home leaves a library view (#59)', async () => {
