@@ -494,6 +494,8 @@ body.am-liquid:not(.am-solid) [data-am-glass="2"] {--am-menu-filter:url(#am-menu
 body.am-liquid:not(.am-solid) [data-am-glass="3"] {--am-menu-filter:url(#am-menu-glass-3)}
 body.am-liquid:not(.am-solid) [data-am-glass="4"] {--am-menu-filter:url(#am-menu-glass-4)}
 body.am-liquid:not(.am-solid) [data-am-glass="5"] {--am-menu-filter:url(#am-menu-glass-5)}
+body.am-liquid:not(.am-solid) [data-am-glass="6"] {--am-menu-filter:url(#am-menu-glass-6)}
+body.am-liquid:not(.am-solid) [data-am-glass="7"] {--am-menu-filter:url(#am-menu-glass-7)}
 body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}

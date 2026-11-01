@@ -854,10 +854,16 @@ try {
 
   await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
     // An feImage given its href again paints nothing until it reloads: a new menu showed a sharp square for a frame.
-    await page.evaluate(() => { window.__hrefSets = 0; new MutationObserver(r => { window.__hrefSets += r.filter(m => m.attributeName === 'href').length; })
-      .observe(document.getElementById('am-menu-glass-0'), { attributes: true, subtree: true }); });
-    for (let n = 0; n < 2; n++) { await page.click('.am-more'); await page.waitForTimeout(100); await page.keyboard.press('Escape'); }
+    // A two-row menu (a folder's) moves to a slot already holding its smaller corners, and back.
+    await page.evaluate(() => { window.__hrefSets = 0; const mo = new MutationObserver(r => { window.__hrefSets += r.filter(m => m.attributeName === 'href').length; });
+      for (const f of document.querySelectorAll('[id^="am-menu-glass-"]')) mo.observe(f, { attributes: true, subtree: true }); });
+    const slots = [];
+    for (let n = 0; n < 2; n++) {
+      await page.click('.am-more'); await page.waitForTimeout(100); slots.push(await page.getAttribute('#am-popover', 'data-am-glass')); await page.keyboard.press('Escape');
+      await page.click('#am-sidebar .am-list-row[title="Ruh Hali"]', { button: 'right' }); await page.waitForTimeout(100); slots.push(await page.getAttribute('#am-popover', 'data-am-glass')); await page.keyboard.press('Escape');
+    }
     assert.equal(await page.evaluate(() => window.__hrefSets), 0);
+    assert.ok(slots[0] !== slots[1] && slots[0] === slots[2] && slots[1] === slots[3], slots.join());
   });
 
   await check('every row of our menus has its icon, in Apple Music\'s icon column', async () => {
