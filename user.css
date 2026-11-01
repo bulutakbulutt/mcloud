@@ -520,6 +520,75 @@ body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!i
 #global-nav-bar.searchInputCollapsed form > :last-child {opacity:1!important;visibility:visible!important}
 #global-nav-bar.searchInputCollapsed input {color:var(--text-base)!important;padding-inline-end:96px!important}
 #global-nav-bar.searchInputCollapsed input::placeholder {color:#ffffffa6!important}
+/* Live results (#search-dropdown): macOS 27 Music's suggestions popover, measured (AX frames and 2x captures; numbers
+   in STATUS.md): 1pt under the field's focus ring, 13pt corners, 5pt top and bottom; queries in 24pt rows with a small
+   grey magnifier, then results in 52pt rows with 46pt artwork, an 11pt gap with a hairline inset 16pt between them;
+   the selection is the accent, 5pt in from the sides. Its glass is far more diffuse than a menu's (blur fitted 21pt
+   against the user's screenshot, menus 6.8pt), then one dark level that keeps the page's colour (theme.js
+   #am-search-glass); in Eco a plain fill. Spotify's keyboard hint, the play button over the
+   artwork and the row's buttons (like, Following, remove, More) go: Apple shows none, and right-click still opens
+   Spotify's menu. Encore's class names carry a version (e-10860-…), so rows are matched by data-encore-id and parts. */
+:is(#search-dropdown,#search-suggestions-loading-dropdown) {top:40px!important}
+:is(#search-dropdown,#search-suggestions-loading-dropdown) > :first-child {margin:0 1px!important;padding:0!important;width:auto!important;height:auto!important;max-height:min(523px,calc(100vh - 120px))!important;border-radius:13px!important;background:var(--am-sd-fill)!important;backdrop-filter:var(--am-sd-filter);-webkit-backdrop-filter:var(--am-sd-filter);-webkit-app-region:no-drag;
+ box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 14px 36px #00000080!important}
+body {--am-sd-fill:transparent;--am-sd-filter:blur(21px) url(#am-search-glass)}
+body.am-solid {--am-sd-fill:#2c2c2e;--am-sd-filter:none}
+:is(#search-dropdown,#search-suggestions-loading-dropdown) [data-overlayscrollbars-viewport] {padding:5px 0!important}
+#search-dropdown [data-overlayscrollbars-viewport] > div:first-child {display:none!important}
+#search-dropdown [data-encore-id="typeList"] {padding:0!important;margin:0!important}
+#search-dropdown [role="row"] {position:relative;isolation:isolate;height:24px!important;min-height:0!important;margin:0!important;padding:0 16px 0 17px!important;grid-template-columns:14px minmax(0,1fr)!important;column-gap:7px!important;align-items:center!important;border-radius:0!important;background:none!important}
+#search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]) {height:52px!important;grid-template-columns:46px minmax(0,1fr)!important;column-gap:8px!important}
+#search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]):not(:first-child) {margin-top:11px!important}
+#search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]):not(:first-child)::before,#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4)::before {content:"";position:absolute;left:16px;right:16px;top:-6px;height:1px;background:#ffffff4d;pointer-events:none}
+/* While results load, Spotify shows a second list (#search-suggestions-loading-dropdown) of six grey placeholders, a
+   picture and two bars each: drawn as the rows they stand for, three queries then results, in the same glass. */
+#search-suggestions-loading-dropdown [data-encore-id="listRow"] {position:relative;height:24px!important;min-height:0!important;margin:0!important;padding:0 16px 0 17px!important;grid-template-columns:14px minmax(0,1fr)!important;column-gap:7px!important;align-items:center!important;border-radius:0!important;background:none!important}
+#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4) {height:52px!important;margin-top:11px!important;grid-template-columns:46px minmax(0,1fr)!important;column-gap:8px!important}
+#search-suggestions-loading-dropdown [class*="list-row__header-side"] {display:flex!important;align-items:center;justify-content:center;width:auto!important;height:auto!important}
+#search-suggestions-loading-dropdown [class*="list-row__header-side"] > * > * {width:12px!important;height:12px!important;border-radius:50%!important;background:#ffffff1a!important}
+#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4) [class*="list-row__header-side"] > * > * {width:46px!important;height:46px!important;border-radius:5px!important}
+#search-suggestions-loading-dropdown [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
+#search-suggestions-loading-dropdown [class*="list-row__column"] {gap:7px!important;justify-content:center}
+#search-suggestions-loading-dropdown [data-encore-id="text"] {height:9px!important;max-width:60%;border-radius:999px!important;background:#ffffff1a!important}
+#search-suggestions-loading-dropdown [data-encore-id="text"] + [data-encore-id="text"] {height:7px!important}
+#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(-n+3) [data-encore-id="text"] + [data-encore-id="text"] {display:none!important}
+#search-dropdown [role="row"]::after {content:"";position:absolute;inset:0 5px;z-index:-1;border-radius:6px;pointer-events:none}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"])::after {background:var(--am-accent)}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) :is([data-encore-id^="listRow"],[data-encore-id^="listRow"] *) {color:#fff!important}
+#search-dropdown [role="row"] [class*="list-row__header-side"] {width:auto!important;height:auto!important}
+#search-dropdown [role="row"]:not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] :is(a,div) {display:flex;align-items:center;justify-content:center;width:14px!important;height:14px!important;min-width:0!important;background:none!important}
+#search-dropdown [role="row"]:not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {width:14px!important;height:14px!important;fill:#ffffff8c!important}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]):not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {fill:#fff!important}
+#search-dropdown [role="row"] [class*="list-row__header-side"] :is(a,div,img):has(> img),#search-dropdown [role="row"] [class*="list-row__header-side"] img {width:46px!important;height:46px!important}
+#search-dropdown [role="row"]:not(:has([id$="-title"] a:is([href*="/artist/"],[href*="/user/"]))) [class*="list-row__header-side"] :has(> img) {border-radius:5px!important}
+#search-dropdown [role="row"] :is([id$="-play"],[class*="list-row__slot"]) {display:none!important}
+#search-dropdown [role="row"] [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
+#search-dropdown [role="row"] [class*="list-row__column"] {gap:0!important}
+#search-dropdown [role="row"] a {text-decoration:none!important}
+#search-dropdown [data-encore-id="listRowTitle"],#search-dropdown [data-encore-id="listRowTitle"] * {font:400 13px/16px var(--encore-body-font-stack)!important;letter-spacing:0!important;color:#ffffffd9!important}
+#search-dropdown [data-encore-id="listRowTitle"] ~ * svg {fill:currentColor!important;color:#ffffff8c!important}
+/* A query: what was typed in the label colour, Spotify's completion in the secondary one, both regular (Apple: 223 and
+   159 over its glass); with no typed prefix (ö for o) all of it in the label colour, as Apple's. */
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] {color:#ffffff8c!important}
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"]:not(:has(*)) {color:#ffffffd9!important}
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] > * {color:#ffffffd9!important;font-weight:400!important}
+#search-dropdown [data-encore-id="listRowSubtitle"] {margin:0!important;font:400 11px/14px var(--encore-body-font-stack)!important;color:#ffffff8c!important}
+#search-dropdown [data-encore-id="listRowSubtitle"] * {color:inherit!important}
+/* "Song • No Doubt" -> "Song · No Doubt". Spotify's bullet is a bare text node: sized away, Apple's dot drawn instead.
+   The type icon before "Song" goes too. */
+#search-dropdown [data-encore-id="listRowSubtitle"] > [class*="line-clamp"] {font-size:0!important;line-height:14px!important}
+#search-dropdown [data-encore-id="listRowSubtitle"] > [class*="line-clamp"] > * {font-size:11px!important}
+#search-dropdown [data-encore-id="listRowSubtitle"] > [class*="line-clamp"] > * + *::before {content:"\00a0·\00a0"}
+#search-dropdown [data-encore-id="listRowSubtitle"] :is(svg,[class]:has(> svg):not(:has(> :not(svg)))) {display:none!important}
+/* "Recent searches" (an empty field), "View all results" and "Clear recent searches": quiet text rows. */
+#search-dropdown [data-overlayscrollbars-viewport] > p {margin:0!important;padding:0 17px!important;font:600 11px/24px var(--encore-body-font-stack)!important;color:#ffffff8c!important}
+#search-dropdown [data-overlayscrollbars-viewport] > button {display:block!important;width:auto!important;height:24px!important;min-height:0!important;margin:5px 0 0!important;padding:0 17px!important;border:0!important;background:none!important;box-shadow:none!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 13px/24px var(--encore-body-font-stack)!important;color:var(--am-accent-focus)!important}
+/* Over the library, the loading list is lifted with #main as the results are (below). */
+body.am-library-open #main:has(#search-suggestions-loading-dropdown) {z-index:30!important;pointer-events:none;background:transparent!important;transition:none!important}
+body.am-library-open #main:has(#search-suggestions-loading-dropdown) #global-nav-bar {pointer-events:auto}
+body.am-library-open #main:has(#search-suggestions-loading-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+/* The field while it has focus: Apple's ring, the accent at about half strength, 3pt outside the glass. */
+body.am-tglass-on #global-nav-bar form[role="search"] input:focus {box-shadow:0 0 0 3px color-mix(in srgb,var(--am-accent) 55%,transparent)!important}
 #global-nav-bar .am-toolbar-leading div:empty {display:none!important}
 #global-nav-bar .am-toolbar-trailing div:empty {display:none!important}
 /* Spicy Lyrics owns its fullscreen page, including playback and exit controls. */
