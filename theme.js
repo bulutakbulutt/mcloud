@@ -1054,19 +1054,22 @@
     // size), a menu moves to a free slot whose pieces fit it, and a slot loads new ones only when none does. Slots for
     // the usual corner (menus taller than 80px) and for one- and two-row menus (24px rows) are loaded at start.
     const cornerOf=(w,h,k)=>Math.max(1,Math.min(turn,Math.floor(Math.min(w,h)/2*k)/k));
+    // Liquid Glass reads clearer on small things (Apple Music's one-row New Playlist submenu looks like the player's
+    // glass): one- and two-row menus, those under 80px, blur 1.5px instead of 6.8 (picked by eye, 2026-11-02).
+    const thinBlur=1.5;
     // size: the ResizeObserver's border box, unrounded and unscaled (offsetWidth rounds; the opening animation scales).
     const place=(slot,size)=>{
       const w=size?size.inlineSize:slot.node?.offsetWidth,h=size?size.blockSize:slot.node?.offsetHeight,k=devicePixelRatio||1;if(!w||!h)return;
       const C=cornerOf(w,h,k),key=k+'/'+C,other=slot.key!==key&&slot.node&&slots.find(s=>!s.node&&s.key===key);
       if(other){const node=slot.node;slot.watch.unobserve(node);slot.node=null;other.node=node;node.dataset.amGlass=other.i;other.watch.observe(node);place(other,size);return;}
-      const p=pieces(k,C),c=p.N/k;slot.key=key;
+      const p=pieces(k,C),c=p.N/k;slot.key=key;const blur=String(C<turn?thinBlur:6.8);if(slot.blur.getAttribute('stdDeviation')!==blur)slot.blur.setAttribute('stdDeviation',blur);
       const box={tl:[0,0,c,c],t:[c,0,w-2*c,c],tr:[w-c,0,c,c],l:[0,c,c,h-2*c],r:[w-c,c,c,h-2*c],bl:[0,h-c,c,c],b:[c,h-c,w-2*c,c],br:[w-c,h-c,c,c]};
       for(const image of slot.images){const part=image.dataset.piece;if(image.getAttribute('href')!==p[part])image.setAttribute('href',p[part]);box[part].forEach((v,n)=>image.setAttribute(['x','y','width','height'][n],Math.max(0,v)));}
     };
     const newSlot=(C=turn)=>{
       const slot={i:slots.length},k=devicePixelRatio||1,p=pieces(k,C);slots.push(slot);
-      glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="6.8" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
-      slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
+      glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="${C<turn?thinBlur:6.8}" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
+      slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.blur=glass.lastElementChild.querySelector('feGaussianBlur');slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
       for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);slot.key=k+'/'+C;
       return slot;
     };
