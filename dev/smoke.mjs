@@ -6,6 +6,7 @@
 import { chromium } from 'playwright';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -915,6 +916,15 @@ try {
     const dialog = await page.$eval('#mock-artwork [role="dialog"]', e => [getComputedStyle(e).transform, getComputedStyle(e).animationName]);
     assert.deepEqual(dialog, ['none', 'am-artwork-in']);
     await page.evaluate(() => document.getElementById('mock-artwork').remove());
+  });
+
+  await check('no :has() in user.css tests inline style', async () => {
+    // Spicy Lyrics writes inline styles every frame. With `style` inside a :has() argument each write re-matched the
+    // writer's ancestors up to <html>, ~1700 elements restyled per frame instead of a few (issue #53).
+    const css = fs.readFileSync(path.join(here, '..', 'user.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    const args = [...css.matchAll(/:has\(/g)].map(m => { let depth = 0, i = m.index + 4; do { depth += css[i] === '(' ? 1 : css[i] === ')' ? -1 : 0; i++; } while (depth && i < css.length); return css.slice(m.index, i); });
+    assert.ok(args.length > 0);
+    assert.deepEqual(args.filter(a => /\[style\b/.test(a)), []);
   });
 
   await check('watch feed sits between the sidebar and the player', async () => {
