@@ -1054,15 +1054,22 @@
       const w=size?size.inlineSize:slot.node?.offsetWidth,h=size?size.blockSize:slot.node?.offsetHeight,k=devicePixelRatio||1;if(!w||!h)return;
       const p=pieces(k,Math.max(1,Math.min(turn,Math.floor(Math.min(w,h)/2*k)/k))),c=p.N/k;
       const box={tl:[0,0,c,c],t:[c,0,w-2*c,c],tr:[w-c,0,c,c],l:[0,c,c,h-2*c],r:[w-c,c,c,h-2*c],bl:[0,h-c,c,c],b:[c,h-c,w-2*c,c],br:[w-c,h-c,c,c]};
-      for(const image of slot.images){const part=image.dataset.piece;image.setAttribute('href',p[part]);box[part].forEach((v,n)=>image.setAttribute(['x','y','width','height'][n],Math.max(0,v)));}
+      // An feImage whose href is set paints nothing until its image has loaded again, even the same one: a new menu's
+      // glass showed a sharp square at a corner for its first frame. So only a changed piece is set.
+      for(const image of slot.images){const part=image.dataset.piece;if(image.getAttribute('href')!==p[part])image.setAttribute('href',p[part]);box[part].forEach((v,n)=>image.setAttribute(['x','y','width','height'][n],Math.max(0,v)));}
     };
+    // A slot's map starts loaded at the usual corner size (most menus are taller than 80px), and four are made at once
+    // (the theme's menu and submenu, one of Spotify's and its submenu), so a menu's first frame has its whole map.
+    const newSlot=()=>{
+      const slot={i:slots.length};slots.push(slot);
+      glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="6.8" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
+      slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
+      const p=pieces(devicePixelRatio||1,turn);for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);
+      return slot;
+    };
+    for(let n=0;n<4;n++)newSlot();
     const attach=node=>{
-      let slot=slots.find(s=>!s.node);
-      if(!slot){
-        slot={i:slots.length};slots.push(slot);
-        glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="6.8" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
-        slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
-      }
+      const slot=slots.find(s=>!s.node)||newSlot();
       slot.node=node;node.dataset.amGlass=slot.i;slot.watch.observe(node);place(slot);
     };
     // Spotify's menus: each list in a [data-tippy-root] of its own, appended to body or, for some submenus (Add to

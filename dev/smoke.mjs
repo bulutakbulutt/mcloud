@@ -852,6 +852,14 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
   });
 
+  await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
+    // An feImage given its href again paints nothing until it reloads: a new menu showed a sharp square for a frame.
+    await page.evaluate(() => { window.__hrefSets = 0; new MutationObserver(r => { window.__hrefSets += r.filter(m => m.attributeName === 'href').length; })
+      .observe(document.getElementById('am-menu-glass-0'), { attributes: true, subtree: true }); });
+    for (let n = 0; n < 2; n++) { await page.click('.am-more'); await page.waitForTimeout(100); await page.keyboard.press('Escape'); }
+    assert.equal(await page.evaluate(() => window.__hrefSets), 0);
+  });
+
   await check('every row of our menus has its icon, in Apple Music\'s icon column', async () => {
     await page.click('.am-more');
     await page.waitForTimeout(150); // the opening animation scales the menu
