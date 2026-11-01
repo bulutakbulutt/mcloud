@@ -666,20 +666,20 @@ try {
     await page.click('.am-hero-follow');
     assert.deepEqual(await page.evaluate(() => { const f = document.querySelector('.am-hero-follow'); return [f.classList.contains('am-active'), f.getAttribute('aria-pressed')]; }), [true, 'true']);
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
-    await page.waitForFunction(() => document.querySelector('.am-toast.am-toast-show')?.textContent === 'Sena Şener takip ediliyor.');
+    await page.waitForFunction(() => document.querySelector('.am-toasts > .am-toast-show:last-child')?.textContent === 'Sena Şener takip ediliyor.');
     await page.click('.am-hero-follow');
     await page.waitForFunction(() => (window.__libraryRemoves || []).includes('spotify:artist:mock'));
-    assert.equal(await page.textContent('.am-toast'), 'Sena Şener takipten çıkarıldı.');
+    assert.equal(await page.textContent('.am-toasts > :last-child'), 'Sena Şener takipten çıkarıldı.');
     assert.equal(await page.getAttribute('.am-hero-follow', 'aria-pressed'), 'false');
     // Back and share + more float on the toolbar glass, in the artist view's own layer, one shape each on their rects.
     assert.deepEqual(await page.evaluate(() => { const g = [...document.querySelectorAll('#am-artist .am-tglass-root .am-tglass')].map(e => e.getBoundingClientRect()), b = document.querySelector('.am-artist-back').getBoundingClientRect();
       return [document.getElementById('am-artist').classList.contains('am-tglass-on'), g.length, Math.round(g[0].left) === Math.round(b.left), g[1].height]; }), [true, 2, true, 36]);
     // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
-    await page.waitForFunction(() => /^Bağlantı kopyala/.test(document.querySelector('.am-toast.am-toast-show')?.textContent));
+    await page.waitForFunction(() => /^Bağlantı kopyala/.test(document.querySelector('.am-toasts > .am-toast-show:last-child')?.textContent));
     // It is Liquid Glass with a lens of its own, drawn at the toast's size.
     assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.am-toast')).backdropFilter), /url\(.*#am-glass-toast/);
-    await page.waitForFunction(() => document.querySelector('#am-glass-toast feImage').getAttribute('width') === String(document.querySelector('.am-toast').offsetWidth));
+    await page.waitForFunction(() => { const t = document.querySelector('.am-toasts > :last-child'), id = 'am-glass-toast' + (+t.dataset.slot ? '-' + t.dataset.slot : ''); return document.querySelector(`#${id} feImage`).getAttribute('width') === String(t.offsetWidth); });
     // Right-click on song row opens context menu
     await page.click('.am-song >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
@@ -896,9 +896,44 @@ try {
     await page.waitForFunction(() => window.__libraryAdds?.includes('spotify:album:7'));
     assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Sabah Kahvesi"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }, 'top'), [true, 'am-drop-before']);
     await page.waitForFunction(() => JSON.stringify(window.__pins?.at(-1)) === JSON.stringify(['spotify:playlist:2', { before: { uri: 'spotify:playlist:0' } }]));
+    // A playlist onto the middle of a folder goes into it, at its top.
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Ruh Hali"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }), [true, 'am-drop-into']);
+    await page.waitForFunction(() => JSON.stringify(window.__rootlistMoves?.at(-1)) === JSON.stringify(['spotify:playlist:2', { after: { uri: 'spotify:folder:ruh' } }]));
     assert.equal(await page.locator('#am-sidebar .am-drop-into, #am-sidebar .am-drop-before').count(), 0);
     // The sidebar's rows start drags Spotify's pages understand.
     assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
+  });
+  await check('Spotify\'s menus show their icons only with the menu icons setting (#59)', async () => {
+    // Spotify's rows: [icon | label], and a submenu row [icon + label | chevron].
+    const shown = () => page.evaluate(() => [...document.querySelectorAll('#mock-tip svg')].map(s => s.getBoundingClientRect().width > 0));
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-tip'; tip.setAttribute('data-tippy-root', '');
+      const icon = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
+      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div>Add to queue</div></button></li><li><button role="menuitem"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li></ul>`;
+      document.body.append(tip); });
+    await page.waitForFunction(() => document.querySelector('#mock-tip [role="menuitem"][data-am-iconed]'));
+    assert.deepEqual(await shown(), [false, false, true]);
+    await page.evaluate(() => document.body.classList.add('am-menu-icons'));
+    assert.deepEqual(await shown(), [true, true, true]);
+    await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });
+  });
+
+  await check('Spotify\'s snackbars come up as the theme\'s glass toast, with their button (#59)', async () => {
+    await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer';
+      c.innerHTML = '<div class="notistack-Snackbar"><div role="alert"><div><span data-encore-id="text">Removed from Your Library.</span><button>Undo</button></div></div></div>';
+      c.querySelector('button').onclick = () => { window.__undo = true; }; document.querySelector('.mock-snackbar-host').append(c); });
+    await page.waitForFunction(() => document.querySelector('.am-toasts > .am-toast-show:last-child')?.firstChild?.textContent === 'Removed from Your Library.');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.notistack-SnackbarContainer')).visibility), 'hidden');
+    await page.click('.am-toasts > :last-child .am-toast-action');
+    assert.ok(await page.evaluate(() => window.__undo));
+    await page.evaluate(() => document.querySelector('.notistack-SnackbarContainer').remove());
+    // Two at once stack: the newest at the bottom, the other above it, apart.
+    await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer'; document.querySelector('.mock-snackbar-host').append(c);
+      for (const m of ['Added to queue', 'Added to Your Library.']) { const s = document.createElement('div'); s.className = 'notistack-Snackbar'; s.innerHTML = `<div role="alert"><span data-encore-id="text">${m}</span></div>`; c.append(s); } });
+    await page.waitForFunction(() => document.querySelectorAll('.am-toasts > .am-toast-show').length >= 2);
+    await page.waitForTimeout(350);
+    assert.ok(await page.evaluate(() => { const [a, b] = [...document.querySelectorAll('.am-toasts > .am-toast-show')].slice(-2), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      return a.textContent === 'Added to queue' && b.textContent === 'Added to Your Library.' && ra.bottom <= rb.top; }), 'the newest sits under the older one, without overlap');
+    await page.evaluate(() => document.querySelector('.notistack-SnackbarContainer').remove());
   });
   await shot('library');
 
@@ -995,7 +1030,7 @@ try {
     await page.waitForFunction(() => document.body.classList.contains('am-solid'));
     assert.deepEqual(await checks(), [false, false, true]);
     await pick('Cam efekti: Tam');
-    assert.match(await page.textContent('.am-toast'), /saydamlık/);
+    assert.match(await page.textContent('.am-toasts > :last-child'), /saydamlık/);
     assert.deepEqual(await checks(), [false, false, true]);
     await pick('Cam efekti: Dengeli');
     await cdp.send('Emulation.setEmulatedMedia', { features: [] });

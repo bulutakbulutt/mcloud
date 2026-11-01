@@ -115,6 +115,8 @@
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
     contains: async (...uris) => uris.map(() => true),
     pin: async (uri, where) => { (window.__pins ||= []).push([uri, where]); },
+    unpin: async uri => { (window.__unpins ||= []).push(uri); },
+    getIsPinned: async (...uris) => uris.map(u => !!library.find(i => i.uri === u)?.pinned),
   });
   // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
   Object.assign(Spicetify.Platform.PlaylistAPI, {
@@ -127,6 +129,9 @@
   Object.assign(Spicetify.Platform.RootlistAPI, {
     remove: async items => { (window.__rootlistRemoves ||= []).push(...items.map(i => i.uri)); },
     setPublishedState: async (uri, on) => { (window.__published ||= []).push([uri, on]); },
+    contains: async uris => uris.map(u => library.some(i => i.uri === u)),
+    move: async (items, where) => { (window.__rootlistMoves ||= []).push([items.map(i => i.uri).join(), where]); },
+    moveFolder: async (item, where) => { (window.__rootlistMoves ||= []).push([item.uri, where]); },
   });
   // Spotify's Redux store, found by the theme in the React tree under #main (it opens Spotify's credits dialog), and the
   // radio lookup Spotify's "Go to artist radio" makes.

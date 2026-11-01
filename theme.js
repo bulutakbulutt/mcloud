@@ -71,10 +71,30 @@
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.music}</svg>`;
   function el(tag, cls, text) { const e = document.createElement(tag); e.className = cls; if (text) e.textContent = text; return e; }
   // Spotify's toasts live inside its own stacking context, under the floating player and the artist view, so the
-  // theme shows its messages in a toast of its own above the player.
-  const toast=el('div','am-toast');toast.setAttribute('role','status');toast.setAttribute('aria-live','polite');document.body.append(toast);
-  let toastTimer=0;
-  function notify(message) { toast.textContent=message;toast.classList.add('am-toast-show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>toast.classList.remove('am-toast-show'),2600); }
+  // theme shows its messages in toasts of its own above the player: up to three at once, stacked up from the newest
+  // (never over one another), each with its own lens (#am-glass-toast, -1, -2) drawn at its size.
+  const toasts=el('div','am-toasts');document.body.append(toasts);
+  const toastSlots=[0,1,2].map(i=>{const t=el('div','am-toast');t.dataset.slot=i;t.setAttribute('role','status');t.setAttribute('aria-live','polite');toasts.append(t);return {t,timer:0,at:0};});
+  function hideToast(slot) { clearTimeout(slot.timer);slot.t.classList.replace('am-toast-show','am-toast-leaving');slot.timer=setTimeout(()=>slot.t.classList.remove('am-toast-leaving'),260); }
+  // action: {label, run}, a button in the toast (Spotify's Undo or Change), which then stays a little longer.
+  function notify(message,action) {
+    // A free slot, else the oldest; it goes to the bottom of the stack and the others step up.
+    const slot=toastSlots.find(s=>!s.t.classList.contains('am-toast-show')&&!s.t.classList.contains('am-toast-leaving'))||toastSlots.reduce((a,b)=>a.at<b.at?a:b),t=slot.t;
+    clearTimeout(slot.timer);t.classList.remove('am-toast-show','am-toast-leaving');t.replaceChildren(message);t.classList.toggle('am-toast-has-action',!!action);
+    if(action){const b=el('button','am-toast-action',action.label);b.type='button';b.onclick=()=>{hideToast(slot);action.run();};t.append(b);}
+    slot.at=performance.now();toasts.append(t);void t.offsetWidth;t.classList.add('am-toast-show');slot.timer=setTimeout(()=>hideToast(slot),action?5000:2600);
+  }
+  // Spotify's own snackbars (Added to Your Library, Added to queue, Playlist has been made private, …) come up as the
+  // theme's glass toast (issue #59). notistack mounts its list in an empty child of the layout (bindLayout watches
+  // those, childList only); each new snackbar is read, hidden by user.css and retold, with its button.
+  const snackbars=new MutationObserver(records=>{for(const r of records)for(const n of r.addedNodes){if(n.nodeType!==1)continue;
+    if(n.matches('.notistack-SnackbarContainer'))snackbars.observe(n,{childList:true,subtree:true});
+    for(const snack of n.matches('.notistack-Snackbar')?[n]:n.querySelectorAll('.notistack-Snackbar'))retell(snack);}});
+  function retell(snack) {
+    const alert=snack.querySelector('[role="alert"]')||snack,button=alert.querySelector('button');if(snack.dataset.amTold!==undefined)return;
+    const text=[...alert.querySelectorAll('[data-encore-id="text"]')].filter(t=>!t.closest('button')&&!t.parentElement.closest('[data-encore-id="text"]')).map(t=>t.textContent.trim()).filter(Boolean).join(' ');
+    if(!text)return;snack.dataset.amTold='';notify(text,button&&{label:button.textContent.trim(),run:()=>button.click()});
+  }
   function button(label, icon, fn, cls = '') {
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
@@ -149,6 +169,7 @@
     const bindings = {'left-sidebar':'am-native-sidebar','right-sidebar':'am-native-right','now-playing-bar':'am-native-player'};
     for (const n of layout.children) {
       if (n === main) continue;
+      if (!n.childElementCount || n.querySelector(':scope > .notistack-SnackbarContainer')) snackbars.observe(n, { childList: true });
       const area = getComputedStyle(n).gridArea.split('/')[0].trim();
       if (bindings[area]) n.classList.add(bindings[area]);
     }
@@ -432,7 +453,7 @@
       else {
         const created = await Rootlist.createPlaylist(name, { before: 'start' }), uri = typeof created === 'string' ? created : created?.uri;
         if (initialTrack && uri && S.Platform.PlaylistAPI?.add) {
-          await S.Platform.PlaylistAPI.add(uri, [initialTrack], {});
+          await S.Platform.PlaylistAPI.add(uri, [initialTrack], {}, { silent: true });
           notify(T('Çalma listesine eklendi.','Added to playlist.'));
         }
         if (/^spotify:playlist:/.test(uri || '')) go('/playlist/' + uri.split(':')[2]);
@@ -926,7 +947,7 @@
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
   // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
-  glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)
+  glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
     +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
     // Save to Your Library plays a Lottie animation with Spotify's greens baked into the file. #am-accent-swap masks
@@ -964,7 +985,7 @@
     if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(node);draw();
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
-  glassLens('am-glass-toast',toast,glassStates.focused);
+  toastSlots.forEach((slot,i)=>glassLens('am-glass-toast'+(i?'-'+i:''),slot.t,glassStates.focused));
   // Menus (ours and Spotify's): macOS 27's NSMenu, fitted over 45° stripes (research/menus/REPORT.md §9-11). The page
   // blurs (6.8pt) and bends near the rim: the edge shows the page ~29pt inward at 3pt from it, nothing moves past 18pt,
   // and the bend turns over the last 40pt before each corner (fitted; a bend square to the edge missed twice as much).
@@ -1029,7 +1050,13 @@
     const sync=()=>{
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
       for(const tip of document.querySelectorAll('body > [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
-        for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}}
+        for(const menu of tip.querySelectorAll('ul[role="menu"]:not([data-am-glass-list])')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(!root.dataset.amGlass)attach(root);}
+        // Spotify's leading icons, which user.css shows only with the menu icons setting, as in the theme's menus: the
+        // first of a row's parts when it holds no text, or the icon before a submenu row's label (its chevron is last).
+        for(const item of tip.querySelectorAll('[role^="menuitem"]:not([data-am-iconed])')){
+          item.dataset.amIconed='';const first=item.firstElementChild;if(!first||first===item.lastElementChild)continue;
+          if(!first.textContent.trim())first.dataset.amIcon='';else[...first.children].find(c=>!c.textContent.trim()&&(c.matches('svg')||c.querySelector('svg')))?.setAttribute('data-am-icon','');
+        }}
     };
     const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
     return {attach,sync};
@@ -1153,10 +1180,11 @@
       notify(T('Sıraya eklendi.','Added to queue.'));
     }catch{notify(T('Sıraya eklenemedi.','Couldn\'t add to queue.'));}
   };
-  const addTrackToPlaylist=async(playlistUri,trackUri)=>{
+  // silent: Spotify would show its own "Added to …" snackbar too (it listens to these APIs; LibraryAPI likewise).
+  const addTrackToPlaylist=async(playlistUri,trackUri,name)=>{
     try{
-      if(S.Platform.PlaylistAPI?.add)await S.Platform.PlaylistAPI.add(playlistUri,[trackUri],{});
-      notify(T('Çalma listesine eklendi.','Added to playlist.'));
+      if(S.Platform.PlaylistAPI?.add)await S.Platform.PlaylistAPI.add(playlistUri,[trackUri],{},{silent:true});
+      notify(name?T(`"${name}" listesine eklendi.`,`Added to "${name}".`):T('Çalma listesine eklendi.','Added to playlist.'));
     }catch{notify(T('Çalma listesine eklenemedi.','Couldn\'t add to playlist.'));}
   };
   // The same playlists Spotify's own "Add to playlist" offers: every one you can add to, folders flattened, in rootlist
@@ -1192,23 +1220,33 @@
     const item=listItems.find(i=>i.uri===row.dataset.uri);if(!item)return null;
     if(!addTargets)loadAddTargets();
     const box=row.getBoundingClientRect(),mid=box.top+box.height/2,songs=!kinds.size||['track','album','episode'].some(k=>kinds.has(k));
-    const addable=item.type==='playlist'&&songs&&!!addTargets?.some(t=>t.uri===item.uri);
-    if(item.pinned&&['playlist','folder','album','artist','show'].some(k=>kinds.has(k))&&(!addable||Math.abs(y-mid)>box.height/4))
+    const addable=item.type==='playlist'&&songs&&!!addTargets?.some(t=>t.uri===item.uri),into=item.type==='folder'&&(kinds.has('playlist')||kinds.has('folder'))&&!!Rootlist?.move;
+    if(item.pinned&&['playlist','folder','album','artist','show'].some(k=>kinds.has(k))&&(!addable&&!into||Math.abs(y-mid)>box.height/4))
       return {kind:'pin',uri:item.uri,where:y<mid?{before:{uri:item.uri}}:{after:{uri:item.uri}}};
-    return addable?{kind:'add',uri:item.uri,name:item.name}:null;
+    return into?{kind:'folder',uri:item.uri,name:item.name}:addable?{kind:'add',uri:item.uri,name:item.name}:null;
   }
   async function dropOn(action,dt) {
     const uris=droppedUris(dt);if(!uris.length)return;
     try{
-      if(action.kind==='library'){await S.Platform.LibraryAPI.add({uris:uris.filter(u=>uriType(u)!=='folder')});notify(T('Arşive eklendi.','Added to Library.'));}
+      if(action.kind==='library'){await S.Platform.LibraryAPI.add({uris:uris.filter(u=>uriType(u)!=='folder'),silent:true});notify(T('Arşive eklendi.','Added to Library.'));}
       else if(action.kind==='add'){
         const songs=(await Promise.all(uris.map(queueUris))).flat().filter(u=>/^spotify:(track|episode):/.test(u||''));if(!songs.length)throw 0;
-        await S.Platform.PlaylistAPI.add(action.uri,songs,{});notify(T(`"${action.name}" listesine eklendi.`,`Added to "${action.name}".`));
+        await S.Platform.PlaylistAPI.add(action.uri,songs,{},{silent:true});notify(T(`"${action.name}" listesine eklendi.`,`Added to "${action.name}".`));
+      } else if(action.kind==='folder'){
+        // As Spotify's sidebar does: into the folder at its top ({after: the folder}); a pinned playlist is unpinned first
+        // (pinned items stay out of folders), one not in your playlists yet is added there.
+        const L=S.Platform.LibraryAPI,where={after:{uri:action.uri}};
+        for(const uri of uris.filter(u=>u!==action.uri)){
+          if((await L.getIsPinned?.(uri).catch(()=>[false]))?.[0])await L.unpin(uri);
+          if(uriType(uri)==='folder')await Rootlist.moveFolder({uri},where);
+          else if((await Rootlist.contains([uri]).catch(()=>[true]))[0])await Rootlist.move([{uri}],where);else await Rootlist.add([uri],where);
+        }
+        notify(T(`"${action.name}" klasörüne taşındı.`,`Moved to "${action.name}".`));
       } else {
         // As Spotify's sidebar does: an album, artist or show not yet in the library is saved first, then pinned at the
         // line. Playlists and folders are not (LibraryAPI.contains says false for those in the rootlist).
         const L=S.Platform.LibraryAPI;
-        for(const uri of uris.filter(u=>u!==action.uri)){if(!['playlist','folder'].includes(uriType(uri))){const [saved]=await L.contains(uri).catch(()=>[true]);if(!saved)await L.add({uris:[uri]});}await L.pin(uri,action.where);}
+        for(const uri of uris.filter(u=>u!==action.uri)){if(!['playlist','folder'].includes(uriType(uri))){const [saved]=await L.contains(uri).catch(()=>[true]);if(!saved)await L.add({uris:[uri],silent:true});}await L.pin(uri,action.where);}
       }
     }catch{notify(T('Buraya bırakılamadı.','Couldn\'t drop it here.'));}
   }
@@ -1232,7 +1270,7 @@
   // item's state is read as its menu opens (a few ms), so the labels match it.
   async function libraryEntries(uri) {
     const type=uri.split(':')[1],L=S.Platform.LibraryAPI;
-    const removal=label=>({label,action:async()=>{try{await L.remove({uris:[uri]});notify(T('Kitaplıktan çıkarıldı.','Removed from Your Library.'));}catch{notify(T('Kitaplıktan çıkarılamadı.','Couldn\'t remove it from Your Library.'));}}});
+    const removal=label=>({label,action:async()=>{try{await L.remove({uris:[uri],silent:true});notify(T('Kitaplıktan çıkarıldı.','Removed from Your Library.'));}catch{notify(T('Kitaplıktan çıkarılamadı.','Couldn\'t remove it from Your Library.'));}}});
     if(type==='playlist'){
       const meta=await S.Platform.PlaylistAPI?.getMetadata?.(uri).catch(()=>null);if(!meta)return [];
       if(!meta.isOwnedBySelf)return meta.isSaved&&L?.remove?[removal(T('Kitaplıktan Çıkar','Remove from Your Library'))]:[];
@@ -1242,9 +1280,10 @@
         ...(Rootlist?.setPublishedState?[{label:meta.isPublished?T('Profilden Kaldır','Remove from Profile'):T('Profile Ekle','Add to Profile'),action:async()=>{
           try{await Rootlist.setPublishedState(uri,!meta.isPublished);notify(meta.isPublished?T('Profilden kaldırıldı.','Removed from your profile.'):T('Profile eklendi.','Added to your profile.'));}
           catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}]:[]),
-        // Spotify's Make private: no one else can open it, and it leaves your profile.
+        // Spotify's Make private: no one else can open it, and it leaves your profile. Spotify confirms it in a snackbar
+        // of its own (no silent option), which comes up as the theme's toast.
         ...(meta.permissions?.canAdministratePermissions&&Perm?.setBasePermission?[{label:priv?T('Herkese Açık Yap','Make Public'):T('Gizli Yap','Make Private'),action:async()=>{
-          try{if(!priv&&meta.isPublished)await Rootlist?.setPublishedState?.(uri,false);await Perm.setBasePermission(uri,priv?'VIEWER':'BLOCKED');notify(priv?T('Liste herkese açık.','The playlist is public.'):T('Liste gizli.','The playlist is private.'));}
+          try{if(!priv&&meta.isPublished)await Rootlist?.setPublishedState?.(uri,false);await Perm.setBasePermission(uri,priv?'VIEWER':'BLOCKED');}
           catch{notify(T('Değiştirilemedi.','Couldn\'t change it.'));}}}]:[]),
         ...(Rootlist?.remove?[{label:T('Sil','Delete'),submenu:[{label:T(`"${name}" Silinsin`,`Delete "${name}"`),action:async()=>{
           try{await Rootlist.remove([{uri}]);notify(T('Çalma listesi silindi.','Playlist deleted.'));}catch{notify(T('Silinemedi.','Couldn\'t delete it.'));}}}]}]:[]),
@@ -1311,7 +1350,7 @@
       const lists=addTargets||[];
       return [
         ...(Rootlist?.createPlaylist?[{label:T('+ Yeni Çalma Listesi','+ New Playlist'),action:()=>nameNewItem('playlist',trackUri)},'-']:[]),
-        ...lists.map(list=>({label:list.name||T('Adsız Liste','Untitled Playlist'),action:()=>addTrackToPlaylist(list.uri,trackUri)})),
+        ...lists.map(list=>({label:list.name||T('Adsız Liste','Untitled Playlist'),action:()=>addTrackToPlaylist(list.uri,trackUri,list.name)})),
         ...(!addTargets?[{label:T('Yükleniyor…','Loading…'),action:()=>{}}]:!lists.length&&!Rootlist?.createPlaylist?[{label:T('Kullanılabilir liste yok','No playlists available'),action:()=>{}}]:[]),
       ];
     };
@@ -2176,7 +2215,7 @@
   }
   async function toggleSaved(uri,saved) {
     const api=S.Platform.LibraryAPI;
-    if(saved)await api.remove({uris:[uri]});else await api.add({uris:[uri]});
+    if(saved)await api.remove({uris:[uri],silent:true});else await api.add({uris:[uri],silent:true});
     return !saved;
   }
   function playArtist(uri,trackUri) {
