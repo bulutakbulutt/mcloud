@@ -375,8 +375,9 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 /* Spotify's modals (artwork viewer, dialogs) portal into body without a z-index, under the sidebar and player. */
 .ReactModalPortal > * {z-index:65}
 /* The artwork viewer grows from its centre instead of Spotify's rise from below. Its fade is left to the backdrop
-   (its parent), which react-modal opens a couple of frames after mounting, hence the delay. */
-.ReactModalPortal [role="dialog"]:has(> [style*="--image-aspect-ratio"]) {transform:none!important;opacity:1!important;animation:am-artwork-in .3s ease-out 30ms backwards}
+   (its parent), which react-modal opens a couple of frames after mounting, hence the delay. Never test `style` inside
+   :has(): every inline style write anywhere (Spicy Lyrics animates its words every frame) then restyles the page. */
+.ReactModalPortal [role="dialog"]:has(> div > [role="img"]) {transform:none!important;opacity:1!important;animation:am-artwork-in .3s ease-out 30ms backwards}
 @keyframes am-artwork-in {from{scale:.6}}
 .am-popover-item {display:block;width:100%;padding:6px 10px;border:0;border-radius:7px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-popover-item:hover,.am-popover-item:focus-visible,.am-popover-item.am-active {background:var(--am-accent);color:white;outline:0}
