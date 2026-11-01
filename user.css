@@ -140,7 +140,31 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-trailing"] {display:flex!important;align-items:center;order:2;margin-inline-start:auto!important;color:#ffffff99}
 /* Spotify shows the title bar once the header has scrolled past its own, taller height, which the compact header
    reports at once; theme.js marks the page top (am-entity-top) until the play controls pass under the bar. */
-body.am-ready.am-entity-top .am-native-main:has(:is([data-testid="playlist-page"],[data-testid="album-page"]) > [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-topBar-topbarContentWrapper {opacity:0!important;visibility:hidden}
+body.am-ready.am-entity-top .am-native-main:has(:is([data-testid="playlist-page"],[data-testid="album-page"]) > [data-testid="entity-header"] .main-entityHeader-imageContainer,section > div > [data-testid="entity-header"] [data-testid="user-image"]) .main-topBar-topbarContentWrapper {opacity:0!important;visibility:hidden}
+/* Profiles as Apple Music draws them (issue #59): no cover-coloured band, a ~150px round photo, the name at 28px with the
+   counts under it in grey, then round icon buttons (and Follow as an accent capsule) in the same column; the group is
+   centred on the photo. Spotify's action bar sits in clipping wrappers below the header, so the wrapper is moved up. */
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) {--am-av:clamp(120px,15cqi,150px);--am-btn:28px;--am-av-gap:clamp(18px,2.2cqi,24px);--am-av-off:calc((var(--am-av) - 95px) / 2)}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="entity-header"] > :is([style*="background-color"],[style*="--background-base"]),body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="entity-header"] > div[style*="background-color"] + div:not(.main-entityHeader-contentWrapper) {display:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) > div > div[style*="background-color"]:not([data-testid]) {background:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="entity-header"] {height:auto!important;min-height:0!important;max-height:none!important;padding:12px 0 0!important;background:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-contentWrapper {height:auto!important;min-height:0!important;align-items:stretch!important;gap:var(--am-av-gap)}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-contentWrapper > div:first-child:empty {display:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-imageContainer {width:var(--am-av)!important;height:var(--am-av)!important;min-width:0!important;margin:0!important;align-self:center}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="user-image"],body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="user-image"] .main-entityHeader-image {width:100%!important;height:100%!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText {justify-content:flex-end!important;gap:3px!important;padding-bottom:calc(var(--am-av-off) + var(--am-btn) + 12px)!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText > span.encore-text-body-small:first-child {display:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText h1 {font-size:28px!important;font-weight:700!important;line-height:34px!important;letter-spacing:0!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText > div:last-child :is(span,a) {font-size:13px!important;color:#ffffff8c!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) div:has(> div > [data-testid="action-bar"]) {position:relative;z-index:1;margin-top:calc(-1 * (var(--am-av-off) + var(--am-btn)))!important;margin-bottom:calc(var(--am-av-off) + 28px)!important;height:var(--am-btn)!important;min-height:0!important;overflow:visible!important;pointer-events:none}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) div:has(> [data-testid="action-bar"]) {overflow:visible!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar"] {height:var(--am-btn)!important;padding-block:0!important;padding-inline-start:calc(var(--content-spacing) + var(--am-av) + var(--am-av-gap))!important;background:none!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] {pointer-events:auto;height:var(--am-btn)!important;min-height:0!important;padding:0!important;gap:10px!important;align-items:center!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row-actions"] {display:contents!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] {width:var(--am-btn)!important;height:var(--am-btn)!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:#ffffff1f!important;display:grid!important;place-items:center!important;color:#ffffffd9!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] svg {width:16px!important;height:16px!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonSecondary"] {min-block-size:0!important;height:var(--am-btn)!important;padding:0 16px!important;border:0!important;border-radius:14px!important;background:var(--am-accent)!important;color:#fff!important;font-size:13px!important;font-weight:600!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) section h2 {font-size:17px!important;font-weight:700!important}
 /* Spotify's editing row (Add, Mix, Name & details) becomes an icon capsule at the header's top right, like Apple
    Music's corner buttons, so the page keeps one row of controls. The labels stay in the DOM for screen readers. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) {position:relative}
@@ -254,6 +278,12 @@ body.am-resizing * {transition:none!important}
 .am-list-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .am-list-pin {display:grid;flex-shrink:0;color:#ffffff59}
 #am-sidebar .am-list-pin svg {width:12px;height:12px;color:inherit}
+/* Drag and drop onto the sidebar (theme.js): a row taking the drop is ringed in the accent; a pin lands at the line. */
+#am-sidebar .am-nav-row.am-drop-into {box-shadow:inset 0 0 0 2px var(--am-accent)!important}
+#am-sidebar .am-nav-row:is(.am-drop-before,.am-drop-after) {position:relative}
+#am-sidebar .am-nav-row:is(.am-drop-before,.am-drop-after)::before {content:'';position:absolute;left:8px;right:8px;height:2px;border-radius:1px;background:var(--am-accent);pointer-events:none}
+#am-sidebar .am-nav-row.am-drop-before::before {top:-1px}
+#am-sidebar .am-nav-row.am-drop-after::before {bottom:-1px}
 .am-list-row.am-playing::after {content:"";flex-shrink:0;width:14px;height:14px;background:var(--am-accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3z'/%3E%3Cpath d='M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
 #am-sidebar .am-list-more {color:#ffffff8c;font-weight:500}
 #am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}
@@ -278,11 +308,17 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-nav-less:not([hidden]) + .am-nav-add {margin-left:0}
 .am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:#1c1c1e;color:#f2f2f2;font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
-/* Spotify's own toasts sit under the floating player; lift them above it (they stay under the artist view, so the
-   theme's messages use .am-toast instead). */
-body.am-ready .notistack-SnackbarContainer {bottom:84px!important}
-.am-toast {position:fixed;z-index:70;bottom:84px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translate(-50%,8px);max-width:min(420px,calc(100vw - var(--am-side) - 48px));padding:9px 16px;border-radius:999px;background:#2c2c2eeb;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px #ffffff26,0 8px 24px #0006;color:#f2f2f2;font:600 13px var(--encore-body-font-stack);letter-spacing:-.01em;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
-.am-toast.am-toast-show {opacity:1;transform:translate(-50%,0)}
+/* Spotify's own snackbars are retold as the theme's glass toast (theme.js); theirs stay in the DOM, unseen, so their
+   buttons (Undo, Change) still work from the toast. */
+body.am-ready .notistack-SnackbarContainer {visibility:hidden!important;pointer-events:none!important}
+.am-toasts {position:fixed;z-index:70;bottom:84px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
+.am-toast {position:relative;transform:translateY(8px);max-width:min(420px,calc(100vw - var(--am-side) - 48px));padding:9px 16px;border-radius:999px;background:#2c2c2eeb;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px #ffffff26,0 8px 24px #0006;color:#f2f2f2;font:600 13px var(--encore-body-font-stack);letter-spacing:-.01em;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.am-toast.am-toast-show {opacity:1;transform:none}
+/* A toast that has gone leaves the stack (after its fade), so the others close up. */
+.am-toast:not(.am-toast-show):not(.am-toast-leaving) {position:absolute;bottom:0;visibility:hidden}
+.am-toast.am-toast-has-action {display:flex;align-items:center;gap:14px}
+.am-toast.am-toast-show.am-toast-has-action {pointer-events:auto}
+.am-toast-action {padding:0;border:0;background:none;color:var(--am-accent);font:inherit;cursor:pointer;-webkit-app-region:no-drag}
 /* Spotify centres its watch feed (Explore on playlists and albums) over the whole window, so the glass sidebar hid
    its left column (title, progress, Follow). Padding centres it between the sidebar, the toolbar and the player while
    the dimmed backdrop still covers the window; its height cap follows that area instead of 85vh. */
@@ -375,7 +411,7 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2;animation:am-pop .14s ease-out}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
@@ -385,11 +421,72 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 /* Spotify's: the glass behind the list (theme.js puts it on the root, which its transform already makes the stacking
    context and the submenus' containing block); a list the theme has not reached keeps a plain box. */
 [data-tippy-root][data-am-glass]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
-body > [data-tippy-root] ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
-body > [data-tippy-root] ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] {border-radius:8px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {border-radius:8px!important}
+/* Spotify's menus in the theme's (macOS) measure, so right-click menus read the same everywhere: 13px labels on 24px
+   rows (Spotify's: 14px on 40px), the same inset and separators. A row that opens a page outside (Report) is a
+   role="link" row, the others role="menuitem…". Separators are empty divs in the list; submenus nested in a list
+   are [data-tippy-root] divs and keep their own layout. A few menus open inside a sheet (Shared with's Listener ▾). */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {min-height:0!important;height:auto!important;padding:3px 10px!important;gap:8px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(span,p) {font-size:13px!important;line-height:18px!important}
+/* Icons stay small, so a row keeps the 24px of a label (Spicetify's rows drew a 24px check). */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) :is(svg,img):not([data-encore-id="listRow"] *) {max-width:16px!important;max-height:16px!important}
+/* Your Updates (profile menu): the unread dot in the accent, white on the highlighted row. Spotify drew it in its
+   notification colour, the scheme's dark grey (color.ini), which other banners use too. It is the empty element in
+   the Encore list row's trailing slot. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {width:8px!important;height:8px!important;border-radius:50%!important;background:var(--am-accent)!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role^="menuitem"]:is(:hover,:focus-visible) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {background:#fff!important}
+/* A long list (Add to playlist, Your Updates) scrolls inside its glass and feathers out at the edges it can scroll past:
+   theme.js gives the rows within 20px of such an edge a gradient (--am-mask) that fades their text to nothing there,
+   instead of slicing it. On the rows, not the list: a mask on the list would also cut the submenus nested in it. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) :is([role^="menuitem"],li > [role="link"],li > button),.am-popover-item {-webkit-mask-image:var(--am-mask,none);mask-image:var(--am-mask,none)}
+/* "Opens outside" marks (Account, Support, Report) are smaller and quieter than the labels: Spotify's external-link
+   icon carries an aria-label, a check does not. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) > :last-child:not(:first-child) svg[aria-label] {width:11px!important;height:11px!important;opacity:.5}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:empty:not([data-tippy-root]),:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:not([data-tippy-root]) > div:empty {width:auto!important;height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
+/* Spotify gives a long submenu's list (Add to playlist, Move to folder) a height counted in its own rows, 40px each with
+   a 32px search, so ours left that much empty glass under the last row. Counted in the theme's rows instead (a
+   separator is 1px between 5px margins); past 50vh the menu scrolls, as Spotify's does. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) {--context-menu-submenu-item-height:24px;--context-menu-submenu-filter-height:30px;--context-menu-submenu-divider-height:11px}
+/* Rows answer as the theme's do: the accent under the pointer, grey while their submenu is open, the thin › for a
+   submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
+/* A submenu that opens down from its row (popper anchors it by its top) sits 5px higher, so its first row is level
+   with the row it came from, as macOS places them; at the side it already meets that row's highlight. One pushed up
+   to fit the window (anchored by its bottom) stays where popper put it. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [data-tippy-root][style*="inset: 0px auto auto"] {margin-top:-5px!important}
+/* A submenu row keeps its icon inside the label, at the same gap as the other rows. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :first-child:not(:last-child) {gap:8px!important}
+/* "Find a playlist" (Add to playlist's submenu) as a macOS search field: 24px, 7px corners, a 12px magnifier, the
+   accent ring while typing. Its icon and clear button are overlays the height of the field. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role^="menuitem"]:has([role="search"]) {background:none!important;padding:3px 5px 5px!important;cursor:default}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] {height:24px!important;width:100%!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] > div {height:24px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] > div > span {padding:6px 8px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] svg {width:12px!important;height:12px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] button {width:24px!important;height:24px!important;padding:6px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:#ffffff17!important;box-shadow:none!important;color:#f2f2f2!important;font-size:13px!important;line-height:24px!important;outline:0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input::placeholder {color:#ffffff73!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
-body > [data-tippy-root] ul[role="menu"] [role^="menuitem"] svg {fill:currentColor!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) svg {fill:currentColor!important}
+/* Icons stand as in Apple Music's menus (macOS 27): centred in a 14px column where a plain row's text starts, the
+   label 22px from that start, the glyph about the label's cap height (Apple's Play 9pt, Shuffle 10pt; Spotify's 16px
+   icons, which fill their box, drawn at 12px). A row without an icon keeps its text at the column, no indent, as in
+   Apple's. The column is a label's height, so rows stay 24px, as the submenu heights above count them. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-icon] {flex:0 0 14px!important;width:14px!important;height:18px!important;display:inline-flex!important;align-items:center;justify-content:center}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) :is(svg,img)[data-am-icon] {flex-basis:12px!important;width:12px!important;height:12px!important;margin:0 1px!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-icon] :is(svg,img) {width:12px!important;height:12px!important}
+/* Liked Songs rows: the theme's star from the player for Spotify's purple tile, filled when the song is liked; drawn a
+   little heavier than the player's, to sit with Spotify's icons at 12px. */
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-liked] > img {display:none!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-liked]::before {content:'';width:12px;height:12px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E") center/12px no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E") center/12px no-repeat}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [data-am-liked="on"]::before {-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black' stroke='black' stroke-width='2.2' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E")}
 body.am-liquid:not(.am-solid) [data-am-glass] {--am-menu-fill:transparent}
 body.am-liquid:not(.am-solid) [data-am-glass="0"] {--am-menu-filter:url(#am-menu-glass-0)}
 body.am-liquid:not(.am-solid) [data-am-glass="1"] {--am-menu-filter:url(#am-menu-glass-1)}
@@ -397,11 +494,17 @@ body.am-liquid:not(.am-solid) [data-am-glass="2"] {--am-menu-filter:url(#am-menu
 body.am-liquid:not(.am-solid) [data-am-glass="3"] {--am-menu-filter:url(#am-menu-glass-3)}
 body.am-liquid:not(.am-solid) [data-am-glass="4"] {--am-menu-filter:url(#am-menu-glass-4)}
 body.am-liquid:not(.am-solid) [data-am-glass="5"] {--am-menu-filter:url(#am-menu-glass-5)}
+body.am-liquid:not(.am-solid) [data-am-glass="6"] {--am-menu-filter:url(#am-menu-glass-6)}
+body.am-liquid:not(.am-solid) [data-am-glass="7"] {--am-menu-filter:url(#am-menu-glass-7)}
 body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
-@keyframes am-pop {from{opacity:0;transform:translateY(4px) scale(.98)}}
+/* Menus, ours and Spotify's, open on their first frame with no fade, as macOS's do. A fade from 30% left their glass
+   see-through for 0.1s, so moving between submenus flashed the page sharp behind each new one. */
+@keyframes am-fade-in {from{opacity:.3}}
+/* Rows that join an open menu (its library rows, read after it opened) fade in rather than pop. */
+.am-popover-late {animation:am-fade-in .12s ease-out}
 /* Spotify's modals (artwork viewer, dialogs) portal into body without a z-index, under the sidebar and player. */
 .ReactModalPortal > * {z-index:65}
 /* The artwork viewer grows from its centre instead of Spotify's rise from below. Its fade is left to the backdrop
@@ -415,13 +518,63 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 .am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
 .am-popover-item.am-has-submenu::after {content:'›';font-size:15px;line-height:1;opacity:.6;margin-left:8px}
 .am-popover-separator {height:1px;margin:5px 11px;background:#ffffff24}
+/* Our menus' rows carry their icon in the same column as Spotify's (Apple Music's measure, above); a row without one
+   keeps its text at the column. */
+.am-popover-item.am-has-icon {display:flex;align-items:center;gap:8px}
+.am-popover-item.am-has-icon.am-has-submenu {justify-content:flex-start}
+.am-popover-item.am-has-icon.am-has-submenu::after {margin-left:auto}
+.am-popover-item .am-menu-icon {display:block;width:12px;height:12px;flex:none;margin:0 1px}
+/* Edit details (our menus' playlist action): a small sheet over the window. */
+.am-edit-back {position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#00000059;-webkit-app-region:no-drag}
+.am-edit-box {box-sizing:border-box;width:min(420px,calc(100vw - 48px));display:grid;gap:12px;padding:20px;color:#f2f2f2;font:13px var(--encore-body-font-stack)}
+/* Sheets: Spotify's dialogs (credits, keyboard shortcuts, confirmations) and the theme's own, in frosted glass with the
+   menus' rim. The menus' bending glass let the page's text read through at this size; a heavier blur keeps only its
+   colours. Spotify's card is either the dialog's only child (credits) or the dialog itself, holding a header and a body. */
+dialog[open]::backdrop {background:#00000059!important;animation:am-dim-in .24s ease-out}
+/* Older Spotify windows are react-modals (Playlist permissions: "Shared with", from a shared playlist's names): their
+   card (data-testid "…-modal") is the same sheet, their overlay the same light dim. The :has() is on the portal, so
+   only portals test it. */
+.ReactModalPortal:has([role="dialog"] > [data-testid$="modal"]) > div {background-color:#00000059!important;animation:am-dim-bg-in .24s ease-out}
+/* Sheets fade and grow in (Spotify's dialogs opened at once). The sheet animates, never an ancestor: opacity on an
+   ancestor would cut its backdrop blur off from the page until the fade ended. */
+@keyframes am-sheet-in {from{opacity:0;transform:scale(.96)}}
+@keyframes am-dim-in {from{opacity:0}}
+@keyframes am-dim-bg-in {from{background-color:transparent}}
+.am-edit-back {animation:am-dim-bg-in .24s ease-out}
+:is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1);border-radius:16px!important;background:#28282abf!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
+ box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 22px 70px #0000008c!important}
+.am-edit-title {margin:0;font-size:17px;font-weight:600}
+.am-edit-name,.am-edit-desc {box-sizing:border-box;width:100%;padding:8px 10px;border:0;border-radius:8px;background:#ffffff14;color:inherit;font:inherit;outline:0}
+.am-edit-name:focus-visible,.am-edit-desc:focus-visible {box-shadow:0 0 0 2px var(--am-accent-focus)}
+.am-edit-desc {min-height:96px;resize:vertical}
+.am-edit-actions {display:flex;justify-content:flex-end;gap:8px}
+.am-edit-actions button {padding:6px 16px;border:0;border-radius:999px;font:inherit;cursor:pointer}
+.am-edit-cancel {background:#ffffff1f;color:inherit}
+.am-edit-save {background:var(--am-accent);color:#fff}
+body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+/* Credits as Apple lists them (iOS, music.apple.com; Music on the Mac has none): grey captions over rounded groups of
+   rows, hairlines between rows inset to the text. Encore's listRow ids, not Spotify's hashed classes. */
+dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em;text-transform:uppercase;color:#ffffff80!important}
+dialog[open] [data-encore-id="listRow"] {margin:0!important;width:auto!important;padding:9px 16px!important;border-radius:0;background:#ffffff0f}
+dialog[open] [data-encore-id="listRow"] + [data-encore-id="listRow"] {background:linear-gradient(#ffffff1c,#ffffff1c) 16px 0/calc(100% - 16px) .5px no-repeat,#ffffff0f}
+dialog[open] :is(:not([data-encore-id="listRow"]) + [data-encore-id="listRow"],[data-encore-id="listRow"]:first-child) {border-top-left-radius:10px!important;border-top-right-radius:10px!important}
+dialog[open] [data-encore-id="listRow"]:not(:has(+ [data-encore-id="listRow"])) {border-bottom-left-radius:10px!important;border-bottom-right-radius:10px!important}
+dialog[open] [data-encore-id="listRow"] [data-encore-id="text"]:not(p *,.encore-internal-color-text-subdued) {font-size:15px!important;font-weight:400!important;color:#f5f5f7!important}
+dialog[open] [data-encore-id="listRow"] :is([data-encore-id="listRowSubtitle"],.encore-internal-color-text-subdued) {font-size:13px!important;color:#ffffff80!important}
+/* Follow / Following in the credits: Spotify draws "Follow" until it has read the follow state (~100ms on a first open,
+   measured), then "Following". The button waits that out unseen (keeping its place) and fades in. */
+@keyframes am-follow-in {from{opacity:0}}
+dialog[open] [data-encore-id="listRow"] [data-encore-id="buttonSecondary"] {animation:am-follow-in .12s ease-out .18s both}
+/* Report error, under the groups: a link lined up with the rows' text, as Apple's links under a list. */
+dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] {margin:10px 0 0 16px!important;padding:0!important;min-block-size:0!important;gap:5px!important;font-size:13px!important;font-weight:500!important;color:var(--am-accent)!important}
+dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] svg {width:12px!important;height:12px!important;fill:currentColor!important}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
 .am-swatch.am-selected {outline:2px solid #f2f2f2;outline-offset:2px}
 .am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,:is(#am-popover,#am-popover-sub),.ReactModalPortal [role="dialog"]{animation:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back{animation:none}}
 
 
 body:not(.am-library-open) #am-library {display:none!important}
@@ -645,13 +798,14 @@ body.am-ready .am-native-panel-open {
 body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
 /* Native panels share Spotify's stacking context; lift it over the custom views. So do the search field's live
-   results (#search-dropdown, inside the toolbar), which the library hid while typing. */
-body:is(.am-panel-open,.am-library-open:has(#search-dropdown)) #main {z-index:30!important}
+   results (#search-dropdown, inside the toolbar), which the library hid while typing. The :has() is on #main, not
+   body: on body, every element added anywhere (a menu's rows) re-checked it and restyled the page (~6ms a menu). */
+body.am-panel-open #main,body.am-library-open #main:has(#search-dropdown) {z-index:30!important}
 /* Lifted, Spotify's transparent layout covers the library and artist views; let clicks through to them. */
-body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-open:has(#search-dropdown) #main {pointer-events:none}
-body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-open #main:has(#search-dropdown) {pointer-events:none}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
-body:is(.am-panel-open,.am-library-open:has(#search-dropdown)) :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
+body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#search-dropdown),body.am-library-open #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
@@ -661,8 +815,10 @@ body.am-ready .am-native-panel-open [data-am-fill] {
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
 }
-/* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. */
-body.am-ready [data-am-sheet] :has(> * > [class*="tab-list__container"]) > button {display:none!important}
+/* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. The :has()
+   is on the button: with a bare :has() subject Chromium tests every element against it, and any element added
+   anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
+body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
@@ -880,6 +1036,8 @@ body.am-liquid #am-player {background:none;border-color:transparent;box-shadow:n
 body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
 body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
+body.am-liquid .am-toast[data-slot="1"] {backdrop-filter:url(#am-glass-toast-1);-webkit-backdrop-filter:url(#am-glass-toast-1)}
+body.am-liquid .am-toast[data-slot="2"] {backdrop-filter:url(#am-glass-toast-2);-webkit-backdrop-filter:url(#am-glass-toast-2)}
 /* Eco mode, or Windows' "Transparency effects" off (reduced transparency), sets body.am-solid (theme.js): glass becomes
    solid but keeps its depth, and nothing re-blurs the page on every frame. */
 body.am-solid #am-player,body.am-solid.am-liquid #am-player,body.am-solid.am-tinted #am-player {background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}

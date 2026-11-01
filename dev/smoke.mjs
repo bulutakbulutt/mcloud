@@ -216,12 +216,13 @@ try {
 
   await check('track menu and profile corner', async () => {
     await page.click('.am-more');
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     // Liquid Glass: the menu's own filter, its nine-piece map placed for its size (by a ResizeObserver: after a frame's rAF callbacks, before its paint).
     const menuGlass = () => page.evaluate(async () => { for (let n = 0; n < 2; n++) await new Promise(r => requestAnimationFrame(r)); const p = document.getElementById('am-popover'), f = document.getElementById('am-menu-glass-' + p.dataset.amGlass), i = [...f.querySelectorAll('feImage')], br = i.find(e => e.dataset.piece === 'br');
-      return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight]; });
-    const [filter, pieces, mapped, right, bottom, width, height] = await menuGlass();
-    assert.deepEqual([filter, pieces, mapped, right, bottom], ['url("#am-menu-glass-0")', 8, true, width, height]);
+      return [getComputedStyle(p).backdropFilter, i.length, i.every(e => e.getAttribute('href')?.startsWith('data:image/png')), Math.round(+br.getAttribute('x') + +br.getAttribute('width')), Math.round(+br.getAttribute('y') + +br.getAttribute('height')), p.offsetWidth, p.offsetHeight, p.dataset.amGlass]; });
+    // Its slot is whichever free one already holds pieces of its corner size (they differ between menu heights).
+    const [filter, pieces, mapped, right, bottom, width, height, slot] = await menuGlass();
+    assert.deepEqual([filter, pieces, mapped, right, bottom], [`url("#am-menu-glass-${slot}")`, 8, true, width, height]);
     await page.waitForTimeout(150); // the opening animation scales the menu, and the submenu is placed from its rows
     // Hover submenu test: hovering 'Çalma Listesine Ekle' opens the flyout submenu to the right
     await page.hover('#am-popover .am-popover-item:has-text("Çalma Listesine Ekle")');
@@ -234,7 +235,7 @@ try {
     // The submenu lies over the menu's edge by its padding, its first row level with the parent unless that runs off the
     // window (it does here); with the pointer in it the parent turns grey.
     const flyout = () => page.evaluate(() => { const item = document.querySelector('#am-popover .am-has-submenu').getBoundingClientRect(), sub = document.getElementById('am-popover-sub'); // offsets: its opening animation scales it
-      return [Math.round(sub.offsetLeft - item.right), sub.offsetTop - item.top <= -5, document.querySelector('#am-popover .am-has-submenu').classList.contains('am-parent')]; });
+      return [Math.round(sub.offsetLeft - item.right) || 0, sub.offsetTop - item.top <= -5, document.querySelector('#am-popover .am-has-submenu').classList.contains('am-parent')]; });
     assert.deepEqual(await flyout(), [0, true, false]);
     await page.hover('#am-popover-sub .am-popover-item >> nth=1');
     assert.deepEqual(await flyout(), [0, true, true]);
@@ -247,7 +248,7 @@ try {
     // Right click on player also opens track menu
     await page.click('#am-player', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Sanatçıya Git', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     assert.equal(await page.textContent('.am-profile-name'), 'Emir Bilici');
@@ -680,30 +681,76 @@ try {
     await page.click('.am-hero-follow');
     assert.deepEqual(await page.evaluate(() => { const f = document.querySelector('.am-hero-follow'); return [f.classList.contains('am-active'), f.getAttribute('aria-pressed')]; }), [true, 'true']);
     await page.waitForFunction(() => (window.__libraryAdds || []).includes('spotify:artist:mock'));
-    await page.waitForFunction(() => document.querySelector('.am-toast.am-toast-show')?.textContent === 'Sena Şener takip ediliyor.');
+    await page.waitForFunction(() => document.querySelector('.am-toasts > .am-toast-show:last-child')?.textContent === 'Sena Şener takip ediliyor.');
     await page.click('.am-hero-follow');
     await page.waitForFunction(() => (window.__libraryRemoves || []).includes('spotify:artist:mock'));
-    assert.equal(await page.textContent('.am-toast'), 'Sena Şener takipten çıkarıldı.');
+    assert.equal(await page.textContent('.am-toasts > :last-child'), 'Sena Şener takipten çıkarıldı.');
     assert.equal(await page.getAttribute('.am-hero-follow', 'aria-pressed'), 'false');
     // Back and share + more float on the toolbar glass, in the artist view's own layer, one shape each on their rects.
     assert.deepEqual(await page.evaluate(() => { const g = [...document.querySelectorAll('#am-artist .am-tglass-root .am-tglass')].map(e => e.getBoundingClientRect()), b = document.querySelector('.am-artist-back').getBoundingClientRect();
       return [document.getElementById('am-artist').classList.contains('am-tglass-on'), g.length, Math.round(g[0].left) === Math.round(b.left), g[1].height]; }), [true, 2, true, 36]);
     // Share copies the link and says so above the player (Spotify's own toasts stay under the artist view).
     await page.click('#am-artist .am-artist-actions button[aria-label="Paylaş"]');
-    await page.waitForFunction(() => /^Bağlantı kopyala/.test(document.querySelector('.am-toast.am-toast-show')?.textContent));
+    await page.waitForFunction(() => /^Bağlantı kopyala/.test(document.querySelector('.am-toasts > .am-toast-show:last-child')?.textContent));
     // It is Liquid Glass with a lens of its own, drawn at the toast's size.
     assert.match(await page.evaluate(() => getComputedStyle(document.querySelector('.am-toast')).backdropFilter), /url\(.*#am-glass-toast/);
-    await page.waitForFunction(() => document.querySelector('#am-glass-toast feImage').getAttribute('width') === String(document.querySelector('.am-toast').offsetWidth));
+    await page.waitForFunction(() => { const t = document.querySelector('.am-toasts > :last-child'), id = 'am-glass-toast' + (+t.dataset.slot ? '-' + t.dataset.slot : ''); return document.querySelector(`#${id} feImage`).getAttribute('width') === String(t.offsetWidth); });
     // Right-click on song row opens context menu
     await page.click('.am-song >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Çalma Listesine Ekle', 'Albüme Git', 'Şarkı Bağlantısını Kopyala']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çalma Listesine Ekle', 'Çal', 'Sıraya Ekle', 'Katkıda Bulunanları Görüntüle', 'Albüme Git', 'Şarkı Bağlantısını Kopyala']);
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#am-popover').isHidden());
     await page.click('.am-artist-back');
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open') && !document.body.classList.contains('am-tinted'));
   });
   await shot('artist');
+
+  await check('profiles: Apple Music\'s header (#59)', async () => {
+    // Spotify's profile markup (section > div > entity-header with user-image; the action bar in wrappers after it).
+    assert.deepEqual(await page.evaluate(() => { const host = document.querySelector('.am-native-main'), sec = document.createElement('section');
+      sec.innerHTML = '<div><div data-testid="entity-header"><div style="background-color: rgb(176, 8, 16)"></div><div class="main-entityHeader-contentWrapper"><div class="main-entityHeader-imageContainer"><div data-testid="user-image"></div></div><div class="main-entityHeader-headerText"><span class="encore-text-body-small">Profile</span><span><h1>Leo</h1></span><div><span>48 Followers</span></div></div></div></div>'
+        + '<div><div><div data-testid="action-bar"><div data-testid="action-bar-row"><button data-encore-id="buttonSecondary">Follow</button><button data-encore-id="buttonTertiary">…</button></div></div></div></div></div>';
+      host.append(sec); const cs = s => getComputedStyle(sec.querySelector(s));
+      const out = [cs('[data-testid="entity-header"] > [style]').display, cs('.main-entityHeader-headerText > span').display, cs('h1').fontSize, cs('[data-encore-id="buttonTertiary"]').borderRadius, cs('[data-encore-id="buttonSecondary"]').backgroundColor === getComputedStyle(document.body).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)];
+      sec.remove(); return out; }), ['none', 'none', '28px', '50%', true]);
+  });
+
+  await check('View Credits opens Spotify\'s dialog; Go to Artist Radio opens the radio playlist (#59)', async () => {
+    // Credits: the action Spotify's own track menu dispatches to its store, for the song the menu is about.
+    await page.click('.am-more');
+    await page.click('#am-popover .am-popover-item:has-text("Katkıda Bulunanları Görüntüle")');
+    assert.deepEqual(await page.evaluate(() => window.__dispatched?.at(-1)), { type: 'SHOW_TRACK_CREDITS', isOpen: true, trackUri: 'spotify:track:1' });
+    // Spotify's dialogs are <dialog> elements in .Root; the card (the dialog's only child, as in Credits, or the dialog
+    // itself when it holds a header and a body, as Keyboard Shortcuts does) is a frosted sheet, and only the card.
+    assert.deepEqual(await page.evaluate(() => { const sheet = n => { const cs = getComputedStyle(n); return cs.borderRadius === '16px' && /blur\(40px\)/.test(cs.backdropFilter); };
+      const open = (...parts) => { const d = document.createElement('dialog'); d.append(...parts.map(t => Object.assign(document.createElement('div'), { textContent: t }))); document.querySelector('.Root').append(d); d.showModal(); return d; };
+      const one = open('Credits'), out = [sheet(one), sheet(one.firstChild), getComputedStyle(one, '::backdrop').backgroundColor]; one.close(); one.remove();
+      const two = open('Keyboard Shortcuts', 'Basic'); out.push(sheet(two), sheet(two.firstChild)); two.close(); two.remove(); return out; }), [false, true, 'rgba(0, 0, 0, 0.35)', true, false]);
+    // Spotify's older react-modal windows (Playlist permissions) take the same sheet and dim.
+    assert.deepEqual(await page.evaluate(() => { const portal = document.createElement('div'); portal.className = 'ReactModalPortal';
+      portal.innerHTML = '<div style="position:fixed;inset:0;background-color:rgba(0,0,0,.7)"><div role="dialog"><div data-testid="playlist-permissions-modal">Shared with</div></div></div>'; document.body.append(portal);
+      const card = getComputedStyle(portal.querySelector('[data-testid]')), out = [card.borderRadius, /blur\(40px\)/.test(card.backdropFilter), getComputedStyle(portal.firstElementChild).backgroundColor]; portal.remove(); return out; }), ['16px', true, 'rgba(0, 0, 0, 0.35)']);
+    // Credits' Encore list rows: a grey caption over one rounded group, a hairline between rows.
+    assert.deepEqual(await page.evaluate(() => { const d = document.createElement('dialog'), card = document.createElement('div'), sec = document.createElement('div');
+      sec.innerHTML = '<span data-encore-id="text">Artist</span><div data-encore-id="listRow">A<button data-encore-id="buttonSecondary">Follow</button></div><div data-encore-id="listRow">B</div>'; card.append(sec); d.append(card); document.querySelector('.Root').append(d); d.showModal();
+      const [cap, a, b] = sec.children, cs = n => getComputedStyle(n), out = [cs(cap).textTransform, cs(a).borderTopLeftRadius, cs(a).borderBottomLeftRadius, cs(b).borderTopLeftRadius, cs(b).borderBottomLeftRadius, /linear-gradient/.test(cs(b).backgroundImage), cs(a.querySelector('button')).animationDelay];
+      d.close(); d.remove(); return out; }), ['uppercase', '10px', '0px', '0px', '10px', true, '0.18s']);
+    await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
+    await page.waitForSelector('body.am-artist-open .am-song');
+    await page.click('.am-song >> nth=1', { button: 'right' });
+    await page.click('#am-popover .am-popover-item:has-text("Katkıda Bulunanları Görüntüle")');
+    assert.equal(await page.evaluate(() => window.__dispatched.at(-1).trackUri), 'spotify:track:t1');
+    // Radio: Spotify's server names a playlist made from the artist; the theme opens it.
+    await page.click('.am-artist-name', { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Bu Sanatçıyı Çalma")');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sanatçıyı Çal', 'Sanatçı Bağlantısını Kopyala', 'Bu Sanatçıyı Çalma', 'Sanatçı Radyosuna Git']);
+    await page.click('#am-popover .am-popover-item:has-text("Sanatçı Radyosuna Git")');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/playlist/radio');
+    assert.match(await page.evaluate(() => window.__cosmos.at(-1)), /\/seed_to_playlist\/spotify:artist:mock\?/);
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
+  });
 
   await check('locale-prefixed artist links and portrait-only artists', async () => {
     await page.evaluate(() => { window.__savedHeader = window.__mockArtist.headerImage; window.__mockArtist.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
@@ -798,11 +845,13 @@ try {
     // Right-click on library card opens context menu
     await page.click('.am-library-card >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala']);
-    await page.keyboard.press('Escape');
+    // Spotify's own menu offers removal for a saved album (#59).
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala', 'Kitaplıktan Çıkar']);
+    await page.click('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
+    assert.equal(await page.evaluate(() => window.__libraryRemoves.at(-1)), await page.evaluate(() => document.querySelector('.am-library-card').dataset.uri));
     assert.ok(await page.locator('#am-popover').isHidden());
   });
-  await shot('library');
 
   await check('search results as macOS 27 Music\'s suggestions', async () => {
     await page.fill('#global-nav-bar input', 'sena');
@@ -852,6 +901,236 @@ try {
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-suggestions-loading-dropdown'));
   });
+
+  await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
+    // An feImage given its href again paints nothing until it reloads: a new menu showed a sharp square for a frame.
+    // A two-row menu (a folder's) moves to a slot already holding its smaller corners, and back.
+    await page.evaluate(() => { window.__hrefSets = 0; const mo = new MutationObserver(r => { window.__hrefSets += r.filter(m => m.attributeName === 'href').length; });
+      for (const f of document.querySelectorAll('[id^="am-menu-glass-"]')) mo.observe(f, { attributes: true, subtree: true }); });
+    const slots = [];
+    for (let n = 0; n < 2; n++) {
+      await page.click('.am-more'); await page.waitForTimeout(100); slots.push(await page.getAttribute('#am-popover', 'data-am-glass')); await page.keyboard.press('Escape');
+      await page.click('#am-sidebar .am-list-row[title="Ruh Hali"]', { button: 'right' }); await page.waitForTimeout(100); slots.push(await page.getAttribute('#am-popover', 'data-am-glass')); await page.keyboard.press('Escape');
+    }
+    assert.equal(await page.evaluate(() => window.__hrefSets), 0);
+    assert.ok(slots[0] !== slots[1] && slots[0] === slots[2] && slots[1] === slots[3], slots.join());
+    // Small menus read clearer, as Liquid Glass does on small things: the two-row menu's glass blurs 1.5px, the track menu's 6.8.
+    assert.deepEqual(await page.evaluate(([a, b]) => [a, b].map(n => document.querySelector(`#am-menu-glass-${n} feGaussianBlur`).getAttribute('stdDeviation')), [slots[0], slots[1]]), ['6.8', '1.5']);
+    // Spotify puts a closed submenu back when it opens again, still marked with a slot another menu took meanwhile:
+    // it gets a slot of its own again.
+    assert.ok(await page.evaluate(async () => { const frame = () => new Promise(r => requestAnimationFrame(r)), make = () => { const tip = document.createElement('div'); tip.setAttribute('data-tippy-root', ''); tip.innerHTML = '<ul role="menu"><li><button role="menuitem"><span>Row</span></button></li></ul>'; return tip; };
+      const a = make(); document.body.append(a); await frame(); const was = a.dataset.amGlass; a.remove(); await frame();
+      const b = make(); document.body.append(b); await frame(); document.body.append(a); await frame();
+      const own = a.dataset.amGlass !== b.dataset.amGlass && b.dataset.amGlass === was; a.remove(); b.remove(); return own; }));
+  });
+
+  await check('every row of our menus has its icon, in Apple Music\'s icon column', async () => {
+    await page.click('.am-more');
+    await page.waitForTimeout(150); // the opening animation scales the menu
+    // The icon centred in a 14px column where text starts (10px in), the label 22px from there.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-popover .am-popover-item')].map(item => {
+      const icon = item.querySelector('.am-menu-icon'), range = document.createRange(); range.selectNodeContents(item.lastChild);
+      const left = item.getBoundingClientRect().left;
+      return icon && [icon.getBoundingClientRect().left - left, icon.getBoundingClientRect().width, range.getBoundingClientRect().left - left].map(Math.round).join(); }).filter(Boolean).every(v => v === '11,12,32')), true);
+    await page.keyboard.press('Escape');
+  });
+
+  await check('menus open at once; rows that need the library arrive after (#59)', async () => {
+    // Spotify slow to answer: the menu is up within the right-click, its library rows join when they come.
+    assert.deepEqual(await page.evaluate(() => { window.__apiDelay = 400; const row = document.querySelector('#am-sidebar .am-list-row[title="Yol Şarkıları"]'), b = row.getBoundingClientRect();
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: b.left + 20, clientY: b.top + 5 }));
+      const items = [...document.querySelectorAll('#am-popover .am-popover-item')].map(i => i.textContent); return [!document.getElementById('am-popover').hidden, items.includes('Çal'), items.includes('Sil')]; }), [true, true, false]);
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
+    await page.evaluate(() => { window.__apiDelay = 0; });
+    await page.keyboard.press('Escape');
+    // A folder opens titled with its name, as Spotify's folder page is.
+    await page.click('#am-sidebar .am-list-row[title="Ruh Hali"]');
+    await page.waitForFunction(() => document.querySelector('.am-library-title')?.textContent === 'Ruh Hali');
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-library-open'));
+    // A folder has a menu too.
+    await page.click('#am-sidebar .am-list-row[title="Ruh Hali"]', { button: 'right' });
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Klasörü Aç', 'Yeni Çalma Listesi']);
+    await page.keyboard.press('Escape');
+  });
+
+  await check('library actions on playlists and the playing track (#59)', async () => {
+    // Your own playlist: on or off your profile, and delete confirmed in a submenu.
+    const row = name => `#am-sidebar .am-list-row[title="${name}"]`;
+    await page.click(row('Sabah Kahvesi'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
+    const items = await page.locator('#am-popover .am-popover-item').allTextContents();
+    assert.ok(['Ayrıntıları Düzenle', 'Gizli Yap', 'Sil'].every(t => items.includes(t)) && items.some(t => /^Profil(den Kaldır|e Ekle)$/.test(t)), items.join());
+    // Edit details: a small sheet, saved through PlaylistAPI.updateDetails.
+    await page.click('#am-popover .am-popover-item:has-text("Ayrıntıları Düzenle")');
+    await page.fill('#am-edit-details .am-edit-name', 'Sabah Kahvesi 2');
+    await page.click('#am-edit-details .am-edit-save');
+    await page.waitForSelector('#am-edit-details', { state: 'detached' });
+    assert.equal(await page.evaluate(() => window.__details?.at(-1)?.name), 'Sabah Kahvesi 2');
+    await page.click(row('Sabah Kahvesi'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Sil")');
+    await page.hover('#am-popover .am-popover-item:has-text("Sil")');
+    await page.click('#am-popover-sub .am-popover-item:has-text("Silinsin")');
+    const uri = await page.getAttribute(row('Sabah Kahvesi'), 'data-uri');
+    assert.deepEqual(await page.evaluate(() => window.__rootlistRemoves), [uri]);
+    // A playlist you follow is only removed from the library.
+    await page.evaluate(uri => { window.__followed = [uri]; }, await page.getAttribute(row('Koşu'), 'data-uri'));
+    await page.click(row('Koşu'), { button: 'right' });
+    await page.waitForSelector('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
+    assert.ok(!(await page.locator('#am-popover .am-popover-item').allTextContents()).includes('Sil'));
+    await page.keyboard.press('Escape');
+    // The playing track from your own playlist: "Remove from this Playlist" names its row by uid.
+    await page.evaluate(uri => { const d = Spicetify.Player.data; window.__ctx = d.context; d.context = { uri }; d.item.uid = 'u1'; }, uri);
+    await page.click('.am-more');
+    await page.click('#am-popover .am-popover-item:has-text("Bu Listeden Çıkar")');
+    assert.deepEqual(await page.evaluate(() => window.__playlistRemoves), [{ uri, items: [{ uri: 'spotify:track:1', uid: 'u1' }] }]);
+    await page.evaluate(() => { Spicetify.Player.data.context = window.__ctx; delete Spicetify.Player.data.item.uid; });
+  });
+  await check('drag and drop onto the sidebar, with Spotify\'s drag data (#59)', async () => {
+    // A drag as Spotify's pages start one; edge: 'top' drops on a row's top edge, else its middle.
+    const drop = (sel, data, edge) => page.evaluate(([sel, data, edge]) => { const row = [...document.querySelectorAll(sel)].find(n => n.offsetParent), b = row.getBoundingClientRect(), dt = new DataTransfer();
+      for (const [k, v] of Object.entries(data)) dt.setData(k, v);
+      const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: b.left + 20, clientY: edge === 'top' ? b.top + 2 : b.top + b.height / 2 }, over = new DragEvent('dragover', opts);
+      row.dispatchEvent(over); const seen = [over.defaultPrevented, ['am-drop-into', 'am-drop-before', 'am-drop-after'].find(c => row.classList.contains(c)) || '']; row.dispatchEvent(new DragEvent('drop', opts)); return seen; }, [sel, data, edge]);
+    const track = { 'text/uri-list': 'https://open.spotify.com/track/9', 'text/x-spotify-tracks': 'spotify:track:9' };
+    await drop('#am-sidebar .am-list-row[title="Odak"]', track);   // the first dragover loads the playlists you can add to
+    await page.waitForTimeout(100);
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Odak"]', track), [true, 'am-drop-into']);
+    await page.waitForFunction(() => window.__playlistAdds?.some(a => a.playlistUri === 'spotify:playlist:2' && a.uris.join() === 'spotify:track:9'));
+    // A drag without Spotify's data is left alone; an album onto Albums saves it; a playlist onto a pinned row's top
+    // edge is pinned above it.
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Odak"]', { 'text/plain': 'hello' }), [false, '']);
+    const albums = await page.evaluate(() => [...document.querySelectorAll('#am-sidebar .am-nav-row')].findIndex(n => n.textContent === 'Albümler'));
+    assert.deepEqual(await page.evaluate(i => { const row = document.querySelectorAll('#am-sidebar .am-nav-row')[i], b = row.getBoundingClientRect(), dt = new DataTransfer(); dt.setData('text/x-spotify-albums', 'spotify:album:7');
+      const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: b.left + 20, clientY: b.top + b.height / 2 }, over = new DragEvent('dragover', opts); row.dispatchEvent(over); row.dispatchEvent(new DragEvent('drop', opts)); return over.defaultPrevented; }, albums), true);
+    await page.waitForFunction(() => window.__libraryAdds?.includes('spotify:album:7'));
+    // The pointer stays over the sidebar after a drop, where rows otherwise hold still; your own move shows at once.
+    await page.hover('#am-sidebar .am-list-row[title="Koşu"]');
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Sabah Kahvesi"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }, 'top'), [true, 'am-drop-before']);
+    await page.waitForFunction(() => JSON.stringify(window.__pins?.at(-1)) === JSON.stringify(['spotify:playlist:2', { before: { uri: 'spotify:playlist:0' } }]));
+    // Spotify tells of a pin only through update_pin. Then the library is put back.
+    await page.waitForFunction(() => [...document.querySelectorAll('#am-sidebar .am-list-row')].filter(r => r.querySelector('.am-list-pin')).map(r => r.title).join().includes('Odak,Sabah Kahvesi'));
+    await page.evaluate(() => { const l = window.__mockLibrary, [item] = l.splice(l.findIndex(i => i.uri === 'spotify:playlist:2'), 1); item.pinned = false; l.splice(l.findIndex(i => i.uri === 'spotify:playlist:1') + 1, 0, item); window.__libraryUpdate(); });
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => !document.querySelector('#am-sidebar .am-list-row[title="Odak"] .am-list-pin'));
+    // A playlist onto the middle of a folder goes into it, at its top.
+    assert.deepEqual(await drop('#am-sidebar .am-list-row[title="Ruh Hali"]', { 'text/x-spotify-playlists': 'spotify:playlist:2' }), [true, 'am-drop-into']);
+    await page.waitForFunction(() => JSON.stringify(window.__rootlistMoves?.at(-1)) === JSON.stringify(['spotify:playlist:2', { after: { uri: 'spotify:folder:ruh' } }]));
+    assert.equal(await page.locator('#am-sidebar .am-drop-into, #am-sidebar .am-drop-before').count(), 0);
+    // The sidebar's rows start drags Spotify's pages understand.
+    assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
+  });
+  await check('Spotify\'s menus in the theme\'s measure, their icons in Apple Music\'s column (#59)', async () => {
+    // Spotify's rows: [icon | label], and a submenu row [icon + label | chevron].
+    const shown = () => page.evaluate(() => [...document.querySelectorAll('#mock-tip svg')].map(s => s.getBoundingClientRect().width > 0));
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-tip'; tip.setAttribute('data-tippy-root', '');
+      const icon = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
+      // Spotify's rows are flex rows.
+      tip.innerHTML = `<style>#mock-tip :is(button,[role="menuitem"]) { display: flex; align-items: center; border: 0; font: inherit }</style><ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><div role="menuitem"><div><div role="search"><input placeholder="Find a playlist"><div><span>${icon}</span></div></div></div></div></li><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li><li><button role="link" disabled><div>${icon}</div><div><span>Report</span></div><div>${icon}</div></button></li><li><button role="menuitem"><span>${icon}Experimental features</span></button></li><li><button><div>${icon}</div><div>Home config</div></button></li><li><button role="menuitem"><div><span>Profile</span></div></button></li><li><button role="menuitem" id="mock-update"><div data-encore-id="listRow"><div class="e-legacy-list-row__header-side"><img width="56" height="56" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div><div class="e-legacy-list-row__header"><div class="e-legacy-list-row__column"><p>New show near you</p></div><div class="e-legacy-list-row__slot"><div></div></div></div></div></button></li></ul>`;
+      document.body.append(tip); });
+    await page.waitForFunction(() => document.querySelector('#mock-tip [role="menuitem"][data-am-iconed]'));
+    // The search icon is part of its field: it stays, at 12px.
+    // Report, a role="link" row: its leading icon goes too, its "opens outside" mark stays, in the same measure.
+    // Your Updates rows keep their picture at its size; the unread dot takes the accent.
+    assert.deepEqual(await page.evaluate(() => { const row = document.getElementById('mock-update'), img = row.querySelector('img'), dot = row.querySelector('[class*="list-row__slot"] > div');
+      return [getComputedStyle(img.parentElement).display !== 'none' && img.getBoundingClientRect().width, getComputedStyle(dot).backgroundColor === getComputedStyle(document.body).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)]; }), [56, true]);
+    // Every leading icon shows (Spicetify's rows hold the icon and the label in one part); a submenu's chevron gives way
+    // to the theme's ›.
+    assert.deepEqual(await shown(), [true, true, true, false, true, true, true, true]);
+    // Spicetify's own rows are bare buttons: same measure.
+    assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Home config')).padding), '3px 10px');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [role="link"]')).padding), '3px 10px');
+    // "Find a playlist" as a macOS search field.
+    assert.deepEqual(await page.evaluate(() => { const i = getComputedStyle(document.querySelector('#mock-tip [role="search"] input')); return [i.height, i.borderRadius, i.fontSize]; }), ['24px', '7px', '13px']);
+    // A submenu row (aria-expanded) ends in the theme's thin ›, not Spotify's triangle.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [aria-expanded] > :last-child'), '::after').content), '"›"');
+    // In the theme's menu measure: 13px labels on 21px rows, separators as the theme's.
+    assert.deepEqual(await page.evaluate(() => { const item = document.querySelector('#mock-tip [role="menuitem"]'), sep = document.querySelector('#mock-tip ul > div');
+      return [getComputedStyle(item).padding, getComputedStyle(item.querySelector('span')).fontSize, getComputedStyle(sep).height, getComputedStyle(sep).marginLeft]; }), ['3px 10px', '13px', '1px', '11px']);
+    // As in Apple Music's menus: icons at 12px in a 14px column where a plain row's text starts, the label 22px from
+    // there; a row without an icon is not indented.
+    assert.deepEqual(await page.evaluate(() => { const slot = document.querySelector('#mock-tip [data-am-icon]'), at = sel => [...document.querySelectorAll('#mock-tip span')].find(n => n.textContent === sel).getBoundingClientRect().left;
+      return [getComputedStyle(slot).width, slot.querySelector('svg').getBoundingClientRect().width, Math.round(at('Add to queue') - at('Profile'))]; }), ['14px', 12, 22]);
+    // Liked Songs rows take the theme's star for Spotify's purple tile, filled when the row removes the song.
+    assert.deepEqual(await page.evaluate(async () => {
+      const rows = ['Remove from Liked Songs', 'Add to Liked Songs'].map(label => { const li = document.createElement('li');
+        li.innerHTML = `<button role="menuitem"><div><img src="https://misc.scdn.co/liked-songs/liked-songs-64.jpg" width="16" height="16"></div><div><span>${label}</span></div></button>`; document.querySelector('#mock-tip ul').append(li); return li; });
+      await new Promise(r => requestAnimationFrame(r));
+      const out = rows.map(li => { const slot = li.querySelector('[data-am-liked]'), before = getComputedStyle(slot, '::before'), mask = before.maskImage || before.webkitMaskImage;
+        return [slot.dataset.amLiked, getComputedStyle(slot.querySelector('img')).display, mask.includes("fill='black'")]; });
+      // The first menu after a launch says Add until the song's state arrives: the star follows the text.
+      rows[1].querySelector('span').textContent = 'Remove from Liked Songs'; await new Promise(r => setTimeout(r));
+      out.push(rows[1].querySelector('[data-am-liked]').dataset.amLiked);
+      rows.forEach(li => li.remove()); return out; }), [['on', 'none', true], ['off', 'none', false], 'on']);
+    // A submenu opening down from its row (anchored by its top) rises by the list's padding, so its first row is level
+    // with the parent row; one anchored by its bottom (pushed up to fit) stays.
+    assert.deepEqual(await page.evaluate(() => ['inset: 0px auto auto 0px', 'inset: auto auto 0px 0px'].map(inset => { const sub = document.createElement('div'); sub.setAttribute('data-tippy-root', ''); sub.style.cssText = 'position: absolute; ' + inset;
+      document.querySelector('#mock-tip ul').append(sub); const m = getComputedStyle(sub).marginTop; sub.remove(); return m; })), ['-5px', '0px']);
+    await page.evaluate(() => document.getElementById('mock-tip').remove());
+  });
+
+  await check('a scrolling menu list feathers out at its edge (#59)', async () => {
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-scroll-tip'; tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<ul role="menu" style="display:block;max-height:100px;overflow-y:auto;margin:0;padding:0">' + Array.from({ length: 12 }, (_, i) => `<li><button role="menuitem"><div><span>List ${i}</span></div></button></li>`).join('') + '</ul>';
+      document.body.append(tip); });
+    // The rows over the bottom 20px fade out to the edge; the top ones stay whole until the list scrolls.
+    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => b.style.getPropertyValue('--am-mask')));
+    assert.deepEqual(await page.evaluate(() => { const rows = [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')], cut = rows.find(b => b.style.getPropertyValue('--am-mask'));
+      return [rows[0].style.getPropertyValue('--am-mask'), /linear-gradient/.test(getComputedStyle(cut).maskImage || getComputedStyle(cut).webkitMaskImage)]; }), ['', true]);
+    await page.evaluate(() => { const ul = document.querySelector('#mock-scroll-tip ul'); ul.scrollTop = 40; });
+    // Scrolled, the top edge feathers too.
+    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => b.style.getPropertyValue('--am-mask').startsWith('linear-gradient(transparent')));
+    await page.evaluate(() => document.getElementById('mock-scroll-tip').remove());
+    // Spotify counts a submenu list's height in its own rows (40px, a 32px search); in the theme's rows it ends at the
+    // last one: a search, Create, a separator and three folders.
+    assert.deepEqual(await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-folder-tip'; tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<style>.mock-section{height:calc(var(--context-menu-submenu-length) * var(--context-menu-submenu-item-height,40px) + var(--context-menu-submenu-item-height,40px) + var(--context-menu-submenu-filter-height,32px) + var(--context-menu-submenu-divider-count,0) * var(--context-menu-submenu-divider-height,0px))}</style>'
+        + '<ul role="menu" style="display:block;margin:0;padding:0;list-style:none"><div class="mock-section" style="--context-menu-submenu-length:3;--context-menu-submenu-divider-count:1">'
+        + '<li><div role="menuitem"><div><div role="search"><input></div></div></div></li><li><button role="menuitem" style="display:flex;border:0;font:inherit"><span>Create folder</span></button></li><div></div>'
+        + ['a', 'b', 'c'].map(n => `<li><button role="menuitem" style="display:flex;border:0;font:inherit"><span>${n}</span></button></li>`).join('') + '</div></ul>';
+      document.body.append(tip); const section = tip.querySelector('.mock-section'), last = section.lastElementChild;
+      const height = section.getBoundingClientRect().height, content = last.getBoundingClientRect().bottom - section.getBoundingClientRect().top; tip.remove();
+      return [height < 140, Math.abs(height - content) <= 6]; }), [true, true], 'Spotify\'s count would be 192px (the preview\'s font is a little taller than the client\'s)');
+  });
+
+  await check('a Spotify menu that opens inside a sheet gets the theme\'s menu (#59)', async () => {
+    // Shared with: the Listener ▾ menu (Leave playlist) is a [data-tippy-root] inside the react-modal's dialog.
+    await page.evaluate(() => { const portal = document.createElement('div'); portal.className = 'ReactModalPortal'; portal.id = 'mock-sheet-menu';
+      portal.innerHTML = '<div><div role="dialog" tabindex="-1"><div data-testid="playlist-permissions-modal"><button>Listener</button><div class="mock-slot"></div></div></div></div>'; document.body.append(portal);
+      portal.querySelector('[role="dialog"]').focus(); });
+    await page.waitForTimeout(50);
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<div><ul role="menu"><li><button role="menuitemradio" style="padding:8px 8px 8px 12px"><div><svg width="16" height="16"></svg></div><div><span>Leave playlist</span></div></button></li></ul></div>';
+      document.querySelector('#mock-sheet-menu .mock-slot').append(tip); });
+    await page.waitForFunction(() => document.querySelector('#mock-sheet-menu [data-tippy-root]')?.dataset.amGlass !== undefined);
+    assert.deepEqual(await page.evaluate(() => { const row = document.querySelector('#mock-sheet-menu [role="menuitemradio"]'), style = getComputedStyle(row);
+      return [style.paddingTop, style.paddingLeft, Math.round(row.querySelector('svg').getBoundingClientRect().width)]; }), ['3px', '10px', 12]);
+    await page.evaluate(() => document.getElementById('mock-sheet-menu').remove());
+  });
+
+  await check('Spotify\'s snackbars come up as the theme\'s glass toast, with their button (#59)', async () => {
+    await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer';
+      c.innerHTML = '<div class="notistack-Snackbar"><div role="alert"><div><span data-encore-id="text">Removed from Your Library.</span><button>Undo</button></div></div></div>';
+      c.querySelector('button').onclick = () => { window.__undo = true; }; c.firstChild.__reactFiber$mock = { memoizedProps: {}, return: { memoizedProps: { open: true, id: 'undo' } } };
+      document.querySelector('.mock-snackbar-host').append(c); });
+    await page.waitForFunction(() => document.querySelector('.am-toasts > .am-toast-show:last-child')?.firstChild?.textContent === 'Removed from Your Library.');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.notistack-SnackbarContainer')).visibility), 'hidden');
+    await page.click('.am-toasts > :last-child .am-toast-action');
+    assert.ok(await page.evaluate(() => window.__undo));
+    assert.deepEqual(await page.evaluate(() => window.__closedSnacks), ['undo'], 'one with a button closes with our toast, after its click');
+    await page.evaluate(() => document.querySelector('.notistack-SnackbarContainer').remove());
+    // Two at once stack: the newest at the bottom, the other above it, apart.
+    await page.evaluate(() => { const c = document.createElement('div'); c.className = 'notistack-SnackbarContainer'; document.querySelector('.mock-snackbar-host').append(c);
+      for (const m of ['Added to queue', 'Added to Your Library.']) { const s = document.createElement('div'); s.className = 'notistack-Snackbar'; s.innerHTML = `<div role="alert"><span data-encore-id="text">${m}</span></div>`; s.__reactFiber$mock = { memoizedProps: { open: true, id: m } }; c.append(s); } });
+    await page.waitForFunction(() => document.querySelectorAll('.am-toasts > .am-toast-show').length >= 2);
+    // Closed at once, so Spotify's provider (preventDuplicate) shows the next one with the same text right away.
+    assert.deepEqual(await page.evaluate(() => window.__closedSnacks.slice(1)), ['Added to queue', 'Added to Your Library.']);
+    await page.waitForTimeout(350);
+    assert.ok(await page.evaluate(() => { const [a, b] = [...document.querySelectorAll('.am-toasts > .am-toast-show')].slice(-2), ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+      return a.textContent === 'Added to queue' && b.textContent === 'Added to Your Library.' && ra.bottom <= rb.top; }), 'the newest sits under the older one, without overlap');
+    await page.evaluate(() => document.querySelector('.notistack-SnackbarContainer').remove());
+  });
+  await shot('library');
 
   await check('the toolbar Home leaves a library view (#59)', async () => {
     // Library views are /?am-library=…; Spotify's Home does nothing where the path is already '/'.
@@ -946,7 +1225,7 @@ try {
     await page.waitForFunction(() => document.body.classList.contains('am-solid'));
     assert.deepEqual(await checks(), [false, false, true]);
     await pick('Cam efekti: Tam');
-    assert.match(await page.textContent('.am-toast'), /saydamlık/);
+    assert.match(await page.textContent('.am-toasts > :last-child'), /saydamlık/);
     assert.deepEqual(await checks(), [false, false, true]);
     await pick('Cam efekti: Dengeli');
     await cdp.send('Emulation.setEmulatedMedia', { features: [] });

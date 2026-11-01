@@ -13,8 +13,8 @@
   library.push({ uri: 'spotify:collection:tracks', type: 'liked-songs', name: 'Beğenilen Şarkılar', pinned: true, images: [] });
   const folders = { 'spotify:folder:ruh': ['Neşeli', 'Hüzünlü'].map((n, i) => ({ uri: 'spotify:playlist:f' + i, type: 'playlist', name: n, images: [{ url: art(300 + i * 30, '♪') }], owner: { displayName: 'emir' } })) };
   window.__mockLibrary = library;
-  // Spotify's library and rootlist emit 'update' through an emitter behind getEvents().
-  const emitter = { listeners: [], addListener(name, fn) { if (name === 'update') this.listeners.push(fn); }, removeListener() {}, emit() { this.listeners.forEach(fn => fn({})); } };
+  // Spotify's library and rootlist emit 'update' (and the library 'update_pin') through an emitter behind getEvents().
+  const emitter = { listeners: {}, addListener(name, fn) { (this.listeners[name] ||= []).push(fn); }, removeListener() {}, emit(name = 'update') { (this.listeners[name] || []).forEach(fn => fn({})); } };
   let created = 0;
   const createItem = type => async (name, location) => {
     const uri = `spotify:${type}:new${++created}`;
@@ -26,6 +26,8 @@
   window.__menus = [];
   window.Spicetify = {
     showNotification: m => { (window.__notes ||= []).push(m); },
+    // notistack's provider; the theme closes a snackbar it retold by the id on its React fiber.
+    Snackbar: { closeSnackbar: id => { (window.__closedSnacks ||= []).push(id); }, handleExitedSnack: () => {} },
     Menu: {
       Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } },
       SubMenu: class { constructor(name, items) { Object.assign(this, { name, items }); } register() { window.__menus.push(this); } deregister() {} },
@@ -105,7 +107,7 @@
       relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
     },
   };
-  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr' };
+  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
   Spicetify.GraphQL = {
     Definitions: { queryArtistOverview: { name: 'queryArtistOverview' } },
     Request: async (def, vars) => (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
@@ -113,6 +115,33 @@
   Object.assign(Spicetify.Platform.LibraryAPI, {
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
+    contains: async (...uris) => uris.map(() => true),
+    // As Spotify's: the item is pinned at the line and only update_pin is emitted.
+    pin: async (uri, where) => { (window.__pins ||= []).push([uri, where]);
+      const at = library.findIndex(i => i.uri === uri), [item] = at < 0 ? [] : library.splice(at, 1); if (!item) return;
+      const target = library.findIndex(i => i.uri === (where?.before || where?.after)?.uri); item.pinned = true;
+      library.splice(target < 0 ? 0 : target + (where?.after ? 1 : 0), 0, item); emitter.emit('update_pin'); },
+    unpin: async uri => { (window.__unpins ||= []).push(uri); },
+    getIsPinned: async (...uris) => uris.map(u => !!library.find(i => i.uri === u)?.pinned),
   });
+  // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
+  Object.assign(Spicetify.Platform.PlaylistAPI, {
+    getMetadata: async uri => { await new Promise(r => setTimeout(r, window.__apiDelay || 0)); const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', description: '', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own, canEditMetadata: own, permissions: { canAdministratePermissions: own, isPrivate: false } }; },
+    updateDetails: async (uri, details) => { (window.__details ||= []).push({ uri, ...details }); },
+    remove: async (uri, items) => { (window.__playlistRemoves ||= []).push({ uri, items }); },
+  });
+  Spicetify.Platform.PlaylistPermissionsAPI = { setBasePermission: async (uri, p) => { (window.__permissions ||= []).push([uri, p]); } };
+  Spicetify.Platform.CollectionPlatformAPI = { contains: async (set, uris) => uris.map(u => (window.__banned || []).includes(u)), add: async (set, uris) => { (window.__banned ||= []).push(...uris); }, remove: async (set, uris) => { window.__banned = (window.__banned || []).filter(u => !uris.includes(u)); } };
+  Object.assign(Spicetify.Platform.RootlistAPI, {
+    remove: async items => { (window.__rootlistRemoves ||= []).push(...items.map(i => i.uri)); },
+    setPublishedState: async (uri, on) => { (window.__published ||= []).push([uri, on]); },
+    contains: async uris => uris.map(u => library.some(i => i.uri === u)),
+    move: async (items, where) => { (window.__rootlistMoves ||= []).push([items.map(i => i.uri).join(), where]); },
+    moveFolder: async (item, where) => { (window.__rootlistMoves ||= []).push([item.uri, where]); },
+  });
+  // Spotify's Redux store, found by the theme in the React tree under #main (it opens Spotify's credits dialog), and the
+  // radio lookup Spotify's "Go to artist radio" makes.
+  document.getElementById('main').__reactContainer$mock = { child: { memoizedProps: { store: { getState: () => ({ ui: { trackCreditsModal: { isOpen: false } } }), dispatch: action => { (window.__dispatched ||= []).push(action); } } } } };
+  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url); return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();
