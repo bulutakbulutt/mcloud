@@ -961,13 +961,17 @@ try {
     await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });
   });
 
-  await check('a row cut by a scrolling menu list fades by how much of it shows (#59)', async () => {
+  await check('a scrolling menu list feathers out at its edge (#59)', async () => {
     await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-scroll-tip'; tip.setAttribute('data-tippy-root', '');
       tip.innerHTML = '<ul role="menu" style="display:block;max-height:100px;overflow-y:auto;margin:0;padding:0">' + Array.from({ length: 12 }, (_, i) => `<li><button role="menuitem"><div><span>List ${i}</span></div></button></li>`).join('') + '</ul>';
       document.body.append(tip); });
-    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => +b.style.getPropertyValue('--am-seen') > 0 && +b.style.getPropertyValue('--am-seen') < 1));
-    const seen = await page.evaluate(() => { const rows = [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')]; return [rows[0].style.getPropertyValue('--am-seen'), getComputedStyle(rows.find(b => b.style.getPropertyValue('--am-seen')).firstElementChild).opacity < 1]; });
-    assert.deepEqual(seen, ['', true]);
+    // The rows over the bottom 20px fade out to the edge; the top ones stay whole until the list scrolls.
+    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => b.style.getPropertyValue('--am-mask')));
+    assert.deepEqual(await page.evaluate(() => { const rows = [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')], cut = rows.find(b => b.style.getPropertyValue('--am-mask'));
+      return [rows[0].style.getPropertyValue('--am-mask'), /linear-gradient/.test(getComputedStyle(cut).maskImage || getComputedStyle(cut).webkitMaskImage)]; }), ['', true]);
+    await page.evaluate(() => { const ul = document.querySelector('#mock-scroll-tip ul'); ul.scrollTop = 40; });
+    // Scrolled, the top edge feathers too.
+    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => b.style.getPropertyValue('--am-mask').startsWith('linear-gradient(transparent')));
     await page.evaluate(() => document.getElementById('mock-scroll-tip').remove());
   });
 

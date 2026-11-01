@@ -1086,16 +1086,24 @@
         for(const list of new Set([...tip.querySelectorAll(featherRows)].map(row=>(row.closest('li')||row).parentElement)))if(list.childElementCount>6)featherSoon(scrollParent(list,tip));
       }
     };
-    // A row cut by a scrolling list's edge fades by the share of it that shows (--am-seen on the row, user.css).
+    // A scrolling list feathers out at its edges: rows within 20px of an edge it can scroll past get a mask (--am-mask,
+    // user.css) that fades their text to nothing at the edge, as one gradient across the rows. On the rows, not the list:
+    // a mask on the list would also cut the submenus nested in it (a folder's).
     const feathered=new WeakSet(),featherRows=':is([role^="menuitem"],li > [role="link"],li > button,.am-popover-item)';
     function scrollParent(node,root) { for(let n=node;n&&n!==root;n=n.parentElement)if(n.scrollHeight>n.clientHeight+1&&/auto|scroll/.test(getComputedStyle(n).overflowY))return n;return null; }
     function feather(list) {
-      const box=list.getBoundingClientRect();
+      // The fade ends where the list's padding starts, so no text reaches the glass's rim (it slid under it, looking outside).
+      const box=list.getBoundingClientRect(),style=getComputedStyle(list),F=20,top=list.scrollTop>0,bottom=list.scrollTop+list.clientHeight<list.scrollHeight-1,px=v=>v.toFixed(1)+'px';
+      const inTop=box.top+(parseFloat(style.paddingTop)||0),inBottom=box.bottom-(parseFloat(style.paddingBottom)||0);
       for(const row of list.querySelectorAll(featherRows)){
         if(row.parentElement.closest(featherRows))continue;
-        // Squared, so a half-cut row is a quarter there: a feather rather than a dimmed row.
-        const r=row.getBoundingClientRect(),seen=r.height?Math.max(0,Math.min(r.bottom,box.bottom)-Math.max(r.top,box.top))/r.height:1,value=seen>.98?'':(seen*seen).toFixed(2);
-        if(row.style.getPropertyValue('--am-seen')!==value)value?row.style.setProperty('--am-seen',value):row.style.removeProperty('--am-seen');
+        const r=row.getBoundingClientRect(),stops=[];
+        if(r.bottom>box.top&&r.top<box.bottom){
+          if(top&&r.top<inTop+F)stops.push('transparent '+px(inTop-r.top),'#000 '+px(inTop+F-r.top));
+          if(bottom&&r.bottom>inBottom-F)stops.push('#000 '+px(inBottom-F-r.top),'transparent '+px(inBottom-r.top));
+        }
+        const mask=stops.length?`linear-gradient(${stops.join(',')})`:'';
+        if(row.style.getPropertyValue('--am-mask')!==mask)mask?row.style.setProperty('--am-mask',mask):row.style.removeProperty('--am-mask');
       }
     }
     const featherQueue=new Set();let featherFrame=0;

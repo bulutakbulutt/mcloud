@@ -430,10 +430,10 @@ body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link
    the Encore list row's trailing slot. */
 body > [data-tippy-root] [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {width:8px!important;height:8px!important;border-radius:50%!important;background:var(--am-accent)!important}
 body > [data-tippy-root] [role^="menuitem"]:is(:hover,:focus-visible) [data-encore-id="listRow"] [class*="list-row__header"] > [class*="list-row__slot"] > div:empty {background:#fff!important}
-/* A long list (Add to playlist, Your Updates) scrolls inside its glass: a row cut by the edge fades by how much of it
-   shows (--am-seen, set by theme.js while it scrolls), as a feather, instead of being sliced. On the row's parts, not
-   a mask on the list: a mask would also cut the submenus nested in it (a folder's). */
-body > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) > *,.am-popover-item {opacity:var(--am-seen,1)}
+/* A long list (Add to playlist, Your Updates) scrolls inside its glass and feathers out at the edges it can scroll past:
+   theme.js gives the rows within 20px of such an edge a gradient (--am-mask) that fades their text to nothing there,
+   instead of slicing it. On the rows, not the list: a mask on the list would also cut the submenus nested in it. */
+body > [data-tippy-root] :is([role^="menuitem"],li > [role="link"],li > button),.am-popover-item {-webkit-mask-image:var(--am-mask,none);mask-image:var(--am-mask,none)}
 /* With menu icons on, a row without one lines its label up with the rows that have one (Spotify's profile menu mixes
    Spicetify's icon rows with its own plain ones). */
 body.am-menu-icons > [data-tippy-root] ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[data-am-indent] {padding-left:36px!important}
