@@ -929,7 +929,7 @@ try {
     const shown = () => page.evaluate(() => [...document.querySelectorAll('#mock-tip svg')].map(s => s.getBoundingClientRect().width > 0));
     await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-tip'; tip.setAttribute('data-tippy-root', '');
       const icon = '<svg width="16" height="16"><rect width="16" height="16"/></svg>';
-      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><div role="menuitem"><div><div role="search"><input placeholder="Find a playlist"><div><span>${icon}</span></div></div></div></div></li><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li><li><button role="link" disabled><div>${icon}</div><div><span>Report</span></div><div>${icon}</div></button></li><li><button role="menuitem"><span>${icon}Experimental features</span></button></li><li><button role="menuitem" id="mock-update"><div data-encore-id="listRow"><div class="e-legacy-list-row__header-side"><img width="56" height="56" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div><div class="e-legacy-list-row__header"><div class="e-legacy-list-row__column"><p>New show near you</p></div><div class="e-legacy-list-row__slot"><div></div></div></div></div></button></li></ul>`;
+      tip.innerHTML = `<ul role="menu"><li><button role="menuitem"><div>${icon}</div><div><span>Add to queue</span></div></button></li><div></div><li><div role="menuitem"><div><div role="search"><input placeholder="Find a playlist"><div><span>${icon}</span></div></div></div></div></li><li><button role="menuitem" aria-expanded="false"><div><span>${icon}</span>Share</div><div>${icon}</div></button></li><li><button role="link" disabled><div>${icon}</div><div><span>Report</span></div><div>${icon}</div></button></li><li><button role="menuitem"><span>${icon}Experimental features</span></button></li><li><button><div>${icon}</div><div>Home config</div></button></li><li><button role="menuitem"><div><span>Profile</span></div></button></li><li><button role="menuitem" id="mock-update"><div data-encore-id="listRow"><div class="e-legacy-list-row__header-side"><img width="56" height="56" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div><div class="e-legacy-list-row__header"><div class="e-legacy-list-row__column"><p>New show near you</p></div><div class="e-legacy-list-row__slot"><div></div></div></div></div></button></li></ul>`;
       document.body.append(tip); });
     await page.waitForFunction(() => document.querySelector('#mock-tip [role="menuitem"][data-am-iconed]'));
     // The search icon is part of its field: it stays, at 12px.
@@ -938,7 +938,9 @@ try {
     assert.deepEqual(await page.evaluate(() => { const row = document.getElementById('mock-update'), img = row.querySelector('img'), dot = row.querySelector('[class*="list-row__slot"] > div');
       return [getComputedStyle(img.parentElement).display !== 'none' && img.getBoundingClientRect().width, getComputedStyle(dot).backgroundColor === getComputedStyle(document.body).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (m, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)]; }), [56, true]);
     // Spicetify's rows hold the icon and the label in one part; its icon goes too.
-    assert.deepEqual(await shown(), [false, true, false, false, false, true, false]);
+    assert.deepEqual(await shown(), [false, true, false, false, false, true, false, false]);
+    // Spicetify's own rows are bare buttons: same measure, icon hidden too.
+    assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Home config')).padding), '3px 10px');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-tip [role="link"]')).padding), '3px 10px');
     // "Find a playlist" as a macOS search field.
     assert.deepEqual(await page.evaluate(() => { const i = getComputedStyle(document.querySelector('#mock-tip [role="search"] input')); return [i.height, i.borderRadius, i.fontSize]; }), ['24px', '7px', '13px']);
@@ -948,8 +950,20 @@ try {
     assert.deepEqual(await page.evaluate(() => { const item = document.querySelector('#mock-tip [role="menuitem"]'), sep = document.querySelector('#mock-tip ul > div');
       return [getComputedStyle(item).padding, getComputedStyle(item.querySelector('span')).fontSize, getComputedStyle(sep).height, getComputedStyle(sep).marginLeft]; }), ['3px 10px', '13px', '1px', '11px']);
     await page.evaluate(() => document.body.classList.add('am-menu-icons'));
-    assert.deepEqual(await shown(), [true, true, true, false, true, true, true]);
+    assert.deepEqual(await shown(), [true, true, true, false, true, true, true, true]);
+    // With icons on, a row without one lines up with the rest.
+    assert.equal(await page.evaluate(() => getComputedStyle([...document.querySelectorAll('#mock-tip li > button')].find(b => b.textContent === 'Profile')).paddingLeft), '36px');
     await page.evaluate(() => { document.body.classList.remove('am-menu-icons'); document.getElementById('mock-tip').remove(); });
+  });
+
+  await check('a row cut by a scrolling menu list fades by how much of it shows (#59)', async () => {
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.id = 'mock-scroll-tip'; tip.setAttribute('data-tippy-root', '');
+      tip.innerHTML = '<ul role="menu" style="display:block;max-height:100px;overflow-y:auto;margin:0;padding:0">' + Array.from({ length: 12 }, (_, i) => `<li><button role="menuitem"><div><span>List ${i}</span></div></button></li>`).join('') + '</ul>';
+      document.body.append(tip); });
+    await page.waitForFunction(() => [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')].some(b => +b.style.getPropertyValue('--am-seen') > 0 && +b.style.getPropertyValue('--am-seen') < 1));
+    const seen = await page.evaluate(() => { const rows = [...document.querySelectorAll('#mock-scroll-tip [role="menuitem"]')]; return [rows[0].style.getPropertyValue('--am-seen'), getComputedStyle(rows.find(b => b.style.getPropertyValue('--am-seen')).firstElementChild).opacity < 1]; });
+    assert.deepEqual(seen, ['', true]);
+    await page.evaluate(() => document.getElementById('mock-scroll-tip').remove());
   });
 
   await check('Spotify\'s snackbars come up as the theme\'s glass toast, with their button (#59)', async () => {

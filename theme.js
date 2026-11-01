@@ -1066,7 +1066,7 @@
         // theme's menus: a row's first part when it holds no text (an icon, or the empty slot of one), else the first
         // icon before the label's text, taken with its wrappers up to the one that holds text. Trailing icons (submenu
         // chevrons, checks, "opens outside") stay.
-        for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"]):not([data-am-iconed])')){
+        for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"],li > button):not([data-am-iconed])')){
           item.dataset.amIconed='';const first=item.firstElementChild;
           // Rich rows (Your Updates: a picture, two lines, a dot) are Encore list rows: their picture is content.
           if(item.querySelector('[data-encore-id="listRow"]'))continue;
@@ -1075,15 +1075,38 @@
           let icon=text&&[...item.querySelectorAll('svg,img')].find(i=>i.compareDocumentPosition(text)&Node.DOCUMENT_POSITION_FOLLOWING);
           while(icon&&icon.parentElement!==item&&!icon.parentElement.textContent.trim())icon=icon.parentElement;
           icon?.setAttribute('data-am-icon','');
-        }}
+        }
+        for(const list of tip.querySelectorAll('ul[role="menu"]')){
+          const rows=[...list.querySelectorAll(':scope > li > :is([role^="menuitem"],[role="link"],button)')].filter(row=>!row.querySelector('[data-encore-id="listRow"],[role="search"]'));
+          const icons=rows.some(row=>row.querySelector('[data-am-icon]')||row.hasAttribute('data-am-icon'));
+          for(const row of rows)row.toggleAttribute('data-am-indent',icons&&!row.querySelector('[data-am-icon]'));
+        }
+        if(!feathered.has(tip)){feathered.add(tip);tip.addEventListener('scroll',event=>featherSoon(event.target),{capture:true,passive:true});}
+        // Long lists, as they open: the rows' own list (a ul, or Your Updates' scroller), or the element scrolling it.
+        for(const list of new Set([...tip.querySelectorAll(featherRows)].map(row=>(row.closest('li')||row).parentElement)))if(list.childElementCount>6)featherSoon(scrollParent(list,tip));
+      }
     };
+    // A row cut by a scrolling list's edge fades by the share of it that shows (--am-seen on the row, user.css).
+    const feathered=new WeakSet(),featherRows=':is([role^="menuitem"],li > [role="link"],li > button,.am-popover-item)';
+    function scrollParent(node,root) { for(let n=node;n&&n!==root;n=n.parentElement)if(n.scrollHeight>n.clientHeight+1&&/auto|scroll/.test(getComputedStyle(n).overflowY))return n;return null; }
+    function feather(list) {
+      const box=list.getBoundingClientRect();
+      for(const row of list.querySelectorAll(featherRows)){
+        if(row.parentElement.closest(featherRows))continue;
+        const r=row.getBoundingClientRect(),seen=r.height?Math.max(0,Math.min(r.bottom,box.bottom)-Math.max(r.top,box.top))/r.height:1,value=seen>.98?'':seen.toFixed(2);
+        if(row.style.getPropertyValue('--am-seen')!==value)value?row.style.setProperty('--am-seen',value):row.style.removeProperty('--am-seen');
+      }
+    }
+    const featherQueue=new Set();let featherFrame=0;
+    function featherSoon(list) { if(!list||list.nodeType!==1)return;featherQueue.add(list);featherFrame||=requestAnimationFrame(()=>{featherFrame=0;for(const l of featherQueue)if(l.isConnected)feather(l);featherQueue.clear();}); }
     const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
-    return {attach,sync};
+    return {attach,sync,featherSoon};
   })();
   // One shared popover serves the "…" track menu and the profile menu, with an optional flyout submenu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.tabIndex=-1;popover.hidden=true;
   const subPopover=el('div','am-popover am-popover-sub');subPopover.id='am-popover-sub';subPopover.setAttribute('role','menu');subPopover.tabIndex=-1;subPopover.hidden=true;
   document.body.append(popover,subPopover);menuGlass.attach(popover);menuGlass.attach(subPopover);
+  for(const pop of [popover,subPopover])pop.addEventListener('scroll',()=>menuGlass.featherSoon(pop),{passive:true});
   for(const p of [popover,subPopover]){
     p.addEventListener('keydown',event=>{
       const items=[...p.querySelectorAll('.am-popover-item')];const index=items.indexOf(document.activeElement);
@@ -1113,7 +1136,7 @@
     const placeRight=innerWidth-itemRect.right>=subW+12||itemRect.left<subW+12;
     subPopover.style.left=Math.round(placeRight?itemRect.right:itemRect.left-subW)+'px';
     const top=Math.max(8,Math.min(itemRect.top-5,innerHeight-subH-8));
-    subPopover.style.top=Math.round(top)+'px';subPopover.style.bottom='';
+    subPopover.style.top=Math.round(top)+'px';subPopover.style.bottom='';menuGlass.featherSoon(subPopover);
   }
   // With the pointer in the submenu its parent row turns grey, as on macOS; back on the parent it is the accent again.
   subPopover.addEventListener('pointerenter',()=>{clearTimeout(subTimer);subAnchor?.classList.add('am-parent');});
@@ -1175,7 +1198,7 @@
     const entries=typeof build==='function'?build():build;if(!entries?.length)return;
     renderPopoverEntries(entries);
     popoverAnchor=anchor;anchor.setAttribute?.('aria-expanded','true');popover.hidden=false;
-    placePopover(anchor);popover.focus({preventScroll:true});
+    placePopover(anchor);popover.focus({preventScroll:true});menuGlass.featherSoon(popover);
   }
   function placePopover(anchor) {
     const width=popover.offsetWidth,height=popover.offsetHeight;
