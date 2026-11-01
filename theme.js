@@ -1068,6 +1068,8 @@
         // chevrons, checks, "opens outside") stay.
         for(const item of tip.querySelectorAll(':is([role^="menuitem"],li > [role="link"]):not([data-am-iconed])')){
           item.dataset.amIconed='';const first=item.firstElementChild;
+          // Rich rows (Your Updates: a picture, two lines, a dot) are Encore list rows: their picture is content.
+          if(item.querySelector('[data-encore-id="listRow"]'))continue;
           if(first&&first!==item.lastElementChild&&!first.textContent.trim()){first.dataset.amIcon='';continue;}
           const text=document.createTreeWalker(item,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.data.trim()?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP}).nextNode();
           let icon=text&&[...item.querySelectorAll('svg,img')].find(i=>i.compareDocumentPosition(text)&Node.DOCUMENT_POSITION_FOLLOWING);
