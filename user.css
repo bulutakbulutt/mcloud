@@ -784,12 +784,13 @@ body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-ev
 
 /* Friend Activity opens in Spotify's right panel. The theme shows that pane (not a copy) as a glass sheet that
    fades in at the right edge; the queue uses the same sheet. It does not slide: moving, its edge lands on
-   fractional pixels and the anti-aliased column shimmers against the page. Its glass is the search field's recipe. */
+   fractional pixels and the anti-aliased column shimmers against the page. Its glass is Apple's Playing Next panel, measured:
+   about 36% of the page shows through, as soft colour. --am-panel-fill (light mode) overrides the dark fill. */
 body.am-ready .am-native-panel-open {
  display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
  position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:min(340px,calc(100vw - var(--am-side) - 40px))!important;
  min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;overflow:hidden;color:var(--am-text);
- border-radius:18px;background:color-mix(in srgb,#1e1e1e 58%,transparent)!important;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
+ border-radius:18px;background:var(--am-panel-fill,color-mix(in srgb,#2f2f2f 64%,transparent))!important;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
  box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 18px 50px #0007;
  transition:opacity .25s ease;
 }
@@ -831,6 +832,11 @@ body.am-ready [data-am-sheet] [data-overlayscrollbars-viewport] {-webkit-mask-im
 body.am-ready [data-am-sheet] .os-scrollbar-vertical {top:16px!important}
 /* Friend Activity's list opens with an empty item, which with the list's 24px gap pushed the first friend down. */
 body.am-ready [data-am-sheet] ul > li:first-child:empty {display:none!important}
+/* As in Apple's panel, the artwork lies flat (Spotify's casts a 60px shadow) and rows part with a 1pt hairline from the
+   title's edge to 16px short of the sheet's. */
+body.am-ready [data-am-sheet] [class*="list-row__header-side"] * {box-shadow:none!important}
+body.am-ready [data-am-sheet] li[role="row"] + li[role="row"] {position:relative}
+body.am-ready [data-am-sheet] li[role="row"] + li[role="row"]::before {content:"";position:absolute;top:0;left:68px;right:8px;height:1px;background:rgb(var(--am-ink,255 255 255)/.1);pointer-events:none}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
