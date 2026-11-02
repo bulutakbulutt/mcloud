@@ -1057,7 +1057,7 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
    a window (no dimming, moved by its title bar) or a sheet (dimmed page, clicking outside closes). Materials: Liquid
    Glass (menuGlass's lens and tone, as the menus, through data-am-glass), frosted, solid; Eco is always solid.
    Colours are the variables below, so a light appearance only redefines them. */
-:root {--am-settings-fill:#28282ac7;--am-settings-solid:#262628;--am-settings-card:#ffffff0d;--am-settings-line:#ffffff14;--am-settings-control:#ffffff1f;--am-settings-control-on:#ffffff40;--am-settings-side:#ffffff0a;--am-settings-knob:#fff;--am-settings-dim:#00000059;--am-settings-glass-tint:#1c1c1e59;
+:root {--am-settings-fill:var(--am-sheet-fill,#28282ac7);--am-settings-solid:var(--am-menu-solid,#262628);--am-settings-card:rgb(var(--am-ink,255 255 255)/.05);--am-settings-line:rgb(var(--am-ink,255 255 255)/.08);--am-settings-control:rgb(var(--am-ink,255 255 255)/.12);--am-settings-control-on:rgb(var(--am-ink,255 255 255)/.25);--am-settings-side:rgb(var(--am-ink,255 255 255)/.04);--am-settings-knob:#fff;--am-settings-dim:#00000059;--am-settings-glass-tint:#1c1c1e59;
  --am-settings-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' fill='none' stroke='%23ffffffb3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 4.5 2.5-2.5 2.5 2.5M1.5 7.5 4 10l2.5-2.5'/%3E%3C/svg%3E")}
 #am-settings {position:fixed;inset:0;z-index:76;pointer-events:none;-webkit-app-region:no-drag;font:13px var(--encore-body-font-stack);color:var(--am-text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 #am-settings.am-settings-sheet {pointer-events:auto;background:var(--am-settings-dim);animation:am-dim-in .24s ease-out}
@@ -1066,7 +1066,7 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 .am-settings-box {--am-settings-w:600px;pointer-events:auto;position:absolute;left:50%;top:max(72px,11vh);translate:-50% 0;box-sizing:border-box;width:min(var(--am-settings-w),calc(100vw - 32px));max-height:calc(100vh - 120px);
  display:grid;grid-template:"bar" auto "body" minmax(0,1fr) / minmax(0,1fr);border-radius:16px;overflow:hidden;outline:0;animation:am-settings-in .24s cubic-bezier(.2,.8,.2,1);
  background:var(--am-menu-fill,var(--am-settings-fill));backdrop-filter:var(--am-menu-filter,blur(40px) saturate(1.8));-webkit-backdrop-filter:var(--am-menu-filter,blur(40px) saturate(1.8));
- box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 22px 70px #0000008c}
+ box-shadow:var(--am-rim-lines,inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12),0 22px 70px #0000008c}
 .am-settings-sheet .am-settings-box {top:64px;animation:am-settings-drop .28s cubic-bezier(.2,.8,.2,1)}
 #am-settings .am-settings-material-glass {--am-menu-fill:var(--am-settings-glass-tint)}
 #am-settings .am-settings-material-frosted {--am-menu-fill:var(--am-settings-fill);--am-menu-filter:blur(40px) saturate(1.8)}
@@ -1080,7 +1080,7 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 .am-settings-close svg {width:12px;height:12px;stroke-width:2.2}
 .am-settings-body {grid-area:body;overflow:auto;overscroll-behavior:contain;padding:14px 20px 20px}
 .am-settings-body::-webkit-scrollbar {width:5px}
-.am-settings-body::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
+.am-settings-body::-webkit-scrollbar-thumb {background:rgb(var(--am-ink,255 255 255)/.15);border-radius:3px}
 .am-settings-group + .am-settings-group {margin-top:22px}
 .am-settings-group-title {margin:0 4px 8px;font-size:15px;font-weight:700}
 .am-settings-section {margin:16px 4px 6px;font-size:11px;font-weight:600;color:var(--am-sub)}

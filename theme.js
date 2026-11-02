@@ -2784,7 +2784,7 @@
     options:[['glass','Liquid Glass'],['frosted',T('Buzlu','Frosted')],['solid',T('Opak','Solid')]],note:T('Cam efekti Eko iken pencere opak olur.','With the glass effect on Eco the window is solid.')});
   const settingsBack=el('div','am-settings-back'),settingsBox=el('div','am-settings-box');settingsBack.id='am-settings';settingsBack.append(settingsBox);
   settingsBox.setAttribute('role','dialog');settingsBox.setAttribute('aria-labelledby','am-settings-title');settingsBox.tabIndex=-1;
-  let settingsTab='',settingsReturn=null,settingsSyncs=[],settingsDrag=null;
+  let settingsTab='',settingsReturn=null,settingsSyncs=[],settingsDrag=null,settingsShown='';
   const shownDefs=()=>settingDefs.filter(d=>{if(d.hidden)return false;try{return !d.when||d.when();}catch{return false;}});
   function renderSettings() {
     const layout=settings.settingsLayout,defs=shownDefs(),groups=settingGroups.filter(g=>defs.some(d=>d.group===g.id));
@@ -2793,7 +2793,8 @@
     settingsBack.className='am-settings-back am-settings-'+settings.settingsPresent;
     settingsBox.className='am-settings-box am-settings-layout-'+layout+' am-settings-material-'+settings.settingsGlass;
     settingsBox.setAttribute('aria-modal',String(settings.settingsPresent==='sheet'));
-    settingsSyncs=[];settingsBox.replaceChildren();
+    const focusKey=settingsBox.contains(document.activeElement)&&document.activeElement.closest('.am-settings-row')?.dataset.key;
+    settingsSyncs=[];settingsBox.replaceChildren();settingsShown=defs.map(d=>d.key).join();
     const bar=el('div','am-settings-titlebar'),title=el('h2','am-settings-title',layout==='page'?T('mcloud Ayarları','mcloud Settings'):tab?.label||'mcloud');title.id='am-settings-title';
     bar.append(button(T('Kapat','Close'),'close',closeSettings,'am-settings-close'),title);
     bar.addEventListener('pointerdown',event=>{
@@ -2835,6 +2836,7 @@
       body.append(section);
     }
     body.scrollTop=scroll;
+    if(focusKey){const c=body.querySelector('.am-settings-row[data-key="'+focusKey+'"] .am-settings-control');(c?.querySelector('[aria-checked="true"]')||c)?.focus({preventScroll:true});}
   }
   function settingRow(def) {
     const row=el('div','am-settings-row am-settings-'+def.type),text=el('div','am-settings-text'),id='am-setting-'+def.key;
@@ -2867,7 +2869,8 @@
     control.classList.add('am-settings-control');control.setAttribute('aria-labelledby',label.id);control.id=id;
     row.append(text,control);settingsSyncs[settingsSyncs.length-1]();return row;
   }
-  document.addEventListener('am-settings',()=>{if(settingsBack.isConnected)settingsSyncs.forEach(fn=>fn());});
+  // Rows with a when() come and go as other settings change: then the window is drawn again, else its controls follow.
+  document.addEventListener('am-settings',()=>{if(!settingsBack.isConnected)return;if(shownDefs().map(d=>d.key).join()!==settingsShown)renderSettings();else settingsSyncs.forEach(fn=>fn());});
   function openSettings(group) {
     if(group)settingsTab=group;
     if(!settingsBack.isConnected){settingsReturn=document.activeElement;closePopover();settingsBox.style.cssText='';document.body.append(settingsBack);menuGlass.attach(settingsBox);}
