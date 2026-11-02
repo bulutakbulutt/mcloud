@@ -153,6 +153,8 @@ try {
     assert.equal(box.x, 1440 - 16 - box.width, 'sheet moves while opening');
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
     // Spotify's panel holder is solid; left alone it hides the sheet's glass.
+    // No dark band under the header on glass: the rows fade out under it instead.
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('[data-testid="mock-panel-header"]')).boxShadow, getComputedStyle(document.querySelector('[data-testid="mock-panel-list"]')).maskImage.startsWith('linear-gradient')]), ['none', true]);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-native-panel-open [data-am-fill]')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)')), [], 'panel holder paints over the glass');
     // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
