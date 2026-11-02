@@ -22,6 +22,31 @@ async function check(name, fn) {
   try { await fn(); console.log('ok  ', name); }
   catch (e) { console.log('FAIL', name); throw e; }
 }
+// The settings window (#am-settings), as the profile menu's mcloud entry opens it: pick finds a setting's row on whichever
+// tab holds it and picks an option by its label (a toggle flips), then closes the window; state reads what the row shows.
+const settingsOf = p => {
+  const find = key => {
+    if (!document.getElementById('am-settings')) window.__menuItems.find(i => ['mcloud Ayarları', 'mcloud Settings'].includes(i.name)).onClick();
+    const row = () => document.querySelector(`#am-settings .am-settings-row[data-key="${key}"]`);
+    for (let i = 0; !row() && i < document.querySelectorAll('#am-settings .am-settings-tab').length; i++) document.querySelectorAll('#am-settings .am-settings-tab')[i].click();
+    return row().querySelector('.am-settings-control');
+  };
+  return {
+    pick: (key, option, keep) => p.evaluate(([find, key, option, keep]) => {
+      const c = eval(find)(key);
+      if (c.matches('select')) { c.value = String([...c.options].findIndex(o => o.textContent === option)); c.dispatchEvent(new Event('change')); }
+      else if (c.matches('[role="switch"]')) c.click();
+      else [...c.children].find(b => (b.textContent || b.getAttribute('aria-label')) === option).click();
+      if (!keep) document.querySelector('#am-settings .am-settings-close')?.click();
+    }, [find.toString(), key, option, keep]),
+    state: key => p.evaluate(([find, key]) => {
+      const c = eval(find)(key), on = c.querySelector('[aria-checked="true"]');
+      return c.matches('select') ? c.selectedOptions[0].textContent : c.matches('[role="switch"]') ? c.getAttribute('aria-checked') === 'true' : on && (on.textContent || on.getAttribute('aria-label'));
+    }, [find.toString(), key]),
+    close: () => p.evaluate(() => document.querySelector('#am-settings .am-settings-close')?.click()),
+  };
+};
+const settingsWindow = settingsOf(page);
 
 try {
   await page.goto(pathToFileURL(path.join(here, 'preview.html')).href);
@@ -447,14 +472,15 @@ try {
     await page.evaluate(() => { Spicetify.Player.data.context.uri = 'spotify:album:0'; window.__firePlayer('songchange'); });
     await moveBefore('spotify:playlist:5', 'spotify:playlist:6');
     await page.waitForFunction(() => document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')[2]?.textContent === 'Koşu');
-    // mcloud → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
-    const recent = n => page.evaluate(n => window.__menus[0].items.find(i => i.name === 'Son listeler: ' + n).onClick(), n);
+    // Settings → Recent playlists picks how many show under the pinned ones; with none, Show All still lists them.
+    const recent = n => settingsWindow.pick('recent', String(n));
     await recent(3);
     assert.equal(await page.locator(rows).count(), 5);
     await recent('Yok');
     assert.deepEqual(await names(), ['Ruh Hali', 'Sabah Kahvesi']);
     assert.ok(await page.locator('#am-sidebar .am-list-more').isVisible());
-    assert.deepEqual(await page.evaluate(() => window.__menus[0].items.filter(i => i.name.startsWith('Son listeler')).map(i => i.checked)), [true, false, false, false, false]);
+    assert.equal(await settingsWindow.state('recent'), 'Yok');
+    await settingsWindow.close();
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).recent, 0);
     await recent(5);
     assert.equal(await page.locator(rows).count(), 7);
@@ -525,11 +551,11 @@ try {
     // The index column folds away, titles take its place and the play button sits on the artwork.
     assert.deepEqual(await layout(), { index: '0px', title: 16, hash: 'hidden', plainIndex: 'hidden', onArt: true });
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).numbers, false);
-    // The mcloud switch follows, and turns them back on.
-    const numbers = () => page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları'));
-    assert.equal((await numbers()).checked, false);
-    await page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick());
-    assert.equal((await numbers()).checked, true);
+    // The settings window's switch follows, and turns them back on.
+    assert.equal(await settingsWindow.state('numbers'), false);
+    await settingsWindow.pick('numbers', null, true);
+    assert.equal(await settingsWindow.state('numbers'), true);
+    await settingsWindow.close();
     assert.equal((await layout()).index, '16px');
     await page.evaluate(() => document.querySelectorAll('.mock-numbers, .mock-menu').forEach(e => e.remove()));
   });
@@ -1188,15 +1214,87 @@ try {
     }), [20, '20 öğe', true]);
   });
 
-  await check('settings menu', async () => {
-    const names = await page.evaluate(() => window.__menus[0].items.map(i => i.name));
-    assert.equal(names[0], 'Oynatıcıda albüm kapağı');
-    await page.evaluate(() => window.__menus[0].items.find(i => i.name === 'Renk: Mavi').onClick());
-    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-accent')), '#0a84ff');
-    await page.evaluate(() => window.__menus[0].items[0].onClick());
+  await check('settings window: the profile menu\'s mcloud opens Apple Music\'s Settings window, drawn from the definitions', async () => {
+    // The profile menu holds one "mcloud Settings" entry; the old submenu is only the fallback.
+    assert.deepEqual(await page.evaluate(() => [window.__menuItems.map(i => i.name), window.__menus.length]), [['mcloud Ayarları'], 0]);
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
+    await page.waitForSelector('#am-settings .am-settings-box[role="dialog"]');
+    const tabs = () => page.locator('#am-settings .am-settings-tab').allTextContents();
+    assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler']);
+    // It reopens on the last tab (Albums & Playlists, from the track numbers check), as macOS does; the title names it.
+    assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
+    // A form: labels right-aligned with a colon, toggles as checkboxes. Real clicks from here on.
+    await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+    assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı', 'Oynatıcı düğmeleri']);
+    assert.deepEqual(await page.evaluate(() => { const l = getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label')); return [l.textAlign, getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label'), '::after').content]; }), ['right', '":"']);
+    await page.click('#am-settings [data-key="artwork"] .am-settings-switch');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-artwork')));
+    assert.equal(await page.getAttribute('#am-settings [data-key="artwork"] .am-settings-switch', 'aria-checked'), 'false');
+    // Apple's dark Settings colours, neutral: the window, a lighter toolbar band, the selected tab on a tile in the accent.
+    assert.deepEqual(await page.evaluate(() => {
+      const box = document.querySelector('#am-settings .am-settings-box'), tab = document.querySelector('#am-settings .am-settings-tab.am-selected');
+      return [getComputedStyle(box).backdropFilter.split('(')[0], getComputedStyle(tab).color === getComputedStyle(document.documentElement).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)];
+    }), ['blur', true]);
+    await shot('settings-window');
+    await page.click('#am-settings .am-settings-tab:has-text("Görünüm")');
+    await page.click('#am-settings [data-key="accent"] [aria-label="Mavi"]');
+    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-accent')), '#0a84ff');
+    // Arrow keys move between tabs.
+    await page.focus('#am-settings .am-settings-tab.am-selected');
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Oynatıcı');
+    // Not modal: no dimming, the page stays usable, and the title bar moves the window.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('am-settings')).pointerEvents), 'none');
+    await page.evaluate(() => document.querySelector('#am-settings .am-settings-box').getAnimations().forEach(a => a.finish()));
+    const box = await page.locator('#am-settings .am-settings-box').boundingBox();
+    await page.mouse.move(box.x + box.width / 2 + 60, box.y + 14);await page.mouse.down();await page.mouse.move(box.x + box.width / 2 + 160, box.y + 64);await page.mouse.up();
+    const moved = await page.locator('#am-settings .am-settings-box').boundingBox();
+    assert.deepEqual([Math.round(moved.x - box.x), Math.round(moved.y - box.y)], [100, 50]);
+    // OK closes; Escape closes; ⌘⌥, opens and closes it.
+    await page.click('#am-settings .am-settings-ok');
+    assert.equal(await page.locator('#am-settings').count(), 0);
+    await page.keyboard.press('Meta+Alt+Comma');
+    assert.equal(await page.locator('#am-settings').count(), 1);
+    await page.focus('#am-settings .am-settings-tab.am-selected');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('#am-settings').count(), 0);
+    await page.keyboard.press('Meta+Alt+Comma');
+    await page.keyboard.press('Meta+Alt+Comma');
+    assert.equal(await page.locator('#am-settings').count(), 0);
     const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings')));
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
+  });
+
+  await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
+    await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+    const chips = () => page.locator('#am-settings .am-pb-chip').allTextContents();
+    // Every tagged button, in the player's order, by its short name; locked ones (play, the LCD) have no chip.
+    assert.deepEqual(await chips(), ['Karıştır', 'Önceki', 'Sonraki', 'Yinele', 'Beğen', 'Diğer', 'Sözler', 'Cihazlar', 'Çalma sırası', 'Ses']);
+    const preview = () => page.evaluate(() => [...document.querySelectorAll('#am-settings .am-pb-icon')].map(i => i.classList.contains('am-pb-off') ? 0 : 1).join(''));
+    assert.equal(await preview(), '11111111111');
+    const shown = sel => page.evaluate(s => getComputedStyle(document.querySelector(s)).display !== 'none', sel);
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    await page.click('#am-settings .am-pb-chip:has-text("Cihazlar")');
+    assert.equal(await preview(), '01111111011');
+    assert.deepEqual([await shown('#am-player [data-am-button="shuffle"]'), await shown('#am-player [data-am-button="connect"]'), await shown('#am-player .am-play')], [false, false, true]);
+    assert.equal(await page.getAttribute('#am-settings .am-pb-chip[data-id="shuffle"]', 'aria-checked'), 'false');
+    // The rule is on the node, not the player: a button moved elsewhere (Now Playing's pane) stays hidden there.
+    assert.equal(await page.evaluate(() => { const b = document.querySelector('#am-player [data-am-button="shuffle"]').cloneNode(true); document.body.append(b); const d = getComputedStyle(b).display; b.remove(); return d; }), 'none');
+    assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).playerHidden, ['shuffle', 'connect']);
+    await shot('settings-player-buttons');
+    // A button its feature hides (Now Playing's while its pane is off) leaves the list when any setting changes, and comes back.
+    await page.evaluate(() => { document.querySelector('#am-player [data-am-button="lyrics"]').hidden = true; });
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    assert.ok(!(await chips()).includes('Sözler'));
+    await page.evaluate(() => { document.querySelector('#am-player [data-am-button="lyrics"]').hidden = false; });
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    assert.ok((await chips()).includes('Sözler'));
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    await page.click('#am-settings .am-pb-chip:has-text("Cihazlar")');
+    assert.equal(await preview(), '11111111111');
+    assert.ok(await shown('#am-player [data-am-button="shuffle"]'));
+    await page.click('#am-settings .am-settings-close');
   });
 
   await check('glass modes: balanced runs the lite glass on the Spicy page only, full keeps the layers, eco is solid', async () => {
@@ -1208,7 +1306,7 @@ try {
         rims: [...document.querySelectorAll('#am-player > .am-tglass-rim, #am-toolbar-glass > .am-tglass-pane-rim')].filter(e => shown(e) && getComputedStyle(e).backdropFilter !== 'none').length,
         sidebar: /blur/.test(getComputedStyle(document.getElementById('am-sidebar')).backdropFilter), glow: shown(document.getElementById('am-sidebar-glow')) };
     });
-    const pick = name => page.evaluate(n => window.__menus[0].items.find(i => i.name === n).onClick(), name);
+    const pick = (key, option) => settingsWindow.pick(key, option);
     const glass = { player: 'bend,mid,tone', toolbar: 'bend,mid,tone', rims: 2, sidebar: true, glow: true };
     assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
     await page.evaluate(() => Spicetify.Platform.History.push('/SpicyLyrics'));
@@ -1219,35 +1317,35 @@ try {
       return [f.querySelectorAll('feDisplacementMap').length, f.querySelectorAll('feGaussianBlur').length, !!f.querySelector('feImage[data-map="map"]').getAttribute('href')]; }), [1, 0, true]);
     // With the Liquid Glass player off, the toolbar's own buttons blur the page; Balanced turns that off here too.
     const blurs = () => page.evaluate(() => [...document.querySelectorAll('#global-nav-bar :is(button,input), #am-player, #am-sidebar')].filter(e => getComputedStyle(e).backdropFilter !== 'none').length);
-    await pick('Liquid Glass oynatıcı');
+    await pick('liquid');
     await page.waitForFunction(() => !document.body.classList.contains('am-tglass-on'));
     assert.equal(await blurs(), 0);
-    await pick('Liquid Glass oynatıcı');
+    await pick('liquid');
     await page.waitForFunction(() => document.body.classList.contains('am-tglass-on'));
-    await pick('Cam efekti: Tam');
+    await pick('glass', 'Tam');
     assert.deepEqual(await state(), { mode: 'full', ...glass });
-    await pick('Cam efekti: Eko');
+    await pick('glass', 'Eko');
     await page.waitForFunction(() => !document.getElementById('am-toolbar-glass'));
     assert.deepEqual(await state(), { mode: 'am-solid', player: null, toolbar: null, rims: 0, sidebar: false, glow: false });
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).glass, 'eco');
-    await pick('Cam efekti: Dengeli');
+    await pick('glass', 'Dengeli');
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForSelector('#am-toolbar-glass > .am-tglass-pane');
     assert.deepEqual(await state(), { mode: 'am-balanced', ...glass });
-    // Reduced transparency in the OS keeps Eco: the menu checks Eco and says why another pick changes nothing.
-    const checks = () => page.evaluate(() => window.__menus[0].items.filter(i => i.name.startsWith('Cam efekti: ')).map(i => i.checked));
-    assert.deepEqual(await checks(), [false, true, false]);
+    // Reduced transparency in the OS keeps Eco: the window shows Eco and says why another pick changes nothing.
+    const checks = async () => { const v = await settingsWindow.state('glass'); await settingsWindow.close(); return v; };
+    assert.equal(await checks(), 'Dengeli');
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-transparency', value: 'reduce' }] });
     await page.waitForFunction(() => document.body.classList.contains('am-solid'));
-    assert.deepEqual(await checks(), [false, false, true]);
-    await pick('Cam efekti: Tam');
+    assert.equal(await checks(), 'Eko');
+    await pick('glass', 'Tam');
     assert.match(await page.textContent('.am-toasts > :last-child'), /saydamlık/);
-    assert.deepEqual(await checks(), [false, false, true]);
-    await pick('Cam efekti: Dengeli');
+    assert.equal(await checks(), 'Eko');
+    await pick('glass', 'Dengeli');
     await cdp.send('Emulation.setEmulatedMedia', { features: [] });
     await page.waitForFunction(() => !document.body.classList.contains('am-solid'));
-    assert.deepEqual(await checks(), [false, true, false]);
+    assert.equal(await checks(), 'Dengeli');
     await cdp.detach();
   });
 
@@ -1389,14 +1487,80 @@ try {
       assert.deepEqual((await english.locator('#am-sidebar .am-nav-row').allTextContents()).slice(0, 2), ['Search', 'Home']);
       assert.equal(await english.getAttribute('#am-player .am-play', 'aria-label'), 'Pause');
       assert.equal(await english.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-t-play')), '"Play"');
-      const names = await english.evaluate(() => window.__menus[0].items.map(i => i.name));
-      assert.deepEqual([names[0], ...names.slice(-3)], ['Artwork in player', 'Language: Automatic', 'Language: English', 'Language: Türkçe']);
-      await Promise.all([english.waitForEvent('load'), english.evaluate(() => window.__menus[0].items.find(i => i.name === 'Language: Türkçe').onClick())]);
+      assert.deepEqual(await english.evaluate(() => window.__menuItems.map(i => i.name)), ['mcloud Settings']);
+      const englishSettings = settingsOf(english);
+      assert.equal(await englishSettings.state('lang'), 'Automatic');
+      assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists']);
+      await Promise.all([english.waitForEvent('load'), englishSettings.pick('lang', 'Türkçe', true)]);
       await english.waitForSelector('body.am-ready #am-sidebar');
       assert.equal(await english.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
       assert.equal(JSON.parse(await english.evaluate(() => localStorage.getItem('mcloud:settings'))).lang, 'tr');
       assert.deepEqual(englishErrors, []);
     } finally { await english.close(); }
+  });
+
+  await check('settings fallback: the mcloud submenu, drawn from the same definitions, when the window cannot open', async () => {
+    const other = await browser.newPage({ viewport: { width: 1440, height: 900 } }), otherErrors = [];
+    other.on('pageerror', e => otherErrors.push(e.message));
+    try {
+      // A Spicetify whose menu items cannot register: the submenu, as before the window.
+      await other.goto(pathToFileURL(path.join(here, 'preview.html')).href + '?menu=submenu');
+      await other.waitForSelector('body.am-ready #am-sidebar');
+      const names = () => other.evaluate(() => window.__menus[0]?.items.map(i => i.name));
+      const list = await names();
+      // Every definition but the window's own, in tab order (General first); a choice gives a row per option.
+      assert.equal(list[0], 'Dil: Otomatik');
+      assert.ok(['Dil: Türkçe', 'Renk: Spotify Yeşili', 'Oynatıcıda albüm kapağı', 'Düğme: Karıştır', 'Son listeler: 20', 'Çalma listelerinde parça numaraları'].every(n => list.includes(n)));
+      assert.ok(list.includes('Renk: Mavi') && list.includes('Cam efekti: Eko') && list.includes('Son listeler: Yok'));
+      await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
+      assert.ok(await other.evaluate(() => !document.body.classList.contains('am-liquid') && window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').checked === false));
+      await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
+      // Saved values of settings this build does not define are kept when it saves.
+      await other.evaluate(() => localStorage.setItem('mcloud:settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('mcloud:settings')), futureKey: 'kept' })));
+      // A window that fails to open: the entry gives way to the submenu, and a toast says where the settings went.
+      await other.goto(pathToFileURL(path.join(here, 'preview.html')).href);
+      await other.waitForSelector('body.am-ready #am-sidebar');
+      await other.evaluate(() => { const append = document.body.append; document.body.append = () => { throw new Error('test'); }; try { window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick(); } finally { document.body.append = append; } });
+      assert.deepEqual(await other.evaluate(() => [window.__menuItems.length, window.__menus.length, document.getElementById('am-settings')]), [0, 1, null]);
+      assert.match(await other.textContent('.am-toasts > :last-child'), /mcloud/);
+      const artwork = await other.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).artwork);
+      await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Oynatıcıda albüm kapağı').onClick());
+      assert.deepEqual(await other.evaluate(() => { const s = JSON.parse(localStorage.getItem('mcloud:settings')); return [s.futureKey, s.artwork]; }), ['kept', !artwork]);
+      assert.deepEqual(otherErrors, []);
+    } finally { await other.close(); }
+  });
+
+  await check('stored settings: a twice-encoded value is read through, digit keys from a spread string are dropped', async () => {
+    const other = await browser.newPage({ viewport: { width: 1440, height: 900 } }), otherErrors = [];
+    other.on('pageerror', e => otherErrors.push(e.message));
+    const before = await page.evaluate(() => localStorage.getItem('mcloud:settings'));
+    const stored = () => other.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')));
+    const load = async value => {
+      await other.evaluate(v => localStorage.setItem('mcloud:settings', v), value);
+      await other.reload(); await other.waitForSelector('body.am-ready #am-sidebar');
+      await other.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
+      await other.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+      await other.click('#am-settings [data-key="artwork"] .am-settings-switch');
+      await other.click('#am-settings .am-settings-ok');
+    };
+    try {
+      await other.goto(pathToFileURL(path.join(here, 'preview.html')).href);
+      await other.waitForSelector('body.am-ready #am-sidebar');
+      // Twice encoded: read through, and saved back as a plain object.
+      await load(JSON.stringify(JSON.stringify({ accent: 'green', recent: 3, artwork: true, futureKey: 'kept' })));
+      assert.equal(await other.evaluate(() => document.documentElement.style.getPropertyValue('--am-accent')), '#30d158');
+      let s = await stored();
+      assert.deepEqual([typeof s, s.accent, s.recent, s.artwork, s.futureKey], ['object', 'green', 3, false, 'kept']);
+      // A string spread into the object: its digit keys go, the real ones stay.
+      const junk = Object.assign({ accent: 'teal', artwork: true }, { ...'{"appearance":"light"}' });
+      await load(JSON.stringify(junk));
+      s = await stored();
+      assert.deepEqual([Object.keys(s).filter(k => /^\d+$/.test(k)).length, s.accent, s.artwork], [0, 'teal', false]);
+      // Anything but an object reads as nothing saved.
+      await load('[1,2]');
+      assert.equal(Array.isArray(await stored()), false);
+      assert.deepEqual(otherErrors, []);
+    } finally { await other.evaluate(v => localStorage.setItem('mcloud:settings', v), before); await other.close(); }
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
