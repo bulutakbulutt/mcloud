@@ -876,13 +876,11 @@
     if(folder==='true')openLibrary(kind,uri);
     else go('/'+uri.split(':').slice(1).join('/'));
   });
-  libraryView.addEventListener('contextmenu',event=>{
-    const card=event.target.closest?.('.am-library-card');
-    if(!card||!libraryView.contains(card))return;
-    event.preventDefault();
-    const {uri,kind,folder}=card.dataset;if(!uri)return;
-    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/'),at={x:event.clientX,y:event.clientY};
-    openMenu(at,extra=>{
+  // The "…" on a card and a right click open the same menu, which fits the kind: a folder opens or gets a playlist,
+  // everything else plays, queues, opens, copies its link and takes Spotify's own entries (libraryEntries).
+  function libraryMenu(uri,kind,folder) {
+    const shareLink='https://open.spotify.com/'+uri.split(':').slice(1).join('/');
+    return [extra=>{
       if(folder==='true')return [
         {label:T('Klasörü Aç','Open Folder'),action:()=>openLibrary(kind,uri)},
         ...(Rootlist?.createPlaylist?[{label:T('Yeni Çalma Listesi','New Playlist'),action:()=>nameNewItem('playlist')}]:[]),
@@ -895,7 +893,16 @@
         {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
         ...(extra.length?['-',...extra]:[]),
       ];
-    },folder==='true'?null:menuExtras('lib:'+uri,()=>libraryEntries(uri)));
+    },folder==='true'?null:menuExtras('lib:'+uri,()=>libraryEntries(uri))];
+  }
+  // The card is a button, so its hover tools sit beside it in an .am-library-item; this finds the card from either.
+  const libraryCardAt=event=>{const item=event.target.closest?.('.am-library-item');return item&&libraryView.contains(item)?item.querySelector('.am-library-card'):null;};
+  libraryView.addEventListener('contextmenu',event=>{
+    const card=libraryCardAt(event);
+    if(!card)return;
+    event.preventDefault();
+    const {uri,kind,folder}=card.dataset;if(!uri)return;
+    openMenu({x:event.clientX,y:event.clientY},...libraryMenu(uri,kind,folder));
   });
   libraryView.addEventListener('error',event=>{
     const img=event.target;
@@ -996,7 +1003,10 @@
         if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else art.innerHTML=svg(item.type==='artist'?'artist':item.type==='album'?'album':'music');
         if(item.type==='artist')art.classList.add('am-artist-art');
         b.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')),el('span','am-library-sub',item.subtitle));
-        fragment.append(b);
+        const cell=el('div','am-library-item');cell.append(b);
+        // Round artist cards get no tools, as on the artist page; a folder cannot be played.
+        if(item.type!=='artist')cell.append(cardTools(item.uri,null,{noPlay:item.type==='folder',menu:more=>openMenu(more,...libraryMenu(item.uri,kind,String(item.type==='folder')))}));
+        fragment.append(cell);
         }
         grid.append(fragment);
         for(const img of artwork)observeArtwork(img);
@@ -1742,7 +1752,7 @@
   const openTrackMenu=anchor=>openMenu(anchor,extra=>trackMenu(extra),menuExtras(removalKey(),playlistRemoval));
   // Read a hovered item's menu rows ahead, after a short rest (sweeping the pointer over a list reads nothing).
   nav.addEventListener('pointerover',event=>{const uri=event.target.closest?.('.am-list-row[data-uri]')?.dataset.uri;if(uri&&!/:folder:/.test(uri))warmMenu(()=>menuExtras('lib:'+uri,()=>libraryEntries(uri)));},{passive:true});
-  libraryView.addEventListener('pointerover',event=>{const card=event.target.closest?.('.am-library-card');if(card?.dataset.uri&&card.dataset.folder!=='true')warmMenu(()=>menuExtras('lib:'+card.dataset.uri,()=>libraryEntries(card.dataset.uri)));},{passive:true});
+  libraryView.addEventListener('pointerover',event=>{const card=libraryCardAt(event);if(card?.dataset.uri&&card.dataset.folder!=='true')warmMenu(()=>menuExtras('lib:'+card.dataset.uri,()=>libraryEntries(card.dataset.uri)));},{passive:true});
   player.addEventListener('pointerenter',()=>warmMenu(()=>menuExtras(removalKey(),playlistRemoval)));
   function playlistSubmenu(trackUri) {
     if(!addTargets)loadAddTargets();
@@ -2968,10 +2978,11 @@
     return card;
   }
   // Apple Music's hover controls over an artwork: round glass play (bottom left) and "…" (bottom right).
-  function cardTools(uri,items) {
+  function cardTools(uri,items,{noPlay,menu}={}) {
     const tools=el('span','am-card-tools');
-    const more=button(T('Diğer seçenekler','More'),'more',event=>{event.stopPropagation();togglePopover(more,items);},'am-tool-more');
-    tools.append(button(T('Çal','Play'),'play',event=>{event.stopPropagation();playArtist(uri);},'am-tool-play'),more);
+    const more=button(T('Diğer seçenekler','More'),'more',event=>{event.stopPropagation();if(menu)menu(more);else togglePopover(more,items);},'am-tool-more');
+    if(!noPlay)tools.append(button(T('Çal','Play'),'play',event=>{event.stopPropagation();playArtist(uri);},'am-tool-play'));
+    tools.append(more);
     return tools;
   }
   async function toggleSaved(uri,saved) {
