@@ -1829,6 +1829,8 @@ try {
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));
       await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying === 'beside');
+      // Out of the box: Spicy Lyrics' colours and lyrics (the cover's colours and Spotify's lyrics while Spicy's card is missing).
+      assert.deepEqual(await page.evaluate(() => ['am-np-spicybg', 'am-np-artbg', 'am-np-spicy'].map(c => document.body.classList.contains(c))), [true, true, false]);
       const pane = await rect('#am-nowplaying');
       assert.ok(pane.right === 1424 && pane.top === 76 && pane.bottom === 900 - 96 && pane.width >= 300, JSON.stringify(pane));
       assert.deepEqual(await page.evaluate(() => { const c = getComputedStyle(document.getElementById('am-nowplaying')); return [c.borderRadius, c.boxShadow.includes('0px 18px 50px')]; }), ['18px', true]);
@@ -1920,7 +1922,10 @@ try {
       const addCard = () => page.evaluate(() => { document.getElementById('SpicyLyricsNPVCard')?.remove(); const aside = [...document.querySelectorAll('.am-native-right aside[data-testid="mock-npv"]')].pop();
         document.querySelectorAll('.am-native-right aside').forEach(a => { if (a !== aside) a.parentElement.remove(); });
         aside.insertAdjacentHTML('beforeend', '<div id="SpicyLyricsNPVCard" class="Collapsed"><div class="CardHeader"><span>Lyrics</span><button id="NPVCardMaximize"></button></div><div class="CardBody"><div id="SpicyLyricsPage" class="CardMode" style="position:absolute;inset:0"></div></div></div>');
-        aside.querySelector('#NPVCardMaximize').onclick = e => { window.__expandClicks = (window.__expandClicks || 0) + 1; const c = e.target.closest('#SpicyLyricsNPVCard'); c.classList.remove('Collapsed'); c.classList.toggle('Expanded'); }; });
+        // Spicy's "Animated Background": a canvas over the whole view.
+        aside.insertAdjacentHTML('afterbegin', '<canvas class="spicy-dynamic-bg" style="position:absolute;inset:0;width:100%;height:100%;z-index:-1"></canvas>');
+        // Expanded, Spicy hides the view's other sections (here the cover).
+        aside.querySelector('#NPVCardMaximize').onclick = e => { window.__expandClicks = (window.__expandClicks || 0) + 1; const c = e.target.closest('#SpicyLyricsNPVCard'); c.classList.remove('Collapsed'); c.classList.toggle('Expanded'); aside.querySelector('img').hidden = c.classList.contains('Expanded'); }; });
       const paneRect = await rect('#am-nowplaying');
       await addCard();
       await pick('npLyricsSource', 'Spicy Lyrics');
@@ -1935,12 +1940,20 @@ try {
       const lyricsTop = (await rect('#am-nowplaying .am-np-lyrics')).top;
       assert.deepEqual([state.pane, state.card, state.header, state.page], [true, 'Expanded', false, 0]);
       // The cut is measured by a ResizeObserver, a frame after the switch.
-      await page.waitForFunction(top => Math.abs([...document.querySelectorAll('.am-native-right aside')].pop().getBoundingClientRect().top - top) <= 1, lyricsTop);
-      const asideTop = await page.evaluate(() => [...document.querySelectorAll('.am-native-right aside')].pop().getBoundingClientRect().top);
+      await page.waitForFunction(top => Math.abs(document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top - top) <= 1, lyricsTop);
+      const asideTop = await page.evaluate(() => document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top);
       assert.deepEqual([state.col, Math.abs(asideTop - lyricsTop) <= 1], [paneRect, true], 'one background in the pane\'s place; Spicy\'s view starts where the lyrics did');
       const topAt = (x, y) => page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e?.closest('.am-native-right') ? 'column' : e?.closest('#am-nowplaying') ? 'pane' : e?.tagName; }, [x, y]);
       const art = await rect('#am-nowplaying .am-np-cover');
       assert.deepEqual([await topAt(art.left + 20, art.top + 20), await topAt(state.col.left + state.col.width / 2, lyricsTop + 40)], ['pane', 'column']);
+      // Spicy Lyrics' colours (the default background): Spicy's own moving background fills the whole sidebar, behind the
+      // artwork too; with another background it is hidden.
+      const spicyBg = () => page.evaluate(() => { const c = [...document.querySelectorAll('.am-native-right aside > .spicy-dynamic-bg')].pop(), r = c.getBoundingClientRect(); return c.getClientRects().length ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } : null; });
+      assert.equal(await spicyBg(), null, 'hidden with the artwork colours');
+      await pick('npBg', 'Spicy Lyrics');
+      assert.deepEqual(await spicyBg(), paneRect, 'Spicy\'s colours fill the sidebar');
+      assert.ok(await page.evaluate(() => document.body.classList.contains('am-np-artbg')), 'the cover\'s colours stay under them');
+      await pick('npBg', 'Kapak renkleri');
       // Plain: the column is the whole sidebar.
       await pick('npBg', 'Sade (Apple)');
       await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden);
