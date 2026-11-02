@@ -123,7 +123,8 @@
   document.documentElement.style.setProperty('--am-t-pause',JSON.stringify(T('Duraklat','Pause')));
   const accents={red:[T('Kırmızı','Red'),'#fa2d48','#fa4662'],pink:[T('Pembe','Pink'),'#ff375f','#ff5c7c'],orange:[T('Turuncu','Orange'),'#ff9f0a','#ffb340'],yellow:[T('Sarı','Yellow'),'#ffd60a','#ffe04d'],green:[T('Yeşil','Green'),'#30d158','#5ade7a'],teal:[T('Turkuaz','Teal'),'#40c8e0','#6dd6ea'],blue:[T('Mavi','Blue'),'#0a84ff','#409cff'],purple:[T('Mor','Purple'),'#bf5af2','#cf7ff5'],spotify:[T('Spotify Yeşili','Spotify Green'),'#1ed760','#3be477']};
   if(!accents[settings.accent])settings.accent='red';
-  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
+  // Saved values of settings this build does not define (a newer or older build's) are kept, not dropped.
+  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify({...savedSettings,...settings}));}catch{}}
   function applySettings(){
     const [,accent,focus]=accents[settings.accent];
     document.documentElement.style.setProperty('--am-accent',accent);
@@ -2875,7 +2876,7 @@
     if(group)settingsTab=group;
     if(!settingsBack.isConnected){settingsReturn=document.activeElement;closePopover();settingsBox.style.cssText='';document.body.append(settingsBack);menuGlass.attach(settingsBox);}
     renderSettings();
-    (settingsBox.querySelector('.am-settings-tab.am-selected')||settingsBox.querySelector('.am-settings-control'))?.focus({preventScroll:true});
+    if(!settingsBox.contains(document.activeElement))settingsBox.focus({preventScroll:true});
     return settingsBack.isConnected&&!!settingsBox.querySelector('.am-settings-row');
   }
   function closeSettings() {

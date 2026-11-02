@@ -1063,11 +1063,11 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 #am-settings.am-settings-sheet {pointer-events:auto;background:var(--am-settings-dim);animation:am-dim-in .24s ease-out}
 @keyframes am-settings-in {from{opacity:0;scale:.96}}
 @keyframes am-settings-drop {from{opacity:0;translate:-50% -16px}}
-.am-settings-box {--am-settings-w:600px;pointer-events:auto;position:absolute;left:50%;top:max(72px,11vh);translate:-50% 0;box-sizing:border-box;width:min(var(--am-settings-w),calc(100vw - 32px));max-height:calc(100vh - 120px);
+.am-settings-box {--am-settings-w:600px;--am-settings-top:max(72px,11vh);pointer-events:auto;position:absolute;--am-settings-half:calc(min(var(--am-settings-w),100vw - 32px) / 2);left:clamp(calc(var(--am-settings-half) + 16px),calc(var(--am-side) + (100vw - var(--am-side)) / 2),calc(100vw - var(--am-settings-half) - 16px));top:var(--am-settings-top);translate:-50% 0;box-sizing:border-box;width:min(var(--am-settings-w),calc(100vw - 32px));max-height:calc(100vh - var(--am-settings-top) - 86px);
  display:grid;grid-template:"bar" auto "body" minmax(0,1fr) / minmax(0,1fr);border-radius:16px;overflow:hidden;outline:0;animation:am-settings-in .24s cubic-bezier(.2,.8,.2,1);
  background:var(--am-menu-fill,var(--am-settings-fill));backdrop-filter:var(--am-menu-filter,blur(40px) saturate(1.8));-webkit-backdrop-filter:var(--am-menu-filter,blur(40px) saturate(1.8));
  box-shadow:var(--am-rim-lines,inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12),0 22px 70px #0000008c}
-.am-settings-sheet .am-settings-box {top:64px;animation:am-settings-drop .28s cubic-bezier(.2,.8,.2,1)}
+.am-settings-sheet .am-settings-box {--am-settings-top:64px;animation:am-settings-drop .28s cubic-bezier(.2,.8,.2,1)}
 #am-settings .am-settings-material-glass {--am-menu-fill:var(--am-settings-glass-tint)}
 #am-settings .am-settings-material-frosted {--am-menu-fill:var(--am-settings-fill);--am-menu-filter:blur(40px) saturate(1.8)}
 /* Balanced over a page that redraws every frame (Spicy Lyrics): solid, as the sidebar there, so no glass reruns per frame. */
@@ -1130,7 +1130,7 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 .am-settings-layout-tabs .am-settings-knob {display:none}
 .am-settings-layout-tabs .am-settings-switch[aria-checked="true"]::after {content:'';position:absolute;left:5.5px;top:2.5px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;rotate:45deg}
 /* Sidebar: System Settings. The groups in a sidebar of its own glass inside the window, the selected one in the accent. */
-.am-settings-layout-sidebar {--am-settings-w:760px;height:min(540px,calc(100vh - 120px));grid-template:"bar bar" auto "side body" minmax(0,1fr) / 200px minmax(0,1fr)}
+.am-settings-layout-sidebar {--am-settings-w:760px;height:min(540px,calc(100vh - var(--am-settings-top) - 86px));grid-template:"bar bar" auto "side body" minmax(0,1fr) / 200px minmax(0,1fr)}
 .am-settings-layout-sidebar .am-settings-title {text-align:left;padding-left:212px;font-size:15px;font-weight:700}
 .am-settings-side {grid-area:side;margin:0 0 10px 10px;padding:6px;border-radius:12px;background:var(--am-settings-side);overflow:auto}
 .am-settings-layout-sidebar .am-settings-nav {display:grid;gap:1px}

@@ -1493,17 +1493,24 @@ try {
       await other.waitForSelector('body.am-ready #am-sidebar');
       const names = () => other.evaluate(() => window.__menus[0]?.items.map(i => i.name));
       const list = await names();
-      assert.deepEqual([list[0], list.length], ['Dil: Otomatik', 3 + 9 + 3 + 2 + 5 + 1]);
+      // Every definition but the window's own, in tab order (General first); a choice gives a row per option.
+      assert.equal(list[0], 'Dil: Otomatik');
+      assert.ok(['Dil: Türkçe', 'Renk: Spotify Yeşili', 'Oynatıcıda albüm kapağı', 'Son listeler: 20', 'Çalma listelerinde parça numaraları'].every(n => list.includes(n)));
       assert.ok(list.includes('Renk: Mavi') && list.includes('Cam efekti: Eko') && list.includes('Son listeler: Yok') && !list.some(n => n.startsWith('Düzen')));
       await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
       assert.ok(await other.evaluate(() => !document.body.classList.contains('am-liquid') && window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').checked === false));
       await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
+      // Saved values of settings this build does not define are kept when it saves.
+      await other.evaluate(() => localStorage.setItem('mcloud:settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('mcloud:settings')), futureKey: 'kept' })));
       // A window that fails to open: the entry gives way to the submenu, and a toast says where the settings went.
       await other.goto(pathToFileURL(path.join(here, 'preview.html')).href);
       await other.waitForSelector('body.am-ready #am-sidebar');
       await other.evaluate(() => { const append = document.body.append; document.body.append = () => { throw new Error('test'); }; try { window.__menuItems.find(i => i.name === 'mcloud').onClick(); } finally { document.body.append = append; } });
       assert.deepEqual(await other.evaluate(() => [window.__menuItems.length, window.__menus.length, document.getElementById('am-settings')]), [0, 1, null]);
       assert.match(await other.textContent('.am-toasts > :last-child'), /mcloud/);
+      const artwork = await other.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).artwork);
+      await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Oynatıcıda albüm kapağı').onClick());
+      assert.deepEqual(await other.evaluate(() => { const s = JSON.parse(localStorage.getItem('mcloud:settings')); return [s.futureKey, s.artwork]; }), ['kept', !artwork]);
       assert.deepEqual(otherErrors, []);
     } finally { await other.close(); }
   });
