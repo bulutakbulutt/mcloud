@@ -822,8 +822,10 @@ body.am-ready .am-native-panel-open [data-am-fill] {
    anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
 body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
 /* Scrolled, Spotify drops a dark shadow under the panel's header and cuts the rows at its edge. On glass the rows fade
-   out under the header instead, as at a macOS scroll edge. The header is the sibling before the list's OverlayScrollbars box. */
-body.am-ready [data-am-sheet] div:has(+ div > .os-scrollbar) {box-shadow:none!important}
+   out under the header instead, as at a macOS scroll edge. The header is the sibling before the list's OverlayScrollbars box.
+   The list's 16px top padding, under 4px of header below the tabs, left a gap before "Now playing"; the list starts 16px
+   higher, under the header (which stays on top for clicks), so that padding is the fade. */
+body.am-ready [data-am-sheet] div:has(+ div > .os-scrollbar) {box-shadow:none!important;position:relative;z-index:1;margin-bottom:-16px!important}
 body.am-ready [data-am-sheet] div:has(> .os-scrollbar) {-webkit-mask-image:linear-gradient(transparent,#000 16px);mask-image:linear-gradient(transparent,#000 16px)}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
