@@ -731,6 +731,12 @@ try {
     await page.waitForFunction(() => __playerExtent() === '712');
   });
 
+  // The card tools' look, compared between the artist page and the library (#86): one set of rules for both.
+  const toolLook = button => { const c = getComputedStyle(button); return ['width', 'height', 'borderTopWidth', 'paddingTop', 'borderRadius', 'backgroundColor', 'backdropFilter', 'color', 'bottom'].map(k => c[k]).join(' | '); };
+  // While the buttons fade in, nothing above them may sit below opacity 1: that ancestor would become their backdrop root
+  // and their blur would show only once the fade ends (the flicker).
+  const toolRoots = button => { const out = []; for (let e = button.parentElement; e && e !== document.body; e = e.parentElement) if (getComputedStyle(e).opacity !== '1') out.push(e.className || e.id); return out; };
+  let artistToolLook = null;
   await check('artist page', async () => {
     await page.evaluate(() => Spicetify.Platform.History.push('/artist/mock'));
     await page.waitForSelector('body.am-artist-open .am-artist-name');
@@ -793,9 +799,11 @@ try {
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
     // Hovering a release shows Apple's play and "…" over its artwork (#86); play plays it, the card still opens it.
     const card = page.locator('#am-artist .am-card:has(.am-card-tools) >> nth=0');
-    assert.equal(await card.locator('.am-card-tools').evaluate(e => getComputedStyle(e).opacity), '0');
+    assert.equal(await card.locator('.am-tool-play').evaluate(e => getComputedStyle(e).opacity), '0');
     await card.hover();
-    await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-artist .am-card:hover .am-card-tools')).opacity === '1');
+    assert.deepEqual(await card.locator('.am-tool-play').evaluate(toolRoots), []);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-artist .am-card:hover .am-tool-play')).opacity === '1');
+    artistToolLook = await card.locator('.am-tool-play').evaluate(toolLook);
     await card.locator('.am-tool-play').click();
     assert.equal(await page.evaluate(() => window.__playedUri), await card.getAttribute('data-uri'));
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-open')));
@@ -977,6 +985,56 @@ try {
     await page.click('#am-popover .am-popover-item:has-text("Kitaplıktan Çıkar")');
     assert.equal(await page.evaluate(() => window.__libraryRemoves.at(-1)), await page.evaluate(() => document.querySelector('.am-library-card').dataset.uri));
     assert.ok(await page.locator('#am-popover').isHidden());
+  });
+
+  await check('library cards get the artist page\'s hover tools (#86)', async () => {
+    const open = async kind => { await page.evaluate(k => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=' + k }), kind); await page.waitForSelector('.am-library-item'); };
+    await open('playlists');
+    const item = uri => page.locator(`.am-library-item:has(.am-library-card[data-uri="${uri}"])`);
+    // A playlist: tools hidden until hover, the art dims, play (bottom left) and "…" (bottom right) sit on the art.
+    const list = item('spotify:playlist:1');
+    assert.equal(await list.locator('.am-tool-play').evaluate(e => getComputedStyle(e).opacity), '0');
+    await list.hover();
+    assert.deepEqual(await list.locator('.am-tool-play').evaluate(toolRoots), []);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.am-library-item:hover .am-tool-play')).opacity === '1');
+    // The same buttons as the artist page's: size, no UA border or padding, glass, colour, place.
+    assert.equal(await list.locator('.am-tool-play').evaluate(toolLook), artistToolLook);
+    assert.equal(await list.locator('.am-tool-more').evaluate(toolLook), artistToolLook);
+    const look = await list.evaluate(e => {
+      const art = e.querySelector('.am-library-art').getBoundingClientRect(), p = e.querySelector('.am-tool-play').getBoundingClientRect(), m = e.querySelector('.am-tool-more').getBoundingClientRect();
+      return { filter: getComputedStyle(e.querySelector('.am-library-art')).filter, left: p.left - art.left, right: art.right - m.right, bottom: art.bottom - p.bottom, nested: !!e.querySelector('.am-library-card button') };
+    });
+    assert.equal(look.filter, 'brightness(0.92)');
+    assert.deepEqual([look.left, look.right, look.bottom, look.nested], [8, 8, 8, false]);
+    // Play starts the playlist; "…" opens the menu a right click opens.
+    await list.locator('.am-tool-play').click();
+    assert.equal(await page.evaluate(() => window.__playedUri), 'spotify:playlist:1');
+    assert.ok(await page.locator('#am-popover').isHidden());
+    await list.locator('.am-tool-more').click();
+    await page.waitForSelector('#am-popover .am-popover-item');
+    const more = await page.locator('#am-popover .am-popover-item').allTextContents();
+    assert.ok(more.slice(0, 4).join() === ['Çal', 'Sıraya Ekle', 'Aç', 'Bağlantıyı Kopyala'].join() && more.includes('Çalma listesi sil') === false);
+    await page.keyboard.press('Escape');
+    await item('spotify:playlist:2').click({ button: 'right', position: { x: 20, y: 20 } });
+    await page.waitForSelector('#am-popover .am-popover-item');
+    assert.deepEqual((await page.locator('#am-popover .am-popover-item').allTextContents()).slice(0, 4), more.slice(0, 4));
+    await page.keyboard.press('Escape');
+    // A folder has "…" only (Open Folder, New Playlist); Liked Songs plays like a playlist.
+    const folder = item('spotify:folder:ruh');
+    await folder.hover();
+    assert.equal(await folder.locator('.am-tool-play').count(), 0);
+    await folder.locator('.am-tool-more').click();
+    await page.waitForSelector('#am-popover .am-popover-item');
+    assert.equal((await page.locator('#am-popover .am-popover-item').allTextContents())[0], 'Klasörü Aç');
+    await page.keyboard.press('Escape');
+    assert.equal(await item('spotify:collection:tracks').locator('.am-tool-play').count(), 1);
+    // Keyboard focus shows them too.
+    await item('spotify:playlist:3').locator('.am-library-card').focus();
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('.am-library-item:focus-within .am-tool-play')).opacity === '1');
+    // Round artist cards get none, as on the artist page.
+    await open('artists');
+    assert.equal(await page.locator('.am-library-item .am-card-tools').count(), 0);
+    assert.equal(await page.locator('.am-library-item').count(), 6);
   });
 
   await check('search results as macOS 27 Music\'s suggestions', async () => {
