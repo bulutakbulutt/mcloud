@@ -1159,7 +1159,9 @@ body:not(.am-np-only) #am-nowplaying:not(.am-np-lyrics-on) .am-np-actions {margi
 #am-nowplaying .am-np-actions button {width:40px;height:36px;border-radius:8px;color:var(--am-np-sub)}
 #am-nowplaying .am-np-actions svg {width:21px;height:21px}
 #am-nowplaying .am-np-actions .am-active {color:var(--am-np-text);background:var(--am-np-chip)}
-#am-player .am-np-toggle.am-active {color:var(--am-accent-focus)}
+/* The pane's lyrics button with lyrics under the artwork: back to the line being sung, and a brief glow shows where. */
+.am-np-lyrics.am-np-flash {animation:am-np-flash .9s ease-out}
+@keyframes am-np-flash {from{background:var(--am-np-chip)}}
 /* Everything else keeps clear of the pane: the floating player and toasts centre on the page, the theme's views,
    the toolbar and Spotify's queue sheet stop at its edge. */
 body.am-np-open #am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - var(--am-right) - 64px),700px),2px);left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-right) - var(--am-player-w))/2),1px)}

@@ -1401,8 +1401,13 @@ try {
       body: '#EXTM3U\n#EXT-X-MAP:URI="clip-.mp4",BYTERANGE="898@0"\n#EXTINF:4,\n#EXT-X-BYTERANGE:5000@898\nclip-.mp4\n#EXT-X-ENDLIST' }));
     await page.route(/\.mp4$/, r => r.fulfill({ status: 200, contentType: 'video/mp4', body: 'not a video' }));
     try {
-      // Off by default: no pane, no toggle, nothing requested.
-      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open') && document.querySelector('#am-player .am-np-toggle').hidden));
+      // Off by default: no pane, nothing requested, and the lyrics button still drives Spicy Lyrics. The player's optional
+      // buttons are named for the settings window's button picker.
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
+      assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-player [data-am-button]')].map(b => b.dataset.amButton).sort()),
+        ['connect', 'love', 'lyrics', 'more', 'next', 'popup-lyrics', 'previous', 'queue', 'repeat', 'shuffle', 'volume']);
+      assert.equal(await page.locator('#am-player .am-np-toggle').count(), 0, 'no separate pane button');
       await page.waitForFunction(() => window.__menus.some(m => m.name === 'mcloud: Şimdi Çalan'));
 
       // Beside the player: the pane at the right edge, the page and the player kept clear of it, Spotify's lyrics under the cover.
@@ -1422,19 +1427,24 @@ try {
       // A line plays from where it is clicked.
       await page.click('#am-nowplaying .am-np-line >> nth=3');
       assert.equal(await page.evaluate(() => window.__mockState.progress), 90000);
-      // The player's button closes and opens the pane; the page takes the room back.
-      await page.click('#am-player .am-np-toggle');
-      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
-      assert.ok((await rect('.am-native-main')).right > 1430);
-      await page.click('#am-player .am-np-toggle');
-      assert.ok(await page.isVisible('#am-nowplaying'));
-
-      // The lyrics button variant: lyrics in their own view, artwork shrunk to a thumbnail.
-      await pick('npLyricsPlace', 'Sözler düğmesiyle');
-      assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')));
+      // The pane's lyrics button (lyrics under the artwork) brings the line being sung back into view.
+      await page.evaluate(() => { document.querySelector('#am-nowplaying .am-np-lyrics').scrollTop = 0; window.__mockState.progress = 125000; });
       await page.click('#am-nowplaying .am-np-lyrics-toggle');
+      assert.equal(await page.textContent('#am-nowplaying .am-np-line.am-current'), 'Every day patches the night up');
+      assert.ok(await page.evaluate(() => { const box = document.querySelector('#am-nowplaying .am-np-lyrics'), line = box.querySelector('.am-current'); return box.scrollTop > 0 && line.offsetTop >= box.scrollTop && line.offsetTop < box.scrollTop + box.clientHeight; }));
+      // As in Apple Music, the player's lyrics button opens and closes the pane (no button of its own); the page takes the room back.
+      assert.deepEqual(await page.evaluate(() => { const b = document.getElementById('am-lyrics-toggle'); return [b.getAttribute('aria-label'), b.getAttribute('aria-pressed'), b.title]; }), ['Sözler', 'true', 'Sözleri gizle']);
+      await page.click('#am-lyrics-toggle');
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      assert.deepEqual(await page.evaluate(() => { const b = document.getElementById('am-lyrics-toggle'); return [b.getAttribute('aria-pressed'), b.title]; }), ['false', 'Sözleri göster']);
+      assert.ok((await rect('.am-native-main')).right > 1430);
+      assert.ok(!(await page.evaluate(() => location.pathname.endsWith('/SpicyLyrics') || Spicetify.Platform.History.location.pathname === '/SpicyLyrics')), 'Spicy Lyrics stays closed');
+      // The lyrics button variant: the pane opens straight into its lyrics view, the artwork shrunk to a thumbnail.
+      await pick('npLyricsPlace', 'Sözler düğmesiyle');
+      await page.click('#am-lyrics-toggle');
       assert.ok(await page.isVisible('#am-nowplaying .am-np-lyrics') && await page.isVisible('#am-nowplaying .am-np-thumb') && !(await page.isVisible('#am-nowplaying .am-np-art')));
       await page.click('#am-nowplaying .am-np-lyrics-toggle');
+      assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')) && await page.isVisible('#am-nowplaying .am-np-art'));
       await pick('npLyricsPlace', 'Kapağın altında');
 
       // Sidebar only: the floating player goes, its own controls move into the pane and still work.
@@ -1495,6 +1505,7 @@ try {
     assert.equal(await page.locator('#am-player .am-player-track > .am-scrub .am-seek').count(), 1);
     assert.equal(await page.locator('#am-player .am-player-extras > .am-volume-wrap:last-child').count(), 1);
     assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-only')));
+    assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat', 'off again: the lyrics button drives Spicy Lyrics');
   });
 
   await check('English when Spotify is not in Turkish; the menu switches the language and reloads', async () => {

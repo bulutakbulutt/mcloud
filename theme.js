@@ -886,7 +886,8 @@
     }
   }
   const extras=el('div','am-player-extras');player.append(extras);
-  const lyricsButton=button(T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'),'lyrics',toggleSpicyLyrics);
+  // With the Now Playing pane beside the player, the lyrics button opens the pane's lyrics instead (npPlayerLyrics).
+  const lyricsButton=button(T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'),'lyrics',()=>settings.nowPlaying==='beside'?npPlayerLyrics():toggleSpicyLyrics());
   lyricsButton.id='am-lyrics-toggle';
   const popupLyricsButton=button(T('Spicy Lyrics açılır pencere','Spicy Lyrics popup'),'popup',()=>runSpicyControl('SpicyLyrics_PopupLyricsButton'));popupLyricsButton.hidden=true;
   // Spotify Connect opens its device list in the right panel, shown as the same glass sheet as the queue.
@@ -2003,9 +2004,10 @@
     document.body.classList.toggle('am-spicy-route',lyricsOpen);
     const available=!!document.getElementById('SpicyLyrics_PageButton');
     popupLyricsButton.hidden=!document.getElementById('SpicyLyrics_PopupLyricsButton');
-    lyricsButton.classList.toggle('am-active',lyricsOpen);
+    if(settings.nowPlaying==='beside'){npSyncLyricsButton();}else{
+    lyricsButton.classList.toggle('am-active',lyricsOpen);setAttributeIfChanged(lyricsButton,'aria-label',T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'));
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));
-    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?T('Spicy Lyrics sözlerini kapat','Hide Spicy Lyrics'):T('Spicy Lyrics sözlerini aç','Show Spicy Lyrics')):T('Spicy Lyrics yükleniyor…','Spicy Lyrics is loading…'));
+    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?T('Spicy Lyrics sözlerini kapat','Hide Spicy Lyrics'):T('Spicy Lyrics sözlerini aç','Show Spicy Lyrics')):T('Spicy Lyrics yükleniyor…','Spicy Lyrics is loading…'));}
     fullscreenButton.classList.toggle('am-active',fullscreen);
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
     setAttributeIfChanged(fullscreenButton,'title',fullscreen?T('Tam ekrandan çık','Exit Full Screen'):T('Tam ekran','Full Screen'));
@@ -2068,13 +2070,26 @@
   npMeta.append(npThumb,npText,npStar,npMore);
   const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
   npLyricsBox.setAttribute('aria-live','off');
-  const npLyricsButton=button(T('Sözler','Lyrics'),'lyrics',()=>npShowLyrics(!np.classList.contains('am-np-lyrics-on')),'am-np-lyrics-toggle');
+  // The pane's lyrics button: the lyrics view on and off, or (lyrics under the artwork) back to the line being sung.
+  const npLyricsButton=button(T('Sözler','Lyrics'),'lyrics',()=>settings.npLyricsPlace==='below'?npJumpLyrics(true):npShowLyrics(!np.classList.contains('am-np-lyrics-on')),'am-np-lyrics-toggle');
   npActions.append(npLyricsButton);
   npBody.append(npArt,npMeta,npLyricsBox,npControls,npActions);np.append(npBg,npBleed,npBody);document.body.append(np);
   np.addEventListener('contextmenu',event=>{if(popover.contains(event.target)||!S.Player.data?.item?.uri)return;event.preventDefault();openTrackMenu({x:event.clientX,y:event.clientY});});
-  // In 'beside' mode the floating player opens and closes the pane, where Spotify had its Now Playing view button.
-  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npSet('npOpen',!settings.npOpen),'am-np-toggle');npToggle.hidden=true;
-  lyricsButton.after(npToggle);
+  // In 'beside' mode the player's lyrics button opens and closes the pane with its lyrics, as Apple Music's opens the
+  // lyrics pane on the Mac; there is no separate pane button. With the pane off it keeps driving Spicy Lyrics.
+  function npPlayerLyrics() {
+    const open=!settings.npOpen;
+    if(open&&settings.npLyricsPlace==='button')np.classList.add('am-np-lyrics-on');
+    npSet('npOpen',open);if(open)npJumpLyrics();
+  }
+  function npSyncLyricsButton() {
+    const open=settings.nowPlaying==='beside'&&!!settings.npOpen;
+    lyricsButton.classList.toggle('am-active',open);setAttributeIfChanged(lyricsButton,'aria-pressed',String(open));
+    setAttributeIfChanged(lyricsButton,'aria-label',T('Sözler','Lyrics'));
+    setAttributeIfChanged(lyricsButton,'title',open?T('Sözleri gizle','Hide Lyrics'):T('Sözleri göster','Show Lyrics'));
+  }
+  // The player's optional buttons, named for the settings window's button picker (kept if it named them first).
+  for(const [b,id] of [[shuffle,'shuffle'],[back,'previous'],[next,'next'],[repeat,'repeat'],[star,'love'],[more,'more'],[popupLyricsButton,'popup-lyrics'],[lyricsButton,'lyrics'],[connectButton,'connect'],[queueButton,'queue'],[volumeWrap,'volume']])b.dataset.amButton??=id;
   // 'only' mode moves the player's own controls in, and back out of it.
   function npMove(only) {
     if(only&&scrub.parentElement!==npControls){npControls.append(scrub,controls,volumeWrap);npActions.append(connectButton,queueButton);}
@@ -2087,7 +2102,7 @@
     const mode=settings.nowPlaying,open=mode==='only'||(mode==='beside'&&settings.npOpen),b=document.body.classList;
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-docked',settings.npLayout==='docked');
     b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-center',settings.npLyricsAlign==='center');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
-    np.hidden=!open;npToggle.hidden=mode!=='beside';npToggle.classList.toggle('am-active',open);setAttributeIfChanged(npToggle,'aria-pressed',String(open));
+    np.hidden=!open;syncSpicyControls();
     npMove(mode==='only');
     npTrackKey='';npLyricUri=null;if(open)npTick();else{npStopVideo();clearTimeout(npLyricTimer);}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;}
@@ -2191,6 +2206,11 @@
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
   const npLyricsShown=()=>np.classList.contains('am-np-lyrics-on')||settings.npLyricsPlace==='below';
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
+  // Back to the line being sung, at once; flash marks where the lyrics are.
+  function npJumpLyrics(flash) {
+    npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;npSyncLyric();
+    if(flash&&!reducedMotion.matches){npLyricsBox.classList.remove('am-np-flash');void npLyricsBox.offsetWidth;npLyricsBox.classList.add('am-np-flash');}
+  }
   function npShowLyrics(on) {
     np.classList.toggle('am-np-lyrics-on',on);npLyricsButton.classList.toggle('am-active',on);setAttributeIfChanged(npLyricsButton,'aria-pressed',String(on));
     if(npLyricsShown()){npLyricUri=null;npLoadLyrics(S.Player.data?.item);}else{clearTimeout(npLyricTimer);npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
@@ -2226,7 +2246,7 @@
     const at=S.Player.getProgress?.()||0,lines=npLyrics.lines;let index=-1;
     while(index+1<lines.length&&lines[index+1].t<=at+120)index++;
     if(index!==npLyricIndex){
-      lines[npLyricIndex]?.node.classList.remove('am-current');npLyricIndex=index;
+      npLyricsBox.querySelector('.am-current')?.classList.remove('am-current');npLyricIndex=index;
       const node=lines[index]?.node;node?.classList.add('am-current');
       // Follows the song unless the reader scrolled in the last few seconds; the first line shown after loading (or a
       // seek's click) is jumped to, the next ones glide.
