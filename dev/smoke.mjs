@@ -1222,9 +1222,13 @@ try {
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
     // The artist page keeps its dark artist colours in light mode (as Music does) unless it is set to light.
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
-    await pick('Açık modda sanatçı sayfası: Açık');
+    await pick('Açık modda sanatçı sayfası: Açık (Apple Music\'te yok)');
     assert.ok(await page.evaluate(() => !document.body.classList.contains('am-artist-stays-dark')));
     await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi, Apple gibi)');
+    // Artist page colour: Apple's (the photo's own colour) or the theme's deep tint.
+    await pick('Sanatçı sayfası rengi: Apple (fotoğrafın rengi)');
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).artistTint, 'apple');
+    await pick('Sanatçı sayfası rengi: mcloud (koyu ton)');
     // System: follows prefers-color-scheme as it changes.
     await page.emulateMedia({ colorScheme: 'dark' });
     await pick('Görünüm: Sistem');

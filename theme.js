@@ -146,8 +146,8 @@
   // their tone in SVG, so light mode adds one colour step to each (applyGlassScheme). Style choices are settings:
   // artistLight (the artist page in light mode: 'dark' keeps the dark artist-coloured page, as Music does in light,
   // 'light' turns it pale), lightGlass (player and toolbar glass) and lightMenu (menus and search results).
-  const appearanceModes=['dark','light','system'],artistLightModes=['dark','light'],lightGlassModes=['apple','unfocused'],lightMenuModes=['apple','glass','material'];
-  for(const [key,value] of [['appearance','dark'],['artistLight','dark'],['lightGlass','apple'],['lightMenu','apple']]){
+  const appearanceModes=['dark','light','system'],artistLightModes=['dark','light'],lightGlassModes=['apple','unfocused'],lightMenuModes=['apple','glass','material'],artistTintModes=['theme','apple'];
+  for(const [key,value] of [['appearance','dark'],['artistLight','dark'],['lightGlass','apple'],['lightMenu','apple'],['artistTint','theme']]){
     if(!(key in settings))try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[key];settings[key]=typeof saved==='string'?saved:value;}catch{settings[key]=value;}
   }
   const systemLight=matchMedia('(prefers-color-scheme: light)');
@@ -212,8 +212,9 @@
   applyAppearance();
   function setAppearance(key,value){settings[key]=value;saveSettings();applyAppearance();}
   const appearanceLabels=()=>({appearance:[T('Görünüm','Appearance'),{dark:T('Koyu','Dark'),light:T('Açık','Light'),system:T('Sistem','System')}],
-    artistLight:[T('Açık modda sanatçı sayfası','Artist page in light mode'),{dark:T('Koyu (sanatçı rengi, Apple gibi)','Dark (artist colour, as Apple)'),light:T('Açık','Light')}],
+    artistLight:[T('Açık modda sanatçı sayfası','Artist page in light mode'),{dark:T('Koyu (sanatçı rengi, Apple gibi)','Dark (artist colour, as Apple)'),light:T('Açık (Apple Music\'te yok)','Light (not in Apple Music)')}],
     lightGlass:[T('Açık modda cam','Light glass'),{apple:T('Apple (ölçülen)','Apple (measured)'),unfocused:T('Daha koyu (odaksız pencere)','Deeper (unfocused window)')}],
+    artistTint:[T('Sanatçı sayfası rengi','Artist page colour'),{theme:T('mcloud (koyu ton)','mcloud (deep tint)'),apple:T('Apple (fotoğrafın rengi)','Apple (the photo\'s colour)')}],
     lightMenu:[T('Açık modda menüler','Light menus'),{apple:T('Apple (ölçülen)','Apple (measured)'),glass:T('Liquid Glass','Liquid Glass'),material:T('Buzlu (eski menü)','Frosted (classic menu)')}]});
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
@@ -2193,7 +2194,17 @@
     style.setProperty('--am-tint-top-light',`hsl(${hue} ${Math.round(sat*.6)}% 84%)`);
     style.setProperty('--am-tint-bg-light',`hsl(${hue} ${Math.round(sat*.4)}% 96%)`);
     style.setProperty('--am-tint-text-light',`hsl(${hue} ${Math.min(100,sat+10)}% 30%)`);
+    if(appleTint)applyAppleTint(appleTint);
     document.body.classList.add('am-tinted');
+  }
+  // artistTint 'apple' (issue #74): Music's artist page in both appearances, measured on 11 artists (focused captures):
+  // the page under the hero is one colour from the artwork, kept dark enough for white text (page luminance 2-120 of
+  // 255: Billie Eilish #081b29, Coldplay #5d587e, Adele #6a6862, The Weeknd's white-backed photo #635f65), and the name,
+  // headings and text stay white whatever the photo. Here: the photo's most common colour, capped as the ⓘ sheet's.
+  let appleTint=null;
+  function applyAppleTint(color){
+    const style=document.documentElement.style;appleTint=color;
+    style.setProperty('--am-tint-top',color);style.setProperty('--am-tint-bg',color);style.setProperty('--am-tint-text','rgb(255 255 255/.62)');
   }
   // Apple Music takes the page colour from the artwork. Spotify's extracted colour is often off (grey
   // photos come back reddish), so the artwork is sampled: the most colourful hue family wins, and an
@@ -2516,6 +2527,9 @@
     // Spotify now sends the header as artistUnion.headerImage.data; visuals.headerImage is the older place.
     const header=artist.headerImage?.data||visuals.headerImage,avatarOnly=!header?.sources?.length;
     const spotifyColor=header?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
+    appleTint=null;
+    if(settings.artistTint==='apple'){const photo=sheetPhoto(artist)||smallImage(header||visuals.avatarImage);
+      (sheetColors.has(photo)?Promise.resolve(sheetColors.get(photo)):sheetColor(photo)).then(color=>{if(request===artistRequest&&color){sheetColors.set(photo,color);applyAppleTint(color);}});}
     const fallbackTint=setTimeout(()=>{if(request===artistRequest)setTint(spotifyColor);},600);
     artworkColor(smallImage(header||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
@@ -2826,11 +2840,11 @@
     new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
   }
   // Appearance settings: in the settings window when it is there (issue #76's defineSetting), otherwise their own submenu.
-  {const labels=appearanceLabels(),keys={appearance:appearanceModes,artistLight:artistLightModes,lightGlass:lightGlassModes,lightMenu:lightMenuModes};
+  {const labels=appearanceLabels(),keys={appearance:appearanceModes,artistTint:artistTintModes,artistLight:artistLightModes,lightGlass:lightGlassModes,lightMenu:lightMenuModes};
     const lightOnly=()=>settings.appearance!=='dark';
     if(typeof defineSetting==='function'){
       for(const [key,modes] of Object.entries(keys))defineSetting({key,group:'appearance',label:labels[key][0],type:'choice',default:settings[key],style:key==='appearance'?'segmented':'menu',
-        section:key==='appearance'?undefined:T('Açık mod','Light mode'),options:modes.map(m=>[m,labels[key][1][m]]),apply:v=>{if(settings[key]!==v){settings[key]=v;}applyAppearance();},when:key==='appearance'?undefined:lightOnly});
+        section:key==='appearance'||key==='artistTint'?undefined:T('Açık mod','Light mode'),options:modes.map(m=>[m,labels[key][1][m]]),apply:v=>{if(settings[key]!==v){settings[key]=v;}applyAppearance();},when:key==='appearance'||key==='artistTint'?undefined:lightOnly});
     }else if(S.Menu?.SubMenu&&S.Menu?.Item){
       const items=[];
       for(const [key,modes] of Object.entries(keys))for(const m of modes){const item=new S.Menu.Item(labels[key][0]+': '+labels[key][1][m],settings[key]===m,()=>{setAppearance(key,m);items.forEach(i=>i.item.setState(settings[i.key]===i.m));});items.push({item,key,m});}
