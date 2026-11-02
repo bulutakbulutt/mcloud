@@ -3536,7 +3536,7 @@
     if(typeof setSetting==='function')return setSetting(key,value);
     settings[key]=value;saveSettings();ownSettings.find(def=>def.key===key)?.apply?.(value);applySettings();
   }
-  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
+  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'',playlistId=()=>/^\/playlist\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
   // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
   // the page. Someone who had hid them keeps them hidden on albums too.
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
@@ -3558,7 +3558,8 @@
     return info;
   }
   async function syncAlbum() {
-    const id=albumId(),request=++albumRequest,tint=settings.albumTint!=='off',body=document.body.classList;
+    const id=albumId(),request=++albumRequest,tint=settings.albumTint!=='off',body=document.body.classList,list=!id&&tint&&playlistId();
+    if(list){albumStyle.textContent='';return tintPlaylist(list,request);}
     if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum||!settings.albumClean&&!tint){albumStyle.textContent='';body.remove('am-album-tinted');return;}
     const cached=albumInfo.get(id);if(!cached?.color)body.remove('am-album-tinted');
     const info=cached||await albumData(id);
@@ -3572,19 +3573,51 @@
     if(!tint)return;
     if(info.color===undefined)info.color=await artworkColor(info.cover);
     if(request!==albumRequest)return;
-    const hsl=hexToHsl(info.color);if(!hsl)return;
+    setAlbumTint(info.color);
+  }
+  function setAlbumTint(color) {
+    const hsl=hexToHsl(color);if(!hsl)return;
     // A grey cover keeps a grey page (see setTint); other colours are kept clear of muddy and neon extremes.
     const [h,s,l]=hsl,sat=Math.round((s<.1?s:Math.min(.8,Math.max(.35,s)))*100),light=Math.round(Math.min(.55,Math.max(.32,l))*100);
     document.documentElement.style.setProperty('--am-album-tint',`hsl(${Math.round(h)} ${sat}% ${light}%)`);
-    body.add('am-album-tinted');
+    document.body.classList.add('am-album-tinted');
+  }
+  // Playlists take their cover's colour too (#97). Spotify has no small query for a playlist's image, so it is read
+  // from the page's header once that has loaded; a colour found is kept for the session.
+  const playlistColors=new Map();
+  async function tintPlaylist(id,request) {
+    let color=playlistColors.get(id);
+    if(!color){
+      document.body.classList.remove('am-album-tinted');
+      let img=null;
+      for(let i=0;i<20&&request===albumRequest;i++){img=document.querySelector('.am-native-main [data-testid="playlist-page"] .main-entityHeader-imageContainer img[src]');if(img?.complete&&img.naturalWidth)break;await wait(250);}
+      color=request===albumRequest&&img?.naturalWidth?await artworkColor(img.currentSrc||img.src):null;
+      if(request!==albumRequest||!color)return;
+      playlistColors.set(id,color);
+    }
+    setAlbumTint(color);
   }
   H.listen(syncAlbum);
+  // Apple Music gives an album's or playlist's length under its songs (#97): user.css draws Spotify's own text
+  // ("12 songs, 42 min") from --am-list-info at the end of the list, and hides it in the header once it is copied.
+  // The count can come in after the page and a playlist's length grows as it loads, so it is read for a while.
+  const listCount='.main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > div:not(.main-entityHeader-creatorWrapper)';
+  let listInfoTimer=0;
+  function syncListInfo(tries=0) {
+    clearTimeout(listInfoTimer);
+    const kind=/^\/(album|playlist)\//.exec(routePath())?.[1];if(!kind)return;
+    const page=document.querySelector(`.am-native-main [data-testid="${kind}-page"]`);
+    const text=page?.querySelector(listCount)?.textContent.trim().replace(/,(?=\S)/g,', ')||'';
+    if(text&&!document.hidden){const value=JSON.stringify(text);if(page.style.getPropertyValue('--am-list-info')!==value){page.style.setProperty('--am-list-info',value);page.dataset.amListInfo='';}}
+    if(tries<16)listInfoTimer=setTimeout(()=>syncListInfo(tries+1),text?1000:250);
+  }
+  H.listen(()=>syncListInfo());syncListInfo();
   pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
   // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
   pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
-  // Album pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
+  // Album and playlist pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
   const albumTints=['off','subtle','full'];
-  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm ve çalma listesi rengi','Album and playlist colour'),type:'choice',style:'segmented',default:'off',
     options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
     apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
