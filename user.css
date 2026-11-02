@@ -1070,7 +1070,8 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 .am-settings-sheet .am-settings-box {top:64px;animation:am-settings-drop .28s cubic-bezier(.2,.8,.2,1)}
 #am-settings .am-settings-material-glass {--am-menu-fill:var(--am-settings-glass-tint)}
 #am-settings .am-settings-material-frosted {--am-menu-fill:var(--am-settings-fill);--am-menu-filter:blur(40px) saturate(1.8)}
-#am-settings .am-settings-material-solid,body.am-solid #am-settings .am-settings-box {--am-menu-fill:var(--am-settings-solid);--am-menu-filter:none}
+/* Balanced over a page that redraws every frame (Spicy Lyrics): solid, as the sidebar there, so no glass reruns per frame. */
+#am-settings .am-settings-material-solid,body.am-solid #am-settings .am-settings-box,body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-settings .am-settings-box {--am-menu-fill:var(--am-settings-solid);--am-menu-filter:none}
 .am-settings-box :focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
 .am-settings-titlebar {grid-area:bar;display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;padding:10px 12px 8px;user-select:none}
 .am-settings-window .am-settings-titlebar {cursor:default}
