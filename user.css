@@ -1097,7 +1097,8 @@ body.am-solid #am-settings .am-settings-box,body.am-balanced.am-spicy-route:not(
 /* Checkbox: Apple's 14pt box, empty in the control grey, checked in the accent. */
 .am-settings-switch {position:relative;width:15px;height:15px;padding:0;border:0;border-radius:4px;background:var(--am-settings-control);box-shadow:inset 0 0 0 .5px rgb(var(--am-ink,255 255 255)/.12);cursor:pointer;transition:background-color .15s}
 .am-settings-switch[aria-checked="true"] {background:var(--am-accent)}
-.am-settings-switch[aria-checked="true"]::after {content:'';position:absolute;left:5px;top:2px;width:3.5px;height:7.5px;border:solid #fff;border-width:0 2px 2px 0;rotate:45deg}
+/* The tick is drawn, centred in the box with round ends (a rotated border sat low and left, with square ends). */
+.am-settings-switch[aria-checked="true"]::after {content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7.9l2.4 2.4L11 4.9'/%3E%3C/svg%3E") center/15px 15px no-repeat}
 .am-settings-segmented {display:inline-flex;padding:2px;border-radius:7px;background:var(--am-settings-control)}
 .am-settings-segmented .am-settings-option {padding:2px 12px;border:0;border-radius:5px;background:none;color:var(--am-text);font:12px var(--encore-body-font-stack);white-space:nowrap;cursor:pointer;transition:background-color .15s}
 .am-settings-segmented .am-settings-option[aria-checked="true"] {background:var(--am-settings-control-on);box-shadow:0 1px 2px #0004}
