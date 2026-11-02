@@ -2767,6 +2767,53 @@
     currentMode='native';
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
   });
+  // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
+  // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
+  // the overlay (data-am-preview) and user.css restyles it as an Apple sheet in the layout and material picked here (it
+  // has no Apple counterpart, so these follow the issue's reference loosely); the sidebar and player dim with it.
+  // The artwork material is the current song's cover, blurred: read from the info column, or from the canvas card
+  // nearest the middle when the song shows none. Spotify keeps the same nodes from song to song, so only image
+  // sources and the scrolled list are watched, never its progress bar.
+  const pvLayouts=['apple','split','spotify'],pvMaterials=['artwork','glass','color'],pvSection=T('Şarkı önizlemesi','Song previews');
+  defineSetting({key:'previewLayout',group:'pages',section:pvSection,label:T('Önizleme düzeni','Preview layout'),type:'choice',default:'apple',
+    options:[['apple',T('Apple','Apple')],['split',T('Üç sütun','Three columns')],['spotify','Spotify']],apply:v=>pvLayouts.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
+  defineSetting({key:'previewMaterial',group:'pages',section:pvSection,label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
+    options:[['artwork',T('Bulanık kapak','Blurred artwork')],['glass',T('Cam','Glass')],['color',T('Kapak rengi','Artwork colour')]],apply:v=>pvMaterials.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
+  // Browse all (Search's category tiles, what the sidebar's Browse opens), as Apple Music's Browse Categories: smaller
+  // tiles with the name at the bottom (user.css). The picture is a style choice: Apple's duotone (the cover in grey,
+  // multiplied into the tile's colour), Spotify's tilted cover, or the colour alone.
+  const browseStyles=['apple','tilted','flat','spotify'];
+  defineSetting({key:'browseTiles',group:'browse',label:T('Kategori kutuları','Category tiles'),type:'choice',default:'apple',
+    options:[['apple',T('Apple (çift ton)','Apple (duotone)')],['tilted',T('Eğik kapak','Tilted cover')],['flat',T('Düz renk','Plain colour')],['spotify','Spotify']],apply:v=>browseStyles.forEach(k=>document.body.classList.toggle('am-browse-'+k,k===v))});
+  let previewView=null,previewWatch=null,previewFrame=0;
+  const previewGlass=new Set();
+  function previewArt() {
+    previewFrame=0;const view=previewView;if(!view?.isConnected||document.hidden)return;
+    let art=view.querySelector(':scope > div > div:first-child img[src]');
+    if(!art){const box=view.getBoundingClientRect(),mid=box.top+box.height/2;let best=Infinity;
+      for(const img of view.querySelectorAll(':scope > div > div:nth-child(2) img[src]')){const r=img.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-mid);if(r.height&&d<best){best=d;art=img;}}}
+    const value=art?`url("${art.currentSrc||art.src}")`:'';
+    if(document.documentElement.style.getPropertyValue('--am-preview-art')!==value)value?document.documentElement.style.setProperty('--am-preview-art',value):document.documentElement.style.removeProperty('--am-preview-art');
+    // The small round controls and the title capsule take the menus' Liquid Glass (a filter each, freed on close).
+    for(const node of view.querySelectorAll('[data-testid="watch-feed-close-button"],:scope > div > div:last-child > div:last-child > button,:scope > div > div:first-child > div:first-child'))
+      if(!previewGlass.has(node)){previewGlass.add(node);menuGlass.sync();menuGlass.attach(node);}
+  }
+  const previewArtSoon=()=>{previewFrame||=requestAnimationFrame(previewArt);};
+  function syncPreview() {
+    const view=root.querySelector(':scope > * > [data-testid="watch-feed-view"]');
+    if(view===previewView)return;
+    previewWatch?.disconnect();previewWatch=null;previewView?.removeEventListener('scrollend',previewArtSoon,true);
+    previewView=view;document.body.classList.toggle('am-preview-open',!!view);
+    if(!view){document.documentElement.style.removeProperty('--am-preview-art');previewGlass.clear();menuGlass.sync();return;}
+    if(!view.parentElement.hasAttribute('data-am-preview'))view.parentElement.setAttribute('data-am-preview','');
+    previewWatch=new MutationObserver(previewArtSoon);previewWatch.observe(view,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
+    view.addEventListener('scrollend',previewArtSoon,{capture:true,passive:true});previewArt();
+  }
+  // The dimmed sidebar and player act as the backdrop: a click there closes the preview, as Spotify's backdrop does.
+  document.addEventListener('click',event=>{
+    if(!previewView?.isConnected||!(event.target instanceof Element)||!event.target.closest('#am-sidebar,#am-player'))return;
+    event.preventDefault();event.stopPropagation();previewView.querySelector('[data-testid="watch-feed-close-button"]')?.click();
+  },true);
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
   const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
@@ -2774,6 +2821,7 @@
   function scheduleReconcile(records) {
     if(document.hidden)return;
     if(records.some(record=>record.target===main.parentElement&&record.addedNodes.length))bindPanes();
+    if(records.some(record=>record.target===root))syncPreview();
     // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
     const right=document.querySelector('.am-native-right');
     if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
@@ -2794,7 +2842,7 @@
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();observer.observe(root,{childList:true,subtree:true});}
+    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
