@@ -157,6 +157,28 @@
   document.addEventListener('keydown',()=>{keyFocus=true;},true);
   document.addEventListener('focusin',event=>{const t=event.target;if(t instanceof Element&&t.closest('[id^="am-"],#global-nav-bar')&&!t.matches('input:not([type=range]),textarea'))t.classList.toggle('am-mouse-focus',!keyFocus);},true);
   let main, root, nativeNav, currentMode = 'native';
+  // React rebuilds a pane's class when its state changes (the right sidebar's with every panel opened or closed), which
+  // drops ours, and Spotify can mount a pane after the others. Each pane keeps its class through a class observer,
+  // which runs before paint; new layout children are bound from scheduleReconcile.
+  const paneBindings = {'left-sidebar':'am-native-sidebar','right-sidebar':'am-native-right','now-playing-bar':'am-native-player'};
+  const paneClass = new WeakMap();
+  const paneObserver = new MutationObserver(() => {
+    bindPanes();
+    // classList.add writes the attribute even when the class is there, which would call this again.
+    if (friendPane && document.body.classList.contains('am-panel-open') && !friendPane.classList.contains('am-native-panel-open')) friendPane.classList.add('am-native-panel-open');
+  });
+  function bindPanes() {
+    for (const n of main.parentElement.children) {
+      if (n === main) continue;
+      if (!paneClass.has(n)) {
+        if (!n.childElementCount || n.querySelector(':scope > .notistack-SnackbarContainer')) snackbars.observe(n, { childList: true });
+        paneClass.set(n, paneBindings[getComputedStyle(n).gridArea.split('/')[0].trim()] || '');
+        paneObserver.observe(n, { attributes: true, attributeFilter: ['class'] });
+      }
+      const name = paneClass.get(n);
+      if (name && !n.classList.contains(name)) n.classList.add(name);
+    }
+  }
   function bindLayout() {
     root = document.querySelector('.Root');
     if (!root) return false;
@@ -170,15 +192,8 @@
     }
     if (!main) return false;
     main.classList.add('am-native-main');
-    const layout = main.parentElement;
-    layout.classList.add('am-layout');
-    const bindings = {'left-sidebar':'am-native-sidebar','right-sidebar':'am-native-right','now-playing-bar':'am-native-player'};
-    for (const n of layout.children) {
-      if (n === main) continue;
-      if (!n.childElementCount || n.querySelector(':scope > .notistack-SnackbarContainer')) snackbars.observe(n, { childList: true });
-      const area = getComputedStyle(n).gridArea.split('/')[0].trim();
-      if (bindings[area]) n.classList.add(bindings[area]);
-    }
+    main.parentElement.classList.add('am-layout');
+    bindPanes();
     nativeNav = document.getElementById('global-nav-bar');
     nativeNav?.classList.add('am-native-global');
     return true;
@@ -2654,6 +2669,7 @@
   let reconciliation=null;
   function scheduleReconcile(records) {
     if(document.hidden)return;
+    if(records.some(record=>record.target===main.parentElement&&record.addedNodes.length))bindPanes();
     // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
     const right=document.querySelector('.am-native-right');
     if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();

@@ -59,10 +59,12 @@
 </div></div></div>
 <script>
   // Spotify shows one panel at a time in the right sidebar, as an <aside> labelled like the button that opened it;
-  // otherwise it holds the Now Playing view. Panels cross-fade: the outgoing aside stays mounted for a moment.
+  // otherwise it holds the Now Playing view. Panels cross-fade: the outgoing aside stays mounted for a moment. React
+  // rebuilds the sidebar's class with each panel, as Spotify 1.3 does, which drops any class the theme added.
   const npv = '<aside aria-label="Şu an çalan" data-testid="mock-npv"><img alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="300" height="300"></aside>';
   function swapPanel(html) {
     const right = document.querySelector('.right'), outgoing = right.querySelector('aside');
+    right.className = 'right';
     right.insertAdjacentHTML('beforeend', `<div>${html}</div>`);
     setTimeout(() => outgoing?.parentElement.remove(), 600);
   }

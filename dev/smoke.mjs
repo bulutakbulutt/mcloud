@@ -169,6 +169,19 @@ try {
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-right')).display), 'none');
   });
 
+  await check('the right sidebar keeps its binding when Spotify replaces it', async () => {
+    // Spotify can mount the right sidebar again; unbound, its Now Playing view showed beside the page.
+    await page.evaluate(() => { const old = document.querySelector('.right'), fresh = document.createElement('div'); fresh.className = 'right'; fresh.innerHTML = `<div>${npv}</div>`; old.replaceWith(fresh); });
+    await page.waitForFunction(() => document.querySelector('.right').classList.contains('am-native-right'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.right')).display), 'none', 'Now Playing view shows');
+    // swapPanel rebuilds the class as React does; the sheet keeps its classes open and closed.
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    await page.click('.am-native-right aside button[aria-label="Kapat"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
+    assert.equal(await page.evaluate(() => [document.querySelector('.right').classList.contains('am-native-right'), getComputedStyle(document.querySelector('.right')).display].join()), 'true,none', 'Now Playing view shows after closing');
+  });
+
   await check('a playlist\'s Add and Mix work in the header capsule', async () => {
     // A playlist page with an image header and Spotify's editing row: Add (unlabelled, pressed while "Add to
     // playlist" is open in the right panel) and Mix, whose glowing pill is stacked over its real button.
