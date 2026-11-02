@@ -2329,23 +2329,31 @@
   }
   function releaseCard(release,{subtitle,round}={}) {
     if(!release?.uri)return null;
-    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';card.dataset.uri=release.uri;card.draggable=true;
+    // A wrapper, not one button: Apple's play and "…" sit over the artwork on hover, and buttons can't nest.
+    const card=el('div','am-card'+(round?' am-card-round':''));card.title=release.name||'';card.dataset.uri=release.uri;card.draggable=true;
+    const open=el('button','am-card-open');open.type='button';
     const art=el('span','am-card-art');art.append(lazyImage(artistImage(release.coverArt||release.visuals?.avatarImage||release.images?.items?.[0])));
-    card.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
-    if(subtitle)card.append(el('span','am-card-sub',subtitle));
-    card.addEventListener('click',()=>openUri(release.uri));
-    card.addEventListener('contextmenu',event=>{
-      event.preventDefault();event.stopPropagation();
-      const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
-      togglePopover({x:event.clientX,y:event.clientY},()=>[
-        {label:T('Çal','Play'),action:()=>openUri(release.uri)},
-        ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
-        ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
-        '-',
-        {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-      ]);
-    });
+    open.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
+    if(subtitle)open.append(el('span','am-card-sub',subtitle));
+    open.addEventListener('click',()=>openUri(release.uri));
+    const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
+    const items=()=>[
+      {label:T('Çal','Play'),action:()=>playArtist(release.uri)},
+      ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
+      ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
+      '-',
+      {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+    ];
+    card.append(open);if(!round)card.append(cardTools(release.uri,items));
+    card.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
     return card;
+  }
+  // Apple Music's hover controls over an artwork: round glass play (bottom left) and "…" (bottom right).
+  function cardTools(uri,items) {
+    const tools=el('span','am-card-tools');
+    const more=button(T('Diğer seçenekler','More'),'more',event=>{event.stopPropagation();togglePopover(more,items);},'am-tool-more');
+    tools.append(button(T('Çal','Play'),'play',event=>{event.stopPropagation();playArtist(uri);},'am-tool-play'),more);
+    return tools;
   }
   async function toggleSaved(uri,saved) {
     const api=S.Platform.LibraryAPI;
@@ -2504,22 +2512,21 @@
         block.append(el('h2','am-shelf-title',T('Son Çıkan','Latest Release')));
         const card=el('div','am-latest-card');
         const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.dataset.uri=latest.uri;cover.draggable=true;cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
-        cover.addEventListener('contextmenu',event=>{
-          event.preventDefault();event.stopPropagation();
-          const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
-          togglePopover({x:event.clientX,y:event.clientY},()=>[
-            {label:T('Çal','Play'),action:()=>openUri(latest.uri)},
-            {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(latest.uri)},
-            '-',
-            {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-          ]);
-        });
+        const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
+        const latestItems=()=>[
+          {label:T('Çal','Play'),action:()=>playArtist(latest.uri)},
+          {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(latest.uri)},
+          '-',
+          {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+        ];
+        const coverBox=el('div','am-latest-cover');coverBox.append(cover,cardTools(latest.uri,latestItems));
+        coverBox.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},latestItems);});
         const info=el('div','am-latest-info');
         info.append(el('span','am-latest-date',releaseDate(latest.date)),el('span','am-latest-name',(latest.name||'')+(releaseLabel[latest.type]?' - '+releaseLabel[latest.type]:'')));
         const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+T(' şarkı',count===1?' song':' songs')));
         let added=false;
         const add=button(T('Arşive ekle','Add to Library'),'plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);notify(added?T('Arşive eklendi.','Added to Library.'):T('Arşivden çıkarıldı.','Removed from Library.'));}catch{notify(T('Arşiv güncellenemedi.','Couldn\'t update your library.'));}},'am-latest-add');
-        info.append(add);card.append(cover,info);block.append(card);track.append(block);
+        info.append(add);card.append(coverBox,info);block.append(card);track.append(block);
       }
       if(topTracks.length){
         const block=el('div','am-top-songs');
@@ -2533,7 +2540,8 @@
           const albumName=song.albumOfTrack?.name;
           const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
           text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
-          playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
+          const thumb=el('span','am-song-thumb');thumb.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'));thumb.insertAdjacentHTML('beforeend',svg('play'));
+          playSong.append(thumb,text);
           const songItems=()=>menuGroups(
             [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)}],
             [{label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)}],

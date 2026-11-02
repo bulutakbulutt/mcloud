@@ -690,6 +690,18 @@ try {
     assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.getElementById('am-sidebar-glow')).display, getComputedStyle(document.getElementById('am-sidebar')).backgroundImage]), ['none', 'none']);
     assert.equal(await page.locator('.am-song').count(), 9);
     assert.ok(await page.locator('.am-shelf-artists .am-card').count() === 5);
+    // Hovering a release shows Apple's play and "…" over its artwork (#86); play plays it, the card still opens it.
+    const card = page.locator('#am-artist .am-card:has(.am-card-tools) >> nth=0');
+    assert.equal(await card.locator('.am-card-tools').evaluate(e => getComputedStyle(e).opacity), '0');
+    await card.hover();
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-artist .am-card:hover .am-card-tools')).opacity === '1');
+    await card.locator('.am-tool-play').click();
+    assert.equal(await page.evaluate(() => window.__playedUri), await card.getAttribute('data-uri'));
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-open')));
+    await card.locator('.am-tool-more').click();
+    assert.equal(await page.locator('#am-popover .am-popover-item >> nth=0').textContent(), 'Çal');
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('.am-shelf-artists .am-card-tools').count(), 0);
     // Following answers at once: the star fills and a toast names the artist; a second click unfollows.
     await page.click('.am-hero-follow');
     assert.deepEqual(await page.evaluate(() => { const f = document.querySelector('.am-hero-follow'); return [f.classList.contains('am-active'), f.getAttribute('aria-pressed')]; }), [true, 'true']);
