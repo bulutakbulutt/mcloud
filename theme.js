@@ -656,7 +656,7 @@
       const menu=()=>[
         ...(user.username?[{label:T('Profil','Profile'),action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
         {label:T('Ayarlar','Settings'),action:()=>go('/preferences')},
-        {label:'mcloud',action:()=>openSettings()},
+        {label:T('mcloud Ayarları','mcloud Settings'),action:()=>openSettings()},
         '-',{swatches:true},
       ];
       profile.hidden=false;
@@ -3037,7 +3037,7 @@
     let entry=null,fallback=null;
     const useMenu=()=>{try{entry?.deregister?.();}catch{}entry=null;if(!fallback&&S.Menu.SubMenu){fallback=settingsMenu();fallback.register();}};
     if(typeof S.Menu.Item.prototype?.register==='function'){
-      entry=new S.Menu.Item('mcloud',false,()=>{
+      entry=new S.Menu.Item(T('mcloud Ayarları','mcloud Settings'),false,()=>{
         let opened=false;try{opened=openSettings();}catch(e){console.warn('[AppleMusicMac] Settings',e);}
         if(!opened){closeSettings();useMenu();notify(T('Ayarlar penceresi açılamadı; ayarlar profil menüsündeki mcloud altında.','The settings window couldn\'t open; the settings are under mcloud in the profile menu.'));}
       });
