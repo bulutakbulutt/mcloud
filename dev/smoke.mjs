@@ -26,7 +26,7 @@ async function check(name, fn) {
 // tab holds it and picks an option by its label (a toggle flips), then closes the window; state reads what the row shows.
 const settingsOf = p => {
   const find = key => {
-    if (!document.getElementById('am-settings')) window.__menuItems.find(i => i.name === 'mcloud').onClick();
+    if (!document.getElementById('am-settings')) window.__menuItems.find(i => ['mcloud Ayarları', 'mcloud Settings'].includes(i.name)).onClick();
     const row = () => document.querySelector(`#am-settings .am-settings-row[data-key="${key}"]`);
     for (let i = 0; !row() && i < document.querySelectorAll('#am-settings .am-settings-tab').length; i++) document.querySelectorAll('#am-settings .am-settings-tab')[i].click();
     return row().querySelector('.am-settings-control');
@@ -1215,9 +1215,9 @@ try {
   });
 
   await check('settings window: the profile menu\'s mcloud opens Apple Music\'s Settings window, drawn from the definitions', async () => {
-    // The profile menu holds one mcloud entry; the old submenu is only the fallback.
-    assert.deepEqual(await page.evaluate(() => [window.__menuItems.map(i => i.name), window.__menus.length]), [['mcloud'], 0]);
-    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
+    // The profile menu holds one "mcloud Settings" entry; the old submenu is only the fallback.
+    assert.deepEqual(await page.evaluate(() => [window.__menuItems.map(i => i.name), window.__menus.length]), [['mcloud Ayarları'], 0]);
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.waitForSelector('#am-settings .am-settings-box[role="dialog"]');
     const tabs = () => page.locator('#am-settings .am-settings-tab').allTextContents();
     assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler']);
@@ -1266,7 +1266,7 @@ try {
   });
 
   await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
-    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
     const chips = () => page.locator('#am-settings .am-pb-chip').allTextContents();
     // Every tagged button, in the player's order, by its short name; locked ones (play, the LCD) have no chip.
@@ -1487,6 +1487,7 @@ try {
       assert.deepEqual((await english.locator('#am-sidebar .am-nav-row').allTextContents()).slice(0, 2), ['Search', 'Home']);
       assert.equal(await english.getAttribute('#am-player .am-play', 'aria-label'), 'Pause');
       assert.equal(await english.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-t-play')), '"Play"');
+      assert.deepEqual(await english.evaluate(() => window.__menuItems.map(i => i.name)), ['mcloud Settings']);
       const englishSettings = settingsOf(english);
       assert.equal(await englishSettings.state('lang'), 'Automatic');
       assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists']);
@@ -1519,7 +1520,7 @@ try {
       // A window that fails to open: the entry gives way to the submenu, and a toast says where the settings went.
       await other.goto(pathToFileURL(path.join(here, 'preview.html')).href);
       await other.waitForSelector('body.am-ready #am-sidebar');
-      await other.evaluate(() => { const append = document.body.append; document.body.append = () => { throw new Error('test'); }; try { window.__menuItems.find(i => i.name === 'mcloud').onClick(); } finally { document.body.append = append; } });
+      await other.evaluate(() => { const append = document.body.append; document.body.append = () => { throw new Error('test'); }; try { window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick(); } finally { document.body.append = append; } });
       assert.deepEqual(await other.evaluate(() => [window.__menuItems.length, window.__menus.length, document.getElementById('am-settings')]), [0, 1, null]);
       assert.match(await other.textContent('.am-toasts > :last-child'), /mcloud/);
       const artwork = await other.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).artwork);
@@ -1537,7 +1538,7 @@ try {
     const load = async value => {
       await other.evaluate(v => localStorage.setItem('mcloud:settings', v), value);
       await other.reload(); await other.waitForSelector('body.am-ready #am-sidebar');
-      await other.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
+      await other.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
       await other.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
       await other.click('#am-settings [data-key="artwork"] .am-settings-switch');
       await other.click('#am-settings .am-settings-ok');
