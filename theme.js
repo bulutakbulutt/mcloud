@@ -2461,7 +2461,10 @@
     if(spicy)npSpicyFill();
     if(mode==='off'&&npFullOn){npFullOn=false;b.remove('am-np-full');npSyncFull();}
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
-    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork'||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    // Spicy Lyrics' colours are Spicy's own moving background, drawn in its view; the cover's colours stand in for them
+    // (with Spotify's lyrics, or when Spicy's "Animated Background" is off).
+    const artbg=settings.npBg==='artwork'||settings.npBg==='spicy';b.toggle('am-np-spicybg',settings.npBg==='spicy');
+    b.toggle('am-np-artbg',artbg);np.classList.toggle('am-scheme-dark',artbg||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
     const on=mode!=='off',shown=open&&(!spicy||split),opening=shown&&np.hidden;np.hidden=!shown;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
@@ -2645,18 +2648,18 @@
     note:T('“Yalnızca panel” alttaki oynatıcıyı gizler; tüm kontroller panele geçer.','“Sidebar only” hides the bottom player and moves every control into the sidebar.'),apply:()=>{npWant=null;npApply();}});
   npSetting({key:'npLayout',group:'nowplaying',type:'choice',style:'segmented',default:'card',label:T('Panel görünümü','Sidebar style'),
     options:[['card',T('Cam kart','Glass card')],['docked',T('Kenara yapışık','Docked')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
-  npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
-    options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')],['plain',T('Sade (Apple)','Plain (Apple)')]],
-    note:T('“Sade”: Apple Music’in Mac’teki söz paneli gibi; kapak ve başlık yok, yalnızca sözler.','“Plain”: like Apple Music’s lyrics pane on the Mac: no artwork or header, only the lyrics.'),apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'spicy',label:T('Panel arka planı','Sidebar background'),
+    options:[['spicy','Spicy Lyrics'],['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')],['plain',T('Sade (Apple)','Plain (Apple)')]],
+    note:T('“Spicy Lyrics”: Spicy’nin hareketli renkleri (Spicy’nin ayarlarında “Animated Background” açıkken); yoksa kapak renkleri. “Sade”: Apple Music’in Mac’teki söz paneli gibi; kapak ve başlık yok, yalnızca sözler.','“Spicy Lyrics”: Spicy’s moving colours (with “Animated Background” on in Spicy’s settings), otherwise the artwork’s colours. “Plain”: like Apple Music’s lyrics pane on the Mac: no artwork or header, only the lyrics.'),apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
   npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
     options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],...(h264?[['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')]]:[]),['canvas','Spotify Canvas']],
     note:h264?T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'):undefined,
     apply:()=>{npTrackKey='';npTick();},when:()=>(npWant??settings.nowPlaying)!=='off'});
   npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
     options:[['below',T('Kapağın altında','Under the artwork')],['full',T('Yalnızca tam ekranda','Only in full screen')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
-  npSetting({key:'npLyricsSource',group:'nowplaying',type:'choice',style:'segmented',default:'spotify',label:T('Söz kaynağı','Lyrics source'),
+  npSetting({key:'npLyricsSource',group:'nowplaying',type:'choice',style:'segmented',default:'spicy',label:T('Söz kaynağı','Lyrics source'),
     options:[['spotify','Spotify'],['spicy','Spicy Lyrics']],
-    note:T('Spicy Lyrics sözlerini kendi görünümüyle kapağın altında gösterir; “Sade” arka planda panelin tamamını doldurur ve Spicy’nin ayarlarındaki “Animated Background” açıksa arka planı Spicy’nindir.','Spicy Lyrics shows its own lyrics view under the artwork; with the Plain background it fills the whole sidebar, and with “Animated Background” on in Spicy’s settings the background is Spicy’s.'),
+    note:T('Spicy Lyrics sözlerini kendi görünümüyle kapağın altında gösterir, “Sade” arka planda panelin tamamında. Spicy yoksa Spotify’ın sözleri gelir.','Spicy Lyrics shows its own lyrics view under the artwork, or across the whole sidebar with the Plain background. Without Spicy, Spotify’s lyrics show.'),
     apply:npSpicySource,when:()=>(npWant??settings.nowPlaying)==='beside'&&(settings.npLyricsPlace==='below'||settings.npBg==='plain')&&!!document.getElementById('SpicyLyrics_PageButton')});
   npReady=true;npApply();
   // The fallback menu is registered after the mcloud one, which the IIFE's end registers.

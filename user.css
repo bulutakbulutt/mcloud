@@ -1604,18 +1604,20 @@ body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right [data-am-np-fill]
 }
 /* Under the artwork (body.am-np-spicy-split): the column keeps the whole pane's place and draws its one background;
    the pane, cleared, stays on top for its artwork and title, cut off where its lyrics start (--am-np-split, set by
-   theme.js), and the column's content starts there. Two backgrounds side by side left a seam in light mode (their
+   theme.js), and Spotify's view inside the column starts its content there (its padding, so Spicy's background still fills it). Two backgrounds side by side left a seam in light mode (their
    blurs see different page edges). Both stay dark. A moving cover behind the pane would stop at the cut: it shows as a cover. */
 body.am-np-spicy-split #am-nowplaying {clip-path:inset(0 0 calc(100% - var(--am-np-split,100%)) 0);background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
 body.am-np-spicy-split #am-nowplaying::before,body.am-np-spicy-split #am-nowplaying :is(.am-np-bg,.am-np-bleed) {display:none!important}
 body.am-np-spicy-split #am-nowplaying.am-np-bleeding .am-np-cover {visibility:visible}
 body.am-np-spicy-split #am-nowplaying.am-np-bleeding .am-np-body {background:none}
-body.am-np-spicy-split:not(.am-panel-open).am-ready .am-native-right {padding-top:var(--am-np-split,0px)!important;box-sizing:border-box!important}
+body.am-np-spicy-split:not(.am-panel-open).am-ready .am-native-right aside[data-am-np-fill] {padding-top:var(--am-np-split,0px)!important;box-sizing:border-box!important}
 body.am-np-spicy-split:not(.am-np-artbg):not(.am-panel-open).am-ready .am-native-right {background:transparent!important}
 body.am-np-spicy-split:not(.am-panel-open).am-ready .am-native-right::before {background:color-mix(in srgb,#2a2a2a 78%,transparent)}
 body.am-np-spicy-split.am-solid:not(.am-panel-open).am-ready .am-native-right {background:#1f1f1f!important}
 body.am-np-spicy-split.am-solid:not(.am-panel-open).am-ready .am-native-right::before {background:#1f1f1f}
-body.am-np-spicy-split:not(.am-panel-open).am-ready .am-native-right aside > .spicy-dynamic-bg {display:none!important}
+/* Spicy's own moving background (its "Animated Background", painted over the whole view, the cut included) shows with
+   the "Spicy Lyrics" background only; the cover's colours stay under it for when it is off. */
+body.am-np-spicy:not(.am-np-spicybg):not(.am-panel-open).am-ready .am-native-right aside > .spicy-dynamic-bg {display:none!important}
 /* Spotify's view paints its own background (the aside's ::before, white in light mode) and the card's hosts, which Spicy marks. */
 body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right :is(.SpicyLyrics_NPVStretch,[data-am-np-fill]) {background:transparent!important;border-radius:0!important}
 body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right aside[data-am-np-fill]::before {background:transparent!important}
