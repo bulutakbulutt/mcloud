@@ -412,6 +412,12 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
 :is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2}
+/* Tooltips (Spotify's [data-tippy-root] holding #hover-or-focus-tooltip; its own is a flat #1e1e1e box in 14px text) in the
+   menus' material: a small glass box in 12pt text, fading in. In Eco a plain fill. */
+body > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {padding:4px 9px!important;border-radius:8px!important;background:color-mix(in srgb,#2c2c2e 72%,transparent)!important;backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:inset 0 0 0 .5px #ffffff26,inset 0 1px #ffffff1a,0 6px 16px #00000059!important;color:#ffffffeb!important;max-width:300px!important;animation:am-tip-in .12s ease-out}
+body > [data-tippy-root] #hover-or-focus-tooltip {font:500 12px/16px var(--encore-body-font-stack)!important;letter-spacing:-.01em}
+body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+@keyframes am-tip-in {from{opacity:0}}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
@@ -652,6 +658,10 @@ body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:#2c2c2e;backd
 .am-tglass-group .am-tglass-light::before {content:"";position:absolute;inset:3px;border-radius:50%;background:rgb(255 255 255/var(--am-tg-light,0))}
 .am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
 body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
+/* Library views live at /?am-library=…, where Spotify's Home takes itself for the current page and draws its filled
+   house (issue #59). There it shows the outline house it has on every other page (its 24-unit icon). */
+body.am-library-open #global-nav-bar .am-toolbar-center button:not([role="search"] button) svg {background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+body.am-library-open #global-nav-bar .am-toolbar-center button:not([role="search"] button) svg > * {opacity:0}
 body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
 /* The search field: the magnifier's lens on the round end's centre line and 2px right of its centre (Spotify's lens is
    centred at 10.53,10.56 of its 24-unit box, 1.1px up and left of the box's centre at 18px; concentric, it read as
@@ -678,9 +688,10 @@ body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!i
    grey magnifier, then results in 52pt rows with 46pt artwork, an 11pt gap with a hairline inset 16pt between them;
    the selection is the accent, 5pt in from the sides. Its glass is far more diffuse than a menu's (blur fitted 21pt
    against the user's screenshot, menus 6.8pt), then one dark level that keeps the page's colour (theme.js
-   #am-search-glass); in Eco a plain fill. Spotify's keyboard hint, the play button over the
-   artwork and the row's buttons (like, Following, remove, More) go: Apple shows none, and right-click still opens
-   Spotify's menu. Encore's class names carry a version (e-10860-…), so rows are matched by data-encore-id and parts. */
+   #am-search-glass); in Eco a plain fill. Spotify's keyboard hint goes. Its row behaviours stay, as without the theme: the
+   play button over the artwork plays the result at once (a click elsewhere on the row opens it), and the row's buttons
+   (like, Following, remove, More) show on hover or selection. Encore's class names carry a version (e-10860-…), so rows
+   are matched by data-encore-id and parts. */
 :is(#search-dropdown,#search-suggestions-loading-dropdown) {top:40px!important}
 :is(#search-dropdown,#search-suggestions-loading-dropdown) > :first-child {margin:0 1px!important;padding:0!important;width:auto!important;height:auto!important;max-height:min(523px,calc(100vh - 120px))!important;border-radius:13px!important;background:var(--am-sd-fill)!important;backdrop-filter:var(--am-sd-filter);-webkit-backdrop-filter:var(--am-sd-filter);-webkit-app-region:no-drag;
  box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 14px 36px #00000080!important}
@@ -714,7 +725,18 @@ body.am-solid {--am-sd-fill:#2c2c2e;--am-sd-filter:none}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]):not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {fill:#fff!important}
 #search-dropdown [role="row"] [class*="list-row__header-side"] :is(a,div,img):has(> img),#search-dropdown [role="row"] [class*="list-row__header-side"] img {width:46px!important;height:46px!important}
 #search-dropdown [role="row"]:not(:has([id$="-title"] a:is([href*="/artist/"],[href*="/user/"]))) [class*="list-row__header-side"] :has(> img) {border-radius:5px!important}
-#search-dropdown [role="row"] :is([id$="-play"],[class*="list-row__slot"]) {display:none!important}
+#search-dropdown [role="row"] [class*="list-row__header-side-flex"] > :has(> [id$="-play"]) {position:relative;width:46px!important;height:46px!important;border-radius:5px;overflow:hidden}
+#search-dropdown [role="row"]:has([id$="-title"] a:is([href*="/artist/"],[href*="/user/"])) [class*="list-row__header-side-flex"] > :has(> [id$="-play"]) {border-radius:50%}
+#search-dropdown [role="row"] [id$="-play"] {position:absolute!important;inset:0!important;display:flex!important;align-items:center;justify-content:center;background:#00000080;opacity:0!important;transition:opacity .1s}
+#search-dropdown [role="row"]:hover [id$="-play"] {opacity:1!important}
+#search-dropdown [role="row"] [id$="-play"] button {width:100%!important;height:100%!important;min-width:0!important;padding:0!important;justify-content:center}
+#search-dropdown [role="row"] [id$="-play"] svg {width:18px!important;height:18px!important;fill:#fff!important}
+/* Its rows run under the queue or Friend Activity sheet (z-index 55) when one is open, which hid their buttons; while the
+   popover is open the toolbar it lives in goes over the sheet. */
+body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loading-dropdown)) {z-index:56!important}
+#search-dropdown [role="row"] [class*="list-row__slot"] {visibility:hidden}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] {visibility:visible}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] :is(button,svg) {color:#fff!important;fill:#fff!important}
 #search-dropdown [role="row"] [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
 #search-dropdown [role="row"] [class*="list-row__column"] {gap:0!important}
 #search-dropdown [role="row"] a {text-decoration:none!important}
@@ -1073,6 +1095,89 @@ body.am-solid #am-sidebar-glow {display:none}
 body.am-solid .am-toast,body.am-solid.am-liquid .am-toast {background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
 body.am-solid.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-solid.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-solid.am-ready .am-native-panel-open::before {background:#262626;backdrop-filter:none;-webkit-backdrop-filter:none}
+
+/* Settings window (#am-settings, theme.js), drawn from the settings definitions: Apple Music's Settings window. A toolbar
+   band of tabs (icon over label, the selected one on a tile, in the accent) with a hairline under it, a form of
+   right-aligned labels with checkboxes and pop-ups, OK in the accent. Frosted; Eco (and Balanced over Spicy Lyrics) solid.
+   Colours: Apple's dark Settings window measured focused (window #302d2c, band #373534, selected tile #4f4f4f, pop-ups and
+   empty boxes #424242, separators #444), kept neutral as the theme's base is: Apple's warmth comes from the wallpaper. The
+   steps over the window are ink overlays, so a light appearance only sets --am-settings-window (and the hairline). */
+:root {--am-settings-window:#2c2c2c;--am-settings-fill:color-mix(in srgb,var(--am-settings-window) 92%,transparent);--am-settings-band:rgb(var(--am-ink,255 255 255)/.035);--am-settings-hairline:rgb(0 0 0/.4);
+ --am-settings-tile:rgb(var(--am-ink,255 255 255)/.13);--am-settings-control:rgb(var(--am-ink,255 255 255)/.1);--am-settings-control-on:rgb(var(--am-ink,255 255 255)/.24);--am-settings-line:rgb(var(--am-ink,255 255 255)/.1);
+ --am-settings-tab-text:rgb(var(--am-ink,255 255 255)/.7);
+ --am-settings-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' fill='none' stroke='%23ffffffb3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 4.5 2.5-2.5 2.5 2.5M1.5 7.5 4 10l2.5-2.5'/%3E%3C/svg%3E")}
+#am-settings {position:fixed;inset:0;z-index:76;pointer-events:none;-webkit-app-region:no-drag;font:13px var(--encore-body-font-stack);color:var(--am-text);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+@keyframes am-settings-in {from{opacity:0;scale:.96}}
+/* Centred over the page (right of the sidebar) and kept above the player. */
+.am-settings-box {--am-settings-w:600px;--am-settings-top:max(72px,11vh);--am-settings-half:calc(min(var(--am-settings-w),100vw - 32px) / 2);pointer-events:auto;position:absolute;
+ left:clamp(calc(var(--am-settings-half) + 16px),calc(var(--am-side) + (100vw - var(--am-side)) / 2),calc(100vw - var(--am-settings-half) - 16px));top:var(--am-settings-top);translate:-50% 0;
+ box-sizing:border-box;width:min(var(--am-settings-w),calc(100vw - 32px));max-height:calc(100vh - var(--am-settings-top) - 86px);display:grid;grid-template-rows:auto minmax(0,1fr) auto;
+ border-radius:16px;overflow:hidden;outline:0;animation:am-settings-in .24s cubic-bezier(.2,.8,.2,1);background:var(--am-settings-fill);backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
+ box-shadow:var(--am-rim-lines,inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12),0 22px 70px #0000008c}
+/* Balanced over a page that redraws every frame (Spicy Lyrics): solid, as the sidebar there, so no blur reruns per frame. */
+body.am-solid #am-settings .am-settings-box,body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-settings .am-settings-box {background:var(--am-settings-window);backdrop-filter:none;-webkit-backdrop-filter:none}
+.am-settings-box :focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
+.am-settings-titlebar {display:grid;grid-template-columns:28px minmax(0,1fr) 28px;align-items:center;padding:10px 12px 0;background:var(--am-settings-band);box-shadow:0 1px var(--am-settings-hairline);position:relative;z-index:1;user-select:none;cursor:default}
+.am-settings-title {grid-column:2;grid-row:1;margin:0;text-align:center;font-size:13px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-settings-close {grid-column:1;grid-row:1;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:var(--am-settings-control);color:var(--am-text);cursor:pointer;transition:background-color .15s}
+.am-settings-close:hover {background:var(--am-settings-control-on)}
+.am-settings-close svg {width:12px;height:12px;stroke-width:2.2}
+.am-settings-nav {grid-column:1 / -1;display:flex;justify-content:center;flex-wrap:wrap;gap:2px;padding:6px 0 7px}
+.am-settings-tab {display:grid;justify-items:center;gap:2px;min-width:62px;padding:5px 8px 4px;border:0;border-radius:7px;background:none;color:var(--am-settings-tab-text);font:11px var(--encore-body-font-stack);cursor:pointer;transition:background-color .15s,color .15s}
+.am-settings-tab svg {width:22px;height:22px}
+.am-settings-tab:hover {color:var(--am-text)}
+.am-settings-tab.am-selected {background:var(--am-settings-tile);color:var(--am-accent)}
+.am-settings-body {overflow:auto;overscroll-behavior:contain;padding:18px 28px 18px}
+.am-settings-body::-webkit-scrollbar {width:5px}
+.am-settings-body::-webkit-scrollbar-thumb {background:rgb(var(--am-ink,255 255 255)/.15);border-radius:3px}
+/* The form: sections part with Apple's separator, labels right-aligned with a colon, notes under the control. */
+.am-settings-section {margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--am-settings-line);text-align:center;font-size:11px;font-weight:600;color:var(--am-sub)}
+.am-settings-group > .am-settings-section:first-child {margin-top:0;padding-top:0;border:0}
+.am-settings-row {display:grid;grid-template-columns:minmax(110px,38%) minmax(0,1fr);grid-template-areas:"label control" ". note";column-gap:8px;row-gap:3px;align-items:center;padding:5px 0}
+.am-settings-text {display:contents}
+.am-settings-label {grid-area:label;text-align:right;font-size:13px}
+.am-settings-label::after {content:':'}
+.am-settings-note {grid-area:note;max-width:380px;font-size:11px;line-height:1.35;color:var(--am-sub)}
+.am-settings-control {grid-area:control;justify-self:start}
+/* Checkbox: Apple's 14pt box, empty in the control grey, checked in the accent. */
+.am-settings-switch {position:relative;width:15px;height:15px;padding:0;border:0;border-radius:4px;background:var(--am-settings-control);box-shadow:inset 0 0 0 .5px rgb(var(--am-ink,255 255 255)/.12);cursor:pointer;transition:background-color .15s}
+.am-settings-switch[aria-checked="true"] {background:var(--am-accent)}
+/* The tick is drawn, centred in the box with round ends (a rotated border sat low and left, with square ends). */
+.am-settings-switch[aria-checked="true"]::after {content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 15' fill='none' stroke='%23fff' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7.9l2.4 2.4L11 4.9'/%3E%3C/svg%3E") center/15px 15px no-repeat}
+.am-settings-segmented {display:inline-flex;padding:2px;border-radius:7px;background:var(--am-settings-control)}
+.am-settings-segmented .am-settings-option {padding:2px 12px;border:0;border-radius:5px;background:none;color:var(--am-text);font:12px var(--encore-body-font-stack);white-space:nowrap;cursor:pointer;transition:background-color .15s}
+.am-settings-segmented .am-settings-option[aria-checked="true"] {background:var(--am-settings-control-on);box-shadow:0 1px 2px #0004}
+.am-settings-swatches {display:flex;flex-wrap:wrap;gap:8px;max-width:270px}
+.am-settings-swatches .am-settings-option {width:20px;height:20px;padding:0;border:0;border-radius:50%;background:var(--am-swatch);box-shadow:inset 0 0 0 1px #0003;cursor:pointer}
+.am-settings-swatches .am-settings-option[aria-checked="true"] {outline:2px solid var(--am-text);outline-offset:2px}
+/* Pop-up button: Apple's rounded rectangle with the up/down chevrons. */
+.am-settings-select {max-width:220px;height:22px;padding:0 24px 0 9px;border:0;border-radius:5px;background:var(--am-settings-control) var(--am-settings-chevron) no-repeat right 8px center/8px 12px;box-shadow:inset 0 .5px rgb(var(--am-ink,255 255 255)/.1);color:var(--am-text);font:13px var(--encore-body-font-stack);appearance:none;cursor:pointer}
+.am-settings-footer {display:flex;justify-content:flex-end;padding:10px 20px 12px;border-top:1px solid var(--am-settings-line)}
+.am-settings-ok {min-width:76px;height:24px;padding:0 14px;border:0;border-radius:6px;background:var(--am-accent);color:#fff;font:13px var(--encore-body-font-stack);cursor:pointer}
+.am-settings-ok:active {filter:brightness(.9)}
+/* Wide rows (the player buttons): the control under the label. */
+.am-settings-row.am-settings-wide {display:block}
+.am-settings-wide .am-settings-text {display:block}
+.am-settings-wide .am-settings-label {text-align:left}
+.am-settings-wide .am-settings-label::after {content:none}
+.am-settings-row.am-settings-wide:not(:first-child) {margin-top:10px;padding-top:12px;border-top:1px solid var(--am-settings-line)}
+/* Player buttons: a small bar drawn from the tagged buttons (placeholders for the track), hidden ones folding away,
+   then a chip per button. */
+.am-pb {display:grid;gap:12px;margin-top:10px}
+.am-pb-bar {display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:999px;background:var(--am-settings-control);box-shadow:inset 0 1px rgb(var(--am-ink,255 255 255)/.12);color:var(--am-text)}
+.am-pb-zone {display:flex;align-items:center;flex:none}
+.am-pb-lcd {flex:1;min-width:0;display:flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 3px;border-radius:7px;background:rgb(var(--am-ink,255 255 255)/.06);position:relative}
+.am-pb-lcd::after {content:'';position:absolute;left:30px;right:6px;bottom:2px;height:1.5px;border-radius:1px;background:rgb(var(--am-ink,255 255 255)/.25)}
+.am-pb-art {flex:none;width:22px;height:22px;border-radius:4px;background:linear-gradient(135deg,rgb(var(--am-ink,255 255 255)/.3),rgb(var(--am-ink,255 255 255)/.12))}
+.am-pb-lines {flex:1;min-width:0;height:13px;background:linear-gradient(rgb(var(--am-ink,255 255 255)/.35),rgb(var(--am-ink,255 255 255)/.35)) 0 0/60% 4px no-repeat,linear-gradient(rgb(var(--am-ink,255 255 255)/.18),rgb(var(--am-ink,255 255 255)/.18)) 0 8px/42% 3px no-repeat}
+.am-pb-icon {display:grid;place-items:center;width:22px;height:22px;overflow:hidden;transition:width .2s cubic-bezier(.3,.7,.3,1),opacity .15s}
+.am-pb-icon svg {width:14px;height:14px;flex:none}
+.am-pb-icon.am-pb-locked svg {width:17px;height:17px}
+.am-pb-icon.am-pb-off {width:0;opacity:0}
+.am-pb-chips {display:flex;flex-wrap:wrap;gap:6px}
+.am-pb-chip {display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border:0;border-radius:999px;background:var(--am-settings-control);color:var(--am-sub);font:12px var(--encore-body-font-stack);cursor:pointer;transition:background-color .15s,color .15s}
+.am-pb-chip svg {width:13px;height:13px;flex:none}
+.am-pb-chip[aria-checked="true"] {background:var(--am-accent);color:#fff}
 
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */
 body.am-windows.am-ready #global-nav-bar {right:150px!important}
