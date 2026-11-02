@@ -2863,14 +2863,6 @@
   pageSetting({key:'albumTint',group:'pages',label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
     options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
     apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
-  // Text rendering (#72). Spotify draws text with -webkit-font-smoothing:antialiased, which leaves SF's strokes about a
-  // quarter thinner than AppKit draws them in Music (measured on 13pt labels; same font, same widths). 'smooth' uses
-  // the system's smoothing, 'apple' also drops the theme's negative letter-spacing (SF tracks itself per size), and
-  // 'apple-sizes' also sets track lists in Music's 13pt.
-  const fontModes=['theme','smooth','apple','apple-sizes'];
-  pageSetting({key:'font',group:'appearance',label:T('Yazı','Text'),type:'choice',default:'theme',
-    options:[['theme',T('Tema (ince)','Theme (thin)')],['smooth',T('macOS yumuşatma','macOS smoothing')],['apple',T('Apple Music','Apple Music')],['apple-sizes',T('Apple Music + boyutlar','Apple Music + sizes')]],
-    apply:value=>{const body=document.body.classList;body.toggle('am-font-smooth',value!=='theme');body.toggle('am-font-apple',value==='apple'||value==='apple-sizes');body.toggle('am-font-sizes',value==='apple-sizes');}});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
   // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.

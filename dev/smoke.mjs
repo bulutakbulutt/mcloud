@@ -1430,20 +1430,21 @@ try {
     await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
-  await check('album pages: clean track list, artwork colour and text rendering (#72)', async () => {
+  await check('album pages: clean track list, artwork colour, heading and text rendering (#72)', async () => {
     // Spotify 1.3's album rows: title, badges (explicit, music video), then the artist links; a Plays column.
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     const albumPage = id => page.evaluate(id => {
       document.querySelector('.mock-page').hidden = true; document.getElementById('mock-album72')?.remove();
       const row = (n, title, artists) => `<div role="row" aria-rowindex="${n + 1}"><div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="presentation"><div class="main-trackList-rowSectionIndex" role="gridcell"><div class="main-trackList-rowMarker"><span>${n}</span></div></div><div class="main-trackList-rowSectionStart" role="gridcell"><div class="main-trackList-rowMainContent"><div class="main-trackList-rowTitle">${title}</div><span class="mock-badges"><span data-encore-id="tagIcon">E</span><span class="mock-video">Music video</span></span><span class="mock-artists"><span>${artists.map(([a, name]) => `<a href="/artist/${a}">${name}</a>`).join(', ')}</span></span></div></div><div class="main-trackList-rowSectionVariable" role="gridcell"><div>1,000</div></div><div class="main-trackList-rowSectionEnd" role="gridcell"><div class="main-trackList-rowDuration">3:50</div></div></div></div>`;
       document.querySelector('main').insertAdjacentHTML('beforeend', `<section data-testid="album-page" id="mock-album72" style="position:relative">
+        <div data-testid="entity-header"><div class="main-entityHeader-contentWrapper"><div class="main-entityHeader-imageContainer"></div><div class="main-entityHeader-headerText"><span class="encore-text-body-small">Album</span><h1 style="font-size:6rem;letter-spacing:-.04em">Blonde</h1><div><div class="main-entityHeader-creatorWrapper"><a href="/artist/frank">Frank Ocean</a></div><span class="mock-year">2016</span></div></div></div></div>
         <style>#mock-album72 .main-trackList-trackListRowGrid{display:grid;grid-template-columns:var(--grid-template-columns);height:56px}#mock-album72 .main-trackList-rowMainContent{display:grid;grid-template-areas:"title title title" "badges prefix subtitle"}#mock-album72 .mock-badges{grid-area:badges;display:flex;justify-content:center}#mock-album72 .mock-artists{grid-area:subtitle}</style>
         <div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] 16px [first] 4fr [var1] 2fr [last] 1fr">
           ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></section>`);
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
-    const tint = option => flip('albumTint', 'Albüm rengi: ' + option, option), font = option => flip('font', 'Yazı: ' + option, option);
+    const tint = option => flip('albumTint', 'Albüm rengi: ' + option, option);
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
@@ -1475,17 +1476,10 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForFunction(() => !document.body.classList.contains('am-album-tinted'));
     await tint('Kapalı');
-    // Text rendering: Spotify's thin antialiasing or the system's smoothing, and Apple's own tracking.
-    const text = () => page.evaluate(() => { const s = getComputedStyle(document.querySelector('#am-sidebar .am-nav-row')); return [s.webkitFontSmoothing, s.letterSpacing]; });
-    assert.equal((await text())[0], 'antialiased');
-    assert.notEqual((await text())[1], 'normal');
-    await font('Apple Music');
-    assert.deepEqual(await text(), ['auto', 'normal']);
-    await font('macOS yumuşatma');
-    assert.equal((await text())[0], 'auto');
-    assert.notEqual((await text())[1], 'normal');
-    await font('Tema (ince)');
-    assert.equal((await text())[0], 'antialiased');
+    // Text is drawn as Music draws it: the system's smoothing, no negative tracking (Spotify's or the theme's).
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-sidebar .am-nav-row, #mock-album72 h1')].slice(-2).map(e => [getComputedStyle(e).webkitFontSmoothing, getComputedStyle(e).letterSpacing])), [['auto', 'normal'], ['auto', 'normal']]);
+    // The heading at Music's sizes: title 26pt bold, artist 26pt, the year line semibold.
+    assert.deepEqual(await page.evaluate(() => { const style = s => getComputedStyle(document.querySelector('#mock-album72 ' + s)); return [style('h1').fontSize, style('h1').fontWeight, style('.main-entityHeader-creatorWrapper').fontSize, style('.mock-year').fontWeight]; }), ['26px', '700', '26px', '600']);
     await page.evaluate(() => { document.getElementById('mock-album72').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 

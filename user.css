@@ -222,12 +222,16 @@ body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-r
 body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-rowMainContent > :nth-child(2):not(:last-child) {grid-area:badges!important;align-self:center;justify-content:flex-start!important;margin:0!important}
 body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-rowMainContent > :nth-child(2):not(:last-child) > :not([data-encore-id="tagIcon"]) {display:none!important}
 body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-rowMainContent > :last-child:not(:first-child) {grid-area:subtitle!important;contain:inline-size}
-/* Text rendering (#72, settings.font). Spotify and the theme draw text antialiased (thin strokes); macOS smoothing
-   matches Music's stroke weight. Apple Music adds no letter-spacing of its own: SF's optical sizes carry it. */
-body.am-font-smooth,body.am-font-smooth *,body.am-font-smooth *::before,body.am-font-smooth *::after {-webkit-font-smoothing:auto!important}
-body.am-font-apple *,body.am-font-apple *::before,body.am-font-apple *::after {letter-spacing:normal!important}
-body.am-font-sizes .am-native-main .main-trackList-trackListRow :is(.main-trackList-rowTitle,.main-trackList-rowDuration,.main-trackList-rowSectionIndex span,.main-trackList-rowSectionVariable > div) {font-size:13px!important}
-body.am-font-sizes .am-native-main .main-trackList-rowMainContent > :not(:first-child),body.am-font-sizes .am-native-main .main-trackList-rowMainContent > :not(:first-child) :is(span,a) {font-size:12px!important}
+/* Text is drawn as Music draws it (#72). Chromium sets the system font exactly as AppKit does (same SF optical sizes
+   and tracking, widths equal to 0.01px), but Spotify's -webkit-font-smoothing:antialiased leaves strokes about a
+   quarter lighter than Music's (ink 0.75 against 0.98 with the system's smoothing, 13pt). SF tracks itself per size,
+   so no negative letter-spacing either, Spotify's or the theme's. */
+body,body *,body *::before,body *::after {-webkit-font-smoothing:auto!important;letter-spacing:normal!important}
+/* Album and playlist headings at Music's measured sizes: title 26pt bold, artist 26pt regular on 32pt lines, and the
+   line under them (year, songs) 12pt semibold. */
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText h1 {font-size:26px!important;line-height:32px!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper {font-size:26px!important;line-height:32px!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper) * {font-weight:600!important}
 /* Album colour (#72, settings.albumTint, theme.js sets --am-album-tint from the artwork). Subtle washes the top of
    the page and fades into the window; full colours the whole window and the page's controls. Mixed with --am-bg and
    --am-text, so a light theme gets light tints. The wash scrolls with the page and reaches under the sidebar. */
@@ -583,7 +587,7 @@ dialog[open]::backdrop {background:#00000059!important;animation:am-dim-in .24s 
 body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Credits as Apple lists them (iOS, music.apple.com; Music on the Mac has none): grey captions over rounded groups of
    rows, hairlines between rows inset to the text. Encore's listRow ids, not Spotify's hashed classes. */
-dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em;text-transform:uppercase;color:#ffffff80!important}
+dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em!important;text-transform:uppercase;color:#ffffff80!important}
 dialog[open] [data-encore-id="listRow"] {margin:0!important;width:auto!important;padding:9px 16px!important;border-radius:0;background:#ffffff0f}
 dialog[open] [data-encore-id="listRow"] + [data-encore-id="listRow"] {background:linear-gradient(#ffffff1c,#ffffff1c) 16px 0/calc(100% - 16px) .5px no-repeat,#ffffff0f}
 dialog[open] :is(:not([data-encore-id="listRow"]) + [data-encore-id="listRow"],[data-encore-id="listRow"]:first-child) {border-top-left-radius:10px!important;border-top-right-radius:10px!important}
