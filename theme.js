@@ -2855,12 +2855,12 @@
     body.add('am-album-tinted');
   }
   H.listen(syncAlbum);
-  pageSetting({key:'numbersAlbum',group:'pages',label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
+  pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
   // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
-  pageSetting({key:'albumClean',group:'pages',label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
+  pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
   // Album pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
   const albumTints=['off','subtle','full'];
-  pageSetting({key:'albumTint',group:'pages',label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
     options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
     apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
