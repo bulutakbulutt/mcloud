@@ -525,8 +525,12 @@ body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > 
 body.am-search-open section[data-shelf]:has(> .main-gridContainer-gridContainer > [role="listitem"] > a[href*="/genre/"]) h2 {font-size:15px!important;line-height:20px!important;font-weight:700!important;letter-spacing:0!important;color:var(--am-text,#dedede)!important}
 /* Whole device pixels for the glass: --am-side is in vw, so a centred player could land on a half pixel, which blurs
    its edge and highlight on 1x screens. The width is rounded to an even number and the left edge to a whole pixel. */
-#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid rgb(var(--am-rim)/.141);background:var(--am-player-fill);backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px rgb(var(--am-rim)/.149),0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
+#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid rgb(var(--am-rim)/.141);background:var(--am-player-fill);backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px rgb(var(--am-rim)/.149),0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 12px 0 8px;gap:9px;font-size:13px}
+/* Music's mini player (macOS 27, AX frames and 2x captures): the transport starts 9pt in, 28pt buttons with the play
+   button 36pt, back to back (centres 23, 51, 83, 115, 143), the title area 9pt after them, the last button centred 27pt
+   from the right end. The glyphs are drawn to Music's boxes (theme.js icons). */
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
+#am-player .am-transport {gap:0}
 #am-player button {display:grid;place-items:center;width:28px;height:32px;color:var(--am-icon);transition:color .15s,transform .12s}
 #am-player button[hidden] {display:none}
 #am-player button:hover {color:rgb(var(--am-ink))}
@@ -535,7 +539,9 @@ body.am-search-open section[data-shelf]:has(> .main-gridContainer-gridContainer 
 #am-player svg {width:19px;height:19px;pointer-events:none}
 #am-player .am-dim {color:var(--am-dim)}
 #am-player .am-dim svg {width:14px;height:14px}
-#am-player .am-play svg {width:26px;height:26px;animation:am-icon-in .22s cubic-bezier(.2,.9,.3,1.3)}
+#am-player .am-play {width:36px;height:36px}
+#am-player .am-play svg {width:32px;height:32px;animation:am-icon-in .22s cubic-bezier(.2,.9,.3,1.3)}
+#am-player :is([data-am-button="previous"],[data-am-button="next"]) svg {width:20px;height:20px}
 #am-player .am-active {color:var(--am-accent-focus)}
 @keyframes am-icon-in {from{transform:scale(.55);opacity:0}}
 /* LCD: artwork, title row, marquee subtitle and the hairline scrubber. */

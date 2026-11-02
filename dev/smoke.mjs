@@ -1381,6 +1381,11 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('player transport: laid out as Music\'s mini player (centres 23, 51, 83, 115, 143pt; play 36pt)', async () => {
+    const boxes = await page.evaluate(() => { const p = document.querySelector('#am-player').getBoundingClientRect();
+      return [...document.querySelectorAll('#am-player .am-transport button')].map(b => { const r = b.getBoundingClientRect(); return [r.x - p.x + r.width / 2, r.width]; }); });
+    assert.deepEqual(boxes, [[23, 28], [51, 28], [83, 36], [115, 28], [143, 28]]);
+  });
   await check('appearance: light swaps the colour tokens, the accent and the glass tone; system follows the OS (#74)', async () => {
     // In the settings window (#76): Appearance tab, a segmented control.
     const pick = async name => {

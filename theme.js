@@ -18,7 +18,9 @@
     music:'<path d="M10 17V5l10-3v12M10 7l10-3"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
     browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
-    play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
+    // The player's transport, drawn to the boxes of Music's mini player glyphs (macOS 27, 2x, in pt: play 19 x 21,
+    // previous/next 19.5 x 11, shuffle 13 x 10.5, repeat 12 x 10.5) at the sizes user.css gives them.
+    play:'<path d="M7.97 4.56c-.81-.46-1.86.09-1.86.98v12.92c0 .89 1.05 1.44 1.86.98l11.38-6.46c.77-.44.77-1.52 0-1.96L7.97 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
     // Apple's "info" (SF Symbols' slab i), traced pixel by pixel from the Music app at 2x: a 2.4pt dot, a serif, a 1.5pt
@@ -41,13 +43,13 @@
     ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
     credits:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
     radio:'<circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>',
-    pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
-    next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
-    back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
-    shuffle:'<path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m3-3c1-2 3-3 5-3h2m-4-4 4 4-4 4"/>',
-    repeat:'<path d="M4 10V7a2 2 0 0 1 2-2h14l-4-4M20 14v3a2 2 0 0 1-2 2H4l4 4M20 5l-4 4M4 19l4-4"/>',
+    pause:'<rect x="6.4" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/><rect x="13.6" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/>',
+    next:'<path d="m.3 5.4 11.7 6.6L.3 18.6zm11.7 0 11.7 6.6L12 18.6z" fill="currentColor" stroke="none"/>',
+    back:'<path d="M23.7 5.4 12 12l11.7 6.6zm-11.7 0L.3 12 12 18.6z" fill="currentColor" stroke="none"/>',
+    shuffle:'<path d="M1.7 7.08h3.43c5.72 0 8.01 9.84 13.73 9.84h3.43m-3.28-3.28 3.28 3.28-3.28 3.28M1.7 16.92h3.43c2.29 0 4.58-2.46 5.72-4.92m3.43-2.46c1.14-1.64 3.43-2.46 5.72-2.46h2.29m-3.28-3.28 3.28 3.28-3.28 3.28"/>',
+    repeat:'<path d="M2.55 12v-1.6a3 3 0 0 1 3-3h15.9m-3.6-3.6 3.6 3.6-3.6 3.6M21.45 12v1.6a3 3 0 0 1-3 3H2.55m3.6 3.6-3.6-3.6 3.6-3.6"/>',
     lyrics:'<rect x="3" y="3" width="18" height="15" rx="3"/><path d="m8 18 1 4 5-4M8 8h2v4H8M14 8h2v4h-2"/>',
-    queue:'<path d="M8 5h14M8 12h14M8 19h14"/><circle cx="3" cy="5" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="19" r=".8"/>',
+    queue:'<path d="M8 5.6h14M8 12h14M8 18.4h14"/><circle cx="3" cy="5.6" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="18.4" r=".8"/>',
     volume:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10M20.5 4.5a10.6 10.6 0 0 1 0 15"/>',
     volume2:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>',
     volume1:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/>',
@@ -951,7 +953,9 @@
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
   const shuffle=button(T('Karıştır','Shuffle'),'shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
   const back=button(T('Önceki parça','Previous'),'back',safe(()=>S.Player.back()));
-  const play=button(T('Çal','Play'),'play',safe(()=>S.Player.togglePlay()),'am-play');
+  // The icon turns at the click, as in Music, instead of after Spotify's playback event (~100-300ms, longer on a
+  // Connect device). Until playback follows, syncPlayer keeps it; if it has not 1.2s later, the real state shows again.
+  let playWant=null,playCheck=0;const play=button(T('Çal','Play'),'play',safe(()=>{playWant=!S.Player.isPlaying();const result=S.Player.togglePlay();showPlaying(playWant);clearTimeout(playCheck);playCheck=setTimeout(()=>{playWant=null;syncPlayer();},1200);return result;}),'am-play');
   const next=button(T('Sonraki parça','Next'),'next',safe(()=>S.Player.next()));
   const repeat=button(T('Yinele','Repeat'),'repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
   playerButton(shuffle,'shuffle');playerButton(back,'previous',T('Önceki','Previous'));playerButton(next,'next',T('Sonraki','Next'));playerButton(repeat,'repeat');play.dataset.amLocked='play';
@@ -2222,11 +2226,11 @@
     document.body.classList.toggle('am-entity-playing',playing);
   }
   let previousTrack='',previousPlaying=null;
+  function showPlaying(playing){if(playing===previousPlaying)return;previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
   function syncPlayer() {
     if(document.hidden||!S.Player.origin?._state) return;
     syncEntityPlaying();
-    const playing=S.Player.isPlaying();
-    if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
+    const playing=S.Player.isPlaying();if(playWant===null||playing===playWant){playWant=null;showPlaying(playing);}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
