@@ -1934,6 +1934,8 @@ try {
       let state = await spicyState();
       const lyricsTop = (await rect('#am-nowplaying .am-np-lyrics')).top;
       assert.deepEqual([state.pane, state.card, state.header, state.page], [true, 'Expanded', false, 0]);
+      // The cut is measured by a ResizeObserver, a frame after the switch.
+      await page.waitForFunction(top => Math.abs([...document.querySelectorAll('.am-native-right aside')].pop().getBoundingClientRect().top - top) <= 1, lyricsTop);
       const asideTop = await page.evaluate(() => [...document.querySelectorAll('.am-native-right aside')].pop().getBoundingClientRect().top);
       assert.deepEqual([state.col, Math.abs(asideTop - lyricsTop) <= 1], [paneRect, true], 'one background in the pane\'s place; Spicy\'s view starts where the lyrics did');
       const topAt = (x, y) => page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e?.closest('.am-native-right') ? 'column' : e?.closest('#am-nowplaying') ? 'pane' : e?.tagName; }, [x, y]);
