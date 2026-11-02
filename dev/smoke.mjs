@@ -1414,9 +1414,10 @@ try {
       // The button turns the pane on (beside the player): a glass card that floats over the page like the queue sheet (same
       // inset, radius and shadow), so the page and the player keep their width. Spotify's lyrics under the cover.
       await page.evaluate(() => { window.__mockState.progress = 83000; });
+      // Shown at once; saved after the frame that shows it.
       await page.click('#am-player .am-np-toggle');
-      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying), 'beside');
       assert.ok(await page.isVisible('#am-nowplaying'));
+      await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying === 'beside');
       const pane = await rect('#am-nowplaying');
       assert.ok(pane.right === 1424 && pane.top === 76 && pane.bottom === 900 - 96 && pane.width >= 300, JSON.stringify(pane));
       assert.deepEqual(await page.evaluate(() => { const c = getComputedStyle(document.getElementById('am-nowplaying')); return [c.borderRadius, c.boxShadow.includes('0px 18px 50px')]; }), ['18px', true]);
@@ -1436,7 +1437,8 @@ try {
       assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#am-player .am-np-toggle'); return [b.getAttribute('aria-pressed'), b.title]; }), ['true', 'Şimdi Çalan\'ı gizle']);
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
-      assert.deepEqual([await page.getAttribute('#am-player .am-np-toggle', 'aria-pressed'), await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying)], ['false', 'off']);
+      assert.equal(await page.getAttribute('#am-player .am-np-toggle', 'aria-pressed'), 'false');
+      await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying === 'off');
       assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));

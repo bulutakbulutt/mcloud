@@ -1194,6 +1194,9 @@ body.am-np-full #am-nowplaying .am-np-lyrics {grid-column:2;grid-row:1/-1;margin
 body.am-np-full #am-nowplaying .am-np-line {font-size:clamp(26px,2.5vw,44px)}
 body.am-np-full #am-nowplaying .am-np-line + .am-np-line {margin-top:clamp(18px,1.6vw,30px)}
 body.am-np-full #am-nowplaying .am-np-close {display:none}
+/* A song without lyrics: the artwork alone, in the middle. */
+body.am-np-full #am-nowplaying.am-np-nolyrics .am-np-body {grid-template-columns:minmax(0,1fr)}
+body.am-np-full #am-nowplaying.am-np-nolyrics .am-np-lyrics {display:none}
 body.am-np-full #am-nowplaying .am-np-fullscreen {position:absolute;z-index:2;top:22px;right:22px;width:32px;height:32px;border-radius:50%;background:var(--am-np-chip);color:var(--am-np-text);opacity:1}
 body.am-windows.am-np-full #am-nowplaying .am-np-fullscreen {top:48px}
 body.am-np-open.am-np-full #am-player {--am-player-w:round(down,min(calc(100vw - 64px),700px),2px);left:round(down,calc((100vw - var(--am-player-w))/2),1px)}

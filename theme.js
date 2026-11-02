@@ -2080,10 +2080,23 @@
   np.addEventListener('contextmenu',event=>{if(popover.contains(event.target)||!S.Player.data?.item?.uri)return;event.preventDefault();openTrackMenu({x:event.clientX,y:event.clientY});});
   // The player's Now Playing button turns the pane on and off (beside the player; the settings window picks "sidebar
   // only"). It is always there unless the settings window's button picker hides it; the player's "…" menu does the same.
-  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npOpen(settings.nowPlaying==='off'),'am-np-toggle');
+  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npOpen((npWant??settings.nowPlaying)==='off'),'am-np-toggle');
   npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
-  const npHandsToSpicy=()=>settings.nowPlaying==='beside'&&settings.npLayout!=='docked'&&!!document.getElementById('SpicyLyrics_PageButton');
-  function npOpen(on) { npFullscreen(false);npSet('nowPlaying',on?'beside':'off'); }
+  const npHandsToSpicy=()=>(npWant??settings.nowPlaying)==='beside'&&settings.npLayout!=='docked'&&!!document.getElementById('SpicyLyrics_PageButton');
+  // Shown or hidden at once, saved after that frame is painted: saving tells the settings window, the menus and the
+  // toolbar glass, which reads layout, and that forced layout cost the opening frame 20-40ms (measured in the client).
+  let npWant=null;
+  function npOpen(on) {
+    npFullscreen(false);const value=on?'beside':'off';if((npWant??settings.nowPlaying)===value)return;
+    npWant=value;npApply();
+    requestAnimationFrame(()=>setTimeout(()=>{if(npWant!==value)return;npWant=null;npSet('nowPlaying',value);}));
+  }
+  // Pointing at the button gets the pane ready (text, artwork, lyrics) while it is still hidden, so opening only shows it.
+  function npPrepare() {
+    if(!npReady||document.hidden||!np.hidden)return;
+    const item=S.Player.data?.item;if((item?.uri||'')!==npTrackKey)npTrack(item);
+  }
+  npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
   let npFullOn=false;
   function npFullscreen(on) {
     if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
@@ -2102,8 +2115,8 @@
   document.addEventListener('keydown',event=>{if(npFullOn&&event.key==='Escape'&&!popover.contains(event.target)){event.preventDefault();npFullscreen(false);}});
   // The player's "…" menu hides the pane beside the player, and shows it again when the button picker hid its button.
   function npMenuEntries() {
-    const open=settings.nowPlaying!=='off';
-    if(settings.nowPlaying==='only'||!open&&!(Array.isArray(settings.playerHidden)&&settings.playerHidden.includes('nowplaying')))return [];
+    const mode=npWant??settings.nowPlaying,open=mode!=='off';
+    if(mode==='only'||!open&&!(Array.isArray(settings.playerHidden)&&settings.playerHidden.includes('nowplaying')))return [];
     return [{label:open?T('Şimdi Çalan\'ı Gizle','Hide Now Playing'):T('Şimdi Çalan\'ı Göster','Show Now Playing'),action:()=>npOpen(!open)}];
   }
 
@@ -2115,19 +2128,23 @@
     else if(!only&&scrub.parentElement===npControls){track.append(scrub);player.insertBefore(controls,track);extras.append(connectButton,queueButton,volumeWrap);}
   }
   const npVisible=()=>!np.hidden&&!document.hidden;
-  let npReady=false,npTrackKey='';
+  let npReady=false,npTrackKey='',npContent='';
   function npApply() {
     if(!npReady)return;
     // While Spicy Lyrics' page is open the pane beside the player steps aside, so the lyrics never show twice.
-    const mode=settings.nowPlaying,b=document.body.classList,open=mode==='only'||mode==='beside'&&!b.contains('am-spicy-route');
+    const mode=npWant??settings.nowPlaying,b=document.body.classList,open=mode==='only'||mode==='beside'&&!b.contains('am-spicy-route');
     if(mode==='off'&&npFullOn){npFullOn=false;b.remove('am-np-full');npSyncFull();}
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
     b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
-    const on=mode!=='off';np.hidden=!open;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
+    const on=mode!=='off',opening=open&&np.hidden;np.hidden=!open;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
-    npTrackKey='';npLyricUri=null;if(open)npTick();else{npStopVideo();clearTimeout(npLyricTimer);}
-    if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;}
+    // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
+    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
+    if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
+    if(!open){npStopVideo();clearTimeout(npLyricTimer);return;}
+    if(opening){npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;if(npTrackKey===(S.Player.data?.item?.uri||''))npLoadMotion(S.Player.data?.item);}
+    npTick();
   }
   // Called from syncPlayer (every second while the window shows, and on track and play/pause changes).
   function npTick() {
@@ -2146,7 +2163,7 @@
     for(const [img,src] of [[npImg,big],[npBg,pick('standard','small')],[npThumb,small]]){if(!src)img.removeAttribute('src');else if(img.getAttribute('src')!==src)img.src=src;}
     npTitle.set(item?.name||meta.title||'');npArtist.set(meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'');
     np.classList.toggle('am-np-empty',!item?.uri);
-    npLoadMotion(item);
+    if(npVisible())npLoadMotion(item);
     if(npLyricsShown())npLoadLyrics(item);
   }
   // Moving artwork. A clip is shown once it plays (no black frame first); one that fails leaves the still cover.
@@ -2226,7 +2243,7 @@
   }
   // Lyrics, as in Apple Music: the line being sung is bright, the rest dim; a line plays from where it is clicked. The
   // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
-  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
+  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npScrollFrame=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
   const npLyricsShown=()=>npFullOn||settings.npLyricsPlace==='below'||settings.npBg==='plain';
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
@@ -2242,11 +2259,12 @@
   }
   async function npLoadLyrics(item) {
     const uri=item?.uri||'';if(uri===npLyricUri)return;
-    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;npLyricJump=true;clearTimeout(npLyricTimer);
+    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;npLyricJump=true;clearTimeout(npLyricTimer);np.classList.remove('am-np-nolyrics');
     npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Sözler yükleniyor…','Loading lyrics…')));
     if(!npLyricCache.has(uri)){npLyricCache.set(uri,uri?await fetchLyrics(uri):null);if(npLyricCache.size>30)npLyricCache.delete(npLyricCache.keys().next().value);}
     if(uri!==npLyricUri)return;
-    npLyrics=npLyricCache.get(uri);npLyricsBox.scrollTop=0;
+    npLyrics=npLyricCache.get(uri);if(!npLyrics?.synced)requestAnimationFrame(()=>{npLyricsBox.scrollTop=0;});
+    np.classList.toggle('am-np-nolyrics',!npLyrics);
     if(!npLyrics){npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Bu şarkının sözleri yok.','Lyrics aren\'t available for this song.')));return;}
     npLyricsBox.classList.toggle('am-np-unsynced',!npLyrics.synced);
     const nodes=npLyrics.lines.map(line=>{
@@ -2267,7 +2285,11 @@
       const node=lines[index]?.node;node?.classList.add('am-current');
       // Follows the song unless the reader scrolled in the last few seconds; the first line shown after loading (or a
       // seek's click) is jumped to, the next ones glide.
-      if(node&&performance.now()-npUserScroll>4000){npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior:npLyricJump||reducedMotion.matches?'auto':'smooth'});npLyricJump=false;}
+      // Placed in the next frame: its layout is due then anyway, while reading offsetTop now would force one more.
+      if(node&&performance.now()-npUserScroll>4000){
+        const behavior=npLyricJump||reducedMotion.matches?'auto':'smooth';npLyricJump=false;cancelAnimationFrame(npScrollFrame);
+        npScrollFrame=requestAnimationFrame(()=>{if(node.isConnected)npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior});});
+      }
     }
     const next=lines[index+1];
     if(next&&S.Player.isPlaying?.())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
@@ -2290,7 +2312,7 @@
   const npApplyAll=()=>npApply();
   npSetting({key:'nowPlaying',group:'nowplaying',type:'choice',style:'segmented',default:'off',label:T('Şimdi Çalan paneli','Now Playing sidebar'),
     options:[['off',T('Kapalı','Off')],['beside',T('Oynatıcının yanında','Beside the player')],['only',T('Yalnızca panel','Sidebar only')]],
-    note:T('“Yalnızca panel” alttaki oynatıcıyı gizler; tüm kontroller panele geçer.','“Sidebar only” hides the bottom player and moves every control into the sidebar.'),apply:npApplyAll});
+    note:T('“Yalnızca panel” alttaki oynatıcıyı gizler; tüm kontroller panele geçer.','“Sidebar only” hides the bottom player and moves every control into the sidebar.'),apply:()=>{npWant=null;npApply();}});
   npSetting({key:'npLayout',group:'nowplaying',type:'choice',style:'segmented',default:'card',label:T('Panel görünümü','Sidebar style'),
     options:[['card',T('Cam kart','Glass card')],['docked',T('Kenara yapışık','Docked')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
