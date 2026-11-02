@@ -883,20 +883,27 @@ try {
         art: rows.slice(2).map(r => { const a = r.querySelector('img').parentElement; return a.offsetWidth + '/' + css(a, 'borderRadius'); }).join(),
         typed: [css(typed, 'color'), css(typed.firstElementChild, 'color'), css(typed.firstElementChild, 'fontWeight'), css(rows[1].querySelector('[class*="color-text-subdued"]'), 'color')].join(),
         dot: [css(sub, 'fontSize'), css(sub.lastElementChild, 'content', '::before'), css(sub.querySelector('svg'), 'display')].join(),
-        hidden: [css(rows[2].querySelector('[id$="-play"]'), 'display'), css(rows[2].querySelector('[class*="list-row__slot"]'), 'display')].join(),
+        // Spotify's play button over the artwork and the row's buttons wait for the pointer (or the selection).
+        rest: [css(rows[2].querySelector('[id$="-play"]'), 'opacity'), css(rows[2].querySelector('[class*="list-row__slot"]'), 'visibility')].join(),
       };
     });
     assert.deepEqual(look, {
       gap: 4, radius: '13px', glass: 'blur(21px) url("#am-search-glass")', tone: true, hint: 'none',
       heights: '24,24,52,52,52', gaps: '0px,0px,11px,11px,11px', line: '"",-6px,none',
       art: '46/5px,46/50%,46/5px', typed: 'rgba(255, 255, 255, 0.55),rgba(255, 255, 255, 0.85),400,rgba(255, 255, 255, 0.85)',
-      dot: '0px,"\u00a0·\u00a0",none', hidden: 'none,none',
+      dot: '0px,"\u00a0·\u00a0",none', rest: '0,hidden',
     });
     // The selection is the accent, 5pt in from the sides; the field shows Apple's focus ring.
     await page.hover('#search-dropdown [role="row"] >> nth=3');
     assert.deepEqual(await page.evaluate(() => { const r = document.querySelectorAll('#search-dropdown [role="row"]')[3], a = getComputedStyle(r, '::after');
       return [a.backgroundColor, a.left, a.right, getComputedStyle(r.querySelector('[data-encore-id="listRowTitle"]')).color, getComputedStyle(document.querySelector('#global-nav-bar input')).boxShadow.includes('0px 0px 0px 3px')]; }),
       ['rgb(250, 45, 72)', '5px', '5px', 'rgb(255, 255, 255)', true]);
+    // Hovered, the play button covers the artwork (a click there plays the result, as without the theme) and the
+    // row's buttons show.
+    await page.waitForTimeout(200);
+    assert.deepEqual(await page.evaluate(() => { const r = document.querySelectorAll('#search-dropdown [role="row"]')[3], img = r.querySelector('img').getBoundingClientRect(), play = r.querySelector('[id$="-play"]');
+      return [getComputedStyle(play).opacity, !!document.elementFromPoint(img.x + img.width / 2, img.y + img.height / 2).closest('[id$="-play"] button'), Math.round(play.getBoundingClientRect().width), getComputedStyle(r.querySelector('[class*="list-row__slot"]')).visibility]; }),
+      ['1', true, 46, 'visible']);
     await shot('search-results');
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-dropdown'));
@@ -913,6 +920,19 @@ try {
     await shot('search-loading');
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-suggestions-loading-dropdown'));
+    // With the queue sheet open the popover still comes first: its rows' buttons ran under the sheet and could not be seen.
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    await page.fill('#global-nav-bar input', 'sena');
+    await page.hover('#search-dropdown [role="row"] >> nth=3');
+    // The preview's popover is narrower than the client's, so the sheet is drawn over it to test the stacking.
+    assert.deepEqual(await page.evaluate(() => { const nav = document.getElementById('global-nav-bar'), sheet = document.querySelector('.am-native-right'), b = document.querySelectorAll('#search-dropdown [role="row"]')[3].querySelector('[class*="list-row__slot"] button').getBoundingClientRect();
+      sheet.style.setProperty('left', Math.round(b.left - 40) + 'px', 'important'); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); sheet.style.removeProperty('left');
+      return [+getComputedStyle(nav).zIndex > +getComputedStyle(sheet).zIndex, !!hit?.closest('#search-dropdown [class*="list-row__slot"] button')]; }), [true, true]);
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
   });
 
   await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
