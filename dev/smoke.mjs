@@ -1586,6 +1586,15 @@ try {
     assert.deepEqual(await shown(), [false, true, true]);
     // Spotify spaces the column header from the first row by the page padding minus 8px; the first row follows it directly, as in Apple Music.
     assert.equal(await page.evaluate(() => { const h = document.querySelector('#mock-album72 .main-trackList-trackListHeader'), r = document.querySelector('#mock-album72 .main-trackList-trackListRow'); return Math.round(r.getBoundingClientRect().top - h.getBoundingClientRect().bottom); }), 0);
+    // The column header can be switched off (B6): it leaves the flow, the first row takes its place, and it comes back.
+    const headerBox = () => page.evaluate(() => { const h = document.querySelector('#mock-album72 .main-trackList-trackListHeader'), r = document.querySelector('#mock-album72 .main-trackList-trackListRow'), l = document.querySelector('#mock-album72 .main-trackList-trackList'); return [getComputedStyle(h).display, Math.round(r.getBoundingClientRect().top - l.getBoundingClientRect().top)]; });
+    const [, rowTop] = await headerBox();
+    await flip('tracklistHeader', ['Parça listesi sütun başlığı']);
+    assert.equal(await saved('tracklistHeader'), false);
+    assert.deepEqual(await headerBox(), ['none', 0]);
+    assert.ok(rowTop >= 36);
+    await flip('tracklistHeader', ['Parça listesi sütun başlığı']);
+    assert.deepEqual(await headerBox(), ['block', rowTop]);
     assert.equal(await page.$eval('#mock-album72 .main-trackList-rowSectionVariable', e => getComputedStyle(e).display), 'none');
     assert.equal(await page.$eval('#mock-album72 .main-trackList-trackListRow', e => getComputedStyle(e).gridTemplateColumns.match(/[\d.]+px/g).length), 3);
     assert.deepEqual(await page.$eval('#mock-album72 .mock-badges', e => [getComputedStyle(e).gridArea, getComputedStyle(e).justifyContent, getComputedStyle(e.lastElementChild).display]), ['badges', 'flex-start', 'none']);
