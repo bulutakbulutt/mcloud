@@ -36,7 +36,7 @@
     },
     Player: {
       origin: { _state: {} },
-      data: { context: { uri: 'spotify:album:0' }, item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean', uri: 'spotify:artist:0' }], album: { uri: 'spotify:album:0', name: 'Blonde', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0' } } },
+      data: { context: { uri: 'spotify:album:0' }, item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean', uri: 'spotify:artist:0' }], album: { uri: 'spotify:album:0', name: 'Blonde', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0', has_lyrics: 'true', 'canvas.url': 'https://canvaz.scdn.co/upload/mock/video/nights.cnvs.mp4', 'canvas.type': 'VIDEO_LOOPING_RANDOM' } } },
       isPlaying: () => state.playing, togglePlay: () => { state.playing = !state.playing; },
       getShuffle: () => state.shuffle, toggleShuffle: () => { state.shuffle = !state.shuffle; },
       getRepeat: () => state.repeat, toggleRepeat: () => { state.repeat = (state.repeat + 1) % 3; },
@@ -156,6 +156,11 @@
   // Spotify's Redux store, found by the theme in the React tree under #main (it opens Spotify's credits dialog), and the
   // radio lookup Spotify's "Go to artist radio" makes.
   document.getElementById('main').__reactContainer$mock = { child: { memoizedProps: { store: { getState: () => ({ ui: { trackCreditsModal: { isOpen: false } } }), dispatch: action => { (window.__dispatched ||= []).push(action); } } } } };
-  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url); return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
+  // Spotify's lyrics (color-lyrics, line synced) for the playing track; other requests are the radio lookup.
+  const lyricLines = ['Round your city, round the clock', 'Everybody needs you', 'No, you can\'t make everybody equal', 'Although you got beautiful people', '♪', 'Every night fucks every day up', 'Every day patches the night up'];
+  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url);
+    if (url.includes('/color-lyrics/')) { if (!url.includes('/track/1?')) throw new Error('404');
+      return { lyrics: { syncType: 'LINE_SYNCED', providerDisplayName: 'Musixmatch', lines: lyricLines.map((words, i) => ({ startTimeMs: String(60000 + i * 10000), words })) }, colors: {} }; }
+    return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();
