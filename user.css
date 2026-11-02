@@ -14,8 +14,8 @@
    sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
 :root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-image-header .am-native-main,body.am-artist-stays-dark.am-artist-open #am-artist {
  color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
- --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:#dedede; --am-sub:#969696; --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
- --am-label:#f2f2f2; --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
+ --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:rgb(255 255 255/.847); --am-sub:rgb(255 255 255/.549); --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
+ --am-label:rgb(255 255 255/.847); --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
  --am-field:#1c1c1e; --am-field-2:#2b2b2b; --am-art-empty:#303030; --am-tint-floor:#161616;
  --am-bar-glass:color-mix(in srgb,#2a2a2a 62%,transparent);
  --am-sidebar-fill:color-mix(in srgb,#252525 76%,transparent); --am-sidebar-lite:color-mix(in srgb,#252525 62%,transparent); --am-sidebar-solid:#1a1a1a;
@@ -48,8 +48,8 @@
  --am-rim-edge:#00000033; --am-glass-text-shadow:0 0 6px #fff9; --am-hero-name-shadow:none;
  --am-rim-lines:inset 0 1px #ffffff99,inset 0 1.5px #ffffff66,inset 0 -1px #ffffff4d,inset 0 -1.5px #ffffff33,inset 1px 0 #ffffff33,inset -1px 0 #ffffff33;
  --am-hero-name:#1d1d1f; --am-hero-play:var(--am-tint-text,#333); --am-hero-play-icon:#fff;
- /* The settings window (#76) keeps these few on :root; its other colours are built on the tokens above. */
- --am-settings-glass-tint:#f6f6f659; --am-settings-dim:#00000033; --am-settings-knob:#fff;
+ /* The settings window (#76): its base and the line under its toolbar (Apple's light Settings: white, #e5e5e5). */
+ --am-settings-window:#fff; --am-settings-hairline:rgb(0 0 0/.1);
  --am-settings-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' fill='none' stroke='%23000000b3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 4.5 2.5-2.5 2.5 2.5M1.5 7.5 4 10l2.5-2.5'/%3E%3C/svg%3E");
  /* Spotify's own scheme (color.ini, Spicetify's --spice-* variables) in light. Spicetify writes Spotify's black as
     --spice-sidebar and its white as --spice-text, so the inverted sets (tooltips) stay inverted. */
@@ -860,6 +860,7 @@ body.am-ready .am-native-panel-open {
  transition:opacity .25s ease;
 }
 @starting-style {body.am-ready .am-native-panel-open {opacity:0}}
+body.am-light.am-ready .am-native-panel-open {backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
 /* While panels cross-fade the outgoing one (often the hidden Now Playing view) is still mounted; show only the current. */
 body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
@@ -887,10 +888,9 @@ body.am-ready .am-native-panel-open [data-am-fill] {
 body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode Music keeps the
-   artist page dark (white text over the artist colour) under its light glass sidebar, queue and play bar; that is
-   artistLight 'dark' (.am-artist-stays-dark: the page takes the dark tokens above, the glass stays light). 'light'
-   turns the page pale with deep text (theme.js setTint). */
-body.am-light:not(.am-artist-stays-dark) {--am-tint-top:var(--am-tint-top-light,#ececec);--am-tint-bg:var(--am-tint-bg-light,var(--am-bg));--am-tint-text:var(--am-tint-text-light,var(--am-sub))}
+   artist page dark (white text over the artist colour) under its light glass sidebar, queue and play bar
+   (.am-artist-stays-dark: the page takes the dark tokens above, the glass stays light; measured on 25 artists, the
+   name is never dark). */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
 body.am-tinted .am-nav-heading {color:rgb(var(--am-ink)/.451)}
 /* Over an artist's colour Apple Music's sidebar is a dark material that lets ~15% of the page through: about half the

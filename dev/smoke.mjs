@@ -1211,7 +1211,7 @@ try {
       spice: getComputedStyle(document.body).getPropertyValue('--spice-main').trim(),
     }));
     const dark = await state();
-    assert.deepEqual([dark.light, dark.bg, dark.row, dark.ink, dark.accent, dark.steps, dark.scheme], [false, 'rgb(31, 31, 31)', 'rgb(242, 242, 242)', 'rgba(255, 255, 255, 0.36)', '#0a84ff', 0, 'dark']);
+    assert.deepEqual([dark.light, dark.bg, dark.row, dark.ink, dark.accent, dark.steps, dark.scheme], [false, 'rgb(31, 31, 31)', 'rgba(255, 255, 255, 0.847)', 'rgba(255, 255, 255, 0.36)', '#0a84ff', 0, 'dark']);
     await pick('Görünüm: Açık');
     const light = await state();
     assert.deepEqual([light.light, light.bg, light.row, light.ink, light.accent, light.scheme, light.spice], [true, 'rgb(255, 255, 255)', 'rgb(29, 29, 31)', 'rgba(0, 0, 0, 0.36)', '#0088ff', 'light', '#fff']);
@@ -1220,15 +1220,9 @@ try {
     assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not(:has([data-am-scheme]))').length), 0);
     assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
-    // The artist page keeps its dark artist colours in light mode (as Music does) unless it is set to light.
+    // The artist page keeps its dark artist colours in light mode, as Music does; the submenu holds only the appearance.
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
-    await pick('Açık modda sanatçı sayfası: Açık (Apple Music\'te yok)');
-    assert.ok(await page.evaluate(() => !document.body.classList.contains('am-artist-stays-dark')));
-    await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi, Apple gibi)');
-    // Artist page colour: Apple's (the photo's own colour) or the theme's deep tint.
-    await pick('Sanatçı sayfası rengi: Apple (fotoğrafın rengi)');
-    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).artistTint, 'apple');
-    await pick('Sanatçı sayfası rengi: mcloud (koyu ton)');
+    assert.deepEqual(await page.evaluate(i => window.__menus[i].items.map(item => item.name), menu), ['Görünüm: Koyu', 'Görünüm: Açık', 'Görünüm: Sistem']);
     // System: follows prefers-color-scheme as it changes.
     await page.emulateMedia({ colorScheme: 'dark' });
     await pick('Görünüm: Sistem');
