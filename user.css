@@ -985,8 +985,8 @@ body.am-tglass-on #global-nav-bar form[role="search"] input:focus {box-shadow:0 
    its own width (container-type:size). The page moves beside the sidebar so it lays out in the visible area; its
    artwork background reaches back under the glass sidebar through the clip margin. That margin takes a plain length
    only (no var() or clamp()); a wide one is harmless, since Spotify's main view clips the page's other edges. */
-body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) {left:var(--am-side)!important;width:calc(100% - var(--am-side))!important;overflow:clip!important;overflow-clip-margin:800px}
-body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen) .spicy-dynamic-bg {left:calc(-1 * var(--am-side))!important;width:calc(100% + var(--am-side))!important}
+body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen,.CardMode) {left:var(--am-side)!important;width:calc(100% - var(--am-side))!important;overflow:clip!important;overflow-clip-margin:800px}
+body.am-ready:not(.am-spicy-fullscreen) #SpicyLyricsPage:not(.Fullscreen,.CardMode) .spicy-dynamic-bg {left:calc(-1 * var(--am-side))!important;width:calc(100% + var(--am-side))!important}
 /* Spicy's view controls (close, fullscreen, translate…) sit 24px from its page's top or bottom, but the page starts
    under the toolbar and ends under the player, which covered them (#7). They move below the toolbar and above the
    player; Spicy also moves top controls to the bottom when the toolbar is not Spotify's global nav. */
@@ -1044,12 +1044,12 @@ body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-pane
 /* Native panels share Spotify's stacking context; lift it over the custom views. So do the search field's live
    results (#search-dropdown, inside the toolbar), which the library hid while typing. The :has() is on #main, not
    body: on body, every element added anywhere (a menu's rows) re-checked it and restyled the page (~6ms a menu). */
-body.am-panel-open #main,body.am-library-open #main:has(#search-dropdown) {z-index:30!important}
+body.am-panel-open #main,body.am-np-spicy #main,body.am-library-open #main:has(#search-dropdown) {z-index:30!important}
 /* Lifted, Spotify's transparent layout covers the library and artist views; let clicks through to them. */
-body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-library-open #main:has(#search-dropdown) {pointer-events:none}
-body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-np-spicy:is(.am-library-open,.am-artist-open) #main,body.am-library-open #main:has(#search-dropdown) {pointer-events:none}
+body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-np-spicy:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
-body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#search-dropdown),body.am-library-open #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+body.am-panel-open :is(#main,.Root,.am-layout),body.am-np-spicy :is(#main,.Root,.am-layout),body.am-library-open #main:has(#search-dropdown),body.am-library-open #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
@@ -1577,6 +1577,31 @@ body.am-np-open.am-ready #global-nav-bar::before {right:var(--am-right)}
 body.am-np-open.am-ready .am-native-panel-open {right:calc(var(--am-right) + 16px)!important;width:min(340px,calc(100vw - var(--am-side) - var(--am-right) - 40px))!important}
 body.am-np-open:not(.am-np-docked).am-ready .am-native-panel-open {right:calc(var(--am-np-w) + 28px)!important;width:min(340px,calc(100vw - var(--am-side) - var(--am-np-w) - 52px))!important}
 body.am-np-only.am-ready .am-native-panel-open {bottom:16px!important}
+/* Spicy Lyrics as the pane's lyrics (theme.js npSpicy): Spicy draws its card only into Spotify's own Now Playing view,
+   which stays mounted in the hidden right column. That view lives in #main, under the pane, so the pane steps aside and
+   the column takes its place and shape (the pane's own fill behind it, always dark: Spicy's lyrics are white), filled by
+   the card in Spicy's expanded state. Its header (title, expand, collapse) goes; the player's lyrics button opens Spicy's page. */
+body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right {
+ display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
+ position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:var(--am-np-w)!important;height:auto!important;min-width:0!important;
+ z-index:55!important;overflow:hidden;isolation:isolate;border-radius:18px;background:#1b1b1b!important;
+ box-shadow:inset 0 1px 0 rgb(255 255 255/.149),inset 0 0 0 1px rgb(255 255 255/.071),0 18px 50px #0007;-webkit-app-region:no-drag;
+}
+body.am-np-spicy.am-np-docked:not(.am-panel-open).am-ready .am-native-right {inset:0 0 0 auto!important;border-radius:0;box-shadow:inset 1px 0 rgb(255 255 255/.078)}
+/* The pane's backgrounds, under Spicy's own (its "Animated Background", drawn inside the view, covers them). */
+body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right::before {content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:color-mix(in srgb,#262626 74%,transparent);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
+body.am-np-spicy.am-np-artbg:not(.am-panel-open).am-ready .am-native-right::before {inset:-25%;background:var(--am-np-cover,none) center/cover #1b1b1b;filter:blur(64px) saturate(1.6) brightness(.62);backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-np-spicy:is(.am-np-plain,.am-solid):not(.am-panel-open).am-ready .am-native-right::before {background:#2c2c2c;backdrop-filter:none;-webkit-backdrop-filter:none}
+/* Square corners down the chain (Spotify's view and Spicy's card round theirs); the column's own shape clips. */
+body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right [data-am-np-fill] {
+ display:flex!important;flex-direction:column!important;flex:1 1 auto!important;width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;
+ position:relative!important;inset:auto!important;transform:none!important;margin:0!important;border-radius:0!important;background:transparent!important;
+}
+/* Spotify's view paints its own background (the aside's ::before, white in light mode) and the card's hosts, which Spicy marks. */
+body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right :is(.SpicyLyrics_NPVStretch,[data-am-np-fill]) {background:transparent!important;border-radius:0!important}
+body.am-np-spicy:not(.am-panel-open).am-ready .am-native-right aside[data-am-np-fill]::before {background:transparent!important}
+body.am-np-spicy:not(.am-panel-open).am-ready #SpicyLyricsNPVCard {border-radius:0!important;background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;max-height:none}
+body.am-np-spicy:not(.am-panel-open).am-ready #SpicyLyricsNPVCard .CardHeader {display:none!important}
 
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */
 body.am-windows.am-ready #global-nav-bar {right:150px!important}

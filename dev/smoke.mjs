@@ -1912,6 +1912,42 @@ try {
       }
       assert.equal(await page.evaluate(() => window.__spicyClicks), 4);
       await pick('npLayout', 'Cam kart');
+
+      // Spicy Lyrics as the lyrics source: Spicy's card lives in Spotify's own Now Playing view (the right column), so the
+      // pane steps aside and that column takes its place and shape, the card expanded by its own button and its header
+      // hidden. Without the card (the queue took the column) the pane comes back; back on Spotify the card shrinks again.
+      const addCard = () => page.evaluate(() => { document.getElementById('SpicyLyricsNPVCard')?.remove(); const aside = [...document.querySelectorAll('.am-native-right aside[data-testid="mock-npv"]')].pop();
+        aside.insertAdjacentHTML('beforeend', '<div id="SpicyLyricsNPVCard" class="Collapsed"><div class="CardHeader"><span>Lyrics</span><button id="NPVCardMaximize"></button></div><div class="CardBody"><div id="SpicyLyricsPage" class="CardMode" style="position:absolute;inset:0"></div></div></div>');
+        aside.querySelector('#NPVCardMaximize').onclick = e => { window.__expandClicks = (window.__expandClicks || 0) + 1; const c = e.target.closest('#SpicyLyricsNPVCard'); c.classList.remove('Collapsed'); c.classList.toggle('Expanded'); }; });
+      const paneRect = await rect('#am-nowplaying');
+      await addCard();
+      await pick('npLyricsSource', 'Spicy Lyrics');
+      await page.waitForFunction(() => document.body.classList.contains('am-np-spicy'));
+      const spicyState = () => page.evaluate(() => { const c = document.getElementById('SpicyLyricsNPVCard'), col = document.querySelector('.am-native-right'), r = col.getBoundingClientRect();
+        return { pane: !document.getElementById('am-nowplaying').hidden, card: c?.className, header: !!c?.querySelector('.CardHeader').getClientRects().length,
+          page: c && Math.round(c.querySelector('#SpicyLyricsPage').getBoundingClientRect().left - r.left), radius: getComputedStyle(col).borderTopLeftRadius,
+          col: { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width } }; });
+      let state = await spicyState();
+      assert.deepEqual([state.pane, state.card, state.header, state.page, state.radius, state.col], [false, 'Expanded', false, 0, '18px', paneRect]);
+      assert.ok(await page.evaluate(() => { const c = document.querySelector('.am-native-right'), r = c.getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('.am-native-right') === c; }), 'Spicy\'s column is on top');
+      await pick('npLayout', 'Kenara yapışık');
+      state = await spicyState();
+      assert.deepEqual([state.col.top, state.col.right, state.radius], [0, await page.evaluate(() => innerWidth), '0px'], 'docked: full height at the edge, square corners');
+      assert.ok(await page.evaluate(() => [...document.querySelectorAll('.am-native-right [data-am-np-fill]')].every(n => getComputedStyle(n).borderTopLeftRadius === '0px')), 'no rounded corner inside the column');
+      await pick('npLayout', 'Cam kart');
+      await page.evaluate(() => document.querySelector('[data-testid="control-button-queue"]').click());
+      const lastPanel = () => [...document.querySelectorAll('.right aside')].pop();
+      await page.waitForFunction(`(${lastPanel})().getAttribute('aria-label') === 'Sıraya Ekle' && !document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-spicy')`);
+      await page.evaluate(`(${lastPanel})().querySelector('button[aria-label="Kapat"]').click()`);
+      await page.waitForFunction(`(${lastPanel})().dataset.testid === 'mock-npv'`);
+      await addCard();
+      await page.waitForFunction(() => document.body.classList.contains('am-np-spicy') && document.getElementById('am-nowplaying').hidden);
+      await page.waitForFunction(() => document.getElementById('SpicyLyricsNPVCard').classList.contains('Expanded'));
+      await pick('npLyricsSource', 'Spotify');
+      state = await spicyState();
+      assert.deepEqual([state.pane, state.card, await page.evaluate(() => document.body.classList.contains('am-np-spicy'))], [true, '', false], 'back on Spotify\'s lyrics');
+      assert.equal(await page.evaluate(() => window.__expandClicks), 3);
+      await page.evaluate(() => document.getElementById('SpicyLyricsNPVCard').remove());
       await page.evaluate(() => document.getElementById('SpicyLyrics_PageButton').remove());
       // The × turns the pane off, and so does the player's "…" menu.
       await page.click('#am-nowplaying .am-np-close');
