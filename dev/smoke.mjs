@@ -1458,12 +1458,11 @@ try {
         return { bg: getComputedStyle(np).backgroundColor, art: shown('.am-np-art'), meta: shown('.am-np-meta'), lyrics: shown('.am-np-lyrics'), current: getComputedStyle(np.querySelector('.am-np-line.am-current')).opacity, other: getComputedStyle(np.querySelector('.am-np-line:not(.am-current)')).opacity }; });
       await page.evaluate(() => { window.__mockState.playing = false; window.__firePlayer('onplaypause'); });
       await page.waitForFunction(() => !document.getElementById('am-nowplaying').classList.contains('am-np-playing'));
-      await page.waitForTimeout(400);
+      // The line fades over .35s; wait for it to settle (slow CI runners) rather than a fixed time.
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-nowplaying .am-np-line.am-current')).opacity === '0.42');
       assert.deepEqual(await plain(), { bg: 'rgb(44, 44, 44)', art: false, meta: false, lyrics: true, current: '0.42', other: '0.42' });
       await page.evaluate(() => { window.__mockState.playing = true; window.__firePlayer('onplaypause'); });
-      await page.waitForFunction(() => document.getElementById('am-nowplaying').classList.contains('am-np-playing'));
-      await page.waitForTimeout(400);
-      assert.equal((await plain()).current, '1');
+      await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-nowplaying .am-np-line.am-current')).opacity === '1');
       await pick('npBg', 'Kapak renkleri');
 
       // The player's lyrics button keeps opening Spicy Lyrics (its own page button, clicked) with the pane on; the pane links to
