@@ -1529,6 +1529,39 @@ try {
     } finally { await other.close(); }
   });
 
+  await check('stored settings: a twice-encoded value is read through, digit keys from a spread string are dropped', async () => {
+    const other = await browser.newPage({ viewport: { width: 1440, height: 900 } }), otherErrors = [];
+    other.on('pageerror', e => otherErrors.push(e.message));
+    const before = await page.evaluate(() => localStorage.getItem('mcloud:settings'));
+    const stored = () => other.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')));
+    const load = async value => {
+      await other.evaluate(v => localStorage.setItem('mcloud:settings', v), value);
+      await other.reload(); await other.waitForSelector('body.am-ready #am-sidebar');
+      await other.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
+      await other.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+      await other.click('#am-settings [data-key="artwork"] .am-settings-switch');
+      await other.click('#am-settings .am-settings-ok');
+    };
+    try {
+      await other.goto(pathToFileURL(path.join(here, 'preview.html')).href);
+      await other.waitForSelector('body.am-ready #am-sidebar');
+      // Twice encoded: read through, and saved back as a plain object.
+      await load(JSON.stringify(JSON.stringify({ accent: 'green', recent: 3, artwork: true, futureKey: 'kept' })));
+      assert.equal(await other.evaluate(() => document.documentElement.style.getPropertyValue('--am-accent')), '#30d158');
+      let s = await stored();
+      assert.deepEqual([typeof s, s.accent, s.recent, s.artwork, s.futureKey], ['object', 'green', 3, false, 'kept']);
+      // A string spread into the object: its digit keys go, the real ones stay.
+      const junk = Object.assign({ accent: 'teal', artwork: true }, { ...'{"appearance":"light"}' });
+      await load(JSON.stringify(junk));
+      s = await stored();
+      assert.deepEqual([Object.keys(s).filter(k => /^\d+$/.test(k)).length, s.accent, s.artwork], [0, 'teal', false]);
+      // Anything but an object reads as nothing saved.
+      await load('[1,2]');
+      assert.equal(Array.isArray(await stored()), false);
+      assert.deepEqual(otherErrors, []);
+    } finally { await other.evaluate(v => localStorage.setItem('mcloud:settings', v), before); await other.close(); }
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();

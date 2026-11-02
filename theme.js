@@ -115,7 +115,18 @@
   function playerButton(node,id,label){node.dataset.amButton=id;if(label)node.dataset.amLabel=label;return node;}
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
-  let savedSettings={};try{savedSettings=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')||{};}catch{}
+  // A value stored twice encoded (a JSON string of the JSON) is read through, and keys of digits only, left by spreading
+  // such a string into an object, are dropped; anything but a plain object reads as nothing saved.
+  function readSettings() {
+    try{
+      let value=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');
+      for(let i=0;i<3&&typeof value==='string';i++)value=JSON.parse(value);
+      if(!value||typeof value!=='object'||Array.isArray(value))return {};
+      for(const key of Object.keys(value))if(/^\d+$/.test(key))delete value[key];
+      return value;
+    }catch{return {};}
+  }
+  const savedSettings=readSettings();
   for(const key in settings)if(typeof savedSettings[key]===typeof settings[key])settings[key]=savedSettings[key];
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
@@ -126,8 +137,9 @@
   document.documentElement.style.setProperty('--am-t-pause',JSON.stringify(T('Duraklat','Pause')));
   const accents={red:[T('Kırmızı','Red'),'#fa2d48','#fa4662'],pink:[T('Pembe','Pink'),'#ff375f','#ff5c7c'],orange:[T('Turuncu','Orange'),'#ff9f0a','#ffb340'],yellow:[T('Sarı','Yellow'),'#ffd60a','#ffe04d'],green:[T('Yeşil','Green'),'#30d158','#5ade7a'],teal:[T('Turkuaz','Teal'),'#40c8e0','#6dd6ea'],blue:[T('Mavi','Blue'),'#0a84ff','#409cff'],purple:[T('Mor','Purple'),'#bf5af2','#cf7ff5'],spotify:[T('Spotify Yeşili','Spotify Green'),'#1ed760','#3be477']};
   if(!accents[settings.accent])settings.accent='red';
-  // Saved values of settings this build does not define (a newer or older build's) are kept, not dropped.
-  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify({...savedSettings,...settings}));}catch{}}
+  // Saved values of settings this build does not define (a newer or older build's) are kept, read again at each save so
+  // a key removed meanwhile stays removed.
+  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify({...readSettings(),...settings}));}catch{}}
   function applySettings(){
     const [,accent,focus]=accents[settings.accent];
     document.documentElement.style.setProperty('--am-accent',accent);
