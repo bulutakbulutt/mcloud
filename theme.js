@@ -1059,12 +1059,15 @@
   // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
   // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
   const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
+  // Light mirrors it as a floor: the dark ceiling turned the white page grey along the sidebar's edge.
+  const glowCapLight='tableValues=".34 .35 .37 .4 .45 .52 .6 .7 .8 .9 1"';
   // The player's glass is toolbarLens (below); the toast keeps this filter: it fades in with opacity, and an element
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
   // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
   glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
+    +`<filter id="am-glow-cap-light" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCapLight}/><feFuncG type="table" ${glowCapLight}/><feFuncB type="table" ${glowCapLight}/></feComponentTransfer></filter>`
     +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
     // Save to Your Library plays a Lottie animation with Spotify's greens baked into the file. #am-accent-swap masks
     // the green (3 × (G − R): greys, the white plus and the dark tick have G = R) and floods it with the accent. A mask

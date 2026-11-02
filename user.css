@@ -45,7 +45,7 @@
  --am-toolbar-glass:color-mix(in srgb,#f5f5f5 44%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
  --am-toolbar-shade:linear-gradient(180deg,#ffffff40,#ffffff14 60%,#fff0);
  --am-menu-solid:#f6f6f6; --am-menu-solid-a:#f6f6f6f0; --am-sheet-fill:#fbfbfbd9;
- --am-rim-edge:#00000033; --am-glass-text-shadow:0 0 6px #fff9; --am-hero-name-shadow:none;
+ --am-rim-edge:#00000033; --am-glass-text-shadow:none; --am-hero-name-shadow:none;
  --am-rim-lines:inset 0 1px #ffffff99,inset 0 1.5px #ffffff66,inset 0 -1px #ffffff4d,inset 0 -1.5px #ffffff33,inset 1px 0 #ffffff33,inset -1px 0 #ffffff33;
  --am-hero-name:#1d1d1f; --am-hero-play:var(--am-tint-text,#333); --am-hero-play-icon:#fff;
  /* The settings window (#76): its base and the line under its toolbar (Apple's light Settings: white, #e5e5e5). */
@@ -141,6 +141,9 @@ body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main
    snapping jumped a whole card per wheel notch and fought quick reversals. Spotify's carousels are the scrollers
    among a shelf's presentation nodes (the property does nothing on the others). */
 body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-type:x proximity!important}
+/* A carousel's edges fade into the page under its arrows; Spotify hard-codes that colour to a dark #121212b3, which in
+   light drew grey bands with hard top and bottom edges over the cards. */
+body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
 /* Playlist and album pages, laid out like Apple Music's: a flat page, the artwork on the left, title and owner beside
    it and the play controls along the artwork's bottom edge. Spotify's action bar is a sibling below the header, so
    its scroll host is pulled up into the header's text column (the text column keeps that strip free); everything
@@ -296,6 +299,7 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
    the sidebar, where the mask already ends. Unclipped, the box overlapped the player's left end: every frame the
    player's glass redrew (progress, marquee) re-ran this blur and the toolbar glass under it (55fps, 80% of a core). */
 #am-sidebar-glow {--am-glow:140px;position:fixed;inset:0 auto 0 0;width:calc(var(--am-side) + var(--am-glow));clip-path:inset(0 var(--am-glow) 0 0);z-index:39;pointer-events:none;backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side));mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side))}
+body.am-light #am-sidebar-glow {backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap-light);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap-light)}
 /* Same height as the toolbar row, so the first item lines up with the page content. */
 .am-drag {height:var(--am-header);flex-shrink:0;-webkit-app-region:drag}
 .am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
