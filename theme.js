@@ -2098,7 +2098,7 @@
     const item=S.Player.data?.item;
     if((item?.uri||'')!==npTrackKey)npTrack(item);
     const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
-    npPlayVideo();npSyncLyric();
+    npSyncCanvas();npPlayVideo();npSyncLyric();
   }
   function npTrack(item) {
     npTrackKey=item?.uri||'';const meta=item?.metadata||{};
@@ -2111,6 +2111,10 @@
     if(npLyricsShown())npLoadLyrics(item);
   }
   // Moving artwork. A clip is shown once it plays (no black frame first); one that fails leaves the still cover.
+  // Spotify's Chromium has no H.264 decoder (macOS 1.3.6: canPlayType and WebCodecs both say no, FFmpeg finds "no
+  // supported streams"), and Apple's motion artwork is H.264 or HEVC only, so its options are offered only where it plays.
+  const h264=!!document.createElement('video').canPlayType('video/mp4; codecs="avc1.64001f"');
+  const hasMedia=v=>!!(v.srcObject||v.getAttribute('src'));
   const motionTag='mcloud-spicetify/2.8'; // keep in step with the version comment at the top
   let npMotionToken=0,npMotionStore={};
   try{npMotionStore=JSON.parse(localStorage.getItem('mcloud:motion')||'{}')||{};}catch{}
@@ -2118,26 +2122,38 @@
   for(const v of [npMotion,npBleed]){
     v.muted=true;v.loop=true;v.playsInline=true;v.disablePictureInPicture=true;v.preload='auto';v.setAttribute('aria-hidden','true');
     v.addEventListener('playing',()=>np.classList.toggle(v===npBleed?'am-np-bleeding':'am-np-moving',true));
-    v.addEventListener('error',()=>{if(v.getAttribute('src'))npStopVideo();});
+    v.addEventListener('error',()=>{if(hasMedia(v))npStopVideo();});
   }
   function npStopVideo() {
     np.classList.remove('am-np-moving','am-np-bleeding','am-np-bleed-tall','am-np-bleed-canvas');
-    for(const v of [npMotion,npBleed])if(v.getAttribute('src')){v.pause();v.removeAttribute('src');v.load();}
+    for(const v of [npMotion,npBleed])if(hasMedia(v)){v.pause();v.srcObject=null;v.removeAttribute('src');v.load();}
   }
   function npPlayVideo() {
-    const v=npBleed.getAttribute('src')?npBleed:npMotion.getAttribute('src')?npMotion:null;if(!v)return;
+    const v=hasMedia(npBleed)?npBleed:hasMedia(npMotion)?npMotion:null;if(!v)return;
     // Paused with the music, and while the window or pane is hidden.
     if(npVisible()&&S.Player.isPlaying?.()){if(v.paused)v.play().catch(()=>{});}else if(!v.paused)v.pause();
   }
   async function npLoadMotion(item) {
     const token=++npMotionToken,kind=settings.npArt;npStopVideo();
     if(!item?.uri||kind==='cover')return;
-    let source=null;
-    if(kind==='canvas'){const m=item.metadata||{},url=m['canvas.url']||'';if(/^https:\/\/[^/]*\.scdn\.co\//.test(url)&&/\.mp4(\?|$)/.test(url)&&!/IMAGE/.test(m['canvas.type']||''))source={url,bleed:'canvas'};}
-    else source=await appleMotion(item,kind==='appleTall');
+    if(kind==='canvas'){npCanvasFrom=null;npCanvasSrc='';npSyncCanvas();return;}
+    if(!h264)return;
+    const source=await appleMotion(item,kind==='appleTall');
     if(token!==npMotionToken||!source?.url||!npVisible())return;
     const v=source.bleed?npBleed:npMotion;if(source.bleed)np.classList.add('am-np-bleed-'+source.bleed);
     v.src=source.url;npPlayVideo();
+  }
+  // Spotify Canvas: the clip is H.264 too, but Spotify's own Now Playing view (mounted, hidden by user.css) plays it
+  // through Spotify's video player; its frames are shared through captureStream(), with no second download or decode.
+  // Checked every player tick, since that view swaps its clip (or its element) a moment after the track changes.
+  let npCanvasFrom=null,npCanvasSrc='';
+  function npSyncCanvas() {
+    if(settings.npArt!=='canvas'||!npVisible())return;
+    const meta=S.Player.data?.item?.metadata||{},has=!!meta['canvas.url']&&!/IMAGE/.test(meta['canvas.type']||'');
+    const native=has?[...document.querySelectorAll('.am-native-right video')].find(v=>v.currentSrc||v.srcObject)||null:null,src=native?.currentSrc||(native?.srcObject?'stream':'');
+    if(native===npCanvasFrom&&src===npCanvasSrc)return;
+    npCanvasFrom=native;npCanvasSrc=src;npStopVideo();if(!native)return;
+    try{np.classList.add('am-np-bleed-canvas');npBleed.srcObject=native.captureStream();npPlayVideo();}catch{npStopVideo();}
   }
   // Apple's motion artwork: m8tec's index names the album's HLS master; its H.264 variant nearest the pane's size points
   // (EXT-X-MAP) at one fragmented MP4 that a plain <video> plays. Results, misses included (for a day), are kept.
@@ -2171,7 +2187,7 @@
   }
   // Lyrics, as in Apple Music: the line being sung is bright, the rest dim; a line plays from where it is clicked. The
   // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
-  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npUserScroll=0;const npLyricCache=new Map();
+  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
   const npLyricsShown=()=>np.classList.contains('am-np-lyrics-on')||settings.npLyricsPlace==='below';
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
@@ -2189,7 +2205,7 @@
   }
   async function npLoadLyrics(item) {
     const uri=item?.uri||'';if(uri===npLyricUri)return;
-    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;clearTimeout(npLyricTimer);
+    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;npLyricJump=true;clearTimeout(npLyricTimer);
     npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Sözler yükleniyor…','Loading lyrics…')));
     if(!npLyricCache.has(uri)){npLyricCache.set(uri,uri?await fetchLyrics(uri):null);if(npLyricCache.size>30)npLyricCache.delete(npLyricCache.keys().next().value);}
     if(uri!==npLyricUri)return;
@@ -2198,7 +2214,7 @@
     npLyricsBox.classList.toggle('am-np-unsynced',!npLyrics.synced);
     const nodes=npLyrics.lines.map(line=>{
       const node=el(npLyrics.synced?'button':'div','am-np-line',line.text||'♪');line.node=node;
-      if(npLyrics.synced){node.type='button';node.addEventListener('click',()=>{try{S.Player.seek(line.t);npUserScroll=0;setTimeout(npSyncLyric,250);}catch{}});}
+      if(npLyrics.synced){node.type='button';node.addEventListener('click',()=>{try{S.Player.seek(line.t);npUserScroll=-Infinity;npLyricJump=true;setTimeout(npSyncLyric,250);}catch{}});}
       return node;
     });
     const credit=npLyrics.provider?[el('div','am-np-lyrics-credit',T('Sözler: ','Lyrics provided by ')+npLyrics.provider)]:[];
@@ -2212,14 +2228,15 @@
     if(index!==npLyricIndex){
       lines[npLyricIndex]?.node.classList.remove('am-current');npLyricIndex=index;
       const node=lines[index]?.node;node?.classList.add('am-current');
-      // Follows the song unless the reader scrolled in the last few seconds.
-      if(node&&performance.now()-npUserScroll>4000)npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior:reducedMotion.matches?'auto':'smooth'});
+      // Follows the song unless the reader scrolled in the last few seconds; the first line shown after loading (or a
+      // seek's click) is jumped to, the next ones glide.
+      if(node&&performance.now()-npUserScroll>4000){npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior:npLyricJump||reducedMotion.matches?'auto':'smooth'});npLyricJump=false;}
     }
     const next=lines[index+1];
     if(next&&S.Player.isPlaying?.())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
   }
   // Back in view, a clip that was found while the window was hidden gets its turn.
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(npLyricTimer);npPlayVideo();}else if(!npMotion.getAttribute('src')&&!npBleed.getAttribute('src'))npTrackKey='';});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(npLyricTimer);npPlayVideo();}else if(!hasMedia(npMotion)&&!hasMedia(npBleed))npTrackKey='';});
   // Settings. With the settings window (#76) they are defined there; before it, they load here and get a menu of their own.
   const npDefs=[];
   function npSetting(def) {
@@ -2242,8 +2259,8 @@
   npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
     options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
-    options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')],['canvas','Spotify Canvas']],
-    note:T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'),
+    options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],...(h264?[['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')]]:[]),['canvas','Spotify Canvas']],
+    note:h264?T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'):undefined,
     apply:()=>{npTrackKey='';npTick();},when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npLyricsAlign',group:'nowplaying',type:'choice',style:'segmented',default:'left',label:T('Söz hizası','Lyrics alignment'),
     options:[['left',T('Sola','Left')],['center',T('Ortaya','Centre')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});

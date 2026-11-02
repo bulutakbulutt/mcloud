@@ -1452,21 +1452,39 @@ try {
       const docked = await rect('#am-nowplaying');
       assert.ok(docked.top === 0 && docked.right === 1440, JSON.stringify(docked));
 
-      // Spotify Canvas: the clip named in the track's metadata, from Spotify's CDN; a clip that fails leaves the still cover.
+      // Spotify Canvas: Spotify's Chromium cannot decode the clip (H.264), so the pane shows the frames of the clip Spotify's own
+      // (hidden) Now Playing view plays, through captureStream(), and requests nothing itself.
+      await page.evaluate(() => {
+        const c = document.createElement('canvas'); c.width = 90; c.height = 160; const x = c.getContext('2d');
+        window.__canvasTimer = setInterval(() => { x.fillStyle = `hsl(${Date.now() / 10 % 360} 70% 50%)`; x.fillRect(0, 0, 90, 160); }, 50);
+        const v = document.createElement('video'); v.id = 'mock-canvas'; v.muted = true; v.srcObject = c.captureStream(20); v.play();
+        document.querySelector('[data-testid="mock-npv"]').append(v); window.__mockState.playing = true;
+      });
       await pick('npArt', 'Spotify Canvas');
-      await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-bleed').getAttribute('src'));
-      assert.ok(requests.some(u => u.startsWith('https://canvaz.scdn.co/upload/mock/video/nights.cnvs.mp4')), requests.join());
-      assert.ok(await page.isVisible('#am-nowplaying .am-np-cover img'));
+      await page.waitForFunction(() => document.getElementById('am-nowplaying').classList.contains('am-np-bleeding'), null, { timeout: 5000 });
+      assert.ok(await page.evaluate(() => document.querySelector('#am-nowplaying .am-np-bleed').srcObject instanceof MediaStream));
+      assert.ok(!requests.some(u => u.includes('canvaz')), requests.join());
+      // A track without Canvas: the still cover.
+      await page.evaluate(() => { delete Spicetify.Player.data.item.metadata['canvas.url']; });
+      await page.evaluate(() => window.__firePlayer('songchange'));
+      await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-bleed').srcObject);
+      await page.evaluate(() => { Spicetify.Player.data.item.metadata['canvas.url'] = 'https://canvaz.scdn.co/upload/mock/video/nights.cnvs.mp4'; clearInterval(window.__canvasTimer); document.getElementById('mock-canvas').remove(); });
 
-      // Apple's motion artwork: tagged lookup, H.264 variant nearest the pane, the variant's MP4.
-      await pick('npArt', 'Apple Music (kare)');
-      await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:motion') || '{}')['spotify:album:0']?.url);
-      const lookup = new URL(requests.find(u => u.includes('m8tec')));
-      assert.deepEqual([lookup.searchParams.get('artist'), lookup.searchParams.get('album')], ['Frank Ocean', 'Blonde']);
-      assert.match(lookup.searchParams.get('client'), /^mcloud-spicetify\/\d/);
-      assert.ok(!requests.some(u => u.includes('hevc')), 'HEVC variants are skipped');
-      assert.ok(requests.some(u => u.endsWith('/a/v/clip-.mp4')), requests.join());
-      await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-motion').getAttribute('src'));
+      // Apple's motion artwork is H.264 (or HEVC): offered only where the browser plays it (Spotify's Chromium does not).
+      const h264 = await page.evaluate(() => !!document.createElement('video').canPlayType('video/mp4; codecs="avc1.64001f"'));
+      const appleItems = await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan').items.filter(i => i.name.includes('Apple Music')).length);
+      assert.equal(appleItems, h264 ? 2 : 0);
+      if (h264) {
+        // Tagged lookup, the H.264 variant nearest the pane, the variant's MP4.
+        await pick('npArt', 'Apple Music (kare)');
+        await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:motion') || '{}')['spotify:album:0']?.url);
+        const lookup = new URL(requests.find(u => u.includes('m8tec')));
+        assert.deepEqual([lookup.searchParams.get('artist'), lookup.searchParams.get('album')], ['Frank Ocean', 'Blonde']);
+        assert.match(lookup.searchParams.get('client'), /^mcloud-spicetify\/\d/);
+        assert.ok(!requests.some(u => u.includes('hevc')), 'HEVC variants are skipped');
+        assert.ok(requests.some(u => u.endsWith('/a/v/clip-.mp4')), requests.join());
+        await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-motion').getAttribute('src'));
+      }
     } finally {
       page.off('request', onRequest);
       await page.unrouteAll({ behavior: 'ignoreErrors' });
