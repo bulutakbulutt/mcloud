@@ -1487,7 +1487,7 @@ try {
 
   await check('Browse all tiles: Apple\'s Browse Categories (#75)', async () => {
     await page.evaluate(() => {
-      const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;
+      const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;
       document.querySelector('main').insertAdjacentHTML('afterbegin', `<section id="mock-browse" data-shelf="shelf"><div><h2>Browse all</h2></div><div class="main-gridContainer-gridContainer" style="--min-column-width:254px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min-column-width),1fr))">${tile('Music', 'rgb(220, 20, 140)')}${tile('Pop', 'rgb(70, 130, 180)')}</div></section>`);
       Spicetify.Platform.History.push('/search');
     });
@@ -1495,18 +1495,28 @@ try {
     const look = () => page.evaluate(() => {
       const t = document.querySelector('#mock-browse a > div'), s = getComputedStyle(t.querySelector('span')), img = getComputedStyle(t.querySelector('img')), grid = getComputedStyle(document.querySelector('#mock-browse .main-gridContainer-gridContainer'));
       const item = t.closest('[role="listitem"]').getBoundingClientRect(), label = t.querySelector('span > span').getBoundingClientRect(), box = t.getBoundingClientRect();
-      return { label: [s.fontSize, s.fontWeight, Math.round(box.bottom - label.bottom), Math.round(label.left - box.left)], img: [img.mixBlendMode, img.transform, img.display], gap: grid.columnGap, pad: getComputedStyle(t.closest('[role="listitem"]')).paddingTop, h2: getComputedStyle(document.querySelector('#mock-browse h2')).fontSize, width: Math.round(item.width) };
+      return { label: [s.fontSize, s.fontWeight, Math.round(box.bottom - label.bottom), Math.round(label.left - box.left)], img: img.visibility, duo: t.hasAttribute('data-am-duo') && getComputedStyle(t, '::before').backgroundImage.slice(0, 10), gap: grid.columnGap, pad: getComputedStyle(t.closest('[role="listitem"]')).paddingTop, h2: getComputedStyle(document.querySelector('#mock-browse h2')).fontSize, width: Math.round(item.width) };
     });
+    // The whole picture becomes a duotone in the tile's colour, drawn once into a blob.
+    await page.waitForFunction(() => document.querySelector('#mock-browse a > div')?.hasAttribute('data-am-duo'));
     const apple = await look();
     assert.deepEqual(apple.label.slice(0, 2), ['13px', '700'], 'the name is 13pt bold');
     assert.ok(apple.label[2] >= 11 && apple.label[2] <= 14 && apple.label[3] === 12, 'at the bottom left, 12pt in: ' + apple.label);
-    assert.deepEqual(apple.img, ['multiply', 'none', 'block'], 'the cover is a duotone, not tilted');
+    assert.deepEqual([apple.img, apple.duo], ['hidden', 'url("blob:'], 'Spotify\'s tilted cover gives way to the duotone');
+    // A white picture is the tile's colour, as a photo's whites are in Apple's tiles.
+    const pixel = await page.evaluate(async () => {
+      const url = getComputedStyle(document.querySelector('#mock-browse a > div')).getPropertyValue('--am-duo').match(/blob:[^"]+/)[0];
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob()), canvas = new OffscreenCanvas(1, 1), context = canvas.getContext('2d');
+      context.drawImage(bitmap, 0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    });
+    assert.deepEqual(pixel, [220, 20, 140]);
     assert.deepEqual([apple.gap, apple.pad, apple.h2], ['16px', '0px', '15px']);
     assert.ok(apple.width < 254, 'smaller tiles than Spotify\'s');
     // Only on Search: elsewhere Spotify's tiles keep their own look.
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForFunction(() => !document.body.classList.contains('am-search-open'));
-    assert.deepEqual((await look()).label.slice(0, 2), ['24px', '400'], 'Spotify\'s tiles off Search');
+    const off = await look();
+    assert.deepEqual([off.label.slice(0, 2), off.duo], [['24px', '400'], false], 'Spotify\'s tiles off Search, the duotone released');
     await page.evaluate(() => document.getElementById('mock-browse').remove());
   });
 

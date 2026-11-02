@@ -2765,7 +2765,7 @@
     else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
     else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
     currentMode='native';
-    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
+    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();syncBrowse();
   });
   // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
   // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
@@ -2775,6 +2775,56 @@
   // the info column, or from the canvas card nearest the middle when the song shows none. Spotify keeps the same nodes
   // from song to song, so only image sources and the scrolled list are watched, never its progress bar.
   // Browse all (Search's category tiles, what the sidebar's Browse opens) is Apple Music's Browse Categories in user.css.
+  // Browse all's pictures as Apple's duotones. Measured on Apple Music's tiles (macOS 27, focused, identical in light
+  // and dark): each pixel is the tile's colour times the photo's grey (the three channels scale alike), so the photo's
+  // whites are the tile colour and its blacks near black (5-25% of it). Spotify's covers are darker and busier than
+  // Apple's cut-outs, so their grey is stretched first (2nd to 98th percentile to a 10-100% range; a flat picture is
+  // left as it is) and every tile spans the same range Apple's do. Drawn once per cover and colour into a blob at the tile's device size, shown while the
+  // tile is near the viewport and released (revoked) when it leaves; nothing is filtered or blended while scrolling.
+  const duoCache=new Map(),duoTiles=new Map();let duoGrid=null,duoTimer=0;
+  const duoAdded=new MutationObserver(()=>syncBrowse());
+  const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
+  function duoKey(tile){const img=tile.querySelector(':scope > img[src]');return img&&{src:img.currentSrc||img.src,color:getComputedStyle(tile).backgroundColor};}
+  function duoDraw({src,color},w,h) {
+    return new Promise(resolve=>{
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d',{willReadFrequently:true});
+        // Cover the tile, as Apple's photos do.
+        const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+        context.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+        const data=context.getImageData(0,0,w,h),p=data.data,grey=new Uint8Array(p.length/4),hist=new Uint32Array(256);
+        for(let i=0,j=0;i<p.length;i+=4,j++){const g=Math.round(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);grey[j]=g;hist[g]++;}
+        const at=f=>{let n=0,k=0;for(;k<255&&n+hist[k]<=grey.length*f;k++)n+=hist[k];return k;},[lo,hi]=at(.98)-at(.02)<32?[0,255]:[at(.02),at(.98)];
+        const c=color.match(/[\d.]+/g).slice(0,3).map(Number),lut=Array.from({length:256},(_,g)=>.1+.9*Math.min(1,Math.max(0,(g-lo)/(hi-lo))));
+        for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
+        context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
+      }catch{resolve(null);}};
+      img.src=src;
+    });
+  }
+  function duoShow(tile) {
+    const key=duoKey(tile);if(!key)return;
+    const k=devicePixelRatio||1,w=Math.round(tile.offsetWidth*k),h=Math.round(tile.offsetHeight*k),id=`${key.src}|${key.color}|${w}x${h}`;
+    if(duoTiles.get(tile)===id||!w||!h)return;
+    duoHide(tile);duoTiles.set(tile,id);
+    let entry=duoCache.get(id);if(!entry){entry={refs:0,url:duoDraw(key,w,h)};duoCache.set(id,entry);}
+    entry.refs++;
+    entry.url.then(url=>{if(url&&duoTiles.get(tile)===id){tile.style.setProperty('--am-duo',`url("${url}")`);tile.setAttribute('data-am-duo','');}});
+  }
+  function duoHide(tile) {
+    const id=duoTiles.get(tile);if(!id)return;duoTiles.delete(tile);
+    tile.removeAttribute('data-am-duo');tile.style.removeProperty('--am-duo');
+    const entry=duoCache.get(id);if(entry&&--entry.refs<=0){duoCache.delete(id);entry.url.then(url=>url&&URL.revokeObjectURL(url));}
+  }
+  // The grid mounts a moment after Search opens; it is looked for a few times, then its tiles are watched.
+  function syncBrowse(tries=0) {
+    clearTimeout(duoTimer);
+    const grid=routePath()==='/search'&&!document.hidden?document.querySelector('.am-native-main .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"])'):null;
+    if(grid!==duoGrid){duoObserver?.disconnect();duoAdded.disconnect();for(const tile of [...duoTiles.keys()])duoHide(tile);duoGrid=grid;if(grid)duoAdded.observe(grid,{childList:true});}
+    if(!grid){if(routePath()==='/search'&&!document.hidden&&tries<20)duoTimer=setTimeout(()=>syncBrowse(tries+1),250);return;}
+    for(const tile of grid.querySelectorAll(':scope > [role="listitem"] > a > div[style*="background-color"]'))duoObserver?.observe(tile);
+  }
   const pvMaterials=['artwork','glass','color'];
   defineSetting({key:'previewMaterial',group:'pages',section:T('Şarkı önizlemesi','Song previews'),label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
     options:[['artwork',T('Bulanık kapak','Blurred artwork')],['glass',T('Cam','Glass')],['color',T('Kapak rengi','Artwork colour')]],apply:v=>pvMaterials.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
@@ -2831,7 +2881,7 @@
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();observer.observe(root,{childList:true,subtree:true});}
+    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
