@@ -1382,7 +1382,7 @@ try {
 
   await check('Now Playing sidebar: off, beside the player, sidebar only; Spotify lyrics, Canvas and Apple motion artwork', async () => {
     const pick = (key, value) => page.evaluate(([key, value]) => {
-      const menu = window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan'), def = { nowPlaying: 'Şimdi Çalan paneli', npArt: 'Hareketli kapak', npLayout: 'Panel görünümü', npLyricsPlace: 'Sözler' }[key];
+      const menu = window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan'), def = { nowPlaying: 'Şimdi Çalan paneli', npArt: 'Hareketli kapak', npLayout: 'Panel görünümü', npLyricsPlace: 'Sözler', lyricsButton: 'Oynatıcının sözler düğmesi' }[key];
       menu.items.find(i => i.name === def + ': ' + value).onClick();
     }, [key, value]);
     const rect = sel => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width }; }, sel);
@@ -1447,6 +1447,38 @@ try {
       assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')) && await page.isVisible('#am-nowplaying .am-np-art'));
       await pick('npLyricsPlace', 'Kapağın altında');
 
+      // Spicy Lyrics users keep their button: with lyricsButton 'page' it opens what it opened before the pane (Spicy's own
+      // page button, clicked), the pane's link opens the full page too (and never closes it), the pane closes with its ×
+      // and comes back from the player's "…" menu.
+      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
+        b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); }; document.body.append(b); });
+      await pick('lyricsButton', 'Sözler sayfasını açar');
+      assert.ok(await page.isVisible('#am-nowplaying') && await page.isVisible('#am-nowplaying .am-np-close'));
+      assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
+      const route = () => page.evaluate(() => Spicetify.Platform.History.location.pathname);
+      await page.click('#am-lyrics-toggle');
+      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks)], ['/SpicyLyrics', 1]);
+      assert.ok(await page.isVisible('#am-nowplaying'), 'the pane stays');
+      await page.click('#am-lyrics-toggle');
+      assert.equal(await route(), '/');
+      await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-full-lyrics').title === 'Spicy Lyrics\'te aç');
+      await page.click('#am-nowplaying .am-np-full-lyrics');
+      await page.click('#am-nowplaying .am-np-full-lyrics');
+      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks)], ['/SpicyLyrics', 3]);
+      await page.evaluate(() => { Spicetify.Platform.History.push('/'); document.getElementById('SpicyLyrics_PageButton').remove(); });
+      // Without Spicy Lyrics the link opens Spotify's own lyrics page through its (hidden) button.
+      await page.evaluate(() => { const b = document.createElement('button'); b.dataset.testid = 'lyrics-button'; b.onclick = () => Spicetify.Platform.History.push('/lyrics'); document.querySelector('.am-native-player').append(b); });
+      await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-full-lyrics').title === 'Tam sözler');
+      await page.click('#am-nowplaying .am-np-full-lyrics');
+      assert.equal(await route(), '/lyrics');
+      await page.evaluate(() => { Spicetify.Platform.History.push('/'); document.querySelector('[data-testid="lyrics-button"]').remove(); });
+      await page.click('#am-nowplaying .am-np-close');
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      await page.click('#am-player .am-more');
+      await page.click('#am-popover .am-popover-item:has-text("Şimdi Çalan\'ı Göster")');
+      assert.ok(await page.isVisible('#am-nowplaying'));
+      await pick('lyricsButton', 'Paneli açar');
+
       // Sidebar only: the floating player goes, its own controls move into the pane and still work.
       await pick('nowPlaying', 'Yalnızca panel');
       assert.ok(!(await page.isVisible('#am-player')));
@@ -1492,6 +1524,7 @@ try {
         assert.deepEqual([lookup.searchParams.get('artist'), lookup.searchParams.get('album')], ['Frank Ocean', 'Blonde']);
         assert.match(lookup.searchParams.get('client'), /^mcloud-spicetify\/\d/);
         assert.ok(!requests.some(u => u.includes('hevc')), 'HEVC variants are skipped');
+        for (let i = 0; i < 50 && !requests.some(u => u.endsWith('/a/v/clip-.mp4')); i++) await page.waitForTimeout(100);
         assert.ok(requests.some(u => u.endsWith('/a/v/clip-.mp4')), requests.join());
         await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-motion').getAttribute('src'));
       }

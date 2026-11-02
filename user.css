@@ -1159,6 +1159,14 @@ body:not(.am-np-only) #am-nowplaying:not(.am-np-lyrics-on) .am-np-actions {margi
 #am-nowplaying .am-np-actions button {width:40px;height:36px;border-radius:8px;color:var(--am-np-sub)}
 #am-nowplaying .am-np-actions svg {width:21px;height:21px}
 #am-nowplaying .am-np-actions .am-active {color:var(--am-np-text);background:var(--am-np-chip)}
+/* Beside the player the pane has its own close button, at the top left as macOS's (Windows' caption buttons sit at the top right). */
+#am-nowplaying .am-np-close {display:none;position:absolute;z-index:2;top:10px;left:12px;width:24px;height:24px;border-radius:50%;background:var(--am-np-chip);color:var(--am-np-sub)}
+#am-nowplaying .am-np-close svg {width:12px;height:12px;stroke-width:2.4}
+#am-nowplaying .am-np-close:hover {color:var(--am-np-text)}
+body.am-np-beside #am-nowplaying .am-np-close {display:grid}
+body.am-np-beside .am-np-body {padding-top:42px}
+body.am-windows.am-np-beside #am-nowplaying .am-np-close {top:44px}
+body.am-windows.am-np-beside #am-nowplaying .am-np-body {padding-top:76px}
 /* The pane's lyrics button with lyrics under the artwork: back to the line being sung, and a brief glow shows where. */
 .am-np-lyrics.am-np-flash {animation:am-np-flash .9s ease-out}
 @keyframes am-np-flash {from{background:var(--am-np-chip)}}
