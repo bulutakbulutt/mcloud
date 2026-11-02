@@ -879,7 +879,8 @@
     barFill.style.transition=smooth?'transform 1s steps('+steps+')':'none';
     if(Math.abs(fraction-shownFraction)>.0001){barFill.style.transform='scaleX('+fraction.toFixed(4)+')';shownFraction=fraction;}
     if(!dragging){const position=String(Math.round(fraction*1000));if(seek.value!==position)seek.value=position;}
-    if(track.classList.contains('am-scrubbing')){
+    // The Now Playing pane (sidebar-only mode) holds the scrubber and always shows the times.
+    if(track.classList.contains('am-scrubbing')||scrub.parentElement!==track){
       const duration=S.Player.getDuration?.()||0,position=fraction*duration;
       rollText(elapsed,duration?formatTime(position):'',false);rollText(remaining,duration?'−'+formatTime(duration-position):'',true);
     }
@@ -893,11 +894,12 @@
     const native=nativeConnect();
     if(native)native.click();else notify(T('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.','Device selection is not available in this version of Spotify.'));
   });
-  extras.append(popupLyricsButton,lyricsButton,connectButton,button(T('Çalma sırası','Playing Next'),'queue',()=>{
+  const queueButton=button(T('Çalma sırası','Playing Next'),'queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
     else notify(T('Çalma sırası bu Spotify sürümünde kullanılamıyor.','The queue is not available in this version of Spotify.'));
-  }));
+  });
+  extras.append(popupLyricsButton,lyricsButton,connectButton,queueButton);
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
   const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
@@ -2041,7 +2043,223 @@
       renderProgress(S.Player.getProgressPercent()||0,true);
       if(changed&&!reducedMotion.matches){lcd.classList.remove('am-swap');void lcd.offsetWidth;lcd.classList.add('am-swap');}
     }
+    npTick();
   }
+  // Now Playing pane (#73): Apple Music's iOS Now Playing at the window's right edge, beside the floating player
+  // ('beside': artwork, title and lyrics, no second set of transport controls) or instead of it ('only': the player's
+  // own scrubber, transport, volume, Connect and queue buttons move into the pane, so their handlers and state stay
+  // one). The page makes room through --am-right (user.css). The artwork can move: Spotify Canvas (the track's
+  // metadata names the clip on Spotify's CDN) or Apple Music's motion artwork, found through m8tec's index (they
+  // agreed to mcloud using it with a client= tag); nothing is requested unless that option is picked. Lyrics are
+  // Spotify's own (the color-lyrics request its lyrics page makes), synced line by line.
+  icons.nowPlaying='<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16"/>';
+  const np=el('aside','');np.id='am-nowplaying';np.setAttribute('aria-label',T('Şimdi Çalan','Now Playing'));np.hidden=true;
+  const npBg=el('img','am-np-bg'),npBleed=el('video','am-np-bleed'),npBody=el('div','am-np-body');
+  const npArt=el('div','am-np-art'),npCover=el('button','am-np-cover'),npImg=el('img',''),npMotion=el('video','am-np-motion');
+  npCover.type='button';npCover.setAttribute('aria-label',T('Tam ekran','Full Screen'));npCover.title=T('Tam ekran','Full Screen');npCover.addEventListener('click',toggleFullscreen);
+  for(const img of [npBg,npImg]){img.alt='';img.decoding='async';img.addEventListener('error',()=>img.removeAttribute('src'));}
+  npCover.append(npImg,npMotion);npArt.append(npCover);
+  const npMeta=el('div','am-np-meta'),npThumb=el('img','am-np-thumb'),npText=el('div','am-np-text');npThumb.alt='';npThumb.decoding='async';
+  const npTitle=marquee('am-np-title'),npArtist=marquee('am-np-artist');npText.append(npTitle.root,npArtist.root);
+  npTitle.root.addEventListener('click',()=>{const item=S.Player.data?.item,uri=item?.album?.uri||item?.metadata?.album_uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
+  npArtist.root.addEventListener('click',()=>{const uri=S.Player.data?.item?.artists?.[0]?.uri||S.Player.data?.item?.metadata?.artist_uri;if(uri?.startsWith('spotify:artist:'))go('/artist/'+uri.split(':')[2]);});
+  const npStar=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',()=>star.click(),'am-np-star');
+  const npMore=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(npMore),'am-np-more');
+  npMeta.append(npThumb,npText,npStar,npMore);
+  const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
+  npLyricsBox.setAttribute('aria-live','off');
+  const npLyricsButton=button(T('Sözler','Lyrics'),'lyrics',()=>npShowLyrics(!np.classList.contains('am-np-lyrics-on')),'am-np-lyrics-toggle');
+  npActions.append(npLyricsButton);
+  npBody.append(npArt,npMeta,npLyricsBox,npControls,npActions);np.append(npBg,npBleed,npBody);document.body.append(np);
+  np.addEventListener('contextmenu',event=>{if(popover.contains(event.target)||!S.Player.data?.item?.uri)return;event.preventDefault();openTrackMenu({x:event.clientX,y:event.clientY});});
+  // In 'beside' mode the floating player opens and closes the pane, where Spotify had its Now Playing view button.
+  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npSet('npOpen',!settings.npOpen),'am-np-toggle');npToggle.hidden=true;
+  lyricsButton.after(npToggle);
+  // 'only' mode moves the player's own controls in, and back out of it.
+  function npMove(only) {
+    if(only&&scrub.parentElement!==npControls){npControls.append(scrub,controls,volumeWrap);npActions.append(connectButton,queueButton);}
+    else if(!only&&scrub.parentElement===npControls){track.append(scrub);player.insertBefore(controls,track);extras.append(connectButton,queueButton,volumeWrap);}
+  }
+  const npVisible=()=>!np.hidden&&!document.hidden;
+  let npReady=false,npTrackKey='';
+  function npApply() {
+    if(!npReady)return;
+    const mode=settings.nowPlaying,open=mode==='only'||(mode==='beside'&&settings.npOpen),b=document.body.classList;
+    b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-docked',settings.npLayout==='docked');
+    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-center',settings.npLyricsAlign==='center');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    np.hidden=!open;npToggle.hidden=mode!=='beside';npToggle.classList.toggle('am-active',open);setAttributeIfChanged(npToggle,'aria-pressed',String(open));
+    npMove(mode==='only');
+    npTrackKey='';npLyricUri=null;if(open)npTick();else{npStopVideo();clearTimeout(npLyricTimer);}
+    if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;}
+  }
+  // Called from syncPlayer (every second while the window shows, and on track and play/pause changes).
+  function npTick() {
+    if(!npReady||!npVisible())return;
+    const item=S.Player.data?.item;
+    if((item?.uri||'')!==npTrackKey)npTrack(item);
+    const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
+    npPlayVideo();npSyncLyric();
+  }
+  function npTrack(item) {
+    npTrackKey=item?.uri||'';const meta=item?.metadata||{};
+    const images=item?.images?.length?item.images:item?.album?.images||[],pick=(...labels)=>spotifyImage((labels.map(l=>images.find(i=>i.label===l)).find(Boolean)||images[0])?.url||meta.image_large_url||meta.image_url||'');
+    const big=pick('xlarge','large','standard'),small=pick('small','standard');
+    for(const [img,src] of [[npImg,big],[npBg,pick('standard','small')],[npThumb,small]]){if(!src)img.removeAttribute('src');else if(img.getAttribute('src')!==src)img.src=src;}
+    npTitle.set(item?.name||meta.title||'');npArtist.set(meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'');
+    np.classList.toggle('am-np-empty',!item?.uri);
+    npLoadMotion(item);
+    if(npLyricsShown())npLoadLyrics(item);
+  }
+  // Moving artwork. A clip is shown once it plays (no black frame first); one that fails leaves the still cover.
+  const motionTag='mcloud-spicetify/2.8'; // keep in step with the version comment at the top
+  let npMotionToken=0,npMotionStore={};
+  try{npMotionStore=JSON.parse(localStorage.getItem('mcloud:motion')||'{}')||{};}catch{}
+  const npMotionLookups=new Map();
+  for(const v of [npMotion,npBleed]){
+    v.muted=true;v.loop=true;v.playsInline=true;v.disablePictureInPicture=true;v.preload='auto';v.setAttribute('aria-hidden','true');
+    v.addEventListener('playing',()=>np.classList.toggle(v===npBleed?'am-np-bleeding':'am-np-moving',true));
+    v.addEventListener('error',()=>{if(v.getAttribute('src'))npStopVideo();});
+  }
+  function npStopVideo() {
+    np.classList.remove('am-np-moving','am-np-bleeding','am-np-bleed-tall','am-np-bleed-canvas');
+    for(const v of [npMotion,npBleed])if(v.getAttribute('src')){v.pause();v.removeAttribute('src');v.load();}
+  }
+  function npPlayVideo() {
+    const v=npBleed.getAttribute('src')?npBleed:npMotion.getAttribute('src')?npMotion:null;if(!v)return;
+    // Paused with the music, and while the window or pane is hidden.
+    if(npVisible()&&S.Player.isPlaying?.()){if(v.paused)v.play().catch(()=>{});}else if(!v.paused)v.pause();
+  }
+  async function npLoadMotion(item) {
+    const token=++npMotionToken,kind=settings.npArt;npStopVideo();
+    if(!item?.uri||kind==='cover')return;
+    let source=null;
+    if(kind==='canvas'){const m=item.metadata||{},url=m['canvas.url']||'';if(/^https:\/\/[^/]*\.scdn\.co\//.test(url)&&/\.mp4(\?|$)/.test(url)&&!/IMAGE/.test(m['canvas.type']||''))source={url,bleed:'canvas'};}
+    else source=await appleMotion(item,kind==='appleTall');
+    if(token!==npMotionToken||!source?.url||!npVisible())return;
+    const v=source.bleed?npBleed:npMotion;if(source.bleed)np.classList.add('am-np-bleed-'+source.bleed);
+    v.src=source.url;npPlayVideo();
+  }
+  // Apple's motion artwork: m8tec's index names the album's HLS master; its H.264 variant nearest the pane's size points
+  // (EXT-X-MAP) at one fragmented MP4 that a plain <video> plays. Results, misses included (for a day), are kept.
+  async function hlsVideo(master,size) {
+    const lines=(await (await fetch(master)).text()).split('\n');let best=null;
+    for(let i=0;i<lines.length;i++){
+      const info=/^#EXT-X-STREAM-INF:(.*)/.exec(lines[i])?.[1],url=lines[i+1]?.trim();if(!info||!url||!/avc1/.test(info))continue;
+      const w=Number(/RESOLUTION=(\d+)x/.exec(info)?.[1])||0,bw=Number(/(?:^|,)BANDWIDTH=(\d+)/.exec(info)?.[1])||0,c={w,bw,url};
+      if(!best||(best.w<size?w>best.w||(w===best.w&&bw>best.bw):w>=size&&(w<best.w||(w===best.w&&bw>best.bw))))best=c;
+    }
+    if(!best)return null;
+    const variant=new URL(best.url,master).href,map=/#EXT-X-MAP:URI="([^"]+)"/.exec(await (await fetch(variant)).text())?.[1];
+    return map?new URL(map,variant).href:null;
+  }
+  function appleMotion(item,tall) {
+    const meta=item.metadata||{},artist=item.artists?.[0]?.name||meta.artist_name||'',album=item.album?.name||meta.album_title||'';
+    if(!artist||!album||!item.uri.startsWith('spotify:track:'))return null;
+    const key=(item.album?.uri||meta.album_uri||artist+'|'+album)+(tall?'|tall':''),kept=npMotionStore[key];
+    if(kept&&(kept.url||Date.now()-kept.at<864e5))return kept.url?kept:null;
+    if(!npMotionLookups.has(key))npMotionLookups.set(key,(async()=>{
+      const response=await fetch('https://artwork.m8tec.top/api/v1/artwork/search?'+new URLSearchParams({artist,album,client:motionTag}));
+      const found=response.ok?await response.json():null,master=tall&&found?.url_tall||found?.url;
+      if(!response.ok&&response.status!==404)throw new Error('m8tec '+response.status);
+      const size=Math.min(1100,Math.round((npArt.clientWidth||340)*(devicePixelRatio||1)));
+      const url=master?await hlsVideo(master,size):null,result={url,bleed:url&&tall&&found.url_tall?'tall':'',at:Date.now()};
+      npMotionStore[key]=result;const keys=Object.keys(npMotionStore);for(const k of keys.slice(0,Math.max(0,keys.length-300)))delete npMotionStore[k];
+      try{localStorage.setItem('mcloud:motion',JSON.stringify(npMotionStore));}catch{}
+      return url?result:null;
+    })().catch(()=>null).finally(()=>npMotionLookups.delete(key)));
+    return npMotionLookups.get(key);
+  }
+  // Lyrics, as in Apple Music: the line being sung is bright, the rest dim; a line plays from where it is clicked. The
+  // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
+  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npUserScroll=0;const npLyricCache=new Map();
+  // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
+  const npLyricsShown=()=>np.classList.contains('am-np-lyrics-on')||settings.npLyricsPlace==='below';
+  for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
+  function npShowLyrics(on) {
+    np.classList.toggle('am-np-lyrics-on',on);npLyricsButton.classList.toggle('am-active',on);setAttributeIfChanged(npLyricsButton,'aria-pressed',String(on));
+    if(npLyricsShown()){npLyricUri=null;npLoadLyrics(S.Player.data?.item);}else{clearTimeout(npLyricTimer);npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
+  }
+  async function fetchLyrics(uri) {
+    const [,type,id]=uri.split(':');if(type!=='track'||!S.CosmosAsync?.get)return null;
+    try{
+      const lyrics=(await S.CosmosAsync.get(`https://spclient.wg.spotify.com/color-lyrics/v2/track/${id}?format=json&vocalRemoval=false&market=from_token`))?.lyrics;
+      if(!lyrics?.lines?.length)return null;
+      return {synced:lyrics.syncType!=='UNSYNCED',provider:lyrics.providerDisplayName||lyrics.provider||'',lines:lyrics.lines.map(l=>({t:Number(l.startTimeMs)||0,text:(l.words||'').trim()}))};
+    }catch{return null;}
+  }
+  async function npLoadLyrics(item) {
+    const uri=item?.uri||'';if(uri===npLyricUri)return;
+    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;clearTimeout(npLyricTimer);
+    npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Sözler yükleniyor…','Loading lyrics…')));
+    if(!npLyricCache.has(uri)){npLyricCache.set(uri,uri?await fetchLyrics(uri):null);if(npLyricCache.size>30)npLyricCache.delete(npLyricCache.keys().next().value);}
+    if(uri!==npLyricUri)return;
+    npLyrics=npLyricCache.get(uri);npLyricsBox.scrollTop=0;
+    if(!npLyrics){npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Bu şarkının sözleri yok.','Lyrics aren\'t available for this song.')));return;}
+    npLyricsBox.classList.toggle('am-np-unsynced',!npLyrics.synced);
+    const nodes=npLyrics.lines.map(line=>{
+      const node=el(npLyrics.synced?'button':'div','am-np-line',line.text||'♪');line.node=node;
+      if(npLyrics.synced){node.type='button';node.addEventListener('click',()=>{try{S.Player.seek(line.t);npUserScroll=0;setTimeout(npSyncLyric,250);}catch{}});}
+      return node;
+    });
+    const credit=npLyrics.provider?[el('div','am-np-lyrics-credit',T('Sözler: ','Lyrics provided by ')+npLyrics.provider)]:[];
+    npLyricsBox.replaceChildren(...nodes,...credit);npSyncLyric();
+  }
+  function npSyncLyric() {
+    clearTimeout(npLyricTimer);
+    if(!npLyrics?.synced||!npVisible()||!npLyricsShown())return;
+    const at=S.Player.getProgress?.()||0,lines=npLyrics.lines;let index=-1;
+    while(index+1<lines.length&&lines[index+1].t<=at+120)index++;
+    if(index!==npLyricIndex){
+      lines[npLyricIndex]?.node.classList.remove('am-current');npLyricIndex=index;
+      const node=lines[index]?.node;node?.classList.add('am-current');
+      // Follows the song unless the reader scrolled in the last few seconds.
+      if(node&&performance.now()-npUserScroll>4000)npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior:reducedMotion.matches?'auto':'smooth'});
+    }
+    const next=lines[index+1];
+    if(next&&S.Player.isPlaying?.())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
+  }
+  // Back in view, a clip that was found while the window was hidden gets its turn.
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(npLyricTimer);npPlayVideo();}else if(!npMotion.getAttribute('src')&&!npBleed.getAttribute('src'))npTrackKey='';});
+  // Settings. With the settings window (#76) they are defined there; before it, they load here and get a menu of their own.
+  const npDefs=[];
+  function npSetting(def) {
+    if(typeof defineSetting==='function')return defineSetting(def);
+    let saved;try{saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[def.key];}catch{}
+    settings[def.key]=def.type==='toggle'?(typeof saved==='boolean'?saved:def.default):(def.options.some(([value])=>value===saved)?saved:def.default);
+    npDefs.push(def);def.apply?.(settings[def.key]);
+  }
+  function npSet(key,value) {
+    if(typeof setSetting==='function')return setSetting(key,value);
+    settings[key]=value;saveSettings();npDefs.find(d=>d.key===key)?.apply?.(value);applySettings();
+  }
+  if(typeof settingGroup==='function')settingGroup('nowplaying',T('Şimdi Çalan','Now Playing'),'play');
+  const npApplyAll=()=>npApply();
+  npSetting({key:'nowPlaying',group:'nowplaying',type:'choice',style:'segmented',default:'off',label:T('Şimdi Çalan paneli','Now Playing sidebar'),
+    options:[['off',T('Kapalı','Off')],['beside',T('Oynatıcının yanında','Beside the player')],['only',T('Yalnızca panel','Sidebar only')]],
+    note:T('“Yalnızca panel” alttaki oynatıcıyı gizler; tüm kontroller panele geçer.','“Sidebar only” hides the bottom player and moves every control into the sidebar.'),apply:npApplyAll});
+  npSetting({key:'npLayout',group:'nowplaying',type:'choice',style:'segmented',default:'card',label:T('Panel görünümü','Sidebar style'),
+    options:[['card',T('Cam kart','Glass card')],['docked',T('Kenara yapışık','Docked')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
+  npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
+    options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
+  npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
+    options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')],['canvas','Spotify Canvas']],
+    note:T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'),
+    apply:()=>{npTrackKey='';npTick();},when:()=>settings.nowPlaying!=='off'});
+  npSetting({key:'npLyricsAlign',group:'nowplaying',type:'choice',style:'segmented',default:'left',label:T('Söz hizası','Lyrics alignment'),
+    options:[['left',T('Sola','Left')],['center',T('Ortaya','Centre')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
+  npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
+    options:[['below',T('Kapağın altında','Under the artwork')],['button',T('Sözler düğmesiyle','With the lyrics button')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
+  npSetting({key:'npOpen',group:'nowplaying',type:'toggle',default:true,label:T('Panel açık','Sidebar open'),apply:npApplyAll,hidden:true,when:()=>false});
+  npReady=true;npApply();
+  // The fallback menu is registered after the mcloud one, which the IIFE's end registers.
+  if(typeof defineSetting!=='function'&&S.Menu?.SubMenu&&S.Menu?.Item)setTimeout(()=>{
+    const items=[];
+    for(const def of npDefs.filter(d=>d.type==='choice')){
+      const own=def.options.map(([value,label])=>new S.Menu.Item(def.label+': '+label,settings[def.key]===value,()=>{npSet(def.key,value);own.forEach((item,i)=>item.setState(def.options[i][0]===value));}));
+      items.push(...own);
+    }
+    new S.Menu.SubMenu(T('mcloud: Şimdi Çalan','mcloud: Now Playing'),items).register();
+  });
   S.Player.addEventListener('songchange',syncPlayer);S.Player.addEventListener('onplaypause',syncPlayer);
   player.addEventListener('pointerenter',syncPlayer);
   player.addEventListener('focusin',syncPlayer);

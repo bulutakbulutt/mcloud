@@ -1380,6 +1380,105 @@ try {
     await page.evaluate(() => { document.getElementById('SpicyLyricsPage').remove(); document.getElementById('mock-spicy-css').remove(); Spicetify.Platform.History.push('/'); });
   });
 
+  await check('Now Playing sidebar: off, beside the player, sidebar only; Spotify lyrics, Canvas and Apple motion artwork', async () => {
+    const pick = (key, value) => page.evaluate(([key, value]) => {
+      const menu = window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan'), def = { nowPlaying: 'Şimdi Çalan paneli', npArt: 'Hareketli kapak', npLayout: 'Panel görünümü', npLyricsPlace: 'Sözler' }[key];
+      menu.items.find(i => i.name === def + ': ' + value).onClick();
+    }, [key, value]);
+    const rect = sel => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width }; }, sel);
+    const requests = [];
+    const onRequest = r => { if (/canvaz|m8tec|mvod/.test(r.url())) requests.push(r.url()); };
+    page.on('request', onRequest);
+    // Apple's motion artwork: m8tec's index, then the HLS master (an H.264 and an HEVC variant), then the variant's map.
+    await page.route(/artwork\.m8tec\.top/, r => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+      body: JSON.stringify({ url: 'https://mvod.itunes.apple.com/a/master.m3u8', url_tall: null }) }));
+    await page.route(/mvod\.itunes\.apple\.com\/a\/master\.m3u8/, r => r.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' }, body: [
+      '#EXTM3U', '#EXT-X-STREAM-INF:BANDWIDTH=900,CODECS="hvc1.2.20000000.L123.B0",RESOLUTION=768x768', 'hevc/768.m3u8',
+      '#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=500,BANDWIDTH=600,CODECS="avc1.64001f",RESOLUTION=486x486', 'v/486.m3u8',
+      '#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=900,BANDWIDTH=1000,CODECS="avc1.64001f",RESOLUTION=768x768', 'v/768.m3u8',
+      '#EXT-X-STREAM-INF:BANDWIDTH=4000,CODECS="avc1.640020",RESOLUTION=1080x1080', 'v/1080.m3u8'].join('\n') }));
+    await page.route(/mvod\.itunes\.apple\.com\/a\/v\/\d+\.m3u8/, r => r.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*' },
+      body: '#EXTM3U\n#EXT-X-MAP:URI="clip-.mp4",BYTERANGE="898@0"\n#EXTINF:4,\n#EXT-X-BYTERANGE:5000@898\nclip-.mp4\n#EXT-X-ENDLIST' }));
+    await page.route(/\.mp4$/, r => r.fulfill({ status: 200, contentType: 'video/mp4', body: 'not a video' }));
+    try {
+      // Off by default: no pane, no toggle, nothing requested.
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open') && document.querySelector('#am-player .am-np-toggle').hidden));
+      await page.waitForFunction(() => window.__menus.some(m => m.name === 'mcloud: Şimdi Çalan'));
+
+      // Beside the player: the pane at the right edge, the page and the player kept clear of it, Spotify's lyrics under the cover.
+      await page.evaluate(() => { window.__mockState.progress = 83000; });
+      await pick('nowPlaying', 'Oynatıcının yanında');
+      assert.ok(await page.isVisible('#am-nowplaying'));
+      const pane = await rect('#am-nowplaying');
+      assert.ok(pane.right <= 1440 && pane.right > 1400 && pane.width >= 300, JSON.stringify(pane));
+      assert.ok((await rect('#am-player')).right <= pane.left, 'the player stays left of the pane');
+      assert.ok((await rect('.am-native-main')).right <= pane.left + 1, 'Spotify\'s page narrows');
+      assert.equal(await page.textContent('#am-nowplaying .am-np-title .am-marquee-inner > span'), 'Nights');
+      assert.ok(await page.isVisible('#am-player .am-transport'), 'the floating player keeps its controls');
+      assert.equal(await page.locator('#am-nowplaying .am-transport').count(), 0, 'no second set of transport controls');
+      await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+      assert.equal(await page.textContent('#am-nowplaying .am-np-line.am-current'), 'No, you can\'t make everybody equal');
+      assert.ok(await page.evaluate(() => window.__cosmos.some(u => u.includes('spclient.wg.spotify.com/color-lyrics/v2/track/1?'))));
+      // A line plays from where it is clicked.
+      await page.click('#am-nowplaying .am-np-line >> nth=3');
+      assert.equal(await page.evaluate(() => window.__mockState.progress), 90000);
+      // The player's button closes and opens the pane; the page takes the room back.
+      await page.click('#am-player .am-np-toggle');
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      assert.ok((await rect('.am-native-main')).right > 1430);
+      await page.click('#am-player .am-np-toggle');
+      assert.ok(await page.isVisible('#am-nowplaying'));
+
+      // The lyrics button variant: lyrics in their own view, artwork shrunk to a thumbnail.
+      await pick('npLyricsPlace', 'Sözler düğmesiyle');
+      assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')));
+      await page.click('#am-nowplaying .am-np-lyrics-toggle');
+      assert.ok(await page.isVisible('#am-nowplaying .am-np-lyrics') && await page.isVisible('#am-nowplaying .am-np-thumb') && !(await page.isVisible('#am-nowplaying .am-np-art')));
+      await page.click('#am-nowplaying .am-np-lyrics-toggle');
+      await pick('npLyricsPlace', 'Kapağın altında');
+
+      // Sidebar only: the floating player goes, its own controls move into the pane and still work.
+      await pick('nowPlaying', 'Yalnızca panel');
+      assert.ok(!(await page.isVisible('#am-player')));
+      assert.equal(await page.locator('#am-nowplaying .am-np-controls .am-transport').count(), 1);
+      assert.equal(await page.locator('#am-nowplaying .am-np-controls .am-scrub .am-seek').count(), 1);
+      assert.equal(await page.locator('#am-nowplaying .am-np-actions [aria-label="Çalma sırası"]').count(), 1);
+      assert.ok(await page.isVisible('#am-nowplaying .am-time-elapsed'), 'the times show without hovering');
+      const playing = await page.evaluate(() => window.__mockState.playing);
+      await page.click('#am-nowplaying .am-transport .am-play');
+      assert.equal(await page.evaluate(() => window.__mockState.playing), !playing);
+      await page.click('#am-nowplaying .am-transport .am-play');
+      await pick('npLayout', 'Kenara yapışık');
+      const docked = await rect('#am-nowplaying');
+      assert.ok(docked.top === 0 && docked.right === 1440, JSON.stringify(docked));
+
+      // Spotify Canvas: the clip named in the track's metadata, from Spotify's CDN; a clip that fails leaves the still cover.
+      await pick('npArt', 'Spotify Canvas');
+      await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-bleed').getAttribute('src'));
+      assert.ok(requests.some(u => u.startsWith('https://canvaz.scdn.co/upload/mock/video/nights.cnvs.mp4')), requests.join());
+      assert.ok(await page.isVisible('#am-nowplaying .am-np-cover img'));
+
+      // Apple's motion artwork: tagged lookup, H.264 variant nearest the pane, the variant's MP4.
+      await pick('npArt', 'Apple Music (kare)');
+      await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:motion') || '{}')['spotify:album:0']?.url);
+      const lookup = new URL(requests.find(u => u.includes('m8tec')));
+      assert.deepEqual([lookup.searchParams.get('artist'), lookup.searchParams.get('album')], ['Frank Ocean', 'Blonde']);
+      assert.match(lookup.searchParams.get('client'), /^mcloud-spicetify\/\d/);
+      assert.ok(!requests.some(u => u.includes('hevc')), 'HEVC variants are skipped');
+      assert.ok(requests.some(u => u.endsWith('/a/v/clip-.mp4')), requests.join());
+      await page.waitForFunction(() => !document.querySelector('#am-nowplaying .am-np-motion').getAttribute('src'));
+    } finally {
+      page.off('request', onRequest);
+      await page.unrouteAll({ behavior: 'ignoreErrors' });
+      await pick('npArt', 'Kapalı (sabit kapak)'); await pick('npLayout', 'Cam kart'); await pick('nowPlaying', 'Kapalı');
+    }
+    // Back off: the controls are home in the floating player, the pane is gone.
+    assert.ok(await page.isVisible('#am-player .am-transport'));
+    assert.equal(await page.locator('#am-player .am-player-track > .am-scrub .am-seek').count(), 1);
+    assert.equal(await page.locator('#am-player .am-player-extras > .am-volume-wrap:last-child').count(), 1);
+    assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-only')));
+  });
+
   await check('English when Spotify is not in Turkish; the menu switches the language and reloads', async () => {
     const english = await browser.newPage({ viewport: { width: 1440, height: 900 } }), englishErrors = [];
     english.on('pageerror', e => englishErrors.push(e.message));
