@@ -853,6 +853,10 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
 #global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 #global-nav-bar input::placeholder {color:rgb(var(--am-ink)/.651)!important}
+/* Light: Music's light search field draws its magnifier and placeholder in the same soft grey (L 125 over a 250 face,
+   2x captures, focused): half black. Its standalone toolbar buttons keep black icons. */
+body.am-light #global-nav-bar input::placeholder {color:rgb(var(--am-ink)/.5)!important}
+body.am-light #global-nav-bar form[role="search"] > :first-child svg {color:rgb(var(--am-ink)/.5)!important;fill:currentColor!important}
 body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:var(--am-menu-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Liquid Glass toolbar (theme.js "Toolbar glass"): the glass is ours, in #am-toolbar-glass under the toolbar, laid on
    Spotify's controls, which keep their icons and handlers but lose their own fill: back + forward, the extension icons

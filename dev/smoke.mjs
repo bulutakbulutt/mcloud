@@ -1414,6 +1414,8 @@ try {
     const rims = () => page.evaluate(() => [...document.querySelectorAll('[data-am-rim] > *')].map(f => f.getAttribute('tableValues') === f.dataset.amDark));
     const lightRims = await rims();
     assert.ok(lightRims.length >= 3 && lightRims.every(dark => !dark), 'hairlines take the light table: ' + lightRims);
+    // The search field's magnifier and placeholder: Music's light grey, half black.
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('#global-nav-bar form[role="search"] > :first-child svg')).fill, getComputedStyle(document.querySelector('#global-nav-bar input'), '::placeholder').color]), ['rgba(0, 0, 0, 0.5)', 'rgba(0, 0, 0, 0.5)']);
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
     // The artist page keeps its dark artist colours in light mode, as Music does; the submenu holds only the appearance.
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
