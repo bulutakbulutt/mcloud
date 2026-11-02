@@ -991,19 +991,26 @@
     valid:v=>Array.isArray(v)&&v.every(id=>typeof id==='string'),
     apply:v=>{hiddenButtons.textContent=v.length?v.map(id=>'[data-am-button="'+CSS.escape(id)+'"]').join(',')+'{display:none!important}':'';},
     menu:()=>playerButtons().filter(b=>!b.locked).map(b=>({name:T('Düğme: ','Button: ')+b.label,checked:()=>!settings.playerHidden.includes(b.id),toggle:()=>toggleButton(b.id)})),
+    // Drawn from the buttons there are now (a hidden one, such as Now Playing's while its pane is off, is left out), and
+    // drawn again when another setting changes that list.
     render() {
-      const node=el('div','am-pb'),bar=el('div','am-pb-bar'),chips=el('div','am-pb-chips'),buttons=playerButtons(),marks=[];
+      const node=el('div','am-pb'),bar=el('div','am-pb-bar'),chips=el('div','am-pb-chips');let marks=[],drawn='';
       node.setAttribute('role','group');bar.setAttribute('aria-hidden','true');node.append(bar,chips);
-      const zones=[el('div','am-pb-zone'),el('div','am-pb-lcd'),el('div','am-pb-zone')];bar.append(...zones);
-      zones[1].append(el('span','am-pb-art'),el('span','am-pb-lines'));
-      for(const b of buttons){
-        if(b.id==='lcd')continue;
-        const icon=el('span','am-pb-icon'+(b.locked?' am-pb-locked':''));icon.innerHTML=b.icon;zones[b.zone].append(icon);
-        if(b.locked)continue;
-        const chip=el('button','am-pb-chip');chip.type='button';chip.setAttribute('role','switch');chip.dataset.id=b.id;
-        chip.innerHTML=b.icon;chip.append(el('span','',b.label));chip.onclick=()=>toggleButton(b.id);chips.append(chip);marks.push([b.id,icon,chip]);
-      }
-      return {node,sync:()=>marks.forEach(([id,icon,chip])=>{const shown=!settings.playerHidden.includes(id);icon.classList.toggle('am-pb-off',!shown);chip.setAttribute('aria-checked',String(shown));})};
+      const draw=buttons=>{
+        const zones=[el('div','am-pb-zone'),el('div','am-pb-lcd'),el('div','am-pb-zone')];bar.replaceChildren(...zones);chips.replaceChildren();marks=[];
+        zones[1].append(el('span','am-pb-art'),el('span','am-pb-lines'));
+        for(const b of buttons){
+          if(b.id==='lcd')continue;
+          const icon=el('span','am-pb-icon'+(b.locked?' am-pb-locked':''));icon.innerHTML=b.icon;zones[b.zone].append(icon);
+          if(b.locked)continue;
+          const chip=el('button','am-pb-chip');chip.type='button';chip.setAttribute('role','switch');chip.dataset.id=b.id;
+          chip.innerHTML=b.icon;chip.append(el('span','',b.label));chip.onclick=()=>toggleButton(b.id);chips.append(chip);marks.push([b.id,icon,chip]);
+        }
+      };
+      return {node,sync:()=>{
+        const buttons=playerButtons(),ids=buttons.map(b=>b.id).join();if(ids!==drawn){drawn=ids;draw(buttons);}
+        marks.forEach(([id,icon,chip])=>{const shown=!settings.playerHidden.includes(id);icon.classList.toggle('am-pb-off',!shown);chip.setAttribute('aria-checked',String(shown));});
+      }};
     }});
 
   try{renderVolume(S.Player.getVolume());volume.value=String(S.Player.getVolume());}catch{}

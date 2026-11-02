@@ -1301,6 +1301,13 @@ try {
     assert.equal(await page.evaluate(() => { const b = document.querySelector('#am-player [data-am-button="shuffle"]').cloneNode(true); document.body.append(b); const d = getComputedStyle(b).display; b.remove(); return d; }), 'none');
     assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).playerHidden, ['shuffle', 'connect']);
     await shot('settings-player-buttons');
+    // A button its feature hides (Now Playing's while its pane is off) leaves the list when any setting changes, and comes back.
+    await page.evaluate(() => { document.querySelector('#am-player [data-am-button="lyrics"]').hidden = true; });
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    assert.ok(!(await chips()).includes('Sözler'));
+    await page.evaluate(() => { document.querySelector('#am-player [data-am-button="lyrics"]').hidden = false; });
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    assert.ok((await chips()).includes('Sözler'));
     await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
     await page.click('#am-settings .am-pb-chip:has-text("Cihazlar")');
     assert.equal(await preview(), '11111111111');
