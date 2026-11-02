@@ -29,12 +29,14 @@
     // notistack's provider; the theme closes a snackbar it retold by the id on its React fiber.
     Snackbar: { closeSnackbar: id => { (window.__closedSnacks ||= []).push(id); }, handleExitedSnack: () => {} },
     Menu: {
-      Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } },
+      // Profile-menu entries: register()ed items land in __menuItems. ?menu=submenu mocks a Spicetify whose items cannot
+      // register, so the theme falls back to its mcloud submenu.
+      Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } register() { (window.__menuItems ||= []).push(this); } deregister() { window.__menuItems = (window.__menuItems || []).filter(i => i !== this); } },
       SubMenu: class { constructor(name, items) { Object.assign(this, { name, items }); } register() { window.__menus.push(this); } deregister() {} },
     },
     Player: {
       origin: { _state: {} },
-      data: { context: { uri: 'spotify:album:0' }, item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean', uri: 'spotify:artist:0' }], album: { uri: 'spotify:album:0', name: 'Blonde', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0' } } },
+      data: { context: { uri: 'spotify:album:0' }, item: { uri: 'spotify:track:1', name: 'Nights', artists: [{ name: 'Frank Ocean', uri: 'spotify:artist:0' }], album: { uri: 'spotify:album:0', name: 'Blonde', images: [{ url: art(30, 'Bl'), label: 'standard' }] }, images: [{ url: art(30, 'Bl'), label: 'small' }], metadata: { title: 'Nights', artist_name: 'Frank Ocean', album_uri: 'spotify:album:0', has_lyrics: 'true', 'canvas.url': 'https://canvaz.scdn.co/upload/mock/video/nights.cnvs.mp4', 'canvas.type': 'VIDEO_LOOPING_RANDOM' } } },
       isPlaying: () => state.playing, togglePlay: () => { state.playing = !state.playing; },
       getShuffle: () => state.shuffle, toggleShuffle: () => { state.shuffle = !state.shuffle; },
       getRepeat: () => state.repeat, toggleRepeat: () => { state.repeat = (state.repeat + 1) % 3; },
@@ -82,6 +84,13 @@
   // Shape follows Spotify's queryArtistOverview response (artistUnion).
   const cover = (n, i) => ({ sources: [{ url: art(i * 47, n.slice(0, 2)), width: 300, height: 300 }] });
   const release = (n, i, type, year) => ({ releases: { items: [{ uri: 'spotify:album:r' + i, name: n, type, date: { year }, coverArt: cover(n, i) }] } });
+  // getAlbum (albumUnion): album 0 is Frank Ocean's alone; album 1 is two artists' (both count as the album's own).
+  const solid = hex => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${hex}"/></svg>`);
+  const albumArtist = (id, name) => ({ uri: 'spotify:artist:' + id, profile: { name } });
+  window.__mockAlbums = {
+    0: { __typename: 'Album', name: 'Blonde', uri: 'spotify:album:0', artists: { items: [albumArtist('frank', 'Frank Ocean')] }, coverArt: { sources: [{ url: solid('#2a7fd4'), width: 64, height: 64 }] } },
+    1: { __typename: 'Album', name: 'Watch the Throne', uri: 'spotify:album:1', artists: { items: [albumArtist('jay', 'JAY-Z'), albumArtist('kanye', 'Kanye West')] }, coverArt: { sources: [{ url: solid('#c8a040'), width: 64, height: 64 }] } },
+  };
   window.__mockArtist = {
     uri: 'spotify:artist:mock', saved: false,
     profile: { name: 'Sena Şener', biography: { text: 'Sena Şener, <b>İstanbul</b> doğumlu şarkıcı ve söz yazarı.' } },
@@ -107,11 +116,16 @@
       relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
     },
   };
+  if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
   Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
   Spicetify.GraphQL = {
-    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' } },
-    Request: async (def, vars) => (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
+    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, getAlbum: { name: 'getAlbum' } },
+    // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id.
+    Request: async (def, vars) => def.name === 'getAlbum'
+      ? (window.__albumRequests ||= []).push(vars) && { data: { albumUnion: (window.__mockAlbums || {})[vars.uri.split(':').pop()] || { __typename: 'NotFound' } } }
+      : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
   };
+  window.__graphqlRequest = Spicetify.GraphQL.Request; // tests that break the API put it back with this
   Object.assign(Spicetify.Platform.LibraryAPI, {
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
@@ -142,6 +156,11 @@
   // Spotify's Redux store, found by the theme in the React tree under #main (it opens Spotify's credits dialog), and the
   // radio lookup Spotify's "Go to artist radio" makes.
   document.getElementById('main').__reactContainer$mock = { child: { memoizedProps: { store: { getState: () => ({ ui: { trackCreditsModal: { isOpen: false } } }), dispatch: action => { (window.__dispatched ||= []).push(action); } } } } };
-  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url); return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
+  // Spotify's lyrics (color-lyrics, line synced) for the playing track; other requests are the radio lookup.
+  const lyricLines = ['Round your city, round the clock', 'Everybody needs you', 'No, you can\'t make everybody equal', 'Although you got beautiful people', '♪', 'Every night fucks every day up', 'Every day patches the night up'];
+  Spicetify.CosmosAsync = { get: async url => { (window.__cosmos ||= []).push(url);
+    if (url.includes('/color-lyrics/')) { if (!url.includes('/track/1?')) throw new Error('404');
+      return { lyrics: { syncType: 'LINE_SYNCED', providerDisplayName: 'Musixmatch', lines: lyricLines.map((words, i) => ({ startTimeMs: String(60000 + i * 10000), words })) }, colors: {} }; }
+    return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
 })();

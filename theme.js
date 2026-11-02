@@ -70,7 +70,9 @@
     music:'<path d="M10 17V5l10-3v12M10 7l10-3"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
     browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
-    play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
+    // The player's transport, drawn to the boxes of Music's mini player glyphs (macOS 27, 2x, in pt: play 19 x 21,
+    // previous/next 19.5 x 11, shuffle 13 x 10.5, repeat 12 x 10.5) at the sizes user.css gives them.
+    play:'<path d="M7.97 4.56c-.81-.46-1.86.09-1.86.98v12.92c0 .89 1.05 1.44 1.86.98l11.38-6.46c.77-.44.77-1.52 0-1.96L7.97 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
     // Apple's "info" (SF Symbols' slab i), traced pixel by pixel from the Music app at 2x: a 2.4pt dot, a serif, a 1.5pt
@@ -93,13 +95,13 @@
     ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
     credits:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
     radio:'<circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>',
-    pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
-    next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
-    back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
-    shuffle:'<path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m3-3c1-2 3-3 5-3h2m-4-4 4 4-4 4"/>',
-    repeat:'<path d="M4 10V7a2 2 0 0 1 2-2h14l-4-4M20 14v3a2 2 0 0 1-2 2H4l4 4M20 5l-4 4M4 19l4-4"/>',
+    pause:'<rect x="6.4" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/><rect x="13.6" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/>',
+    next:'<path d="m.3 5.4 11.7 6.6L.3 18.6zm11.7 0 11.7 6.6L12 18.6z" fill="currentColor" stroke="none"/>',
+    back:'<path d="M23.7 5.4 12 12l11.7 6.6zm-11.7 0L.3 12 12 18.6z" fill="currentColor" stroke="none"/>',
+    shuffle:'<path d="M1.7 7.08h3.43c5.72 0 8.01 9.84 13.73 9.84h3.43m-3.28-3.28 3.28 3.28-3.28 3.28M1.7 16.92h3.43c2.29 0 4.58-2.46 5.72-4.92m3.43-2.46c1.14-1.64 3.43-2.46 5.72-2.46h2.29m-3.28-3.28 3.28 3.28-3.28 3.28"/>',
+    repeat:'<path d="M2.55 12v-1.6a3 3 0 0 1 3-3h15.9m-3.6-3.6 3.6 3.6-3.6 3.6M21.45 12v1.6a3 3 0 0 1-3 3H2.55m3.6 3.6-3.6-3.6 3.6-3.6"/>',
     lyrics:'<rect x="3" y="3" width="18" height="15" rx="3"/><path d="m8 18 1 4 5-4M8 8h2v4H8M14 8h2v4h-2"/>',
-    queue:'<path d="M8 5h14M8 12h14M8 19h14"/><circle cx="3" cy="5" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="19" r=".8"/>',
+    queue:'<path d="M8 5.6h14M8 12h14M8 18.4h14"/><circle cx="3" cy="5.6" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="18.4" r=".8"/>',
     volume:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10M20.5 4.5a10.6 10.6 0 0 1 0 15"/>',
     volume2:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>',
     volume1:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/>',
@@ -118,6 +120,10 @@
     bell:'<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z"/><path d="M10 21h4"/>',
     friends:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17.2" cy="9" r="2.6"/><path d="M16 14.1a5.5 5.5 0 0 1 5.4 5.9"/>',
     devices:'<path d="M7 17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="m12 15 5 6H7z" fill="currentColor"/>',
+    // Settings tabs: SF Symbols' gearshape, paintpalette and sidebar.left, redrawn.
+    gear:'<circle cx="12" cy="12" r="3"/><path d="M9.83 5.13l.42-2.57h3.5l.42 2.57a7.2 7.2 0 0 1 1.15.48l2.12-1.52 2.47 2.47-1.52 2.12a7.2 7.2 0 0 1 .48 1.15l2.57.42v3.5l-2.57.42a7.2 7.2 0 0 1-.48 1.15l1.52 2.12-2.47 2.47-2.12-1.52a7.2 7.2 0 0 1-1.15.48l-.42 2.57h-3.5l-.42-2.57a7.2 7.2 0 0 1-1.15-.48l-2.12 1.52-2.47-2.47 1.52-2.12a7.2 7.2 0 0 1-.48-1.15l-2.57-.42v-3.5l2.57-.42a7.2 7.2 0 0 1 .48-1.15L4.09 6.56l2.47-2.47 2.12 1.52a7.2 7.2 0 0 1 1.15-.48z"/>',
+    paint:'<path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-.9 2-1.8 0-1.3-1-1.7-1-2.8 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.3" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>',
+    sidebar:'<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15M5.5 8.5h1.5M5.5 11.5h1.5"/>',
     popup:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><rect x="11.5" y="11" width="7" height="6" rx="1.2" fill="currentColor" stroke="none"/>'
   };
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${icons[name] || icons.music}</svg>`;
@@ -158,9 +164,24 @@
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
+  // Player buttons people can hide (settings.playerHidden, Settings → Player): data-am-button names one, data-am-label is
+  // its name there (else its aria-label). Any feature tags its own button the same way; data-am-locked ones always stay.
+  function playerButton(node,id,label){node.dataset.amButton=id;if(label)node.dataset.amLabel=label;return node;}
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
-  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');for(const key in settings)if(typeof saved[key]===typeof settings[key])settings[key]=saved[key];}catch{}
+  // A value stored twice encoded (a JSON string of the JSON) is read through, and keys of digits only, left by spreading
+  // such a string into an object, are dropped; anything but a plain object reads as nothing saved.
+  function readSettings() {
+    try{
+      let value=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');
+      for(let i=0;i<3&&typeof value==='string';i++)value=JSON.parse(value);
+      if(!value||typeof value!=='object'||Array.isArray(value))return {};
+      for(const key of Object.keys(value))if(/^\d+$/.test(key))delete value[key];
+      return value;
+    }catch{return {};}
+  }
+  const savedSettings=readSettings();
+  for(const key in settings)if(typeof savedSettings[key]===typeof settings[key])settings[key]=savedSettings[key];
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
   const lang=['tr','en'].includes(settings.lang)?settings.lang:/^tr\b/i.test(S.Locale?.getLocale?.()||navigator.language||'')?'tr':'en';
@@ -170,7 +191,9 @@
   document.documentElement.style.setProperty('--am-t-pause',JSON.stringify(T('Duraklat','Pause')));
   const accents={red:[T('Kırmızı','Red'),'#fa2d48','#fa4662'],pink:[T('Pembe','Pink'),'#ff375f','#ff5c7c'],orange:[T('Turuncu','Orange'),'#ff9f0a','#ffb340'],yellow:[T('Sarı','Yellow'),'#ffd60a','#ffe04d'],green:[T('Yeşil','Green'),'#30d158','#5ade7a'],teal:[T('Turkuaz','Teal'),'#40c8e0','#6dd6ea'],blue:[T('Mavi','Blue'),'#0a84ff','#409cff'],purple:[T('Mor','Purple'),'#bf5af2','#cf7ff5'],spotify:[T('Spotify Yeşili','Spotify Green'),'#1ed760','#3be477']};
   if(!accents[settings.accent])settings.accent='red';
-  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify(settings));}catch{}}
+  // Saved values of settings this build does not define (a newer or older build's) are kept, read again at each save so
+  // a key removed meanwhile stays removed.
+  function saveSettings(){try{localStorage.setItem('mcloud:settings',JSON.stringify({...readSettings(),...settings}));}catch{}}
   function applySettings(){
     const [,accent,focus]=accents[settings.accent];
     document.documentElement.style.setProperty('--am-accent',accent);
@@ -189,10 +212,151 @@
     else document.documentElement.style.removeProperty('--am-side');
     document.dispatchEvent(new Event('am-settings'));
   }
+  // The dark menu tone, by luminance. Music's own song menu, focused, measured over its album page, Home's cards and
+  // Browse (research/issue74, five menus, page blurred 7pt under each cell): 40 -> 66, 72 -> 81, 104 -> 95, 120 -> 100,
+  // 152 -> 118, 184-216 -> 148. The dark end keeps the lab NSMenu fit (REPORT.md §12: 0 -> 32, 31 -> 57); the middle is
+  // ~15 levels darker than that fit (95 -> 105, 127 -> 122 there), the bright end the same (~148).
+  const menuTonePoints=[[0,32],[31,57],[63,79],[95,90],[127,105],[159,128],[191,146],[223,148],[255,150]];
+  // The menu's tone as filter primitives (marked data-am-tone, so light mode can swap them): luminance through pts.
+  function menuToneMarkup(pts){
+      const k=[.2126,.7152,.0722],g=1.05;
+      const T=L=>{let i=0;while(i<pts.length-2&&L>pts[i+1][0])i++;const [a,ta]=pts[i],[b,tb]=pts[i+1];return ta+(tb-ta)*(L-a)/(b-a);};
+      const U=Array.from({length:65},(_,i)=>{const L=Math.max(0,i/32-1)*255;return (T(L)-L)/255;}),lo=Math.min(...U),s=Math.max(...U)-lo,f=v=>v.toFixed(4);
+      const row=c=>k.map((v,j)=>f((j===c?g:0)+(1-g)*v)).join(' ')+' 0 0',add=` ${f(2*s)} ${f(lo-s)}`,floor=`type="table" tableValues="${[32/255,32/255,.25,.375,.5,.625,.75,.875,1].map(f).join(' ')}"`;
+      return `<feColorMatrix data-am-tone="" values="${row(0)} ${row(1)} ${row(2)} ${k.map(v=>f(v/2)).join(' ')} 0 .5"/><feComponentTransfer data-am-tone=""><feFuncA type="table" tableValues="${U.map(u=>f(.5+.5*(u-lo)/s)).join(' ')}"/></feComponentTransfer>`
+        +`<feColorMatrix data-am-tone="" values="1 0 0${add} 0 1 0${add} 0 0 1${add} 0 0 0 0 1"/><feComponentTransfer data-am-tone=""><feFuncR ${floor}/><feFuncG ${floor}/><feFuncB ${floor}/></feComponentTransfer>`;
+  }
   const glassModes=['full','balanced','eco'],reducedTransparency=matchMedia('(prefers-reduced-transparency: reduce)');reducedTransparency.addEventListener?.('change',applySettings);
   applySettings();
-  const accentListeners=[];
-  function setAccent(key){settings.accent=key;saveSettings();applySettings();accentListeners.forEach(fn=>fn());}
+  // Settings window (#am-settings) and its fallback, the profile menu's mcloud submenu, are both drawn from these
+  // definitions, so a feature adds its setting here (or next to its code) and nothing else:
+  //   defineSetting({key, group, label, type:'toggle'|'choice', default, options:[[value,label(,colour)],…],
+  //     section?, note?, style?:'menu'|'segmented'|'swatches', apply?(value), change?(value), reload?, when?(), value?()})
+  // type:'custom' draws its own control: render(def) → {node, sync}, valid(value), menu() → [{name, checked(), toggle()}]
+  // for the fallback submenu, wide: the control under the label.
+  // The value lives in settings[key] (saved in localStorage['mcloud:settings']); a saved value is kept when its type
+  // matches the default and, for a choice, it is one of the options. apply runs now and after every change, change only
+  // after the user's; every change also runs applySettings, which fires 'am-settings'. reload: Spotify reloads after it
+  // (strings built once). when: shown only while it returns true. value: the value in effect when it can differ.
+  // label/section/note are T('Türkçe','English'). Groups are the window's tabs, in this order; settingGroup adds one.
+  const settingDefs=[],settingGroups=[];
+  function settingGroup(id,label,icon){let g=settingGroups.find(g=>g.id===id);if(!g)settingGroups.push(g={id});Object.assign(g,{label,icon});return g;}
+  settingGroup('general',T('Genel','General'),'gear');settingGroup('appearance',T('Görünüm','Appearance'),'paint');settingGroup('player',T('Oynatıcı','Player'),'play');
+  settingGroup('sidebar',T('Kenar Çubuğu','Sidebar'),'sidebar');settingGroup('pages',T('Albümler ve Listeler','Albums & Playlists'),'disc');settingGroup('browse',T('Göz At','Browse'),'grid');
+  function defineSetting(def) {
+    const {key}=def,ok=v=>def.valid?def.valid(v):typeof v===typeof def.default&&(def.type!=='choice'||def.options.some(o=>o[0]===v));
+    if(!ok(settings[key]))settings[key]=ok(savedSettings[key])?savedSettings[key]:def.default;
+    if(!settingGroups.some(g=>g.id===def.group))settingGroup(def.group,def.group,'gear');
+    const i=settingDefs.findIndex(d=>d.key===key);if(i<0)settingDefs.push(def);else settingDefs[i]=def;
+    try{def.apply?.(settings[key]);}catch(e){console.warn('[AppleMusicMac] Setting',key,e);}
+    return def;
+  }
+  function setSetting(key,value) {
+    const def=settingDefs.find(d=>d.key===key);if(settings[key]===value&&!def?.value)return;
+    settings[key]=value;saveSettings();
+    try{def?.apply?.(value);}catch(e){console.warn('[AppleMusicMac] Setting',key,e);}
+    applySettings();def?.change?.(value);if(def?.reload)location.reload();
+  }
+  function setAccent(key){setSetting('accent',key);}
+  defineSetting({key:'lang',group:'general',label:T('Dil','Language'),type:'choice',default:'auto',reload:true,
+    options:[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']],note:T('Değişince Spotify yeniden yüklenir.','Spotify reloads when this changes.')});
+  defineSetting({key:'accent',group:'appearance',label:T('Renk','Colour'),type:'choice',default:'red',style:'swatches',options:Object.entries(accents).map(([key,[label,color]])=>[key,label,color])});
+  // The value shown is the mode in effect: reduced transparency in the OS keeps Eco whatever is picked.
+  defineSetting({key:'glass',group:'appearance',label:T('Cam efekti','Glass effect'),type:'choice',default:'balanced',style:'segmented',
+    options:[['full',T('Tam','Full')],['balanced',T('Dengeli','Balanced')],['eco',T('Eko','Eco')]],value:()=>reducedTransparency.matches?'eco':settings.glass,
+    note:T('Dengeli, her karesi yeniden çizilen sayfalarda (Spicy Lyrics) camı sadeleştirir; Eko camı tamamen kapatır.','Balanced simplifies the glass over pages that redraw every frame (Spicy Lyrics); Eco turns the glass off.'),
+    change:v=>{if(v!=='eco'&&reducedTransparency.matches)notify(T('Sistem ayarlarında saydamlık kapalı olduğu için cam efekti açılamıyor.','Transparency is reduced in your system settings, so the glass effect stays off.'));}});
+  defineSetting({key:'artwork',group:'player',label:T('Oynatıcıda albüm kapağı','Artwork in player'),type:'toggle',default:true});
+  defineSetting({key:'liquid',group:'player',label:T('Liquid Glass oynatıcı','Liquid Glass player'),type:'toggle',default:true});
+  // Apple Music opens the song's menu wherever the player is right-clicked, and its title and artist — album line ask
+  // where to go; Spotify opens it over the song only and links each name (issue #85). Spotify's is the default.
+  defineSetting({key:'playerMenu',group:'player',label:T('Sağ tık menüsü','Right-click menu'),type:'choice',default:'track',
+    options:[['apple',T('Oynatıcının her yerinde (Apple Music)','Anywhere on the player (Apple Music)')],['track',T('Yalnızca şarkının üstünde (Spotify)','Over the song only (Spotify)')]]});
+  defineSetting({key:'lcdLinks',group:'player',label:T('Şarkı adı ve sanatçı','Song title and artist'),type:'choice',default:'spotify',
+    options:[['apple',T('Gidilecek yeri sorar (Apple Music)','Ask where to go (Apple Music)')],['spotify',T('Bağlantı olur (Spotify)','Open as links (Spotify)')]],
+    apply:v=>document.body.classList.toggle('am-lcd-links',v==='spotify'),change:()=>syncPlayer()});
+  defineSetting({key:'numbers',group:'pages',label:T('Çalma listelerinde parça numaraları','Track numbers in playlists'),type:'toggle',default:true});
+  defineSetting({key:'tracklistHeader',group:'pages',label:T('Parça listesi sütun başlığı','Track list column header'),note:T('Kapalıyken #, Başlık, Albüm, Eklenme tarihi ve süre satırı gizlenir.','Off hides the #, Title, Album, Date added and time row.'),type:'toggle',default:true,apply:v=>document.body.classList.toggle('am-no-tracklist-header',!v)});
+  // Appearance (issue #74): dark, light (Apple Music's light appearance) or the system's. user.css keeps every colour
+  // in --am-* tokens; light mode is body.am-light (and :root.am-light) swapping their values. The glass filters carry
+  // their tone in SVG, so light mode adds one colour step to each (applyGlassScheme). As in Music, the artist page keeps
+  // its dark artist colour in light mode (body.am-artist-stays-dark), only the glass around it turns light.
+  const appearanceModes=['dark','light','system'];
+  if(typeof settings.appearance!=='string')try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}').appearance;settings.appearance=typeof saved==='string'?saved:'dark';}catch{settings.appearance='dark';}
+  const systemLight=matchMedia('(prefers-color-scheme: light)');
+  const isLight=()=>settings.appearance==='light'||settings.appearance==='system'&&systemLight.matches;
+  // Light accents: Music's own KeyColor for red (its asset catalog: #fa233b in light, #fa2d48 in dark), the others
+  // NSColor's system colours resolved under aqua on macOS 27; Spotify green from its light Encore sets.
+  const lightAccents={red:'#fa233b',pink:'#ff2d55',orange:'#ff8d28',yellow:'#ffcc00',green:'#34c759',teal:'#00c3d0',blue:'#0088ff',purple:'#cb30e0',spotify:'#169f47'};
+  // Glass tones by luminance (0, 32, … 255 -> output), research/issue74: Music's own window launched light and focused
+  // (2x captures). The play bar 108 + .56 L (over flat tiles L131 -> 183, L139 -> 186, over white 249-253, over its dark
+  // artist page ~110); a song's menu 170 + .34 L (over white 253, over its queue panel 240, darker artwork 197-218).
+  // Light mode maps each filter's dark tone onto these.
+  const lightTones={glass:[108,126,144,162,180,197,215,233,251],menu:[170,181,192,203,214,225,236,246,253]};
+  // The hairline round the glass in light mode (research b8: Music's own window light and focused, 2x, over white and a
+  // brown artist page): all the way round, at the round ends 255 -> 190, 114 -> 56, 87 -> 40, 26 -> 8 (the dark line
+  // takes white to 123: too dark on white, and it fades out along the top and bottom) and about a third of that along
+  // the top and bottom (255 -> 235, 87 -> 71). The table, L*(.2 + .5*L^.8), gives that at the buttons' weight (.85).
+  // The light inside the top and bottom edge already matches Music's (over the brown page +11/+32 against +15/+29).
+  // Music's light glass keeps more of a coloured page's colour than the dark tone mapped onto the light one: over 13 flat
+  // pages (research b8: BtnLab forced light, equal to Music's button on white and brown) green 60,180,90 -> 88,228,123
+  // where the mapped tone gave 119,238,137. A saturation step after the table (a colour step folded into the same pass:
+  // render passes per frame unchanged) fits the faces of the button and the player to 5.0 per channel instead of 8.3;
+  // greys are unchanged.
+  const lightGlassSaturate='1.35';
+  const lightRim={top:.32,table:Array.from({length:33},(_,k)=>{const L=k/32;return (L*(.2+.5*L**.8)).toFixed(4);}).join(' ')};
+  const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]};
+  // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
+  // out = light(dark⁻¹(in)), straight lines past either end.
+  const schemeTable=(dark,light)=>{
+    const at=(t,L)=>{const x=L/255*(t.length-1),i=Math.min(t.length-2,Math.max(0,Math.floor(x)));return t[i]+(t[i+1]-t[i])*(x-i);};
+    const d=dark.map((v,i)=>Math.max(...dark.slice(0,i+1))),lo=d[0],hi=d[d.length-1],slope=(at(light,255)-at(light,0))/(hi-lo);
+    return Array.from({length:33},(_,k)=>{const y=k/32*255;let out;
+      if(y<=lo)out=at(light,0)-(lo-y)*slope;else if(y>=hi)out=at(light,255)+(y-hi)*slope;
+      else{let i=0;while(i<d.length-2&&y>d[i+1])i++;const L=(i+(d[i+1]>d[i]?(y-d[i])/(d[i+1]-d[i]):0))/(d.length-1)*255;out=at(light,L);}
+      return (Math.min(255,Math.max(0,out))/255).toFixed(4);}).join(' ');
+  };
+  // Live search results: one level by luminance plus some of the colour (user.css blurs first), as in dark.
+  const lightSearchTone=t=>{const k=[.2126,.7152,.0722],a=t[0]/255,b=(t[t.length-1]-t[0])/255,g=.6;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';};
+  function applyGlassScheme(){
+    const light=isLight();
+    const tables={glass:light&&schemeTable(darkTones.glass,lightTones.glass)};
+    const mode=light?'light':'dark';
+    for(const f of document.querySelectorAll('filter[id^="am-menu-glass-"]')){
+      if(f.dataset.amTone===mode)continue;f.dataset.amTone=mode;
+      f.querySelectorAll(':scope > [data-am-tone],:scope > [data-am-scheme]').forEach(n=>n.remove());
+      f.insertAdjacentHTML('beforeend',menuToneMarkup(light?lightTones.menu.map((t,i)=>[Math.min(255,i*32),t]):menuTonePoints));
+    }
+    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
+      const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
+      if(!table){f.querySelectorAll(':scope > [data-am-scheme]').forEach(n=>n.remove());continue;}
+      if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
+        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}
+        const sat=document.createElementNS(ns,'feColorMatrix');sat.setAttribute('type','saturate');sat.setAttribute('values',lightGlassSaturate);sat.setAttribute('data-am-scheme','');f.append(step,sat);}
+      for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
+    }
+    for(const t of document.querySelectorAll('[data-am-rim]'))for(const fn of t.children){
+      fn.dataset.amDark??=fn.getAttribute('tableValues');const v=light?lightRim.table:fn.dataset.amDark;if(fn.getAttribute('tableValues')!==v)fn.setAttribute('tableValues',v);}
+    const search=document.querySelector('#am-search-glass feColorMatrix');
+    if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu):search.dataset.amDark);}
+  }
+  let appearanceLight=null;
+  function applyAppearance(){
+    const light=isLight(),root=document.documentElement;
+    root.classList.toggle('am-light',light);document.body.classList.toggle('am-light',light);
+    document.body.classList.toggle('am-artist-stays-dark',light);
+    const [,dark,darkFocus]=accents[settings.accent]||accents.red,accent=light?lightAccents[settings.accent]||lightAccents.red:dark;
+    root.style.setProperty('--am-accent',accent);root.style.setProperty('--am-accent-focus',light?`color-mix(in srgb,${accent} 86%,#000)`:darkFocus);
+    applyGlassScheme();
+    if(appearanceLight!==null&&appearanceLight!==light)document.dispatchEvent(new Event('am-appearance'));
+    appearanceLight=light;
+  }
+  // applySettings (accent, glass) runs first and announces itself; the light accent then replaces the dark one.
+  document.addEventListener('am-settings',applyAppearance);
+  systemLight.addEventListener?.('change',()=>{if(settings.appearance==='system')applyAppearance();});
+  applyAppearance();
+  function setAppearance(key,value){settings[key]=value;saveSettings();applyAppearance();}
+  const appearanceLabels=()=>({appearance:[T('Görünüm','Appearance'),{dark:T('Koyu','Dark'),light:T('Açık','Light'),system:T('Sistem','System')}]});
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
     if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
@@ -292,7 +456,9 @@
   const lists = el('div', 'am-lists'); lists.setAttribute('role', 'group'); lists.setAttribute('aria-label', T('Çalma listelerin','Your playlists'));
   const listBody = el('div', 'am-list-body'); lists.append(listBody); nav.append(lists);
   const Rootlist = S.Platform.RootlistAPI, listPeeks = [0, 3, 5, 10, 20];
-  if (!listPeeks.includes(settings.recent)) settings.recent = 5;
+  // How many recent playlists the sidebar lists under the pinned ones: fewer for a calmer sidebar, more for fewer clicks.
+  defineSetting({key:'recent',group:'sidebar',label:T('Son listeler','Recent playlists'),type:'choice',default:5,options:listPeeks.map(n=>[n,n?String(n):T('Yok','None')]),
+    note:T('Sabitlenmiş listelerin altında kaç son liste görünsün.','How many recent playlists show under the pinned ones.'),change:()=>renderLists(true)});
   let listItems = [], listComplete = false, listShown = '', listNav = [], listRequest = 0, listTimer = 0, listStale = false, listContext = '', naming = null;
   let listPending = false, listFlush = 0, stuckFrame = 0, listToggling = false;
   const listArt = lazyObserver(nav, '200px 0px'), listRows = new Map();
@@ -646,6 +812,7 @@
       const menu=()=>[
         ...(user.username?[{label:T('Profil','Profile'),action:()=>go('/user/'+encodeURIComponent(user.username))}]:[]),
         {label:T('Ayarlar','Settings'),action:()=>go('/preferences')},
+        {label:T('mcloud Ayarları','mcloud Settings'),action:()=>openSettings()},
         '-',{swatches:true},
       ];
       profile.hidden=false;
@@ -839,21 +1006,24 @@
   player.addEventListener('contextmenu',event=>{
     if(popover.contains(event.target))return;
     event.preventDefault();
-    if(!S.Player.data?.item?.uri)return;
+    if(!S.Player.data?.item?.uri||settings.playerMenu==='track'&&!event.target.closest('.am-lcd'))return;
     openTrackMenu({x:event.clientX,y:event.clientY});
   });
   const controls=el('div','am-transport');player.append(controls);
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
   const shuffle=button(T('Karıştır','Shuffle'),'shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
   const back=button(T('Önceki parça','Previous'),'back',safe(()=>S.Player.back()));
-  const play=button(T('Çal','Play'),'play',safe(()=>S.Player.togglePlay()),'am-play');
+  // The icon turns at the click, as in Music, instead of after Spotify's playback event (~100-300ms, longer on a
+  // Connect device). Until playback follows, syncPlayer keeps it; if it has not 1.2s later, the real state shows again.
+  let playWant=null,playCheck=0;const play=button(T('Çal','Play'),'play',safe(()=>{playWant=!S.Player.isPlaying();const result=S.Player.togglePlay();showPlaying(playWant);clearTimeout(playCheck);playCheck=setTimeout(()=>{playWant=null;syncPlayer();},1200);return result;}),'am-play');
   const next=button(T('Sonraki parça','Next'),'next',safe(()=>S.Player.next()));
   const repeat=button(T('Yinele','Repeat'),'repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
+  playerButton(shuffle,'shuffle');playerButton(back,'previous',T('Önceki','Previous'));playerButton(next,'next',T('Sonraki','Next'));playerButton(repeat,'repeat');play.dataset.amLocked='play';
   // The centre "LCD" follows Apple Music: artwork, title, a marquee subtitle
   // and a hairline scrubber that is always clickable and thickens on hover.
   const track=el('div','am-player-track');player.append(track);
   const logo=el('span','am-apple','');track.append(logo);
-  const lcd=el('div','am-lcd');track.append(lcd);
+  const lcd=el('div','am-lcd');track.append(lcd);lcd.dataset.amLocked='lcd';
   const fullscreenButton=el('button','am-track-art');fullscreenButton.type='button';fullscreenButton.id='am-fullscreen-toggle';
   fullscreenButton.setAttribute('aria-label',T('Tam ekran','Full Screen'));fullscreenButton.title=T('Tam ekran','Full Screen');
   const cover=el('img','');cover.alt='';cover.decoding='async';cover.hidden=true;
@@ -874,19 +1044,27 @@
       if(overflow){root.style.setProperty('--am-marquee-duration',((first.offsetWidth+48)/28).toFixed(1)+'s');root.style.setProperty('--am-marquee-steps',String(Math.max(1,Math.round((first.offsetWidth+48)*(window.devicePixelRatio||1)))));}
     }
     if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(root);
-    return {root,set(text){if(first.textContent===text)return;first.textContent=copy.textContent=text;root.title=text;fit();}};
+    // parts: [{text,uri?}], the names that open their page (lcdLinks 'spotify').
+    let shown=null;
+    return {root,set(text,parts){const key=parts?JSON.stringify(parts):text;if(shown===key)return;shown=key;
+      for(const node of [first,copy])if(parts)node.replaceChildren(...parts.map(p=>{if(!p.uri)return p.text;const link=el('span','am-lcd-link',p.text);link.dataset.uri=p.uri;return link;}));else node.textContent=text;
+      root.title=text;fit();}};
   }
   const text=el('div','am-lcd-text'),titleRow=el('div','am-title-row');
   const title=marquee('am-track-title'),subtitle=marquee('am-track-subtitle');
   const star=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
-  title.root.addEventListener('click',()=>{const item=S.Player.data?.item;const uri=item?.album?.uri||item?.metadata?.album_uri||item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
-  // As in Apple Music, the artist — album line asks where to go.
-  subtitle.root.setAttribute('role','button');subtitle.root.tabIndex=0;subtitle.root.setAttribute('aria-haspopup','menu');
-  subtitle.root.addEventListener('click',()=>togglePopover(subtitle.root,subtitleMenu));
-  subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
+  // As in Apple Music, the title and the artist — album line ask where to go; as links, the title opens the album.
+  for(const line of [title.root,subtitle.root]){
+    line.setAttribute('role','button');line.tabIndex=0;line.setAttribute('aria-haspopup','menu');
+    line.addEventListener('click',event=>{
+      if(settings.lcdLinks!=='spotify')return togglePopover(line,subtitleMenu);
+      const item=S.Player.data?.item;openUri(line===title.root?item?.album?.uri||item?.metadata?.album_uri||item?.uri:event.target.closest?.('.am-lcd-link')?.dataset.uri);
+    });
+    line.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(line,subtitleMenu);}});
+  }
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
   const more=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(more),'am-more');
-  lcd.append(fullscreenButton,text,more);
+  lcd.append(fullscreenButton,text,more);playerButton(star,'love',T('Beğen','Like'));playerButton(more,'more',T('Diğer','More'));
   const scrub=el('div','am-scrub');
   const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
   const bar=el('span','am-bar'),barFill=el('span','am-bar-fill');bar.append(barFill);
@@ -931,7 +1109,8 @@
     barFill.style.transition=smooth?'transform 1s steps('+steps+')':'none';
     if(Math.abs(fraction-shownFraction)>.0001){barFill.style.transform='scaleX('+fraction.toFixed(4)+')';shownFraction=fraction;}
     if(!dragging){const position=String(Math.round(fraction*1000));if(seek.value!==position)seek.value=position;}
-    if(track.classList.contains('am-scrubbing')){
+    // The Now Playing pane (sidebar-only mode) holds the scrubber and always shows the times.
+    if(track.classList.contains('am-scrubbing')||scrub.parentElement!==track){
       const duration=S.Player.getDuration?.()||0,position=fraction*duration;
       rollText(elapsed,duration?formatTime(position):'',false);rollText(remaining,duration?'−'+formatTime(duration-position):'',true);
     }
@@ -945,11 +1124,13 @@
     const native=nativeConnect();
     if(native)native.click();else notify(T('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.','Device selection is not available in this version of Spotify.'));
   });
-  extras.append(popupLyricsButton,lyricsButton,connectButton,button(T('Çalma sırası','Playing Next'),'queue',()=>{
+  playerButton(lyricsButton,'lyrics',T('Sözler','Lyrics'));playerButton(popupLyricsButton,'popup-lyrics',T('Sözler penceresi','Lyrics popup'));playerButton(connectButton,'connect',T('Cihazlar','Devices'));
+  const queueButton=button(T('Çalma sırası','Playing Next'),'queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
     else notify(T('Çalma sırası bu Spotify sürümünde kullanılamıyor.','The queue is not available in this version of Spotify.'));
-  }));
+  });
+  extras.append(popupLyricsButton,lyricsButton,connectButton,playerButton(queueButton,'queue'));
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
   const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
@@ -972,7 +1153,46 @@
   volumeWrap.addEventListener('pointerleave',()=>openVolume(false,400));
   volumeWrap.addEventListener('focusin',()=>{if(!volumeWrap.matches(':hover'))openVolume(true,0);});
   volumeWrap.addEventListener('focusout',event=>{if(!volumeWrap.contains(event.relatedTarget)&&!volumeWrap.matches(':hover'))openVolume(false,0);});
-  volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);
+  volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);playerButton(volumeWrap,'volume',T('Ses','Volume'));
+  // Which player buttons show: settings.playerHidden lists the ids to hide, by a rule on the tagged node wherever it is
+  // (Now Playing's sidebar pane moves some of them out of the player), so nothing re-renders. The Player tab draws a small
+  // bar from the buttons tagged at that moment (placeholders for the track, no real text) that follows each pick.
+  const hiddenButtons=el('style','');hiddenButtons.id='am-player-hidden';document.head.append(hiddenButtons);
+  function playerButtons() {
+    const zone=n=>n.closest('.am-transport')?0:n.closest('.am-player-track')?1:2,seen=new Set();
+    return [...document.querySelectorAll('[data-am-button],[data-am-locked]')].filter(n=>!n.closest('#am-settings')&&!n.hidden).map(n=>({
+      id:n.dataset.amButton||n.dataset.amLocked,locked:!n.dataset.amButton,zone:zone(n),icon:n.querySelector('svg')?.outerHTML||'',
+      label:n.dataset.amLabel||n.getAttribute('aria-label')||n.dataset.amButton||'',
+    })).filter(b=>!seen.has(b.id)&&seen.add(b.id));
+  }
+  const toggleButton=id=>setSetting('playerHidden',settings.playerHidden.includes(id)?settings.playerHidden.filter(x=>x!==id):[...settings.playerHidden,id]);
+  defineSetting({key:'playerHidden',group:'player',label:T('Oynatıcı düğmeleri','Player buttons'),type:'custom',default:[],wide:true,
+    note:T('Göstermek ya da gizlemek için bir düğmeye dokun. Çal/duraklat, şarkı adı ve ilerleme çubuğu hep kalır.','Tap a button to show or hide it. Play/pause, the title and the scrubber always stay.'),
+    valid:v=>Array.isArray(v)&&v.every(id=>typeof id==='string'),
+    apply:v=>{hiddenButtons.textContent=v.length?v.map(id=>'[data-am-button="'+CSS.escape(id)+'"]').join(',')+'{display:none!important}':'';},
+    menu:()=>playerButtons().filter(b=>!b.locked).map(b=>({name:T('Düğme: ','Button: ')+b.label,checked:()=>!settings.playerHidden.includes(b.id),toggle:()=>toggleButton(b.id)})),
+    // Drawn from the buttons there are now (a hidden one, such as Now Playing's while its pane is off, is left out), and
+    // drawn again when another setting changes that list.
+    render() {
+      const node=el('div','am-pb'),bar=el('div','am-pb-bar'),chips=el('div','am-pb-chips');let marks=[],drawn='';
+      node.setAttribute('role','group');bar.setAttribute('aria-hidden','true');node.append(bar,chips);
+      const draw=buttons=>{
+        const zones=[el('div','am-pb-zone'),el('div','am-pb-lcd'),el('div','am-pb-zone')];bar.replaceChildren(...zones);chips.replaceChildren();marks=[];
+        zones[1].append(el('span','am-pb-art'),el('span','am-pb-lines'));
+        for(const b of buttons){
+          if(b.id==='lcd')continue;
+          const icon=el('span','am-pb-icon'+(b.locked?' am-pb-locked':''));icon.innerHTML=b.icon;zones[b.zone].append(icon);
+          if(b.locked)continue;
+          const chip=el('button','am-pb-chip');chip.type='button';chip.setAttribute('role','switch');chip.dataset.id=b.id;
+          chip.innerHTML=b.icon;chip.append(el('span','',b.label));chip.onclick=()=>toggleButton(b.id);chips.append(chip);marks.push([b.id,icon,chip]);
+        }
+      };
+      return {node,sync:()=>{
+        const buttons=playerButtons(),ids=buttons.map(b=>b.id).join();if(ids!==drawn){drawn=ids;draw(buttons);}
+        marks.forEach(([id,icon,chip])=>{const shown=!settings.playerHidden.includes(id);icon.classList.toggle('am-pb-off',!shown);chip.setAttribute('aria-checked',String(shown));});
+      }};
+    }});
+
   try{renderVolume(S.Player.getVolume());volume.value=String(S.Player.getVolume());}catch{}
   // Scrolling over the volume control opens it and nudges the level along an audio-taper (perceptual) curve.
   volumeWrap.addEventListener('wheel',event=>{
@@ -1032,12 +1252,15 @@
   // The sidebar glow (user.css) saturates and brightens hard so that small covers reach its edge; this soft
   // ceiling keeps large coloured areas, such as playlist headers under the sidebar, from blowing out.
   const glowCap='tableValues="0 .1 .2 .3 .4 .48 .55 .6 .63 .65 .66"';
+  // Light mirrors it as a floor: the dark ceiling turned the white page grey along the sidebar's edge.
+  const glowCapLight='tableValues=".34 .35 .37 .4 .45 .52 .6 .7 .8 .9 1"';
   // The player's glass is toolbarLens (below); the toast keeps this filter: it fades in with opacity, and an element
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
   // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
   glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
+    +`<filter id="am-glow-cap-light" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCapLight}/><feFuncG type="table" ${glowCapLight}/><feFuncB type="table" ${glowCapLight}/></feComponentTransfer></filter>`
     +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
     // Save to Your Library plays a Lottie animation with Spotify's greens baked into the file. #am-accent-swap masks
     // the green (3 × (G − R): greys, the white plus and the dark tick have G = R) and floods it with the accent. A mask
@@ -1053,7 +1276,7 @@
   // sRGB (headless Chromium, most Windows screens) 1.078 matched, so this one gives a little more colour there.
   const searchTone=(()=>{const k=[.2126,.7152,.0722],a=43.7/255,b=.044,g=1.14;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';})();
   glass.insertAdjacentHTML('beforeend',`<filter id="am-search-glass" color-interpolation-filters="sRGB"><feColorMatrix values="${searchTone}"/></filter>`);
-  document.body.append(glass);
+  document.body.append(glass);applyGlassScheme();
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
   const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
   const wideGamut=matchMedia('(color-gamut: p3)').matches;
@@ -1095,18 +1318,10 @@
     const at=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,15,18],bend=[46,41,34,29,24.2,20.6,17.5,14.8,12.35,10.1,8.2,6.5,5.15,3.9,1.95,0],peak=46,radius=13,turn=40;
     const shiftAt=d=>{if(d>=18)return 0;let i=0;while(d>at[i+1])i++;return bend[i]+(bend[i+1]-bend[i])*(d-at[i])/(at[i+1]-at[i]);};
     const parts=['tl','t','tr','l','r','bl','b','br'],drawn=new Map(),slots=[],watched=new WeakSet();
-    // Apple's menu tone, measured over flat greys and colours (REPORT.md §12): by luminance 0 -> 32, 63 -> 82, 127 -> 122,
-    // 191 -> 143, 255 -> 146, the colour around it kept (x1.05), no channel under 32. Colour steps only, which Skia folds
+    // Apple's menu tone (menuTonePoints, by luminance), the colour around it kept (x1.05), no channel under 32. Colour steps only, which Skia folds
     // into one pass reading the bent page once: luminance rides in alpha as L/2 + 1/2 through the table (a colour stored
     // premultiplied by an alpha near 0 would be lost) and is added back. 4.2 from Apple over 16 surfaces, the CSS fill 19.6.
-    const tone=(()=>{
-      const pts=[[0,32],[31,57],[63,82],[95,105],[127,122],[159,135],[191,143],[223,147],[255,146]],k=[.2126,.7152,.0722],g=1.05;
-      const T=L=>{let i=0;while(i<pts.length-2&&L>pts[i+1][0])i++;const [a,ta]=pts[i],[b,tb]=pts[i+1];return ta+(tb-ta)*(L-a)/(b-a);};
-      const U=Array.from({length:65},(_,i)=>{const L=Math.max(0,i/32-1)*255;return (T(L)-L)/255;}),lo=Math.min(...U),s=Math.max(...U)-lo,f=v=>v.toFixed(4);
-      const row=c=>k.map((v,j)=>f((j===c?g:0)+(1-g)*v)).join(' ')+' 0 0',add=` ${f(2*s)} ${f(lo-s)}`,floor=`type="table" tableValues="${[32/255,32/255,.25,.375,.5,.625,.75,.875,1].map(f).join(' ')}"`;
-      return `<feColorMatrix values="${row(0)} ${row(1)} ${row(2)} ${k.map(v=>f(v/2)).join(' ')} 0 .5"/><feComponentTransfer><feFuncA type="table" tableValues="${U.map(u=>f(.5+.5*(u-lo)/s)).join(' ')}"/></feComponentTransfer>`
-        +`<feColorMatrix values="1 0 0${add} 0 1 0${add} 0 0 1${add} 0 0 0 0 1"/><feComponentTransfer><feFuncR ${floor}/><feFuncG ${floor}/><feFuncB ${floor}/></feComponentTransfer>`;
-    })();
+    const tone=menuToneMarkup(menuTonePoints);
     // The pieces of a box 2C + 1 device pixel wide and high: its corners and the single pixels between them.
     const pieces=(k,C)=>{
       const key=k+'/'+C;if(drawn.has(key))return drawn.get(key);
@@ -1145,7 +1360,7 @@
       const slot={i:slots.length},k=devicePixelRatio||1,p=pieces(k,C);slots.push(slot);
       glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="${C<turn?thinBlur:6.8}" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
       slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.blur=glass.lastElementChild.querySelector('feGaussianBlur');slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
-      for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);slot.key=k+'/'+C;
+      for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);slot.key=k+'/'+C;applyGlassScheme();
       return slot;
     };
     // The theme's menu and submenu, Spotify's menu and submenu, then one- and two-row menus (34px and 58px tall).
@@ -1556,6 +1771,7 @@
         try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}
         catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}
       }}],
+      npMenuEntries(),
       extra,
     );
   }
@@ -1563,9 +1779,10 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artists=(item.artists||[]).filter(artist=>artist?.uri);
     if(!artists.length&&meta.artist_uri)artists.push({uri:meta.artist_uri,name:meta.artist_name||''});
+    // Album first, as Music's own menu.
     return [
-      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
       ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
+      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
     ];
   }
   let boundToolbar=null, toolbarChildren=[];
@@ -1763,23 +1980,24 @@
     // each end; over the glass. w: the line's strength (1 at 36pt, lighter on the player).
     const rimT=[0.0, 0.0098, 0.0208, 0.0326, 0.0453, 0.0591, 0.0743, 0.0904, 0.1069, 0.1238, 0.1412, 0.1595, 0.1787, 0.1996, 0.2221, 0.245, 0.2669, 0.288, 0.3089, 0.3286, 0.3462, 0.3612, 0.3747, 0.3873, 0.3996, 0.412, 0.4242, 0.4359, 0.4467, 0.4567, 0.4662, 0.475, 0.4831];let rimN=0;
     const rimFilter=(id,s,n=1)=>{const tt=`type="table" tableValues="${rimT.join(' ')}"`;
-      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
+      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt" data-am-rim=""><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
     // The map is drawn for each end only (setMaps): the line fades out within r of either end. drawn (shared()): the
     // element only sizes the map, which runs after each drawing; the shared hairline draws it. The element is the glass
     // grown by 1px, or by its data-grow (px) where the toolbar keeps it on device pixels.
     const rimF=(box,{w=1,s=.8,stretch:pressed}={},drawn)=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';el.dataset.filter=id;box.append(el);
       glass.insertAdjacentHTML('beforeend',rimFilter(id,s));
-      if(!glass.isConnected)document.body.append(glass);
+      if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
       if(!drawn)el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
       const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='',rest=null;
-      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw)return;
-        if(rest?.k===k&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
+      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1,top=isLight()?lightRim.top:0;if(!bw)return;
+        if(rest?.k===k&&rest.top===top&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
         const g=+el.dataset.grow||1,W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2*g,gh=bh-2*g,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+g)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
           for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-g,py=(y+(sy+.5)/4)/k-g,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
-          const px=(x+.5)/k-g,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
-        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);drawn?.();};
+          const px=(x+.5)/k-g,fade=Math.max(top,Math.max(0,1-Math.min(px,gw-px)/r)**3),i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
+        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);rest.top=top;drawn?.();};
+      const scheme=()=>el.isConnected?draw():document.removeEventListener('am-appearance',scheme);document.addEventListener('am-appearance',scheme);
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
     // Only mid reads the page past the glass's edge (the edge read, the halo, the wash); bend and tone take the glass's
@@ -1798,7 +2016,7 @@
       // No edge line in the layered glass (the toast's): its map would be all white.
       const state={...glassStates[over?.state||'focused'],...over,line:0},id='am-tglass-'+(++n),exact=Number.isInteger(devicePixelRatio||1);
       glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact)).join(''));
-      if(!glass.isConnected)document.body.append(glass);
+      if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
       node.style.setProperty('--am-tg-hair',1/(devicePixelRatio||1)+'px');node.style.setProperty('--am-tg-m',(state.margin||0)+'px');
       node.style.backdropFilter=node.style.webkitBackdropFilter='none';
       const M=state.margin||0;if(!drawn)node.prepend(...parts.map(p=>layer(p,id,inner(p,M,exact),`inset(${M-inner(p,M,exact)}px round 999px)`)));
@@ -1843,6 +2061,7 @@
         build(){
           glass.querySelectorAll(`[id^="${id}-"]`).forEach(f=>f.remove());
           glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact,members.length)).join('')+rimFilter(`${id}-rim`,rim.s,members.length));
+          if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
           // Each shared piece and the piece of its shape's own filter it copies, placed by the face (or the hairline).
           pairs=[...glass.querySelectorAll(`[id^="${id}-"] feImage`)].map(to=>{const i=+to.dataset.member,part=to.closest('filter').id.slice(id.length+1),rim=part==='rim',src=rim?members[i].rim.dataset.filter:members[i].id+'-'+part;
             return [to,glass.querySelector(`#${src} feImage[data-map="${to.dataset.map}"][data-part="${to.dataset.part}"]`),i,rim?parts.length:parts.indexOf(part)];});
@@ -2050,7 +2269,7 @@
     const fullscreen=!!page?.classList.contains('Fullscreen');
     document.body.classList.toggle('am-spicy-fullscreen',fullscreen);
     const lyricsOpen=routePath()==='/SpicyLyrics';
-    document.body.classList.toggle('am-spicy-route',lyricsOpen);
+    if(document.body.classList.contains('am-spicy-route')!==lyricsOpen){document.body.classList.toggle('am-spicy-route',lyricsOpen);npApply();}
     const available=!!document.getElementById('SpicyLyrics_PageButton');
     popupLyricsButton.hidden=!document.getElementById('SpicyLyrics_PopupLyricsButton');
     lyricsButton.classList.toggle('am-active',lyricsOpen);
@@ -2067,11 +2286,11 @@
     document.body.classList.toggle('am-entity-playing',playing);
   }
   let previousTrack='',previousPlaying=null;
+  function showPlaying(playing){if(playing===previousPlaying)return;previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
   function syncPlayer() {
     if(document.hidden||!S.Player.origin?._state) return;
     syncEntityPlaying();
-    const playing=S.Player.isPlaying();
-    if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
+    const playing=S.Player.isPlaying();if(playWant===null||playing===playWant){playWant=null;showPlaying(playing);}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
@@ -2082,10 +2301,16 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};
     const trackTitle=item?.name||meta.title||'',trackArtist=meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'';
     const album=item?.album?.name||meta.album_title||'';
-    const key=[item?.uri,trackTitle,trackArtist,album].join('\n');
+    const key=[item?.uri,trackTitle,trackArtist,album,settings.lcdLinks].join('\n');
     if(key!==previousTrack){
       const changed=previousTrack!=='';previousTrack=key;closePopover();
-      title.set(trackTitle);subtitle.set([trackArtist,album].filter(Boolean).join(' — '));
+      title.set(trackTitle);
+      if(settings.lcdLinks==='spotify'){
+        const named=(item?.artists||[]).filter(a=>a?.name),artists=named.length?named:trackArtist?[{name:trackArtist,uri:meta.artist_uri}]:[];
+        const parts=artists.flatMap((a,i)=>[...(i?[{text:', '}]:[]),{text:a.name,uri:a.uri}]);
+        if(album)parts.push(...(parts.length?[{text:' — '}]:[]),{text:album,uri:item?.album?.uri||meta.album_uri});
+        subtitle.set(parts.map(p=>p.text).join(''),parts);
+      }else subtitle.set([trackArtist,album].filter(Boolean).join(' — '));
       track.classList.toggle('am-has-track',!!trackTitle);
       const images=item?.images?.length?item.images:item?.album?.images||[];
       const art=spotifyImage((images.find(i=>i.label==='small')||images.find(i=>i.label==='standard')||images[0])?.url||meta.image_small_url||meta.image_url||'');
@@ -2093,7 +2318,298 @@
       renderProgress(S.Player.getProgressPercent()||0,true);
       if(changed&&!reducedMotion.matches){lcd.classList.remove('am-swap');void lcd.offsetWidth;lcd.classList.add('am-swap');}
     }
+    npTick();
   }
+  // Now Playing pane (#73): Apple Music's iOS Now Playing at the window's right edge, beside the floating player
+  // ('beside': artwork, title and lyrics, no second set of transport controls) or instead of it ('only': the player's
+  // own scrubber, transport, volume, Connect and queue buttons move into the pane, so their handlers and state stay
+  // one). The page makes room through --am-right (user.css). The artwork can move: Spotify Canvas (the track's
+  // metadata names the clip on Spotify's CDN) or Apple Music's motion artwork, found through m8tec's index (they
+  // agreed to mcloud using it with a client= tag); nothing is requested unless that option is picked. Lyrics are
+  // Spotify's own (the color-lyrics request its lyrics page makes), synced line by line.
+  icons.collapse='<path d="M20 4l-6.5 6.5M14 4.5v6h6M4 20l6.5-6.5M10 19.5v-6H4"/>';
+  icons.nowPlaying='<rect x="3" y="4" width="18" height="16" rx="2.5"/><path d="M14.5 4v16"/>';
+  const np=el('aside','');np.id='am-nowplaying';np.setAttribute('aria-label',T('Şimdi Çalan','Now Playing'));np.hidden=true;
+  const npBg=el('img','am-np-bg'),npBleed=el('video','am-np-bleed'),npBody=el('div','am-np-body');
+  const npArt=el('div','am-np-art'),npCover=el('button','am-np-cover'),npImg=el('img',''),npMotion=el('video','am-np-motion');
+  npCover.type='button';npCover.setAttribute('aria-label',T('Tam ekran','Full Screen'));npCover.title=T('Tam ekran','Full Screen');npCover.addEventListener('click',toggleFullscreen);
+  for(const img of [npBg,npImg]){img.alt='';img.decoding='async';img.addEventListener('error',()=>img.removeAttribute('src'));}
+  npCover.append(npImg,npMotion);npArt.append(npCover);
+  const npMeta=el('div','am-np-meta'),npThumb=el('img','am-np-thumb'),npText=el('div','am-np-text');npThumb.alt='';npThumb.decoding='async';
+  const npTitle=marquee('am-np-title'),npArtist=marquee('am-np-artist');npText.append(npTitle.root,npArtist.root);
+  npTitle.root.addEventListener('click',()=>{const item=S.Player.data?.item,uri=item?.album?.uri||item?.metadata?.album_uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
+  npArtist.root.addEventListener('click',()=>{const uri=S.Player.data?.item?.artists?.[0]?.uri||S.Player.data?.item?.metadata?.artist_uri;if(uri?.startsWith('spotify:artist:'))go('/artist/'+uri.split(':')[2]);});
+  const npStar=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',()=>star.click(),'am-np-star');
+  const npMore=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(npMore),'am-np-more');
+  npMeta.append(npThumb,npText,npStar,npMore);
+  const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
+  npLyricsBox.setAttribute('aria-live','off');
+  // Full screen: beside the player, Spicy Lyrics' page (its own button, clicked); the pane steps aside while that page is
+  // open, so the lyrics never show twice, and comes back as it was when it closes. Without Spicy Lyrics (or with the
+  // controls in the pane) the pane fills the window itself; Esc or the button again leaves.
+  const npFull=button(T('Tam ekran sözler','Full-screen lyrics'),'expand',()=>npFullscreen(!npFullOn),'am-np-fullscreen');
+  // Beside the player the pane closes itself; it comes back from the player's Now Playing button or its "…" menu.
+  const npClose=button(T('Şimdi Çalan\'ı kapat','Close Now Playing'),'close',()=>npOpen(false),'am-np-close');
+  npActions.append(npFull);np.append(npClose);
+  npBody.append(npArt,npMeta,npLyricsBox,npControls,npActions);np.append(npBg,npBleed,npBody);document.body.append(np);
+  np.addEventListener('contextmenu',event=>{if(popover.contains(event.target)||!S.Player.data?.item?.uri)return;event.preventDefault();openTrackMenu({x:event.clientX,y:event.clientY});});
+  // The player's Now Playing button turns the pane on and off (beside the player; the settings window picks "sidebar
+  // only"). It is always there unless the settings window's button picker hides it; the player's "…" menu does the same.
+  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npOpen((npWant??settings.nowPlaying)==='off'),'am-np-toggle');
+  npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
+  // Beside the player, Spicy Lyrics' page takes the lyrics (its own full screen is a click away there).
+  const npHandsToSpicy=()=>(npWant??settings.nowPlaying)==='beside'&&!!document.getElementById('SpicyLyrics_PageButton');
+  // Shown or hidden at once, saved after that frame is painted: saving tells the settings window, the menus and the
+  // toolbar glass, which reads layout, and that forced layout cost the opening frame 20-40ms (measured in the client).
+  let npWant=null;
+  function npOpen(on) {
+    npFullscreen(false);const value=on?'beside':'off';if((npWant??settings.nowPlaying)===value)return;
+    npWant=value;npApply();
+    requestAnimationFrame(()=>setTimeout(()=>{if(npWant!==value)return;npWant=null;npSet('nowPlaying',value);}));
+  }
+  // Pointing at the button gets the pane ready (text, artwork, lyrics) while it is still hidden, so opening only shows it.
+  function npPrepare() {
+    if(!npReady||document.hidden||!np.hidden)return;
+    const item=S.Player.data?.item;if((item?.uri||'')!==npTrackKey)npTrack(item);
+  }
+  npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
+  let npFullOn=false;
+  function npFullscreen(on) {
+    if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
+    if(npFullOn===on)return;
+    npFullOn=on;document.body.classList.toggle('am-np-full',on);npSyncFull();
+    // The lines move to a new layout: back to the one being sung (or loaded, when the pane showed none).
+    if(!npLyricsShown()){clearTimeout(npLyricTimer);npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
+    else if(npLyrics&&npLyricUri===(S.Player.data?.item?.uri||''))npJumpLyrics();else{npLyricUri=null;npLoadLyrics(S.Player.data?.item);}
+  }
+  function npSyncFull() {
+    const label=npFullOn?T('Tam ekrandan çık','Exit Full Screen'):npHandsToSpicy()?T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'):T('Tam ekran sözler','Full-screen lyrics');
+    if(npFull.classList.contains('am-active')!==npFullOn)npFull.innerHTML=svg(npFullOn?'collapse':'expand');
+    npFull.classList.toggle('am-active',npFullOn);setAttributeIfChanged(npFull,'aria-pressed',String(npFullOn));
+    setAttributeIfChanged(npFull,'aria-label',label);setAttributeIfChanged(npFull,'title',label);
+  }
+  document.addEventListener('keydown',event=>{if(npFullOn&&event.key==='Escape'&&!popover.contains(event.target)){event.preventDefault();npFullscreen(false);}});
+  // The player's "…" menu hides the pane beside the player, and shows it again when the button picker hid its button.
+  function npMenuEntries() {
+    const mode=npWant??settings.nowPlaying,open=mode!=='off';
+    if(mode==='only'||!open&&!(Array.isArray(settings.playerHidden)&&settings.playerHidden.includes('nowplaying')))return [];
+    return [{label:open?T('Şimdi Çalan\'ı Gizle','Hide Now Playing'):T('Şimdi Çalan\'ı Göster','Show Now Playing'),action:()=>npOpen(!open)}];
+  }
+
+  // The player's optional buttons, named for the settings window's button picker (kept if it named them first).
+  for(const [b,id] of [[shuffle,'shuffle'],[back,'previous'],[next,'next'],[repeat,'repeat'],[star,'love'],[more,'more'],[popupLyricsButton,'popup-lyrics'],[lyricsButton,'lyrics'],[connectButton,'connect'],[queueButton,'queue'],[volumeWrap,'volume']])b.dataset.amButton??=id;
+  // 'only' mode moves the player's own controls in, and back out of it.
+  function npMove(only) {
+    if(only&&scrub.parentElement!==npControls){npControls.append(scrub,controls,volumeWrap);npActions.append(connectButton,queueButton);}
+    else if(!only&&scrub.parentElement===npControls){track.append(scrub);player.insertBefore(controls,track);extras.append(connectButton,queueButton,volumeWrap);}
+  }
+  const npVisible=()=>!np.hidden&&!document.hidden;
+  let npReady=false,npTrackKey='',npContent='';
+  function npApply() {
+    if(!npReady)return;
+    // While Spicy Lyrics' page is open the pane beside the player steps aside, so the lyrics never show twice.
+    const mode=npWant??settings.nowPlaying,b=document.body.classList,open=mode==='only'||mode==='beside'&&!b.contains('am-spicy-route');
+    if(mode==='off'&&npFullOn){npFullOn=false;b.remove('am-np-full');npSyncFull();}
+    b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
+    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    const on=mode!=='off',opening=open&&np.hidden;np.hidden=!open;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
+    setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
+    npMove(mode==='only');
+    // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
+    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
+    if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
+    if(!open){npStopVideo();clearTimeout(npLyricTimer);return;}
+    if(opening){npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;if(npTrackKey===(S.Player.data?.item?.uri||''))npLoadMotion(S.Player.data?.item);}
+    npTick();
+  }
+  // Called from syncPlayer (every second while the window shows, and on track and play/pause changes).
+  function npTick() {
+    if(!npReady||!npVisible())return;
+    const item=S.Player.data?.item;
+    if((item?.uri||'')!==npTrackKey)npTrack(item);
+    // Plain lyrics light the line being sung only while playing (paused, every line is grey, as in Music).
+    const playing=!!S.Player.isPlaying?.();if(np.classList.contains('am-np-playing')!==playing)np.classList.toggle('am-np-playing',playing);
+    const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
+    npSyncCanvas();npPlayVideo();npSyncLyric();npSyncFull();
+  }
+  function npTrack(item) {
+    npTrackKey=item?.uri||'';const meta=item?.metadata||{};
+    const images=item?.images?.length?item.images:item?.album?.images||[],pick=(...labels)=>spotifyImage((labels.map(l=>images.find(i=>i.label===l)).find(Boolean)||images[0])?.url||meta.image_large_url||meta.image_url||'');
+    const big=pick('xlarge','large','standard'),small=pick('small','standard');
+    for(const [img,src] of [[npImg,big],[npBg,pick('standard','small')],[npThumb,small]]){if(!src)img.removeAttribute('src');else if(img.getAttribute('src')!==src)img.src=src;}
+    npTitle.set(item?.name||meta.title||'');npArtist.set(meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'');
+    np.classList.toggle('am-np-empty',!item?.uri);
+    if(npVisible())npLoadMotion(item);
+    if(npLyricsShown())npLoadLyrics(item);
+  }
+  // Moving artwork. A clip is shown once it plays (no black frame first); one that fails leaves the still cover.
+  // Spotify's Chromium has no H.264 decoder (macOS 1.3.6: canPlayType and WebCodecs both say no, FFmpeg finds "no
+  // supported streams"), and Apple's motion artwork is H.264 or HEVC only, so its options are offered only where it plays.
+  const h264=!!document.createElement('video').canPlayType('video/mp4; codecs="avc1.64001f"');
+  const hasMedia=v=>!!(v.srcObject||v.getAttribute('src'));
+  const motionTag='mcloud-spicetify/2.8'; // keep in step with the version comment at the top
+  let npMotionToken=0,npMotionStore={};
+  try{npMotionStore=JSON.parse(localStorage.getItem('mcloud:motion')||'{}')||{};}catch{}
+  const npMotionLookups=new Map();
+  for(const v of [npMotion,npBleed]){
+    v.muted=true;v.loop=true;v.playsInline=true;v.disablePictureInPicture=true;v.preload='auto';v.setAttribute('aria-hidden','true');
+    v.addEventListener('playing',()=>np.classList.toggle(v===npBleed?'am-np-bleeding':'am-np-moving',true));
+    v.addEventListener('error',()=>{if(hasMedia(v))npStopVideo();});
+  }
+  function npStopVideo() {
+    np.classList.remove('am-np-moving','am-np-bleeding','am-np-bleed-tall','am-np-bleed-canvas');
+    for(const v of [npMotion,npBleed])if(hasMedia(v)){v.pause();v.srcObject=null;v.removeAttribute('src');v.load();}
+  }
+  function npPlayVideo() {
+    const v=hasMedia(npBleed)?npBleed:hasMedia(npMotion)?npMotion:null;if(!v)return;
+    // Paused with the music, and while the window or pane is hidden.
+    if(npVisible()&&S.Player.isPlaying?.()){if(v.paused)v.play().catch(()=>{});}else if(!v.paused)v.pause();
+  }
+  async function npLoadMotion(item) {
+    const token=++npMotionToken,kind=settings.npArt;npStopVideo();
+    if(!item?.uri||kind==='cover'||settings.npBg==='plain')return;
+    if(kind==='canvas'){npCanvasFrom=null;npCanvasSrc='';npSyncCanvas();return;}
+    if(!h264)return;
+    const source=await appleMotion(item,kind==='appleTall');
+    if(token!==npMotionToken||!source?.url||!npVisible())return;
+    const v=source.bleed?npBleed:npMotion;if(source.bleed)np.classList.add('am-np-bleed-'+source.bleed);
+    v.src=source.url;npPlayVideo();
+  }
+  // Spotify Canvas: the clip is H.264 too, but Spotify's own Now Playing view (mounted, hidden by user.css) plays it
+  // through Spotify's video player; its frames are shared through captureStream(), with no second download or decode.
+  // Checked every player tick, since that view swaps its clip (or its element) a moment after the track changes.
+  let npCanvasFrom=null,npCanvasSrc='';
+  function npSyncCanvas() {
+    if(settings.npArt!=='canvas'||!npVisible())return;
+    const meta=S.Player.data?.item?.metadata||{},has=!!meta['canvas.url']&&!/IMAGE/.test(meta['canvas.type']||'');
+    const native=has?[...document.querySelectorAll('.am-native-right video')].find(v=>v.currentSrc||v.srcObject)||null:null,src=native?.currentSrc||(native?.srcObject?'stream':'');
+    if(native===npCanvasFrom&&src===npCanvasSrc)return;
+    npCanvasFrom=native;npCanvasSrc=src;npStopVideo();if(!native)return;
+    try{np.classList.add('am-np-bleed-canvas');npBleed.srcObject=native.captureStream();npPlayVideo();}catch{npStopVideo();}
+  }
+  // Apple's motion artwork: m8tec's index names the album's HLS master; its H.264 variant nearest the pane's size points
+  // (EXT-X-MAP) at one fragmented MP4 that a plain <video> plays. Results, misses included (for a day), are kept.
+  async function hlsVideo(master,size) {
+    const lines=(await (await fetch(master)).text()).split('\n');let best=null;
+    for(let i=0;i<lines.length;i++){
+      const info=/^#EXT-X-STREAM-INF:(.*)/.exec(lines[i])?.[1],url=lines[i+1]?.trim();if(!info||!url||!/avc1/.test(info))continue;
+      const w=Number(/RESOLUTION=(\d+)x/.exec(info)?.[1])||0,bw=Number(/(?:^|,)BANDWIDTH=(\d+)/.exec(info)?.[1])||0,c={w,bw,url};
+      if(!best||(best.w<size?w>best.w||(w===best.w&&bw>best.bw):w>=size&&(w<best.w||(w===best.w&&bw>best.bw))))best=c;
+    }
+    if(!best)return null;
+    const variant=new URL(best.url,master).href,map=/#EXT-X-MAP:URI="([^"]+)"/.exec(await (await fetch(variant)).text())?.[1];
+    return map?new URL(map,variant).href:null;
+  }
+  function appleMotion(item,tall) {
+    const meta=item.metadata||{},artist=item.artists?.[0]?.name||meta.artist_name||'',album=item.album?.name||meta.album_title||'';
+    if(!artist||!album||!item.uri.startsWith('spotify:track:'))return null;
+    const key=(item.album?.uri||meta.album_uri||artist+'|'+album)+(tall?'|tall':''),kept=npMotionStore[key];
+    if(kept&&(kept.url||Date.now()-kept.at<864e5))return kept.url?kept:null;
+    if(!npMotionLookups.has(key))npMotionLookups.set(key,(async()=>{
+      const response=await fetch('https://artwork.m8tec.top/api/v1/artwork/search?'+new URLSearchParams({artist,album,client:motionTag}));
+      const found=response.ok?await response.json():null,master=tall&&found?.url_tall||found?.url;
+      if(!response.ok&&response.status!==404)throw new Error('m8tec '+response.status);
+      const size=Math.min(1100,Math.round((npArt.clientWidth||340)*(devicePixelRatio||1)));
+      const url=master?await hlsVideo(master,size):null,result={url,bleed:url&&tall&&found.url_tall?'tall':'',at:Date.now()};
+      npMotionStore[key]=result;const keys=Object.keys(npMotionStore);for(const k of keys.slice(0,Math.max(0,keys.length-300)))delete npMotionStore[k];
+      try{localStorage.setItem('mcloud:motion',JSON.stringify(npMotionStore));}catch{}
+      return url?result:null;
+    })().catch(()=>null).finally(()=>npMotionLookups.delete(key)));
+    return npMotionLookups.get(key);
+  }
+  // Lyrics, as in Apple Music: the line being sung is bright, the rest dim; a line plays from where it is clicked. The
+  // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
+  let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npScrollFrame=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
+  // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
+  const npLyricsShown=()=>npFullOn||settings.npLyricsPlace==='below'||settings.npBg==='plain';
+  for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
+  // Back to the line being sung, at once; flash marks where the lyrics are.
+  function npJumpLyrics() { npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;npSyncLyric(); }
+  async function fetchLyrics(uri) {
+    const [,type,id]=uri.split(':');if(type!=='track'||!S.CosmosAsync?.get)return null;
+    try{
+      const lyrics=(await S.CosmosAsync.get(`https://spclient.wg.spotify.com/color-lyrics/v2/track/${id}?format=json&vocalRemoval=false&market=from_token`))?.lyrics;
+      if(!lyrics?.lines?.length)return null;
+      return {synced:lyrics.syncType!=='UNSYNCED',provider:lyrics.providerDisplayName||lyrics.provider||'',lines:lyrics.lines.map(l=>({t:Number(l.startTimeMs)||0,text:(l.words||'').trim()}))};
+    }catch{return null;}
+  }
+  async function npLoadLyrics(item) {
+    const uri=item?.uri||'';if(uri===npLyricUri)return;
+    npLyricUri=uri;npLyrics=null;npLyricIndex=-2;npLyricJump=true;clearTimeout(npLyricTimer);np.classList.remove('am-np-nolyrics');
+    npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Sözler yükleniyor…','Loading lyrics…')));
+    if(!npLyricCache.has(uri)){npLyricCache.set(uri,uri?await fetchLyrics(uri):null);if(npLyricCache.size>30)npLyricCache.delete(npLyricCache.keys().next().value);}
+    if(uri!==npLyricUri)return;
+    npLyrics=npLyricCache.get(uri);if(!npLyrics?.synced)requestAnimationFrame(()=>{npLyricsBox.scrollTop=0;});
+    np.classList.toggle('am-np-nolyrics',!npLyrics);
+    if(!npLyrics){npLyricsBox.replaceChildren(el('div','am-np-lyrics-note',T('Bu şarkının sözleri yok.','Lyrics aren\'t available for this song.')));return;}
+    npLyricsBox.classList.toggle('am-np-unsynced',!npLyrics.synced);
+    const nodes=npLyrics.lines.map(line=>{
+      const node=el(npLyrics.synced?'button':'div','am-np-line',line.text||'♪');line.node=node;
+      if(npLyrics.synced){node.type='button';node.addEventListener('click',()=>{try{S.Player.seek(line.t);npUserScroll=-Infinity;npLyricJump=true;setTimeout(npSyncLyric,250);}catch{}});}
+      return node;
+    });
+    const credit=npLyrics.provider?[el('div','am-np-lyrics-credit',T('Sözler: ','Lyrics provided by ')+npLyrics.provider)]:[];
+    npLyricsBox.replaceChildren(...nodes,...credit);npSyncLyric();
+  }
+  function npSyncLyric() {
+    clearTimeout(npLyricTimer);
+    if(!npLyrics?.synced||!npVisible()||!npLyricsShown())return;
+    const at=S.Player.getProgress?.()||0,lines=npLyrics.lines;let index=-1;
+    while(index+1<lines.length&&lines[index+1].t<=at+120)index++;
+    if(index!==npLyricIndex){
+      npLyricsBox.querySelector('.am-current')?.classList.remove('am-current');npLyricIndex=index;
+      const node=lines[index]?.node;node?.classList.add('am-current');
+      // Follows the song unless the reader scrolled in the last few seconds; the first line shown after loading (or a
+      // seek's click) is jumped to, the next ones glide.
+      // Placed in the next frame: its layout is due then anyway, while reading offsetTop now would force one more.
+      if(node&&performance.now()-npUserScroll>4000){
+        const behavior=npLyricJump||reducedMotion.matches?'auto':'smooth';npLyricJump=false;cancelAnimationFrame(npScrollFrame);
+        npScrollFrame=requestAnimationFrame(()=>{if(node.isConnected)npLyricsBox.scrollTo({top:node.offsetTop-npLyricsBox.clientHeight*.3,behavior});});
+      }
+    }
+    const next=lines[index+1];
+    if(next&&S.Player.isPlaying?.())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
+  }
+  // Back in view, a clip that was found while the window was hidden gets its turn.
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(npLyricTimer);npPlayVideo();}else if(!hasMedia(npMotion)&&!hasMedia(npBleed))npTrackKey='';});
+  // Settings. With the settings window (#76) they are defined there; before it, they load here and get a menu of their own.
+  const npDefs=[];
+  function npSetting(def) {
+    if(typeof defineSetting==='function')return defineSetting(def);
+    let saved;try{saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[def.key];}catch{}
+    settings[def.key]=def.type==='toggle'?(typeof saved==='boolean'?saved:def.default):(def.options.some(([value])=>value===saved)?saved:def.default);
+    npDefs.push(def);def.apply?.(settings[def.key]);
+  }
+  function npSet(key,value) {
+    if(typeof setSetting==='function')return setSetting(key,value);
+    settings[key]=value;saveSettings();npDefs.find(d=>d.key===key)?.apply?.(value);applySettings();
+  }
+  if(typeof settingGroup==='function')settingGroup('nowplaying',T('Şimdi Çalan','Now Playing'),'nowPlaying');
+  const npApplyAll=()=>npApply();
+  npSetting({key:'nowPlaying',group:'nowplaying',type:'choice',style:'segmented',default:'off',label:T('Şimdi Çalan paneli','Now Playing sidebar'),
+    options:[['off',T('Kapalı','Off')],['beside',T('Oynatıcının yanında','Beside the player')],['only',T('Yalnızca panel','Sidebar only')]],
+    note:T('“Yalnızca panel” alttaki oynatıcıyı gizler; tüm kontroller panele geçer.','“Sidebar only” hides the bottom player and moves every control into the sidebar.'),apply:()=>{npWant=null;npApply();}});
+  npSetting({key:'npLayout',group:'nowplaying',type:'choice',style:'segmented',default:'card',label:T('Panel görünümü','Sidebar style'),
+    options:[['card',T('Cam kart','Glass card')],['docked',T('Kenara yapışık','Docked')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
+    options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')],['plain',T('Sade (Apple)','Plain (Apple)')]],
+    note:T('“Sade”: Apple Music’in Mac’teki söz paneli gibi; kapak ve başlık yok, yalnızca sözler.','“Plain”: like Apple Music’s lyrics pane on the Mac: no artwork or header, only the lyrics.'),apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
+    options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],...(h264?[['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')]]:[]),['canvas','Spotify Canvas']],
+    note:h264?T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'):undefined,
+    apply:()=>{npTrackKey='';npTick();},when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
+    options:[['below',T('Kapağın altında','Under the artwork')],['full',T('Yalnızca tam ekranda','Only in full screen')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npReady=true;npApply();
+  // The fallback menu is registered after the mcloud one, which the IIFE's end registers.
+  if(typeof defineSetting!=='function'&&S.Menu?.SubMenu&&S.Menu?.Item)setTimeout(()=>{
+    const items=[];
+    for(const def of npDefs.filter(d=>d.type==='choice')){
+      const own=def.options.map(([value,label])=>new S.Menu.Item(def.label+': '+label,settings[def.key]===value,()=>{npSet(def.key,value);own.forEach((item,i)=>item.setState(def.options[i][0]===value));}));
+      items.push(...own);
+    }
+    new S.Menu.SubMenu(T('mcloud: Şimdi Çalan','mcloud: Now Playing'),items).register();
+  });
   S.Player.addEventListener('songchange',syncPlayer);S.Player.addEventListener('onplaypause',syncPlayer);
   player.addEventListener('pointerenter',syncPlayer);
   player.addEventListener('focusin',syncPlayer);
@@ -2171,14 +2687,17 @@
   // Apple Music takes the page colour from the artwork. Spotify's extracted colour is often off (grey
   // photos come back reddish), so the artwork is sampled: the most colourful hue family wins, and an
   // image with little colour gives its plain average. i.scdn.co allows CORS, so the canvas stays readable.
-  function artworkColor(url) {
+  // band: [top, bottom] as fractions of the image's height to sample (the artist header: the lower half of the photo,
+  // the strip that fades into the page, so the page continues the photo's bottom; p6, issue #74); the whole image when unset.
+  function artworkColor(url,band) {
     return new Promise(resolve=>{
       if(!url)return resolve(null);
       const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
       img.onerror=()=>resolve(null);
       img.onload=()=>{try{
         const size=32,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
-        const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(img,0,0,size,size);
+        const context=canvas.getContext('2d',{willReadFrequently:true}),h=img.naturalHeight||img.height;
+        if(band)context.drawImage(img,0,band[0]*h,img.naturalWidth||img.width,(band[1]-band[0])*h,0,0,size,size);else context.drawImage(img,0,0,size,size);
         const data=context.getImageData(0,0,size,size).data,bins=Array.from({length:12},()=>[0,0,0,0]),total=[0,0,0];
         for(let i=0;i<data.length;i+=4){
           const r=data[i],g=data[i+1],b=data[i+2],max=Math.max(r,g,b),chroma=max-Math.min(r,g,b);
@@ -2381,23 +2900,31 @@
   }
   function releaseCard(release,{subtitle,round}={}) {
     if(!release?.uri)return null;
-    const card=el('button','am-card'+(round?' am-card-round':''));card.type='button';card.title=release.name||'';card.dataset.uri=release.uri;card.draggable=true;
+    // A wrapper, not one button: Apple's play and "…" sit over the artwork on hover, and buttons can't nest.
+    const card=el('div','am-card'+(round?' am-card-round':''));card.title=release.name||'';card.dataset.uri=release.uri;card.draggable=true;
+    const open=el('button','am-card-open');open.type='button';
     const art=el('span','am-card-art');art.append(lazyImage(artistImage(release.coverArt||release.visuals?.avatarImage||release.images?.items?.[0])));
-    card.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
-    if(subtitle)card.append(el('span','am-card-sub',subtitle));
-    card.addEventListener('click',()=>openUri(release.uri));
-    card.addEventListener('contextmenu',event=>{
-      event.preventDefault();event.stopPropagation();
-      const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
-      togglePopover({x:event.clientX,y:event.clientY},()=>[
-        {label:T('Çal','Play'),action:()=>openUri(release.uri)},
-        ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
-        ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
-        '-',
-        {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-      ]);
-    });
+    open.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
+    if(subtitle)open.append(el('span','am-card-sub',subtitle));
+    open.addEventListener('click',()=>openUri(release.uri));
+    const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
+    const items=()=>[
+      {label:T('Çal','Play'),action:()=>playArtist(release.uri)},
+      ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
+      ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
+      '-',
+      {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+    ];
+    card.append(open);if(!round)card.append(cardTools(release.uri,items));
+    card.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
     return card;
+  }
+  // Apple Music's hover controls over an artwork: round glass play (bottom left) and "…" (bottom right).
+  function cardTools(uri,items) {
+    const tools=el('span','am-card-tools');
+    const more=button(T('Diğer seçenekler','More'),'more',event=>{event.stopPropagation();togglePopover(more,items);},'am-tool-more');
+    tools.append(button(T('Çal','Play'),'play',event=>{event.stopPropagation();playArtist(uri);},'am-tool-play'),more);
+    return tools;
   }
   async function toggleSaved(uri,saved) {
     const api=S.Platform.LibraryAPI;
@@ -2490,7 +3017,7 @@
     const header=artist.headerImage?.data||visuals.headerImage,avatarOnly=!header?.sources?.length;
     const spotifyColor=header?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
     const fallbackTint=setTimeout(()=>{if(request===artistRequest)setTint(spotifyColor);},600);
-    artworkColor(smallImage(header||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
+    artworkColor(smallImage(header||visuals.avatarImage),avatarOnly?null:[.5,1]).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
     const back=button(T('Geri','Back'),'left',()=>H.goBack?.(),'am-artist-back');
@@ -2556,22 +3083,21 @@
         block.append(el('h2','am-shelf-title',T('Son Çıkan','Latest Release')));
         const card=el('div','am-latest-card');
         const cover=el('button','am-latest-art');cover.type='button';cover.title=latest.name||'';cover.dataset.uri=latest.uri;cover.draggable=true;cover.append(lazyImage(artistImage(latest.coverArt)));cover.addEventListener('click',()=>openUri(latest.uri));
-        cover.addEventListener('contextmenu',event=>{
-          event.preventDefault();event.stopPropagation();
-          const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
-          togglePopover({x:event.clientX,y:event.clientY},()=>[
-            {label:T('Çal','Play'),action:()=>openUri(latest.uri)},
-            {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(latest.uri)},
-            '-',
-            {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-          ]);
-        });
+        const shareLink='https://open.spotify.com/'+latest.uri.split(':').slice(1).join('/');
+        const latestItems=()=>[
+          {label:T('Çal','Play'),action:()=>playArtist(latest.uri)},
+          {label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(latest.uri)},
+          '-',
+          {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
+        ];
+        const coverBox=el('div','am-latest-cover');coverBox.append(cover,cardTools(latest.uri,latestItems));
+        coverBox.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},latestItems);});
         const info=el('div','am-latest-info');
         info.append(el('span','am-latest-date',releaseDate(latest.date)),el('span','am-latest-name',(latest.name||'')+(releaseLabel[latest.type]?' - '+releaseLabel[latest.type]:'')));
         const count=latest.tracks?.totalCount;if(count)info.append(el('span','am-latest-count',count+T(' şarkı',count===1?' song':' songs')));
         let added=false;
         const add=button(T('Arşive ekle','Add to Library'),'plus',async()=>{try{added=await toggleSaved(latest.uri,added);add.classList.toggle('am-active',added);notify(added?T('Arşive eklendi.','Added to Library.'):T('Arşivden çıkarıldı.','Removed from Library.'));}catch{notify(T('Arşiv güncellenemedi.','Couldn\'t update your library.'));}},'am-latest-add');
-        info.append(add);card.append(cover,info);block.append(card);track.append(block);
+        info.append(add);card.append(coverBox,info);block.append(card);track.append(block);
       }
       if(topTracks.length){
         const block=el('div','am-top-songs');
@@ -2585,7 +3111,8 @@
           const albumName=song.albumOfTrack?.name;
           const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
           text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
-          playSong.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'),text);
+          const thumb=el('span','am-song-thumb');thumb.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'));thumb.insertAdjacentHTML('beforeend',svg('play'));
+          playSong.append(thumb,text);
           const songItems=()=>menuGroups(
             [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)}],
             [{label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)}],
@@ -2713,8 +3240,116 @@
     else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
     else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
     currentMode='native';
-    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
+    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();syncBrowse();
   });
+  // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
+  // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
+  // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows
+  // the issue's reference loosely); the sidebar and player dim with it. Its background is a choice: the current song's
+  // cover blurred (as in the reference), the sheets' glass, or Spotify's colour from the cover. The cover is read from
+  // the info column, or from the canvas card nearest the middle when the song shows none. Spotify keeps the same nodes
+  // from song to song, so only image sources and the scrolled list are watched, never its progress bar.
+  // Browse all (Search's category tiles, what the sidebar's Browse opens) is Apple Music's Browse Categories in user.css.
+  // Browse all's pictures as Apple's duotones. Measured on Apple Music's tiles (macOS 27, focused, identical in light
+  // and dark): each pixel is the tile's colour times the photo's grey (the three channels scale alike), so the photo's
+  // whites are the tile colour and its blacks near black (5-25% of it). Apple's cut-outs are mostly bright: a tile
+  // averages 0.79-0.96 of its colour's luminance, median 1. Spotify's covers are darker and carry big titles, so their
+  // grey is stretched (2nd to 98th percentile; a flat picture is left as it is), lifted by the gamma that brings the
+  // tile's mean to 0.85, and its contrast softened so the darkest part is 25% of the colour (titles recede). The
+  // highlights stay exactly the tile colour. Drawn once per cover and colour into a blob at the tile's device size,
+  // shown while the tile is near the viewport and released (revoked) when it leaves; nothing is filtered or blended
+  // while scrolling.
+  const duoCache=new Map(),duoTiles=new Map();let duoGrid=null,duoTimer=0;
+  const duoAdded=new MutationObserver(()=>syncBrowse());
+  const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
+  function duoKey(tile){const img=tile.querySelector(':scope > img[src]');return img&&{src:img.currentSrc||img.src,color:getComputedStyle(tile).backgroundColor};}
+  // Apple's tile colours are brighter and more vivid than Spotify's (OKLCH lightness 0.53-0.79, chroma 0.10-0.22 against
+  // Spotify's 0.33-0.60 and 0.05-0.24). The colour keeps its hue and is pushed to chroma 0.26 inside sRGB (by eye, a
+  // little past Apple), lightened towards 0.58 only as far as that chroma still fits. Greys stay grey.
+  function duoColor(rgb) {
+    const lin=v=>(v/=255)<=.04045?v/12.92:((v+.055)/1.055)**2.4,enc=v=>255*(v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055);
+    const [r,g,b]=rgb.map(lin),l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),s=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+    const L=.2104542553*l+.793617785*m-.0040720468*s,A=1.9779984951*l-2.428592205*m+.4505937099*s,B=.0259040371*l+.7827717662*m-.808675766*s,C=Math.hypot(A,B);
+    if(C<.03)return rgb;
+    const out=(L,c)=>{const a=A/C*c,bb=B/C*c,l=(L+.3963377774*a+.2158037573*bb)**3,m=(L-.1055613458*a-.0638541728*bb)**3,s=(L-.0894841775*a-1.291485548*bb)**3;
+      return [4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s];};
+    const want=Math.max(C,.26),fits=(L,c)=>out(L,c).every(v=>v>=0&&v<=1),most=L=>{if(fits(L,want))return want;let lo=0,hi=want;for(let i=0;i<20;i++){const c=(lo+hi)/2;fits(L,c)?lo=c:hi=c;}return lo;};
+    let best=[L,0];for(let i=0;i<=24;i++){const L2=Math.max(L,.58)-(Math.max(L,.58)-L)*i/24,c=most(L2);if(c>best[1]+1e-4)best=[L2,c];if(c>=want-1e-4)break;}
+    return out(...best).map(v=>Math.round(enc(Math.min(1,Math.max(0,v)))));
+  }
+  function duoDraw({src,color},w,h) {
+    return new Promise(resolve=>{
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d',{willReadFrequently:true});
+        // Cover the tile, as Apple's photos do.
+        const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+        context.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+        const data=context.getImageData(0,0,w,h),p=data.data,grey=new Uint8Array(p.length/4),hist=new Uint32Array(256);
+        for(let i=0,j=0;i<p.length;i+=4,j++){const g=Math.round(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);grey[j]=g;hist[g]++;}
+        const at=f=>{let n=0,k=0;for(;k<255&&n+hist[k]<=grey.length*f;k++)n+=hist[k];return k;},[lo,hi]=at(.98)-at(.02)<32?[0,255]:[at(.02),at(.98)];
+        // A cover that is mostly black (Charts: white type on black) cannot reach it by gamma; its shadows rise instead.
+        let floor=.25;const x=g=>Math.min(1,Math.max(0,(g-lo)/(hi-lo))),tone=(g,gamma)=>floor+(1-floor)*x(g)**gamma;
+        const mean=gamma=>{let s=0;for(let g=0;g<256;g++)s+=hist[g]*tone(g,gamma);return s/grey.length;};
+        let gamma=1;if(mean(1)<.85){let a=.1,b=1;for(let i=0;i<16;i++){const m=(a+b)/2;if(mean(m)>.85)a=m;else b=m;}gamma=(a+b)/2;}
+        if(mean(gamma)<.84){floor=0;const m=mean(gamma);floor=Math.min(.7,(.85-m)/(1-m));}
+        const c=duoColor(color.match(/[\d.]+/g).slice(0,3).map(Number)),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
+        for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
+        context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
+      }catch{resolve(null);}};
+      img.src=src;
+    });
+  }
+  function duoShow(tile) {
+    const key=duoKey(tile);if(!key)return;
+    const k=devicePixelRatio||1,w=Math.round(tile.offsetWidth*k),h=Math.round(tile.offsetHeight*k),id=`${key.src}|${key.color}|${w}x${h}`;
+    if(duoTiles.get(tile)===id||!w||!h)return;
+    duoHide(tile);duoTiles.set(tile,id);
+    let entry=duoCache.get(id);if(!entry){entry={refs:0,url:duoDraw(key,w,h)};duoCache.set(id,entry);}
+    entry.refs++;
+    entry.url.then(url=>{if(url&&duoTiles.get(tile)===id){tile.style.setProperty('--am-duo',`url("${url}")`);tile.setAttribute('data-am-duo','');}});
+  }
+  function duoHide(tile) {
+    const id=duoTiles.get(tile);if(!id)return;duoTiles.delete(tile);
+    tile.removeAttribute('data-am-duo');tile.style.removeProperty('--am-duo');
+    const entry=duoCache.get(id);if(entry&&--entry.refs<=0){duoCache.delete(id);entry.url.then(url=>url&&URL.revokeObjectURL(url));}
+  }
+  // The grid mounts a moment after Search opens; it is looked for a few times, then its tiles are watched.
+  function syncBrowse(tries=0) {
+    clearTimeout(duoTimer);
+    const grid=routePath()==='/search'&&!document.hidden?document.querySelector('.am-native-main .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"])'):null;
+    if(grid!==duoGrid){duoObserver?.disconnect();duoAdded.disconnect();for(const tile of [...duoTiles.keys()])duoHide(tile);duoGrid=grid;if(grid)duoAdded.observe(grid,{childList:true});}
+    if(!grid){if(routePath()==='/search'&&!document.hidden&&tries<20)duoTimer=setTimeout(()=>syncBrowse(tries+1),250);return;}
+    for(const tile of grid.querySelectorAll(':scope > [role="listitem"] > a > div[style*="background-color"]'))duoObserver?.observe(tile);
+  }
+  const pvMaterials=['artwork','glass','color'];
+  defineSetting({key:'previewMaterial',group:'pages',section:T('Şarkı önizlemesi','Song previews'),label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
+    options:[['artwork',T('Bulanık kapak','Blurred artwork')],['glass',T('Cam','Glass')],['color',T('Kapak rengi','Artwork colour')]],apply:v=>pvMaterials.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
+  let previewView=null,previewWatch=null,previewFrame=0;
+  function previewArt() {
+    previewFrame=0;const view=previewView;if(!view?.isConnected||document.hidden)return;
+    let art=view.querySelector(':scope > div > div:first-child img[src]');
+    if(!art){const box=view.getBoundingClientRect(),mid=box.top+box.height/2;let best=Infinity;
+      for(const img of view.querySelectorAll(':scope > div > div:nth-child(2) img[src]')){const r=img.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-mid);if(r.height&&d<best){best=d;art=img;}}}
+    const value=art?`url("${art.currentSrc||art.src}")`:'';
+    if(document.documentElement.style.getPropertyValue('--am-preview-art')!==value)value?document.documentElement.style.setProperty('--am-preview-art',value):document.documentElement.style.removeProperty('--am-preview-art');
+  }
+  const previewArtSoon=()=>{previewFrame||=requestAnimationFrame(previewArt);};
+  function syncPreview() {
+    const view=root.querySelector(':scope > * > [data-testid="watch-feed-view"]');
+    if(view===previewView)return;
+    previewWatch?.disconnect();previewWatch=null;previewView?.removeEventListener('scrollend',previewArtSoon,true);
+    previewView=view;document.body.classList.toggle('am-preview-open',!!view);
+    if(!view){document.documentElement.style.removeProperty('--am-preview-art');return;}
+    if(!view.parentElement.hasAttribute('data-am-preview'))view.parentElement.setAttribute('data-am-preview','');
+    previewWatch=new MutationObserver(previewArtSoon);previewWatch.observe(view,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
+    view.addEventListener('scrollend',previewArtSoon,{capture:true,passive:true});previewArt();
+  }
+  // The dimmed sidebar and player act as the backdrop: a click there closes the preview, as Spotify's backdrop does.
+  document.addEventListener('click',event=>{
+    if(!previewView?.isConnected||!(event.target instanceof Element)||!event.target.closest('#am-sidebar,#am-player'))return;
+    event.preventDefault();event.stopPropagation();previewView.querySelector('[data-testid="watch-feed-close-button"]')?.click();
+  },true);
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
   const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
@@ -2722,6 +3357,7 @@
   function scheduleReconcile(records) {
     if(document.hidden)return;
     if(records.some(record=>record.target===main.parentElement&&record.addedNodes.length))bindPanes();
+    if(records.some(record=>record.target===root))syncPreview();
     // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
     const right=document.querySelector('.am-native-right');
     if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
@@ -2742,14 +3378,76 @@
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();observer.observe(root,{childList:true,subtree:true});}
+    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
     const input=libraryView.querySelector('.am-library-filter');
     if(input){event.preventDefault();input.focus();input.select();}
   });
-  // Track numbers can be hidden (settings.numbers, body.am-no-numbers). Spotify's "Change visible columns" menu is
+  // Album and playlist page settings (#72). With the settings window's API (defineSetting) they show up there; a build
+  // without it loads them here and lists them in a submenu of their own.
+  const ownSettings=[];
+  function pageSetting(def) {
+    if(typeof defineSetting==='function')return defineSetting(def);
+    const ok=value=>typeof value===typeof def.default&&(!def.options||def.options.some(([option])=>option===value));
+    let saved;try{saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[def.key];}catch{}
+    if(!ok(settings[def.key]))settings[def.key]=ok(saved)?saved:def.default;
+    ownSettings.push(def);def.apply?.(settings[def.key]);
+  }
+  function changeSetting(key,value) {
+    if(typeof setSetting==='function')return setSetting(key,value);
+    settings[key]=value;saveSettings();ownSettings.find(def=>def.key===key)?.apply?.(value);applySettings();
+  }
+  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
+  // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
+  // the page. Someone who had hid them keeps them hidden on albums too.
+  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
+  const numbersKey=()=>albumId()?'numbersAlbum':'numbers';
+  function syncNumbers(){document.body.classList.toggle('am-no-numbers',!settings[numbersKey()]);}
+  document.addEventListener('am-settings',syncNumbers);H.listen(syncNumbers);
+  // An album's artists and artwork colour, from Spotify's own album query (one per album, kept for the session).
+  // The artist rule is a stylesheet keyed on the artists' ids, so React re-rendering rows needs no work here.
+  const albumInfo=new Map(),albumStyle=el('style','');albumStyle.id='am-album-style';document.head.append(albumStyle);
+  let albumRequest=0;
+  async function albumData(id) {
+    if(albumInfo.has(id))return albumInfo.get(id);
+    let info=null;
+    try{
+      const album=(await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:1}))?.data?.albumUnion;
+      if(album?.name)info={artists:(album.artists?.items||[]).map(a=>/[A-Za-z0-9]+$/.exec(a.uri||'')?.[0]).filter(Boolean),cover:smallImage(album.coverArt)};
+    }catch{}
+    if(info){if(albumInfo.size>50)albumInfo.delete(albumInfo.keys().next().value);albumInfo.set(id,info);}
+    return info;
+  }
+  async function syncAlbum() {
+    const id=albumId(),request=++albumRequest,tint=settings.albumTint!=='off',body=document.body.classList;
+    if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum||!settings.albumClean&&!tint){albumStyle.textContent='';body.remove('am-album-tinted');return;}
+    const cached=albumInfo.get(id);if(!cached?.color)body.remove('am-album-tinted');
+    const info=cached||await albumData(id);
+    if(request!==albumRequest)return;
+    if(!info){albumStyle.textContent='';return;}
+    const sub='.main-trackList-rowMainContent > :last-child';
+    albumStyle.textContent=settings.albumClean&&info.artists.length?`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')})) ${sub}{display:none!important}`:'';
+    if(!tint)return;
+    if(info.color===undefined)info.color=await artworkColor(info.cover);
+    if(request!==albumRequest)return;
+    const hsl=hexToHsl(info.color);if(!hsl)return;
+    // A grey cover keeps a grey page (see setTint); other colours are kept clear of muddy and neon extremes.
+    const [h,s,l]=hsl,sat=Math.round((s<.1?s:Math.min(.8,Math.max(.35,s)))*100),light=Math.round(Math.min(.55,Math.max(.32,l))*100);
+    document.documentElement.style.setProperty('--am-album-tint',`hsl(${Math.round(h)} ${sat}% ${light}%)`);
+    body.add('am-album-tinted');
+  }
+  H.listen(syncAlbum);
+  pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
+  // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
+  pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
+  // Album pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
+  const albumTints=['off','subtle','full'];
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
+    options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
+    apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
+  // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
   // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.
   function addNumberColumn() {
@@ -2767,8 +3465,8 @@
     const mark=el('label',check.querySelector('label')?.className||'');mark.append(el('span',check.querySelector('label span')?.className||''));form.append(box,mark);
     const inner=el('div',checkBox.firstElementChild?.className||'');inner.append(form);const outer=el('div',checkBox.className);outer.append(inner);
     const labelWrap=el('div',labelBox.className);labelWrap.append(label);b.append(labelWrap,outer);item.append(b);
-    const sync=()=>{b.setAttribute('aria-checked',String(settings.numbers));box.checked=settings.numbers;label.className=label.className.replace(/encore-internal-color-text-(bright-accent|base)/,'encore-internal-color-text-'+(settings.numbers?'bright-accent':'base'));};
-    b.addEventListener('click',event=>{event.stopPropagation();settings.numbers=!settings.numbers;saveSettings();applySettings();sync();});
+    const sync=()=>{const on=!!settings[numbersKey()];b.setAttribute('aria-checked',String(on));box.checked=on;label.className=label.className.replace(/encore-internal-color-text-(bright-accent|base)/,'encore-internal-color-text-'+(on?'bright-accent':'base'));};
+    b.addEventListener('click',event=>{event.stopPropagation();changeSetting(numbersKey(),!settings[numbersKey()]);sync();});
     sync();sample.parentElement.before(item);return true;
   }
   // The menu mounts a moment after its button is clicked; look for it for a few frames instead of observing the page.
@@ -2777,26 +3475,148 @@
     if(!target?.closest('.main-trackList-trackListHeader button')||target.closest('.main-trackList-trackListHeaderRow'))return;
     let frames=0;const look=()=>{if(!addNumberColumn()&&++frames<30)requestAnimationFrame(look);};requestAnimationFrame(look);
   },true);
-  // Profile menu → mcloud. Older Spicetify builds without Menu keep the defaults.
-  if(S.Menu?.SubMenu&&S.Menu?.Item){
-    const toggle=(label,key)=>{const item=new S.Menu.Item(label,settings[key],()=>{settings[key]=!settings[key];item.setState(settings[key]);saveSettings();applySettings();});return item;};
-    const numbers=toggle(T('Parça numaraları','Track numbers'),'numbers');document.addEventListener('am-settings',()=>numbers.setState(settings.numbers));
-    const glassLabels={full:T('Tam','Full'),balanced:T('Dengeli','Balanced'),eco:T('Eko','Eco')};
-    // The checkmark shows the mode in effect: reduced transparency in the OS keeps Eco whatever is picked.
-    const glassMode=()=>reducedTransparency.matches?'eco':settings.glass,syncGlass=()=>glass.forEach((item,i)=>item.setState(glassModes[i]===glassMode()));
-    const glass=glassModes.map(key=>new S.Menu.Item(T('Cam efekti: ','Glass effect: ')+glassLabels[key],glassMode()===key,()=>{
-      settings.glass=key;saveSettings();applySettings();syncGlass();
-      if(key!=='eco'&&reducedTransparency.matches)notify(T('Sistem ayarlarında saydamlık kapalı olduğu için cam efekti açılamıyor.','Transparency is reduced in your system settings, so the glass effect stays off.'));
-    }));
-    reducedTransparency.addEventListener?.('change',syncGlass);
-    // How many recent playlists the sidebar lists under the pinned ones: fewer for a calmer sidebar, more for fewer clicks.
-    const recents=listPeeks.map(n=>new S.Menu.Item(T('Son listeler: ','Recent playlists: ')+(n||T('Yok','None')),settings.recent===n,()=>{
-      settings.recent=n;saveSettings();recents.forEach((item,i)=>item.setState(listPeeks[i]===n));renderLists(true);
-    }));
-    const colors=Object.entries(accents).map(([key,[label]])=>new S.Menu.Item(T('Renk: ','Colour: ')+label,settings.accent===key,()=>setAccent(key)));
-    accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
-    const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
-    new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
+  // Settings window (#am-settings), drawn from settingDefs whenever it opens or a tab changes, so a feature's defineSetting
+  // shows here with no change below. Apple Music's Settings window: a tab per group in its toolbar, a form of right-aligned
+  // labels with checkboxes and pop-ups, OK to close; frosted, in Apple's dark Settings colours (user.css). It is not
+  // modal: the page stays usable and the title bar moves it.
+  const settingsBack=el('div','am-settings-back'),settingsBox=el('div','am-settings-box');settingsBack.id='am-settings';settingsBack.append(settingsBox);
+  settingsBox.setAttribute('role','dialog');settingsBox.setAttribute('aria-modal','false');settingsBox.setAttribute('aria-labelledby','am-settings-title');settingsBox.tabIndex=-1;
+  let settingsTab='',settingsReturn=null,settingsSyncs=[],settingsDrag=null,settingsShown='';
+  const shownDefs=()=>settingDefs.filter(d=>{if(d.hidden)return false;try{return !d.when||d.when();}catch{return false;}});
+  function renderSettings() {
+    const defs=shownDefs(),groups=settingGroups.filter(g=>defs.some(d=>d.group===g.id));
+    if(!groups.some(g=>g.id===settingsTab))settingsTab=groups[0]?.id||'';
+    const tab=groups.find(g=>g.id===settingsTab),scroll=settingsBox.querySelector('.am-settings-body')?.scrollTop||0;
+    const focusKey=settingsBox.contains(document.activeElement)&&document.activeElement.closest('.am-settings-row')?.dataset.key;
+    settingsSyncs=[];settingsBox.replaceChildren();settingsShown=defs.map(d=>d.key).join();
+    const bar=el('div','am-settings-titlebar'),title=el('h2','am-settings-title',tab?.label||'mcloud');title.id='am-settings-title';
+    bar.append(button(T('Kapat','Close'),'close',closeSettings,'am-settings-close'),title);
+    bar.addEventListener('pointerdown',event=>{
+      if(event.button!==0||event.target.closest('button'))return;
+      settingsBox.getAnimations().forEach(a=>a.finish());const box=settingsBox.getBoundingClientRect();settingsDrag={x:event.clientX-box.left,y:event.clientY-box.top};bar.setPointerCapture?.(event.pointerId);
+    });
+    bar.addEventListener('pointermove',event=>{
+      if(!settingsDrag)return;const w=settingsBox.offsetWidth;
+      settingsBox.style.left=Math.round(Math.max(40-w,Math.min(innerWidth-40,event.clientX-settingsDrag.x)))+'px';
+      settingsBox.style.top=Math.round(Math.max(0,Math.min(innerHeight-40,event.clientY-settingsDrag.y)))+'px';settingsBox.style.translate='none';
+    });
+    bar.addEventListener('pointerup',()=>{settingsDrag=null;});
+    const nav=el('div','am-settings-nav');nav.setAttribute('role','tablist');
+    for(const g of groups){
+      const b=el('button','am-settings-tab'+(g.id===settingsTab?' am-selected':''));b.type='button';b.setAttribute('role','tab');b.dataset.group=g.id;
+      b.setAttribute('aria-selected',String(g.id===settingsTab));b.tabIndex=g.id===settingsTab?0:-1;
+      b.innerHTML=svg(g.icon);b.append(el('span','am-settings-tab-label',g.label));
+      b.onclick=()=>{if(settingsTab===g.id)return;settingsTab=g.id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();};
+      nav.append(b);
+    }
+    nav.addEventListener('keydown',event=>{
+      const step={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[event.key];if(!step)return;event.preventDefault();
+      const i=groups.findIndex(g=>g.id===settingsTab);settingsTab=groups[(i+step+groups.length)%groups.length].id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();
+    });
+    bar.append(nav);
+    const body=el('div','am-settings-body'),foot=el('div','am-settings-footer'),ok=el('button','am-settings-ok','OK');ok.type='button';ok.onclick=closeSettings;foot.append(ok);
+    settingsBox.append(bar,body,foot);
+    if(tab){
+      const section=el('section','am-settings-group');section.dataset.group=tab.id;
+      let card=null,cardSection=null;
+      for(const def of defs.filter(d=>d.group===tab.id)){
+        if(!card||def.section!==cardSection){cardSection=def.section;if(def.section)section.append(el('h4','am-settings-section',def.section));card=el('div','am-settings-card');section.append(card);}
+        card.append(settingRow(def));
+      }
+      body.append(section);
+    }
+    body.scrollTop=scroll;
+    if(focusKey){const c=body.querySelector('.am-settings-row[data-key="'+focusKey+'"] .am-settings-control');(c?.querySelector('[aria-checked="true"]')||c)?.focus({preventScroll:true});}
+  }
+  function settingRow(def) {
+    const row=el('div','am-settings-row am-settings-'+def.type+(def.wide?' am-settings-wide':'')),text=el('div','am-settings-text'),id='am-setting-'+def.key;
+    const label=el('div','am-settings-label',def.label);label.id=id+'-label';text.append(label);row.dataset.key=def.key;
+    if(def.note)text.append(el('div','am-settings-note',def.note));
+    const now=()=>def.value?def.value():settings[def.key];let control;
+    if(def.type==='custom'){const r=def.render(def);control=r.node;settingsSyncs.push(r.sync);}
+    else if(def.type==='toggle'){
+      control=el('button','am-settings-switch');control.type='button';control.setAttribute('role','switch');
+      control.onclick=()=>setSetting(def.key,!settings[def.key]);settingsSyncs.push(()=>control.setAttribute('aria-checked',String(!!now())));
+    } else if(def.style==='segmented'||def.style==='swatches'){
+      control=el('div','am-settings-'+def.style);control.setAttribute('role','radiogroup');
+      const options=def.options.map(([value,name,color])=>{
+        const b=el('button','am-settings-option',def.style==='swatches'?'':name);b.type='button';b.setAttribute('role','radio');
+        if(color){b.style.setProperty('--am-swatch',color);b.title=name;b.setAttribute('aria-label',name);}
+        b.onclick=()=>setSetting(def.key,value);return [value,b];
+      });
+      control.append(...options.map(o=>o[1]));
+      settingsSyncs.push(()=>options.forEach(([value,b])=>{const on=now()===value;b.setAttribute('aria-checked',String(on));b.tabIndex=on?0:-1;}));
+      control.addEventListener('keydown',event=>{
+        const step={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[event.key];if(!step)return;event.preventDefault();
+        const i=def.options.findIndex(o=>o[0]===now()),next=(i+step+def.options.length)%def.options.length;setSetting(def.key,def.options[next][0]);options[next][1].focus();
+      });
+    } else {
+      // A pop-up button: Spotify's <select> opens the system's menu, as NSPopUpButton does.
+      control=el('select','am-settings-select');
+      def.options.forEach(([,name],i)=>{const o=el('option','',name);o.value=String(i);control.append(o);});
+      control.onchange=()=>setSetting(def.key,def.options[+control.value][0]);
+      settingsSyncs.push(()=>{control.value=String(Math.max(0,def.options.findIndex(o=>o[0]===now())));});
+    }
+    control.classList.add('am-settings-control');control.setAttribute('aria-labelledby',label.id);control.id=id;
+    row.append(text,control);settingsSyncs[settingsSyncs.length-1]();return row;
+  }
+  // Rows with a when() come and go as other settings change: then the window is drawn again, else its controls follow.
+  document.addEventListener('am-settings',()=>{if(!settingsBack.isConnected)return;if(shownDefs().map(d=>d.key).join()!==settingsShown)renderSettings();else settingsSyncs.forEach(fn=>fn());});
+  function openSettings(group) {
+    if(group)settingsTab=group;
+    if(!settingsBack.isConnected){settingsReturn=document.activeElement;closePopover();settingsBox.style.cssText='';document.body.append(settingsBack);}
+    renderSettings();
+    if(!settingsBox.contains(document.activeElement))settingsBox.focus({preventScroll:true});
+    return settingsBack.isConnected&&!!settingsBox.querySelector('.am-settings-row');
+  }
+  function closeSettings() {
+    if(!settingsBack.isConnected)return;settingsBack.remove();
+    if(settingsReturn?.isConnected)settingsReturn.focus?.({preventScroll:true});settingsReturn=null;
+  }
+  settingsBox.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();closeSettings();}});
+  // ⌘⌥, (Ctrl+Alt+, on Windows) opens and closes it: ⌘, is Spotify's own Settings.
+  document.addEventListener('keydown',event=>{
+    if(event.code!=='Comma'||!event.altKey||!(event.metaKey||event.ctrlKey)||event.shiftKey)return;
+    event.preventDefault();if(settingsBack.isConnected)closeSettings();else openSettings();
+  },true);
+  // Profile menu → mcloud opens the window. The old mcloud submenu, drawn from the same definitions, is the fallback for
+  // Spicetify builds whose menu items cannot register and for a window that failed to open. Older Spicetify builds
+  // without Menu keep the defaults (and the window's shortcut).
+  function settingsMenu() {
+    const order=d=>settingGroups.findIndex(g=>g.id===d.group),items=[],sync=[];
+    for(const def of settingDefs.filter(d=>d.menu!==false&&!d.hidden).sort((a,b)=>order(a)-order(b))){
+      const now=()=>def.value?def.value():settings[def.key];
+      if(def.type==='custom'){for(const m of def.menu?.()||[]){const item=new S.Menu.Item(m.name,m.checked(),()=>m.toggle());sync.push(()=>item.setState(m.checked()));items.push(item);}continue;}
+      if(def.type==='toggle'){const item=new S.Menu.Item(def.label,!!now(),()=>setSetting(def.key,!settings[def.key]));sync.push(()=>item.setState(!!now()));items.push(item);}
+      else for(const [value,name] of def.options){const item=new S.Menu.Item(def.label+': '+name,now()===value,()=>setSetting(def.key,value));sync.push(()=>item.setState(now()===value));items.push(item);}
+    }
+    document.addEventListener('am-settings',()=>sync.forEach(fn=>fn()));
+    return new S.Menu.SubMenu('mcloud',items);
+  }
+  if(S.Menu?.Item){
+    let entry=null,fallback=null;
+    const useMenu=()=>{try{entry?.deregister?.();}catch{}entry=null;if(!fallback&&S.Menu.SubMenu){fallback=settingsMenu();fallback.register();}};
+    if(typeof S.Menu.Item.prototype?.register==='function'){
+      entry=new S.Menu.Item(T('mcloud Ayarları','mcloud Settings'),false,()=>{
+        let opened=false;try{opened=openSettings();}catch(e){console.warn('[AppleMusicMac] Settings',e);}
+        if(!opened){closeSettings();useMenu();notify(T('Ayarlar penceresi açılamadı; ayarlar profil menüsündeki mcloud altında.','The settings window couldn\'t open; the settings are under mcloud in the profile menu.'));}
+      });
+      try{entry.register();}catch{useMenu();}
+    } else useMenu();
+  }
+  // The appearance setting: in the settings window when it is there (issue #76's defineSetting), otherwise its own submenu.
+  {const [label,names]=appearanceLabels().appearance;
+    if(typeof defineSetting==='function')defineSetting({key:'appearance',group:'appearance',label,type:'choice',default:'dark',style:'segmented',options:appearanceModes.map(m=>[m,names[m]]),apply:v=>{settings.appearance=v;applyAppearance();}});
+    else if(S.Menu?.SubMenu&&S.Menu?.Item){
+      const items=appearanceModes.map(m=>new S.Menu.Item(label+': '+names[m],settings.appearance===m,()=>{setAppearance('appearance',m);items.forEach((item,i)=>item.setState(appearanceModes[i]===m));}));
+      new S.Menu.SubMenu(T('mcloud görünüm','mcloud appearance'),items).register();
+    }
+  }
+  if(S.Menu?.SubMenu&&S.Menu?.Item&&ownSettings.length){
+    const items=ownSettings.flatMap(def=>def.type==='toggle'?[[def.label,()=>settings[def.key],()=>changeSetting(def.key,!settings[def.key])]]
+      :def.options.map(([value,label])=>[def.label+': '+label,()=>settings[def.key]===value,()=>changeSetting(def.key,value)]))
+      .map(([label,on,run])=>{const item=new S.Menu.Item(label,on(),run);document.addEventListener('am-settings',()=>item.setState(on()));return item;});
+    new S.Menu.SubMenu(T('mcloud: Albümler','mcloud: Albums'),items).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
