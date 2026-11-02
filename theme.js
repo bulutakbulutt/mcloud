@@ -4,25 +4,28 @@
   window.__appleMusicMac = true;
   // Marketplace loads theme.js and user.css from GitHub Pages. Its deploy (.github/workflows/pages.yml) writes the
   // commit here and on both files' first line; jsDelivr and local copies keep 'dev'.
-  const BUILD = 'dev', REPO = 'bulutakbulutt/mcloud', PAGES = 'https://bulutakbulutt.github.io/mcloud/';
+  const BUILD = 'dev', REPO = 'mcloudHQ/mcloud', PAGES = 'https://mcloudhq.github.io/mcloud/';
   const pages = window.__amPages = { build: BUILD };
   // Installs made before Pages stored jsDelivr @main URLs (or raw ones Marketplace sends to jsDelivr). Marketplace
   // read them before this script ran and can write its in-memory copy back (its update check rebuilds the record from
   // manifest.json, whose usercss stays relative so the record's key does not change), so this runs on every start
   // and writes only when a URL changed. IndexedDB for Marketplace 1.0.9+, localStorage before; never creates the db.
+  // The repo moved from bulutakbulutt to mcloudHQ: installs made before keep the old owner in their key and URLs, and
+  // Marketplace's casing of the owner is not ours, so both owners match case-insensitively.
   pages.migration = (async () => {
-    const OLD = new Set(['theme.js', 'user.css'].flatMap(f => [`https://cdn.jsdelivr.net/gh/${REPO}@main/${f}`, `https://raw.githubusercontent.com/${REPO}/main/${f}`]));
-    const toPages = u => OLD.has(u) ? PAGES + u.slice(u.lastIndexOf('/') + 1) : u;
+    const OWNERS = ['bulutakbulutt', 'mcloudhq'];
+    const OLD = new Set(OWNERS.flatMap(o => ['theme.js', 'user.css'].flatMap(f => [`https://cdn.jsdelivr.net/gh/${o}/mcloud@main/${f}`, `https://raw.githubusercontent.com/${o}/mcloud/main/${f}`])));
+    const toPages = u => typeof u === 'string' && OLD.has(u.toLowerCase()) ? PAGES + u.slice(u.lastIndexOf('/') + 1) : u;
     const rewrite = json => {
       let r; try { r = JSON.parse(json); } catch { return null; }
-      if (!r || r.user !== 'bulutakbulutt' || r.repo !== 'mcloud') return null;
+      if (!r || !OWNERS.includes(String(r.user).toLowerCase()) || r.repo !== 'mcloud') return null;
       const urls = () => JSON.stringify([r.cssURL, r.include, r.manifest?.include]), before = urls();
       r.cssURL = toPages(r.cssURL);
       if (Array.isArray(r.include)) r.include = r.include.map(toPages);
       if (Array.isArray(r.manifest?.include)) r.manifest.include = r.manifest.include.map(toPages);
       return urls() === before ? null : JSON.stringify(r);
     };
-    const ACTIVE = 'marketplace:theme-installed', mine = k => typeof k === 'string' && k.startsWith(`marketplace:installed:${REPO}/`);
+    const ACTIVE = 'marketplace:theme-installed', mine = k => typeof k === 'string' && OWNERS.some(o => k.toLowerCase().startsWith(`marketplace:installed:${o}/mcloud/`));
     const db = await new Promise(res => {
       try { const q = indexedDB.open('spicetify-marketplace'); q.onupgradeneeded = () => q.transaction.abort(); q.onsuccess = () => res(q.result); q.onerror = q.onblocked = () => res(null); }
       catch { res(null); }

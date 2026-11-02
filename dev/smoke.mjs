@@ -2015,7 +2015,7 @@ try {
   await check('Marketplace installs move to GitHub Pages, and a stamped theme.js loads its own commit\'s CSS', async () => {
     // A local copy (the preview) has no Marketplace and no stamp: nothing is written or fetched.
     assert.deepEqual(await page.evaluate(async () => [await __amPages.migration, await __amPages.css]), ['not-active', 'unstamped']);
-    const sha = 'a'.repeat(40), REPO = 'bulutakbulutt/mcloud', PAGES = 'https://bulutakbulutt.github.io/mcloud/';
+    const sha = 'a'.repeat(40), REPO = 'mcloudHQ/mcloud', OLD_REPO = 'bulutakbulutt/mcloud', PAGES = 'https://mcloudhq.github.io/mcloud/';
     const source = fs.readFileSync(path.join(here, '..', 'theme.js'), 'utf8');
     const stamped = source.replace("const BUILD = 'dev'", `const BUILD = '${sha}'`);
     assert.notEqual(stamped, source, 'theme.js keeps the BUILD the Pages deploy stamps');
@@ -2025,12 +2025,12 @@ try {
       await mp.route('https://xpui.app.spotify.com/**', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }));
       await mp.route('https://cdn.jsdelivr.net/**', r => { fetched.push(r.request().url()); r.fulfill({ contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: '/* AppleMusicMac at the commit */' }); });
       let pagesUp = false;
-      await mp.route('https://bulutakbulutt.github.io/**', r => r.fulfill({ status: pagesUp ? 200 : 404, headers: { 'access-control-allow-origin': '*' }, body: '' }));
+      await mp.route('https://mcloudhq.github.io/**', r => r.fulfill({ status: pagesUp ? 200 : 404, headers: { 'access-control-allow-origin': '*' }, body: '' }));
       // What Marketplace 1.0.12 keeps for an install from the old manifest (Dexie db, IDB version 20, store "settings"),
-      // and the CSS it injected: Pages' other build.
-      const key = `marketplace:installed:${REPO}/user.css`, old = `https://cdn.jsdelivr.net/gh/${REPO}@main/theme.js`;
+      // made before the repo moved to mcloudHQ, and the CSS it injected: Pages' other build.
+      const key = `marketplace:installed:${OLD_REPO}/user.css`, old = `https://cdn.jsdelivr.net/gh/${OLD_REPO}@main/theme.js`;
       const record = { manifest: { name: 'mcloud', usercss: 'user.css', include: [old] }, type: 'theme', user: 'bulutakbulutt', repo: 'mcloud', branch: 'main',
-        cssURL: `https://raw.githubusercontent.com/${REPO}/main/user.css`, include: [old], schemes: { Dark: { text: 'ffffff' } }, activeScheme: 'Dark' };
+        cssURL: `https://raw.githubusercontent.com/${OLD_REPO}/main/user.css`, include: [old], schemes: { Dark: { text: 'ffffff' } }, activeScheme: 'Dark' };
       const start = async css => {
         await mp.goto('https://xpui.app.spotify.com/index.html');
         await mp.evaluate(css => { const s = document.body.appendChild(document.createElement('style')); s.className = 'marketplaceCSS marketplaceUserCSS'; s.textContent = css; }, css);
@@ -2064,6 +2064,16 @@ try {
       assert.equal(fetched.length, 2);
       const third = await start(`/* mcloud build ${sha} */\n/* AppleMusicMac 2.8 */`);
       assert.deepEqual([third.migration, third.css, fetched.length], ['unchanged', 'match', 2]);
+      // An install made after the move (Marketplace's owner casing): theme.js already from Pages, the CSS from
+      // jsDelivr, which moves too.
+      const newKey = 'marketplace:installed:mcloudHQ/mcloud/user.css', pagesJs = PAGES + 'theme.js';
+      const newRecord = { ...record, user: 'mcloudHQ', manifest: { ...record.manifest, include: [pagesJs] }, include: [pagesJs], cssURL: `https://cdn.jsdelivr.net/gh/${REPO}@main/user.css` };
+      await mp.evaluate(rows => new Promise(res => { indexedDB.open('spicetify-marketplace').onsuccess = e => { const db = e.target.result, tx = db.transaction('settings', 'readwrite');
+        for (const r of rows) tx.objectStore('settings').put(r); tx.oncomplete = () => { db.close(); res(); }; }; }), [{ key: 'marketplace:theme-installed', value: newKey }, { key: newKey, value: JSON.stringify(newRecord) }]);
+      assert.equal((await start(`/* mcloud build ${sha} */\n/* AppleMusicMac 2.8 */`)).migration, 'migrated');
+      const moved = JSON.parse(await mp.evaluate(key => new Promise(res => { indexedDB.open('spicetify-marketplace').onsuccess = e => {
+        e.target.result.transaction('settings').objectStore('settings').get(key).onsuccess = g => res(g.target.result.value); }; }), newKey));
+      assert.deepEqual([moved.cssURL, moved.include], [PAGES + 'user.css', [pagesJs]]);
     } finally { await ctx.close(); }
   });
 
