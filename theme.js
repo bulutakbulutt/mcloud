@@ -2809,7 +2809,69 @@
     const input=libraryView.querySelector('.am-library-filter');
     if(input){event.preventDefault();input.focus();input.select();}
   });
-  // Track numbers can be hidden (settings.numbers, body.am-no-numbers). Spotify's "Change visible columns" menu is
+  // Album and playlist page settings (#72). With the settings window's API (defineSetting) they show up there; a build
+  // without it loads them here and lists them in a submenu of their own.
+  const ownSettings=[];
+  function pageSetting(def) {
+    if(typeof defineSetting==='function')return defineSetting(def);
+    const ok=value=>typeof value===typeof def.default&&(!def.options||def.options.some(([option])=>option===value));
+    let saved;try{saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[def.key];}catch{}
+    if(!ok(settings[def.key]))settings[def.key]=ok(saved)?saved:def.default;
+    ownSettings.push(def);def.apply?.(settings[def.key]);
+  }
+  function changeSetting(key,value) {
+    if(typeof setSetting==='function')return setSetting(key,value);
+    settings[key]=value;saveSettings();ownSettings.find(def=>def.key===key)?.apply?.(value);applySettings();
+  }
+  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
+  // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
+  // the page. Someone who had hid them keeps them hidden on albums too.
+  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
+  const numbersKey=()=>albumId()?'numbersAlbum':'numbers';
+  function syncNumbers(){document.body.classList.toggle('am-no-numbers',!settings[numbersKey()]);}
+  document.addEventListener('am-settings',syncNumbers);H.listen(syncNumbers);
+  // An album's artists and artwork colour, from Spotify's own album query (one per album, kept for the session).
+  // The artist rule is a stylesheet keyed on the artists' ids, so React re-rendering rows needs no work here.
+  const albumInfo=new Map(),albumStyle=el('style','');albumStyle.id='am-album-style';document.head.append(albumStyle);
+  let albumRequest=0;
+  async function albumData(id) {
+    if(albumInfo.has(id))return albumInfo.get(id);
+    let info=null;
+    try{
+      const album=(await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:1}))?.data?.albumUnion;
+      if(album?.name)info={artists:(album.artists?.items||[]).map(a=>/[A-Za-z0-9]+$/.exec(a.uri||'')?.[0]).filter(Boolean),cover:smallImage(album.coverArt)};
+    }catch{}
+    if(info){if(albumInfo.size>50)albumInfo.delete(albumInfo.keys().next().value);albumInfo.set(id,info);}
+    return info;
+  }
+  async function syncAlbum() {
+    const id=albumId(),request=++albumRequest,tint=settings.albumTint!=='off',body=document.body.classList;
+    if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum||!settings.albumClean&&!tint){albumStyle.textContent='';body.remove('am-album-tinted');return;}
+    const cached=albumInfo.get(id);if(!cached?.color)body.remove('am-album-tinted');
+    const info=cached||await albumData(id);
+    if(request!==albumRequest)return;
+    if(!info){albumStyle.textContent='';return;}
+    const sub='.main-trackList-rowMainContent > :last-child';
+    albumStyle.textContent=settings.albumClean&&info.artists.length?`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')})) ${sub}{display:none!important}`:'';
+    if(!tint)return;
+    if(info.color===undefined)info.color=await artworkColor(info.cover);
+    if(request!==albumRequest)return;
+    const hsl=hexToHsl(info.color);if(!hsl)return;
+    // A grey cover keeps a grey page (see setTint); other colours are kept clear of muddy and neon extremes.
+    const [h,s,l]=hsl,sat=Math.round((s<.1?s:Math.min(.8,Math.max(.35,s)))*100),light=Math.round(Math.min(.55,Math.max(.32,l))*100);
+    document.documentElement.style.setProperty('--am-album-tint',`hsl(${Math.round(h)} ${sat}% ${light}%)`);
+    body.add('am-album-tinted');
+  }
+  H.listen(syncAlbum);
+  pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
+  // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
+  pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
+  // Album pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
+  const albumTints=['off','subtle','full'];
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
+    options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
+    apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
+  // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
   // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.
   function addNumberColumn() {
@@ -2827,8 +2889,8 @@
     const mark=el('label',check.querySelector('label')?.className||'');mark.append(el('span',check.querySelector('label span')?.className||''));form.append(box,mark);
     const inner=el('div',checkBox.firstElementChild?.className||'');inner.append(form);const outer=el('div',checkBox.className);outer.append(inner);
     const labelWrap=el('div',labelBox.className);labelWrap.append(label);b.append(labelWrap,outer);item.append(b);
-    const sync=()=>{b.setAttribute('aria-checked',String(settings.numbers));box.checked=settings.numbers;label.className=label.className.replace(/encore-internal-color-text-(bright-accent|base)/,'encore-internal-color-text-'+(settings.numbers?'bright-accent':'base'));};
-    b.addEventListener('click',event=>{event.stopPropagation();settings.numbers=!settings.numbers;saveSettings();applySettings();sync();});
+    const sync=()=>{const on=!!settings[numbersKey()];b.setAttribute('aria-checked',String(on));box.checked=on;label.className=label.className.replace(/encore-internal-color-text-(bright-accent|base)/,'encore-internal-color-text-'+(on?'bright-accent':'base'));};
+    b.addEventListener('click',event=>{event.stopPropagation();changeSetting(numbersKey(),!settings[numbersKey()]);sync();});
     sync();sample.parentElement.before(item);return true;
   }
   // The menu mounts a moment after its button is clicked; look for it for a few frames instead of observing the page.
@@ -2965,6 +3027,12 @@
       });
       try{entry.register();}catch{useMenu();}
     } else useMenu();
+  }
+  if(S.Menu?.SubMenu&&S.Menu?.Item&&ownSettings.length){
+    const items=ownSettings.flatMap(def=>def.type==='toggle'?[[def.label,()=>settings[def.key],()=>changeSetting(def.key,!settings[def.key])]]
+      :def.options.map(([value,label])=>[def.label+': '+label,()=>settings[def.key]===value,()=>changeSetting(def.key,value)]))
+      .map(([label,on,run])=>{const item=new S.Menu.Item(label,on(),run);document.addEventListener('am-settings',()=>item.setState(on()));return item;});
+    new S.Menu.SubMenu(T('mcloud: Albümler','mcloud: Albums'),items).register();
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
