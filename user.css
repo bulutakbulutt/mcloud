@@ -144,6 +144,9 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 /* A carousel's edges fade into the page under its arrows; Spotify hard-codes that colour to a dark #121212b3, which in
    light drew grey bands with hard top and bottom edges over the cards. */
 body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
+/* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
+   carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
+body.am-light :is(.main-cardImage-imageWrapper,.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
 /* Playlist and album pages, laid out like Apple Music's: a flat page, the artwork on the left, title and owner beside
    it and the play controls along the artwork's bottom edge. Spotify's action bar is a sibling below the header, so
    its scroll host is pulled up into the header's text column (the text column keeps that strip free); everything
