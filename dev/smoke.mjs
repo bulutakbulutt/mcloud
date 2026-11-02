@@ -154,7 +154,9 @@ try {
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
     // Spotify's panel holder is solid; left alone it hides the sheet's glass.
     // No dark band under the header on glass: the rows fade out under it instead.
-    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('[data-testid="mock-panel-header"]')).boxShadow, getComputedStyle(document.querySelector('[data-testid="mock-panel-list"]')).maskImage.startsWith('linear-gradient')]), ['none', true]);
+    assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('[data-testid="mock-panel-header"]')).boxShadow, getComputedStyle(document.querySelector('[data-testid="mock-panel-list"] [data-overlayscrollbars-viewport]')).maskImage.startsWith('linear-gradient')]), ['none', true]);
+    // The scrollbar starts below the fade, and the feed's empty first item takes no room.
+    assert.deepEqual(await page.evaluate(() => { const list = document.querySelector('[data-testid="mock-panel-list"]'); return [Math.round(list.querySelector('.os-scrollbar').getBoundingClientRect().top - list.getBoundingClientRect().top), getComputedStyle(list.querySelector('li')).display]; }), [16, 'none']);
     // The list starts under the header, so its top padding is the fade and not a gap below the tabs.
     assert.equal(await page.evaluate(() => Math.round(document.querySelector('[data-testid="mock-panel-list"]').getBoundingClientRect().top - document.querySelector('[data-testid="mock-panel-header"]').getBoundingClientRect().bottom)), -16);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-native-panel-open [data-am-fill]')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)')), [], 'panel holder paints over the glass');
@@ -807,7 +809,7 @@ try {
     assert.deepEqual([layout.main, Math.round(layout.pad), layout.header, layout.artist, layout.gutter], [0, Math.round(layout.side), 0, 0, 0]);
     // ...and under the toolbar: the main view starts at the window's top and its scroll viewport keeps the toolbar's height clear.
     // Scrollers nested in a page (playlist action bars) keep their own padding.
-    const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].map(v => parseFloat(getComputedStyle(v).paddingTop))]);
+    const top = await page.evaluate(() => [document.querySelector('.am-native-main').getBoundingClientRect().y, ...[...document.querySelectorAll('[data-overlayscrollbars-viewport]')].filter(v => !v.closest('.right')).map(v => parseFloat(getComputedStyle(v).paddingTop))]);
     assert.deepEqual(top, [0, 56, 0]);
     // Image headers live outside the scroll viewport; they grow by the toolbar's row so they still end with the header.
     const image = await page.evaluate(() => { const r = document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])').getBoundingClientRect(); return [r.y, r.height]; });

@@ -74,8 +74,9 @@
   function mockPanel(button) {
     const label = button.getAttribute('aria-label'), open = [...document.querySelectorAll('.right aside')].pop();
     if (open?.getAttribute('aria-label') === label) { swapPanel(npv); return; }
-    // A header, then the list in an OverlayScrollbars box; scrolled, Spotify shades the header.
-    setTimeout(() => swapPanel(`<aside aria-label="${label}"><div data-testid="mock-panel-header" style="box-shadow:rgba(0,0,0,.6) 0 6px 10px"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></div><div data-testid="mock-panel-list"><div><p>…</p></div><div class="os-scrollbar os-scrollbar-vertical"></div></div></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
+    // A header, then the list in an OverlayScrollbars box (Friend Activity's opens with an empty item); scrolled, Spotify
+    // shades the header.
+    setTimeout(() => swapPanel(`<aside aria-label="${label}"><div data-testid="mock-panel-header" style="box-shadow:rgba(0,0,0,.6) 0 6px 10px"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></div><div data-testid="mock-panel-list" style="position:relative"><div data-overlayscrollbars-viewport><ul style="display:flex;flex-direction:column;gap:24px;margin:0"><li></li><li>…</li></ul></div><div class="os-scrollbar os-scrollbar-vertical" style="position:absolute;top:0;bottom:0;right:0;width:8px"></div></div></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
   }
   // Typing in the search field opens Spotify's live results under it (#search-dropdown, absolute inside the toolbar's
   // form); a click elsewhere closes them.

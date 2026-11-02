@@ -826,7 +826,11 @@ body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:non
    The list's 16px top padding, under 4px of header below the tabs, left a gap before "Now playing"; the list starts 16px
    higher, under the header (which stays on top for clicks), so that padding is the fade. */
 body.am-ready [data-am-sheet] div:has(+ div > .os-scrollbar) {box-shadow:none!important;position:relative;z-index:1;margin-bottom:-16px!important}
-body.am-ready [data-am-sheet] div:has(> .os-scrollbar) {-webkit-mask-image:linear-gradient(transparent,#000 16px);mask-image:linear-gradient(transparent,#000 16px)}
+body.am-ready [data-am-sheet] [data-overlayscrollbars-viewport] {-webkit-mask-image:linear-gradient(transparent,#000 16px);mask-image:linear-gradient(transparent,#000 16px)}
+/* The fade is on the scroller, not the box, and the scrollbar starts below it. */
+body.am-ready [data-am-sheet] .os-scrollbar-vertical {top:16px!important}
+/* Friend Activity's list opens with an empty item, which with the list's 24px gap pushed the first friend down. */
+body.am-ready [data-am-sheet] ul > li:first-child:empty {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
