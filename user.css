@@ -403,8 +403,8 @@ body.am-solid [data-am-preview] :is(button,div) {backdrop-filter:none!important;
 /* Browse all (Search's category tiles) as Apple Music's Browse Categories, measured in Music on macOS 27 with the window
    focused: 195pt tiles (16:9, Spotify's shape too) 16pt apart both ways, 8pt corners, a .5pt white rim at 32%, the
    name in 13pt bold white 12pt from the left with its baseline 15pt above the bottom, a 15pt bold heading in the
-   label colour (223). Tiles are the grid whose items link to /genre/ (Live Events links to /concerts). */
-body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"]) {--min-column-width:180px!important;--grid-gap:16px;gap:16px!important}
+   label colour (223), its baseline 17pt above the tiles. Tiles are the grid whose items link to /genre/ (Live Events links to /concerts). */
+body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"]) {--min-column-width:180px!important;--grid-gap:16px;gap:16px!important;margin-top:4px}
 body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"]) > [role="listitem"] {padding:0!important}
 body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"]) > [role="listitem"] > a > div[style*="background-color"] {isolation:isolate;border-radius:8px!important}
 body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"]) > [role="listitem"] > a > div[style*="background-color"]::after {content:'';position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 .5px #ffffff52}
