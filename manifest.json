@@ -7,7 +7,7 @@
   "usercss": "user.css",
   "schemes": "color.ini",
   "include": [
-    "https://cdn.jsdelivr.net/gh/bulutakbulutt/mcloud@main/theme.js"
+    "https://bulutakbulutt.github.io/mcloud/theme.js"
   ],
   "authors": [
     {
