@@ -2185,14 +2185,17 @@
   // Apple Music takes the page colour from the artwork. Spotify's extracted colour is often off (grey
   // photos come back reddish), so the artwork is sampled: the most colourful hue family wins, and an
   // image with little colour gives its plain average. i.scdn.co allows CORS, so the canvas stays readable.
-  function artworkColor(url) {
+  // band: [top, bottom] as fractions of the image's height to sample (the artist header: the lower half of the photo,
+  // the strip that fades into the page, so the page continues the photo's bottom; p6, issue #74); the whole image when unset.
+  function artworkColor(url,band) {
     return new Promise(resolve=>{
       if(!url)return resolve(null);
       const img=new Image();img.crossOrigin='anonymous';img.decoding='async';
       img.onerror=()=>resolve(null);
       img.onload=()=>{try{
         const size=32,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
-        const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(img,0,0,size,size);
+        const context=canvas.getContext('2d',{willReadFrequently:true}),h=img.naturalHeight||img.height;
+        if(band)context.drawImage(img,0,band[0]*h,img.naturalWidth||img.width,(band[1]-band[0])*h,0,0,size,size);else context.drawImage(img,0,0,size,size);
         const data=context.getImageData(0,0,size,size).data,bins=Array.from({length:12},()=>[0,0,0,0]),total=[0,0,0];
         for(let i=0;i<data.length;i+=4){
           const r=data[i],g=data[i+1],b=data[i+2],max=Math.max(r,g,b),chroma=max-Math.min(r,g,b);
@@ -2504,7 +2507,7 @@
     const header=artist.headerImage?.data||visuals.headerImage,avatarOnly=!header?.sources?.length;
     const spotifyColor=header?.extractedColors?.colorRaw?.hex||visuals.avatarImage?.extractedColors?.colorRaw?.hex;
     const fallbackTint=setTimeout(()=>{if(request===artistRequest)setTint(spotifyColor);},600);
-    artworkColor(smallImage(header||visuals.avatarImage)).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
+    artworkColor(smallImage(header||visuals.avatarImage),avatarOnly?null:[.5,1]).then(hex=>{if(request!==artistRequest||!hex)return;clearTimeout(fallbackTint);setTint(hex);});
     const page=document.createDocumentFragment();
     // Floating controls, as in Apple Music: back on the left, share and more on the right.
     const back=button(T('Geri','Back'),'left',()=>H.goBack?.(),'am-artist-back');

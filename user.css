@@ -50,6 +50,8 @@
  --am-hero-name:#1d1d1f; --am-hero-play:var(--am-tint-text,#333); --am-hero-play-icon:#fff;
  /* The settings window (#76): its base and the line under its toolbar (Apple's light Settings: white, #e5e5e5). */
  --am-settings-window:#fff; --am-settings-hairline:rgb(0 0 0/.1);
+ /* #73's plain Now Playing pane: Music's lyrics pane in light is opaque #eeedec. */
+ --am-np-plain:#eeedec;
  --am-settings-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' fill='none' stroke='%23000000b3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 4.5 2.5-2.5 2.5 2.5M1.5 7.5 4 10l2.5-2.5'/%3E%3C/svg%3E");
  /* Spotify's own scheme (color.ini, Spicetify's --spice-* variables) in light. Spicetify writes Spotify's black as
     --spice-sidebar and its white as --spice-text, so the inverted sets (tooltips) stay inverted. */
