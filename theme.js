@@ -2806,8 +2806,9 @@
   const ownSettings=[];
   function pageSetting(def) {
     if(typeof defineSetting==='function')return defineSetting(def);
+    const ok=value=>typeof value===typeof def.default&&(!def.options||def.options.some(([option])=>option===value));
     let saved;try{saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[def.key];}catch{}
-    settings[def.key]=typeof saved===typeof def.default&&(!def.options||def.options.some(([value])=>value===saved))?saved:def.default;
+    if(!ok(settings[def.key]))settings[def.key]=ok(saved)?saved:def.default;
     ownSettings.push(def);def.apply?.(settings[def.key]);
   }
   function changeSetting(key,value) {
@@ -2817,7 +2818,7 @@
   const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
   // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
   // the page. Someone who had hid them keeps them hidden on albums too.
-  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))localStorage.setItem('mcloud:settings',JSON.stringify({...saved,numbersAlbum:false}));}catch{}
+  try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
   const numbersKey=()=>albumId()?'numbersAlbum':'numbers';
   function syncNumbers(){document.body.classList.toggle('am-no-numbers',!settings[numbersKey()]);}
   document.addEventListener('am-settings',syncNumbers);H.listen(syncNumbers);

@@ -562,18 +562,19 @@ try {
 
   await check('track numbers: albums and playlists switch apart (#72)', async () => {
     const hidden = () => page.evaluate(() => document.body.classList.contains('am-no-numbers'));
-    const menu = () => page.evaluate(() => window.__menus.find(m => m.name === 'mcloud: Albümler').items.map(i => [i.name, i.checked]));
+    // The album switches sit in the settings window's menu fallback (#76) or, without it, in a submenu of their own.
+    const menu = () => page.evaluate(() => window.__menus.flatMap(m => m.items).filter(i => i.name === 'Albümlerde parça numaraları').map(i => [i.name, i.checked]));
     // Playlists off, albums on: the class follows the page.
     await page.evaluate(() => { window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick(); Spicetify.Platform.History.push('/playlist/mock'); });
     assert.equal(await hidden(), true);
     await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
     assert.equal(await hidden(), false);
     assert.deepEqual((await menu())[0], ['Albümlerde parça numaraları', true]);
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud: Albümler').items[0].onClick());
+    await page.evaluate(() => window.__menus.flatMap(m => m.items).find(i => i.name === 'Albümlerde parça numaraları').onClick());
     assert.equal(await hidden(), true);
     assert.deepEqual((await menu())[0], ['Albümlerde parça numaraları', false]);
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).numbersAlbum, false);
-    await page.evaluate(() => { window.__menus.find(m => m.name === 'mcloud: Albümler').items[0].onClick(); window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick(); Spicetify.Platform.History.push('/'); });
+    await page.evaluate(() => { window.__menus.flatMap(m => m.items).find(i => i.name === 'Albümlerde parça numaraları').onClick(); window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick(); Spicetify.Platform.History.push('/'); });
     assert.equal(await hidden(), false);
   });
 
@@ -1435,8 +1436,8 @@ try {
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
-    const albums = () => page.evaluate(() => window.__menus.find(m => m.name === 'mcloud: Albümler').items);
-    const pick = name => page.evaluate(name => window.__menus.find(m => m.name === 'mcloud: Albümler').items.find(i => i.name === name).onClick(), name);
+    const albums = () => page.evaluate(() => window.__menus.flatMap(m => m.items));
+    const pick = name => page.evaluate(name => window.__menus.flatMap(m => m.items).find(i => i.name === name).onClick(), name);
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
