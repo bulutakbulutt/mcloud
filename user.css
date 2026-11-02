@@ -721,6 +721,9 @@ body.am-solid {--am-sd-fill:#2c2c2e;--am-sd-filter:none}
 #search-dropdown [role="row"]:hover [id$="-play"] {opacity:1!important}
 #search-dropdown [role="row"] [id$="-play"] button {width:100%!important;height:100%!important;min-width:0!important;padding:0!important;justify-content:center}
 #search-dropdown [role="row"] [id$="-play"] svg {width:18px!important;height:18px!important;fill:#fff!important}
+/* Its rows run under the queue or Friend Activity sheet (z-index 55) when one is open, which hid their buttons; while the
+   popover is open the toolbar it lives in goes over the sheet. */
+body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loading-dropdown)) {z-index:56!important}
 #search-dropdown [role="row"] [class*="list-row__slot"] {visibility:hidden}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] {visibility:visible}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] :is(button,svg) {color:#fff!important;fill:#fff!important}

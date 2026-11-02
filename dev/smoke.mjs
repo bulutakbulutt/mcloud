@@ -920,6 +920,19 @@ try {
     await shot('search-loading');
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-suggestions-loading-dropdown'));
+    // With the queue sheet open the popover still comes first: its rows' buttons ran under the sheet and could not be seen.
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => document.querySelector('.am-native-right').classList.contains('am-native-panel-open'));
+    await page.fill('#global-nav-bar input', 'sena');
+    await page.hover('#search-dropdown [role="row"] >> nth=3');
+    // The preview's popover is narrower than the client's, so the sheet is drawn over it to test the stacking.
+    assert.deepEqual(await page.evaluate(() => { const nav = document.getElementById('global-nav-bar'), sheet = document.querySelector('.am-native-right'), b = document.querySelectorAll('#search-dropdown [role="row"]')[3].querySelector('[class*="list-row__slot"] button').getBoundingClientRect();
+      sheet.style.setProperty('left', Math.round(b.left - 40) + 'px', 'important'); const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); sheet.style.removeProperty('left');
+      return [+getComputedStyle(nav).zIndex > +getComputedStyle(sheet).zIndex, !!hit?.closest('#search-dropdown [class*="list-row__slot"] button')]; }), [true, true]);
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+    await page.click('#am-player button[aria-label="Çalma sırası"]');
+    await page.waitForFunction(() => !document.body.classList.contains('am-panel-open'));
   });
 
   await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
