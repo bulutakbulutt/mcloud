@@ -1475,10 +1475,10 @@ try {
     assert.notEqual(look.dim, 'none', 'the sidebar dims with the page');
     assert.match(look.frost, /^(blur\(12px\) saturate\(1\.4\)|none)$/, 'frosted buttons (plain in Eco)');
     await shot('song-preview');
-    // Settings: the mcloud submenu lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme zemini: Cam').onClick());
+    // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
+    await settingsWindow.pick('previewMaterial', 'Cam');
     assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme zemini: Bulanık kapak').onClick());
+    await settingsWindow.pick('previewMaterial', 'Bulanık kapak');
     // A click on the dimmed sidebar closes it, as one on Spotify's backdrop does.
     await page.click('#am-sidebar', { position: { x: 100, y: 400 } });
     await page.waitForFunction(() => !document.getElementById('mock-feed') && !document.body.classList.contains('am-preview-open'));
