@@ -1466,14 +1466,14 @@ try {
       return { marked: document.getElementById('mock-feed').hasAttribute('data-am-preview'), classes: ['am-pv-apple', 'am-pv-artwork'].map(c => document.body.classList.contains(c)),
         art: document.documentElement.style.getPropertyValue('--am-preview-art'), grid: cs(view.firstElementChild).display, pill: cs(pill).gridArea.split(' ')[0],
         close: [cs(close).width, cs(close).borderRadius], radius: cs(view).borderTopLeftRadius, dim: cs(document.getElementById('am-sidebar'), '::after').content,
-        glass: !!close.dataset.amGlass };
+        frost: cs(close).backdropFilter };
     });
     assert.ok(look.marked, 'the overlay is marked');
     assert.deepEqual(look.classes, [true, true], 'Apple layout and blurred artwork by default');
     assert.match(look.art, /^url\("data:image\/svg/, 'the cover feeds the artwork material');
     assert.deepEqual([look.grid, look.pill, look.close, look.radius], ['grid', 'pill', ['40px', '50%'], '26px']);
     assert.notEqual(look.dim, 'none', 'the sidebar dims with the page');
-    assert.ok(look.glass, 'the round buttons take the menus\' glass');
+    assert.match(look.frost, /^(blur\(12px\) saturate\(1\.4\)|none)$/, 'frosted buttons (plain in Eco)');
     await shot('song-preview');
     // Settings: the mcloud submenu lists the options; Three columns switches the layout and is saved.
     await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme düzeni: Üç sütun').onClick());

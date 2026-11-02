@@ -2786,7 +2786,6 @@
   defineSetting({key:'browseTiles',group:'browse',label:T('Kategori kutuları','Category tiles'),type:'choice',default:'apple',
     options:[['apple',T('Apple (çift ton)','Apple (duotone)')],['tilted',T('Eğik kapak','Tilted cover')],['flat',T('Düz renk','Plain colour')],['spotify','Spotify']],apply:v=>browseStyles.forEach(k=>document.body.classList.toggle('am-browse-'+k,k===v))});
   let previewView=null,previewWatch=null,previewFrame=0;
-  const previewGlass=new Set();
   function previewArt() {
     previewFrame=0;const view=previewView;if(!view?.isConnected||document.hidden)return;
     let art=view.querySelector(':scope > div > div:first-child img[src]');
@@ -2794,9 +2793,6 @@
       for(const img of view.querySelectorAll(':scope > div > div:nth-child(2) img[src]')){const r=img.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-mid);if(r.height&&d<best){best=d;art=img;}}}
     const value=art?`url("${art.currentSrc||art.src}")`:'';
     if(document.documentElement.style.getPropertyValue('--am-preview-art')!==value)value?document.documentElement.style.setProperty('--am-preview-art',value):document.documentElement.style.removeProperty('--am-preview-art');
-    // The small round controls and the title capsule take the menus' Liquid Glass (a filter each, freed on close).
-    for(const node of view.querySelectorAll('[data-testid="watch-feed-close-button"],:scope > div > div:last-child > div:last-child button,:scope > div > div:first-child > div:first-child'))
-      if(!previewGlass.has(node)){previewGlass.add(node);menuGlass.sync();menuGlass.attach(node);}
   }
   const previewArtSoon=()=>{previewFrame||=requestAnimationFrame(previewArt);};
   function syncPreview() {
@@ -2804,7 +2800,7 @@
     if(view===previewView)return;
     previewWatch?.disconnect();previewWatch=null;previewView?.removeEventListener('scrollend',previewArtSoon,true);
     previewView=view;document.body.classList.toggle('am-preview-open',!!view);
-    if(!view){document.documentElement.style.removeProperty('--am-preview-art');previewGlass.clear();menuGlass.sync();return;}
+    if(!view){document.documentElement.style.removeProperty('--am-preview-art');return;}
     if(!view.parentElement.hasAttribute('data-am-preview'))view.parentElement.setAttribute('data-am-preview','');
     previewWatch=new MutationObserver(previewArtSoon);previewWatch.observe(view,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
     view.addEventListener('scrollend',previewArtSoon,{capture:true,passive:true});previewArt();
