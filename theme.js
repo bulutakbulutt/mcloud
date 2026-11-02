@@ -2817,35 +2817,24 @@
     if(!target?.closest('.main-trackList-trackListHeader button')||target.closest('.main-trackList-trackListHeaderRow'))return;
     let frames=0;const look=()=>{if(!addNumberColumn()&&++frames<30)requestAnimationFrame(look);};requestAnimationFrame(look);
   },true);
-  // Settings window (#am-settings), drawn from settingDefs whenever it opens or its layout changes, so a feature's
-  // defineSetting shows here with no change below. Three layouts, as macOS: an app's Settings window with a tab per group
-  // in its toolbar (Apple Music's), System Settings' sidebar, or one page of grouped rows. Presented as a window (not
-  // modal, moved by its title bar) or as a sheet under the toolbar over a dimmed page; Liquid Glass (menuGlass's lens),
-  // frosted or solid.
-  const settingsSection=T('Ayarlar penceresi','Settings window'),rerender=()=>{if(settingsBack.isConnected)renderSettings();};
-  defineSetting({key:'settingsLayout',group:'general',section:settingsSection,label:T('Düzen','Layout'),type:'choice',default:'tabs',style:'segmented',menu:false,change:rerender,
-    options:[['tabs',T('Sekmeler','Tabs')],['sidebar',T('Kenar çubuğu','Sidebar')],['page',T('Tek sayfa','Single page')]]});
-  defineSetting({key:'settingsPresent',group:'general',section:settingsSection,label:T('Açılış biçimi','Presentation'),type:'choice',default:'window',style:'segmented',menu:false,change:rerender,
-    options:[['window',T('Pencere','Window')],['sheet',T('Açılır sayfa','Sheet')]]});
-  defineSetting({key:'settingsGlass',group:'general',section:settingsSection,label:T('Malzeme','Material'),type:'choice',default:'glass',style:'segmented',menu:false,change:rerender,
-    options:[['glass','Liquid Glass'],['frosted',T('Buzlu','Frosted')],['solid',T('Opak','Solid')]],note:T('Cam efekti Eko iken pencere opak olur.','With the glass effect on Eco the window is solid.')});
+  // Settings window (#am-settings), drawn from settingDefs whenever it opens or a tab changes, so a feature's defineSetting
+  // shows here with no change below. Apple Music's Settings window: a tab per group in its toolbar, a form of right-aligned
+  // labels with checkboxes and pop-ups, OK to close; frosted, in Apple's dark Settings colours (user.css). It is not
+  // modal: the page stays usable and the title bar moves it.
   const settingsBack=el('div','am-settings-back'),settingsBox=el('div','am-settings-box');settingsBack.id='am-settings';settingsBack.append(settingsBox);
-  settingsBox.setAttribute('role','dialog');settingsBox.setAttribute('aria-labelledby','am-settings-title');settingsBox.tabIndex=-1;
+  settingsBox.setAttribute('role','dialog');settingsBox.setAttribute('aria-modal','false');settingsBox.setAttribute('aria-labelledby','am-settings-title');settingsBox.tabIndex=-1;
   let settingsTab='',settingsReturn=null,settingsSyncs=[],settingsDrag=null,settingsShown='';
   const shownDefs=()=>settingDefs.filter(d=>{if(d.hidden)return false;try{return !d.when||d.when();}catch{return false;}});
   function renderSettings() {
-    const layout=settings.settingsLayout,defs=shownDefs(),groups=settingGroups.filter(g=>defs.some(d=>d.group===g.id));
+    const defs=shownDefs(),groups=settingGroups.filter(g=>defs.some(d=>d.group===g.id));
     if(!groups.some(g=>g.id===settingsTab))settingsTab=groups[0]?.id||'';
     const tab=groups.find(g=>g.id===settingsTab),scroll=settingsBox.querySelector('.am-settings-body')?.scrollTop||0;
-    settingsBack.className='am-settings-back am-settings-'+settings.settingsPresent;
-    settingsBox.className='am-settings-box am-settings-layout-'+layout+' am-settings-material-'+settings.settingsGlass;
-    settingsBox.setAttribute('aria-modal',String(settings.settingsPresent==='sheet'));
     const focusKey=settingsBox.contains(document.activeElement)&&document.activeElement.closest('.am-settings-row')?.dataset.key;
     settingsSyncs=[];settingsBox.replaceChildren();settingsShown=defs.map(d=>d.key).join();
-    const bar=el('div','am-settings-titlebar'),title=el('h2','am-settings-title',layout==='page'?T('mcloud Ayarları','mcloud Settings'):tab?.label||'mcloud');title.id='am-settings-title';
+    const bar=el('div','am-settings-titlebar'),title=el('h2','am-settings-title',tab?.label||'mcloud');title.id='am-settings-title';
     bar.append(button(T('Kapat','Close'),'close',closeSettings,'am-settings-close'),title);
     bar.addEventListener('pointerdown',event=>{
-      if(settings.settingsPresent!=='window'||event.button!==0||event.target.closest('button'))return;
+      if(event.button!==0||event.target.closest('button'))return;
       settingsBox.getAnimations().forEach(a=>a.finish());const box=settingsBox.getBoundingClientRect();settingsDrag={x:event.clientX-box.left,y:event.clientY-box.top};bar.setPointerCapture?.(event.pointerId);
     });
     bar.addEventListener('pointermove',event=>{
@@ -2854,29 +2843,25 @@
       settingsBox.style.top=Math.round(Math.max(0,Math.min(innerHeight-40,event.clientY-settingsDrag.y)))+'px';settingsBox.style.translate='none';
     });
     bar.addEventListener('pointerup',()=>{settingsDrag=null;});
-    const body=el('div','am-settings-body');
-    if(layout!=='page'){
-      const nav=el('div','am-settings-nav');nav.setAttribute('role','tablist');nav.setAttribute('aria-orientation',layout==='sidebar'?'vertical':'horizontal');
-      for(const g of groups){
-        const b=el('button','am-settings-tab'+(g.id===settingsTab?' am-selected':''));b.type='button';b.setAttribute('role','tab');b.dataset.group=g.id;
-        b.setAttribute('aria-selected',String(g.id===settingsTab));b.tabIndex=g.id===settingsTab?0:-1;
-        b.innerHTML=svg(g.icon);b.append(el('span','am-settings-tab-label',g.label));
-        b.onclick=()=>{if(settingsTab===g.id)return;settingsTab=g.id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();};
-        nav.append(b);
-      }
-      nav.addEventListener('keydown',event=>{
-        const step={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[event.key];if(!step)return;event.preventDefault();
-        const i=groups.findIndex(g=>g.id===settingsTab);settingsTab=groups[(i+step+groups.length)%groups.length].id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();
-      });
-      if(layout==='sidebar'){const side=el('div','am-settings-side');side.append(nav);settingsBox.append(side);}
-      else bar.append(nav);
+    const nav=el('div','am-settings-nav');nav.setAttribute('role','tablist');
+    for(const g of groups){
+      const b=el('button','am-settings-tab'+(g.id===settingsTab?' am-selected':''));b.type='button';b.setAttribute('role','tab');b.dataset.group=g.id;
+      b.setAttribute('aria-selected',String(g.id===settingsTab));b.tabIndex=g.id===settingsTab?0:-1;
+      b.innerHTML=svg(g.icon);b.append(el('span','am-settings-tab-label',g.label));
+      b.onclick=()=>{if(settingsTab===g.id)return;settingsTab=g.id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();};
+      nav.append(b);
     }
-    settingsBox.prepend(bar);settingsBox.append(body);
-    for(const g of layout==='page'?groups:groups.filter(g=>g.id===settingsTab)){
-      const section=el('section','am-settings-group');section.dataset.group=g.id;
-      if(layout==='page')section.append(el('h3','am-settings-group-title',g.label));
+    nav.addEventListener('keydown',event=>{
+      const step={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[event.key];if(!step)return;event.preventDefault();
+      const i=groups.findIndex(g=>g.id===settingsTab);settingsTab=groups[(i+step+groups.length)%groups.length].id;renderSettings();settingsBox.querySelector('.am-settings-tab.am-selected')?.focus();
+    });
+    bar.append(nav);
+    const body=el('div','am-settings-body'),foot=el('div','am-settings-footer'),ok=el('button','am-settings-ok','OK');ok.type='button';ok.onclick=closeSettings;foot.append(ok);
+    settingsBox.append(bar,body,foot);
+    if(tab){
+      const section=el('section','am-settings-group');section.dataset.group=tab.id;
       let card=null,cardSection=null;
-      for(const def of defs.filter(d=>d.group===g.id)){
+      for(const def of defs.filter(d=>d.group===tab.id)){
         if(!card||def.section!==cardSection){cardSection=def.section;if(def.section)section.append(el('h4','am-settings-section',def.section));card=el('div','am-settings-card');section.append(card);}
         card.append(settingRow(def));
       }
@@ -2892,7 +2877,7 @@
     const now=()=>def.value?def.value():settings[def.key];let control;
     if(def.type==='custom'){const r=def.render(def);control=r.node;settingsSyncs.push(r.sync);}
     else if(def.type==='toggle'){
-      control=el('button','am-settings-switch');control.type='button';control.setAttribute('role','switch');control.append(el('span','am-settings-knob'));
+      control=el('button','am-settings-switch');control.type='button';control.setAttribute('role','switch');
       control.onclick=()=>setSetting(def.key,!settings[def.key]);settingsSyncs.push(()=>control.setAttribute('aria-checked',String(!!now())));
     } else if(def.style==='segmented'||def.style==='swatches'){
       control=el('div','am-settings-'+def.style);control.setAttribute('role','radiogroup');
@@ -2921,16 +2906,15 @@
   document.addEventListener('am-settings',()=>{if(!settingsBack.isConnected)return;if(shownDefs().map(d=>d.key).join()!==settingsShown)renderSettings();else settingsSyncs.forEach(fn=>fn());});
   function openSettings(group) {
     if(group)settingsTab=group;
-    if(!settingsBack.isConnected){settingsReturn=document.activeElement;closePopover();settingsBox.style.cssText='';document.body.append(settingsBack);menuGlass.attach(settingsBox);}
+    if(!settingsBack.isConnected){settingsReturn=document.activeElement;closePopover();settingsBox.style.cssText='';document.body.append(settingsBack);}
     renderSettings();
     if(!settingsBox.contains(document.activeElement))settingsBox.focus({preventScroll:true});
     return settingsBack.isConnected&&!!settingsBox.querySelector('.am-settings-row');
   }
   function closeSettings() {
-    if(!settingsBack.isConnected)return;settingsBack.remove();menuGlass.sync();
+    if(!settingsBack.isConnected)return;settingsBack.remove();
     if(settingsReturn?.isConnected)settingsReturn.focus?.({preventScroll:true});settingsReturn=null;
   }
-  settingsBack.addEventListener('pointerdown',event=>{if(event.target===settingsBack&&settings.settingsPresent==='sheet')closeSettings();});
   settingsBox.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();closeSettings();}});
   // ⌘⌥, (Ctrl+Alt+, on Windows) opens and closes it: ⌘, is Spotify's own Settings.
   document.addEventListener('keydown',event=>{

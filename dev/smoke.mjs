@@ -1214,7 +1214,7 @@ try {
     }), [20, '20 öğe', true]);
   });
 
-  await check('settings window: the profile menu\'s mcloud opens it, drawn from the definitions, in three layouts', async () => {
+  await check('settings window: the profile menu\'s mcloud opens Apple Music\'s Settings window, drawn from the definitions', async () => {
     // The profile menu holds one mcloud entry; the old submenu is only the fallback.
     assert.deepEqual(await page.evaluate(() => [window.__menuItems.map(i => i.name), window.__menus.length]), [['mcloud'], 0]);
     await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
@@ -1223,13 +1223,19 @@ try {
     assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler']);
     // It reopens on the last tab (Albums & Playlists, from the track numbers check), as macOS does; the title names it.
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
-    // Tabs (Apple Music's Settings): a form, toggles as checkboxes. Real clicks from here on.
+    // A form: labels right-aligned with a colon, toggles as checkboxes. Real clicks from here on.
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
     assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı', 'Oynatıcı düğmeleri']);
+    assert.deepEqual(await page.evaluate(() => { const l = getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label')); return [l.textAlign, getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label'), '::after').content]; }), ['right', '":"']);
     await page.click('#am-settings [data-key="artwork"] .am-settings-switch');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-artwork')));
     assert.equal(await page.getAttribute('#am-settings [data-key="artwork"] .am-settings-switch', 'aria-checked'), 'false');
-    await shot('settings-tabs');
+    // Apple's dark Settings colours, neutral: the window, a lighter toolbar band, the selected tab on a tile in the accent.
+    assert.deepEqual(await page.evaluate(() => {
+      const box = document.querySelector('#am-settings .am-settings-box'), tab = document.querySelector('#am-settings .am-settings-tab.am-selected');
+      return [getComputedStyle(box).backdropFilter.split('(')[0], getComputedStyle(tab).color === getComputedStyle(document.documentElement).getPropertyValue('--am-accent').trim().replace(/^#(..)(..)(..)$/, (_, r, g, b) => `rgb(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)})`)];
+    }), ['blur', true]);
+    await shot('settings-window');
     await page.click('#am-settings .am-settings-tab:has-text("Görünüm")');
     await page.click('#am-settings [data-key="accent"] [aria-label="Mavi"]');
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-accent')), '#0a84ff');
@@ -1237,50 +1243,26 @@ try {
     await page.focus('#am-settings .am-settings-tab.am-selected');
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Oynatıcı');
-    // Sidebar (System Settings): grouped rows with switches.
-    await page.click('#am-settings .am-settings-tab:has-text("Genel")');
-    await page.click('#am-settings [data-key="settingsLayout"] .am-settings-option:has-text("Kenar çubuğu")');
-    assert.ok(await page.locator('#am-settings .am-settings-layout-sidebar .am-settings-side .am-settings-tab').first().isVisible());
-    assert.equal(await page.getAttribute('#am-settings [data-key="settingsLayout"] [aria-checked="true"]', 'aria-checked'), 'true');
-    await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
-    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#am-settings [data-key="liquid"] .am-settings-knob')).display), 'block');
-    await shot('settings-sidebar');
-    // One page: every group, each under its heading.
-    await page.click('#am-settings .am-settings-tab:has-text("Genel")');
-    await page.click('#am-settings [data-key="settingsLayout"] .am-settings-option:has-text("Tek sayfa")');
-    assert.equal(await page.locator('#am-settings .am-settings-tab').count(), 0);
-    assert.deepEqual(await page.locator('#am-settings .am-settings-group-title').allTextContents(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler']);
-    await shot('settings-page');
-    await page.click('#am-settings [data-key="settingsLayout"] .am-settings-option:has-text("Sekmeler")');
-    // Sheet: the page dims and a click outside closes it; Window: no dimming, the title bar moves it.
-    await page.click('#am-settings [data-key="settingsPresent"] .am-settings-option:has-text("Açılır sayfa")');
-    assert.equal(await page.evaluate(() => document.getElementById('am-settings').classList.contains('am-settings-sheet')), true);
-    await page.mouse.click(20, 880);
-    assert.equal(await page.locator('#am-settings').count(), 0);
-    await settingsWindow.pick('settingsPresent', 'Pencere', true);
+    // Not modal: no dimming, the page stays usable, and the title bar moves the window.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('am-settings')).pointerEvents), 'none');
     await page.evaluate(() => document.querySelector('#am-settings .am-settings-box').getAnimations().forEach(a => a.finish()));
     const box = await page.locator('#am-settings .am-settings-box').boundingBox();
     await page.mouse.move(box.x + box.width / 2 + 60, box.y + 14);await page.mouse.down();await page.mouse.move(box.x + box.width / 2 + 160, box.y + 64);await page.mouse.up();
     const moved = await page.locator('#am-settings .am-settings-box').boundingBox();
     assert.deepEqual([Math.round(moved.x - box.x), Math.round(moved.y - box.y)], [100, 50]);
-    // Materials: Liquid Glass is the menus' lens (a data-am-glass slot), frosted a blur, solid none.
-    const material = () => page.evaluate(() => { const b = document.querySelector('#am-settings .am-settings-box'); return [!!b.dataset.amGlass, getComputedStyle(b).backdropFilter.split('(')[0]]; });
-    assert.deepEqual(await material(), [true, 'url']);
-    await settingsWindow.pick('settingsGlass', 'Buzlu', true);
-    assert.deepEqual(await material(), [true, 'blur']);
-    await settingsWindow.pick('settingsGlass', 'Opak', true);
-    assert.deepEqual(await material(), [true, 'none']);
-    await settingsWindow.pick('settingsGlass', 'Liquid Glass', true);
-    // Escape closes and frees its glass slot; ⌘⌥, opens and closes it.
+    // OK closes; Escape closes; ⌘⌥, opens and closes it.
+    await page.click('#am-settings .am-settings-ok');
+    assert.equal(await page.locator('#am-settings').count(), 0);
+    await page.keyboard.press('Meta+Alt+Comma');
+    assert.equal(await page.locator('#am-settings').count(), 1);
     await page.focus('#am-settings .am-settings-tab.am-selected');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#am-settings').count(), 0);
     await page.keyboard.press('Meta+Alt+Comma');
-    assert.equal(await page.locator('#am-settings').count(), 1);
     await page.keyboard.press('Meta+Alt+Comma');
     assert.equal(await page.locator('#am-settings').count(), 0);
     const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings')));
-    assert.deepEqual([saved.accent, saved.artwork, saved.sort, saved.settingsLayout, saved.settingsPresent], ['blue', false, 'name', 'tabs', 'window']);
+    assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
   await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
@@ -1528,7 +1510,7 @@ try {
       // Every definition but the window's own, in tab order (General first); a choice gives a row per option.
       assert.equal(list[0], 'Dil: Otomatik');
       assert.ok(['Dil: Türkçe', 'Renk: Spotify Yeşili', 'Oynatıcıda albüm kapağı', 'Düğme: Karıştır', 'Son listeler: 20', 'Çalma listelerinde parça numaraları'].every(n => list.includes(n)));
-      assert.ok(list.includes('Renk: Mavi') && list.includes('Cam efekti: Eko') && list.includes('Son listeler: Yok') && !list.some(n => n.startsWith('Düzen')));
+      assert.ok(list.includes('Renk: Mavi') && list.includes('Cam efekti: Eko') && list.includes('Son listeler: Yok'));
       await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
       assert.ok(await other.evaluate(() => !document.body.classList.contains('am-liquid') && window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').checked === false));
       await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
