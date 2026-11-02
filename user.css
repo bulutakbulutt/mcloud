@@ -394,7 +394,10 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player .am-lcd:hover .am-star,#am-player .am-star:focus-visible {opacity:1}
 .am-track-title {flex:0 1 auto;font-size:13px;font-weight:650;letter-spacing:-.01em;color:#f5f5f5;cursor:pointer}
 .am-track-subtitle {font-size:13px;color:#ffffffd0;cursor:pointer;border-radius:4px}
-.am-track-subtitle:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
+.am-track-title:focus-visible,.am-track-subtitle:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
+.am-lcd-links .am-track-subtitle {cursor:default}
+.am-lcd-link {cursor:pointer}
+.am-lcd-links .am-track-title:hover,.am-lcd-link:hover {text-decoration:underline}
 #am-player .am-more {flex:0 0 auto;color:#e0e0e0}
 #am-player .am-more svg {width:20px;height:20px}
 .am-marquee {overflow:hidden;white-space:nowrap;min-width:0;line-height:1.3}

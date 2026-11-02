@@ -200,6 +200,13 @@
     change:v=>{if(v!=='eco'&&reducedTransparency.matches)notify(T('Sistem ayarlarında saydamlık kapalı olduğu için cam efekti açılamıyor.','Transparency is reduced in your system settings, so the glass effect stays off.'));}});
   defineSetting({key:'artwork',group:'player',label:T('Oynatıcıda albüm kapağı','Artwork in player'),type:'toggle',default:true});
   defineSetting({key:'liquid',group:'player',label:T('Liquid Glass oynatıcı','Liquid Glass player'),type:'toggle',default:true});
+  // Apple Music opens the song's menu wherever the player is right-clicked, and its title and artist — album line ask
+  // where to go; Spotify opens it over the song only and links each name (issue #85). Spotify's is the default.
+  defineSetting({key:'playerMenu',group:'player',label:T('Sağ tık menüsü','Right-click menu'),type:'choice',default:'track',
+    options:[['apple',T('Oynatıcının her yerinde (Apple Music)','Anywhere on the player (Apple Music)')],['track',T('Yalnızca şarkının üstünde (Spotify)','Over the song only (Spotify)')]]});
+  defineSetting({key:'lcdLinks',group:'player',label:T('Şarkı adı ve sanatçı','Song title and artist'),type:'choice',default:'spotify',
+    options:[['apple',T('Gidilecek yeri sorar (Apple Music)','Ask where to go (Apple Music)')],['spotify',T('Bağlantı olur (Spotify)','Open as links (Spotify)')]],
+    apply:v=>document.body.classList.toggle('am-lcd-links',v==='spotify'),change:()=>syncPlayer()});
   defineSetting({key:'numbers',group:'pages',label:T('Çalma listelerinde parça numaraları','Track numbers in playlists'),type:'toggle',default:true});
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
@@ -850,7 +857,7 @@
   player.addEventListener('contextmenu',event=>{
     if(popover.contains(event.target))return;
     event.preventDefault();
-    if(!S.Player.data?.item?.uri)return;
+    if(!S.Player.data?.item?.uri||settings.playerMenu==='track'&&!event.target.closest('.am-lcd'))return;
     openTrackMenu({x:event.clientX,y:event.clientY});
   });
   const controls=el('div','am-transport');player.append(controls);
@@ -886,16 +893,24 @@
       if(overflow){root.style.setProperty('--am-marquee-duration',((first.offsetWidth+48)/28).toFixed(1)+'s');root.style.setProperty('--am-marquee-steps',String(Math.max(1,Math.round((first.offsetWidth+48)*(window.devicePixelRatio||1)))));}
     }
     if(typeof ResizeObserver==='function')new ResizeObserver(fit).observe(root);
-    return {root,set(text){if(first.textContent===text)return;first.textContent=copy.textContent=text;root.title=text;fit();}};
+    // parts: [{text,uri?}], the names that open their page (lcdLinks 'spotify').
+    let shown=null;
+    return {root,set(text,parts){const key=parts?JSON.stringify(parts):text;if(shown===key)return;shown=key;
+      for(const node of [first,copy])if(parts)node.replaceChildren(...parts.map(p=>{if(!p.uri)return p.text;const link=el('span','am-lcd-link',p.text);link.dataset.uri=p.uri;return link;}));else node.textContent=text;
+      root.title=text;fit();}};
   }
   const text=el('div','am-lcd-text'),titleRow=el('div','am-title-row');
   const title=marquee('am-track-title'),subtitle=marquee('am-track-subtitle');
   const star=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',safe(()=>{S.Player.toggleHeart();setTimeout(syncPlayer,300);}),'am-star');
-  title.root.addEventListener('click',()=>{const item=S.Player.data?.item;const uri=item?.album?.uri||item?.metadata?.album_uri||item?.uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
-  // As in Apple Music, the artist — album line asks where to go.
-  subtitle.root.setAttribute('role','button');subtitle.root.tabIndex=0;subtitle.root.setAttribute('aria-haspopup','menu');
-  subtitle.root.addEventListener('click',()=>togglePopover(subtitle.root,subtitleMenu));
-  subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
+  // As in Apple Music, the title and the artist — album line ask where to go; as links, the title opens the album.
+  for(const line of [title.root,subtitle.root]){
+    line.setAttribute('role','button');line.tabIndex=0;line.setAttribute('aria-haspopup','menu');
+    line.addEventListener('click',event=>{
+      if(settings.lcdLinks!=='spotify')return togglePopover(line,subtitleMenu);
+      const item=S.Player.data?.item;openUri(line===title.root?item?.album?.uri||item?.metadata?.album_uri||item?.uri:event.target.closest?.('.am-lcd-link')?.dataset.uri);
+    });
+    line.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(line,subtitleMenu);}});
+  }
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
   const more=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(more),'am-more');
   lcd.append(fullscreenButton,text,more);playerButton(star,'love',T('Beğen','Like'));playerButton(more,'more',T('Diğer','More'));
@@ -1618,9 +1633,10 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artists=(item.artists||[]).filter(artist=>artist?.uri);
     if(!artists.length&&meta.artist_uri)artists.push({uri:meta.artist_uri,name:meta.artist_name||''});
+    // Album first, as Music's own menu.
     return [
-      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
       ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
+      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
     ];
   }
   let boundToolbar=null, toolbarChildren=[];
@@ -2137,10 +2153,16 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};
     const trackTitle=item?.name||meta.title||'',trackArtist=meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'';
     const album=item?.album?.name||meta.album_title||'';
-    const key=[item?.uri,trackTitle,trackArtist,album].join('\n');
+    const key=[item?.uri,trackTitle,trackArtist,album,settings.lcdLinks].join('\n');
     if(key!==previousTrack){
       const changed=previousTrack!=='';previousTrack=key;closePopover();
-      title.set(trackTitle);subtitle.set([trackArtist,album].filter(Boolean).join(' — '));
+      title.set(trackTitle);
+      if(settings.lcdLinks==='spotify'){
+        const named=(item?.artists||[]).filter(a=>a?.name),artists=named.length?named:trackArtist?[{name:trackArtist,uri:meta.artist_uri}]:[];
+        const parts=artists.flatMap((a,i)=>[...(i?[{text:', '}]:[]),{text:a.name,uri:a.uri}]);
+        if(album)parts.push(...(parts.length?[{text:' — '}]:[]),{text:album,uri:item?.album?.uri||meta.album_uri});
+        subtitle.set(parts.map(p=>p.text).join(''),parts);
+      }else subtitle.set([trackArtist,album].filter(Boolean).join(' — '));
       track.classList.toggle('am-has-track',!!trackTitle);
       const images=item?.images?.length?item.images:item?.album?.images||[];
       const art=spotifyImage((images.find(i=>i.label==='small')||images.find(i=>i.label==='standard')||images[0])?.url||meta.image_small_url||meta.image_url||'');
