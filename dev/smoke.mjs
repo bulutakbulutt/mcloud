@@ -1481,36 +1481,27 @@ try {
       await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-nowplaying .am-np-line.am-current')).opacity === '1');
       await pick('npBg', 'Kapak renkleri');
 
-      // With Spicy Lyrics the full-screen button is Spicy's full screen (its own button, clicked), in either layout: the pane
-      // hides under it, and leaving it returns to the page it was opened from with the pane as it was. While Spicy's page is
-      // open the card steps aside, so the lyrics never show twice; the player's lyrics button keeps opening that page.
-      await page.evaluate(() => { const H = Spicetify.Platform.History;
-        const p = document.createElement('div'); p.id = 'SpicyLyricsPage'; document.body.append(p);
-        const f = document.createElement('button'); f.id = 'SpicyLyrics_FullscreenButton';
-        f.onclick = () => { window.__spicyFull = (window.__spicyFull || 0) + 1; if (H.location.pathname !== '/SpicyLyrics') H.push('/SpicyLyrics'); p.classList.toggle('Fullscreen'); }; document.body.append(f);
-        const b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
+      // With Spicy Lyrics, beside the player, the full-screen button opens Spicy's page (its own button, clicked) in either
+      // layout; while that page is open the pane steps aside, so the lyrics never show twice, and it comes back as it was
+      // when the page closes. The player's lyrics button keeps opening that page.
+      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
         b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); }; document.body.append(b); });
       const route = () => page.evaluate(() => Spicetify.Platform.History.location.pathname);
-      const paneShown = () => page.evaluate(() => !!document.getElementById('am-nowplaying').getClientRects().length && document.body.classList.contains('am-np-open'));
+      const paneShown = () => page.evaluate(() => !document.getElementById('am-nowplaying').hidden && document.body.classList.contains('am-np-open'));
       for (const layout of ['Cam kart', 'Kenara yapışık']) {
         await pick('npLayout', layout);
         const before = await rect('#am-nowplaying');
+        await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Spicy Lyrics\'te aç');
         await page.click('#am-nowplaying .am-np-fullscreen');
-        await page.waitForFunction(() => document.body.classList.contains('am-spicy-fullscreen'));
         assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', false, false], layout);
-        await page.evaluate(() => document.getElementById('SpicyLyricsPage').classList.remove('Fullscreen'));
-        await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/' && !document.getElementById('am-nowplaying').hidden);
+        await page.click('#am-lyrics-toggle');
+        assert.equal(await route(), '/');
+        await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden);
         assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane comes back as it was: ' + layout);
       }
-      assert.equal(await page.evaluate(() => window.__spicyFull), 2);
+      assert.equal(await page.evaluate(() => window.__spicyClicks), 4);
       await pick('npLayout', 'Cam kart');
-      await page.click('#am-lyrics-toggle');
-      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks), await paneShown()], ['/SpicyLyrics', 1, false]);
-      await page.click('#am-lyrics-toggle');
-      assert.equal(await route(), '/');
-      await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden);
-      assert.deepEqual(await rect('#am-nowplaying'), pane, 'the card comes back as it was');
-      await page.evaluate(() => ['SpicyLyrics_PageButton', 'SpicyLyrics_FullscreenButton', 'SpicyLyricsPage'].forEach(id => document.getElementById(id).remove()));
+      await page.evaluate(() => document.getElementById('SpicyLyrics_PageButton').remove());
       // The × turns the pane off, and so does the player's "…" menu.
       await page.click('#am-nowplaying .am-np-close');
       assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));

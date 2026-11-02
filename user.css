@@ -1178,7 +1178,7 @@ body.am-np-beside #am-nowplaying .am-np-close {display:grid}
 body.am-np-beside .am-np-body {padding-top:42px}
 body.am-windows.am-np-beside.am-np-docked #am-nowplaying .am-np-close {top:44px}
 body.am-windows.am-np-beside.am-np-docked #am-nowplaying .am-np-body {padding-top:76px}
-/* Full screen without Spicy Lyrics (with it, Spicy's own full screen; theme.js npFullscreen): the pane fills the window as
+/* Full screen without Spicy Lyrics (with it, Spicy's page; theme.js npFullscreen): the pane fills the window as
    Apple Music's full-screen player, the artwork and title on the left and the lyrics large on the right. The floating
    player stays above it. Its button moves to the top right corner. */
 body.am-np-full #am-nowplaying {inset:0;width:auto;z-index:58;border-radius:0;box-shadow:none}

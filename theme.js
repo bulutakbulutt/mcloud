@@ -2000,8 +2000,6 @@
     if(page!==observedSpicyPage){spicyObserver.disconnect();observedSpicyPage=page;if(page)spicyObserver.observe(page,{attributes:true,attributeFilter:['class']});}
     const fullscreen=!!page?.classList.contains('Fullscreen');
     document.body.classList.toggle('am-spicy-fullscreen',fullscreen);
-    // Spicy's full screen opened from the Now Playing pane: leaving it returns to the page it was opened from.
-    if(npSpicyFrom){if(fullscreen)npSpicyFrom.entered=true;else if(npSpicyFrom.entered){const {from}=npSpicyFrom;npSpicyFrom=null;if(from!=='/SpicyLyrics'&&routePath()==='/SpicyLyrics')S.Platform.History.goBack?.();}}
     const lyricsOpen=routePath()==='/SpicyLyrics';
     if(document.body.classList.contains('am-spicy-route')!==lyricsOpen){document.body.classList.toggle('am-spicy-route',lyricsOpen);npApply();}
     const available=!!document.getElementById('SpicyLyrics_PageButton');
@@ -2072,8 +2070,9 @@
   npMeta.append(npThumb,npText,npStar,npMore);
   const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
   npLyricsBox.setAttribute('aria-live','off');
-  // Full screen: Spicy Lyrics' full-screen view (its own button, clicked; the pane hides under it), or without Spicy
-  // Lyrics the pane fills the window itself. Esc or the button again leaves, back to the pane as it was.
+  // Full screen: beside the player, Spicy Lyrics' page (its own button, clicked); the pane steps aside while that page is
+  // open, so the lyrics never show twice, and comes back as it was when it closes. Without Spicy Lyrics (or with the
+  // controls in the pane) the pane fills the window itself; Esc or the button again leaves.
   const npFull=button(T('Tam ekran sözler','Full-screen lyrics'),'expand',()=>npFullscreen(!npFullOn),'am-np-fullscreen');
   // Beside the player the pane closes itself; it comes back from the player's Now Playing button or its "…" menu.
   const npClose=button(T('Şimdi Çalan\'ı kapat','Close Now Playing'),'close',()=>npOpen(false),'am-np-close');
@@ -2084,7 +2083,8 @@
   // only"). It is always there unless the settings window's button picker hides it; the player's "…" menu does the same.
   const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npOpen((npWant??settings.nowPlaying)==='off'),'am-np-toggle');
   npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
-  let npSpicyFrom=null;
+  // Beside the player, Spicy Lyrics' page takes the lyrics (its own full screen is a click away there).
+  const npHandsToSpicy=()=>(npWant??settings.nowPlaying)==='beside'&&!!document.getElementById('SpicyLyrics_PageButton');
   // Shown or hidden at once, saved after that frame is painted: saving tells the settings window, the menus and the
   // toolbar glass, which reads layout, and that forced layout cost the opening frame 20-40ms (measured in the client).
   let npWant=null;
@@ -2101,7 +2101,7 @@
   npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
   let npFullOn=false;
   function npFullscreen(on) {
-    if(on&&document.getElementById('SpicyLyrics_FullscreenButton')){const mark=npSpicyFrom={from:routePath(),entered:false};setTimeout(()=>{if(npSpicyFrom===mark&&!mark.entered)npSpicyFrom=null;},3000);runSpicyControl('SpicyLyrics_FullscreenButton');return;}
+    if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
     if(npFullOn===on)return;
     npFullOn=on;document.body.classList.toggle('am-np-full',on);npSyncFull();
     // The lines move to a new layout: back to the one being sung (or loaded, when the pane showed none).
@@ -2109,7 +2109,7 @@
     else if(npLyrics&&npLyricUri===(S.Player.data?.item?.uri||''))npJumpLyrics();else{npLyricUri=null;npLoadLyrics(S.Player.data?.item);}
   }
   function npSyncFull() {
-    const label=npFullOn?T('Tam ekrandan çık','Exit Full Screen'):T('Tam ekran sözler','Full-screen lyrics');
+    const label=npFullOn?T('Tam ekrandan çık','Exit Full Screen'):npHandsToSpicy()?T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'):T('Tam ekran sözler','Full-screen lyrics');
     if(npFull.classList.contains('am-active')!==npFullOn)npFull.innerHTML=svg(npFullOn?'collapse':'expand');
     npFull.classList.toggle('am-active',npFullOn);setAttributeIfChanged(npFull,'aria-pressed',String(npFullOn));
     setAttributeIfChanged(npFull,'aria-label',label);setAttributeIfChanged(npFull,'title',label);
@@ -2156,7 +2156,7 @@
     // Plain lyrics light the line being sung only while playing (paused, every line is grey, as in Music).
     const playing=!!S.Player.isPlaying?.();if(np.classList.contains('am-np-playing')!==playing)np.classList.toggle('am-np-playing',playing);
     const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
-    npSyncCanvas();npPlayVideo();npSyncLyric();
+    npSyncCanvas();npPlayVideo();npSyncLyric();npSyncFull();
   }
   function npTrack(item) {
     npTrackKey=item?.uri||'';const meta=item?.metadata||{};
