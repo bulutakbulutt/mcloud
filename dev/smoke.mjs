@@ -1220,10 +1220,11 @@ try {
     assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not(:has([data-am-scheme]))').length), 0);
     assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
-    // The artist page can keep its dark artist colours in light mode.
-    await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi)');
+    // The artist page keeps its dark artist colours in light mode (as Music does) unless it is set to light.
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
     await pick('Açık modda sanatçı sayfası: Açık');
+    assert.ok(await page.evaluate(() => !document.body.classList.contains('am-artist-stays-dark')));
+    await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi, Apple gibi)');
     // System: follows prefers-color-scheme as it changes.
     await page.emulateMedia({ colorScheme: 'dark' });
     await pick('Görünüm: Sistem');

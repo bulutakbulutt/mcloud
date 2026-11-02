@@ -12,7 +12,7 @@
    quaternary .098, fills .098/.078/.047; NSColor resolved under NSAppearance aqua and darkAqua), only the ink flips.
    --am-rim stays white: glass rims are bright in both. .am-scheme-dark keeps a region dark in light mode (the About
    sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
-:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-image-header .am-native-main,body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
+:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-image-header .am-native-main,body.am-artist-stays-dark.am-artist-open #am-artist {
  color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
  --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:#dedede; --am-sub:#969696; --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
  --am-label:#f2f2f2; --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
@@ -29,20 +29,20 @@
  --am-hero-name:#e4e4e4; --am-hero-play:#fff; --am-hero-play-icon:var(--am-tint-top,#333);
 }
 /* Light, after Apple Music's light appearance. Sources (research/issue74/NOTES.md): window #fff and under-page #f6f6f6
-   (NSColor windowBackground and underPageBackground under aqua); text = label (.847 black) and secondary label (.498)
-   over white; sidebar #f3f2f2 (Music's own window, launched light for one run, 2x capture); bars = the titlebar
-   material (aqua: 197 + .19 x the page: #f3f3f3 at 81%); panels = Music's queue panel (opaque #f3f2f2); frosted glass =
-   NSGlassEffectView's tone (aqua: 102 + .525 x the page: #d7d7d7 at 48%); Music's red KeyColor is #fa233b in light. */
+   (NSColor under aqua); text = label (.847 black: #272727) and secondary label (.498: #808080), the same cores Music's
+   album page draws. Music's own window launched light and focused (2x captures): the sidebar and the queue panel are
+   glass, 138 over a near-black page and #eeedec over white (#e2e2e2 at 61%); the play bar 108 + .56 x the page (#f5f5f5
+   at 44% as a plain fill); bars = the titlebar material (#f3f3f3 at 81%); Music's red KeyColor is #fa233b in light. */
 :root.am-light,body.am-light {
  color-scheme:light; --am-ink:0 0 0;
  --am-bg:#fff; --am-sidebar:#f6f6f6; --am-text:#272727; --am-sub:#808080; --am-sub-2:#6e6e73; --am-dim:#a1a1a6;
  --am-label:#1d1d1f; --am-icon:#2b2b2b; --am-icon-2:#333; --am-time:#3d3d3d;
  --am-field:#fff; --am-field-2:#fff; --am-art-empty:#ececec; --am-tint-floor:#f2f2f2;
  --am-bar-glass:color-mix(in srgb,#f3f3f3 81%,transparent);
- --am-sidebar-fill:color-mix(in srgb,#f3f2f2 88%,transparent); --am-sidebar-lite:color-mix(in srgb,#f3f2f2 80%,transparent); --am-sidebar-solid:#f3f2f2;
- --am-panel-fill:#f3f2f2; --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#f6f6f6;
- --am-player-fill:color-mix(in srgb,#d7d7d7 48%,transparent); --am-solid-fill:linear-gradient(180deg,#fdfdfd,#ececec); --am-toast-fill:#f6f6f6eb;
- --am-toolbar-glass:color-mix(in srgb,#d7d7d7 48%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
+ --am-sidebar-fill:color-mix(in srgb,#e2e2e2 61%,transparent); --am-sidebar-lite:color-mix(in srgb,#e2e2e2 70%,transparent); --am-sidebar-solid:#eeedec;
+ --am-panel-fill:color-mix(in srgb,#e2e2e2 61%,transparent); --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#eeedec;
+ --am-player-fill:color-mix(in srgb,#f5f5f5 44%,transparent); --am-solid-fill:linear-gradient(180deg,#fdfdfd,#ececec); --am-toast-fill:#f6f6f6eb;
+ --am-toolbar-glass:color-mix(in srgb,#f5f5f5 44%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
  --am-toolbar-shade:linear-gradient(180deg,#ffffff40,#ffffff14 60%,#fff0);
  --am-menu-solid:#f6f6f6; --am-menu-solid-a:#f6f6f6f0; --am-sheet-fill:#fbfbfbd9;
  --am-rim-edge:#00000033; --am-glass-text-shadow:0 0 6px #fff9; --am-hero-name-shadow:none;
@@ -886,9 +886,10 @@ body.am-ready .am-native-panel-open [data-am-fill] {
    anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
 body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
 
-/* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode (artistLight
-   'light') the colour is a pale page with deep text (theme.js setTint); with 'dark' the page, sidebar and player keep
-   the dark artist colours (.am-artist-stays-dark, the dark tokens above). */
+/* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode Music keeps the
+   artist page dark (white text over the artist colour) under its light glass sidebar, queue and play bar; that is
+   artistLight 'dark' (.am-artist-stays-dark: the page takes the dark tokens above, the glass stays light). 'light'
+   turns the page pale with deep text (theme.js setTint). */
 body.am-light:not(.am-artist-stays-dark) {--am-tint-top:var(--am-tint-top-light,#ececec);--am-tint-bg:var(--am-tint-bg-light,var(--am-bg));--am-tint-text:var(--am-tint-text-light,var(--am-sub))}
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
 body.am-tinted .am-nav-heading {color:rgb(var(--am-ink)/.451)}

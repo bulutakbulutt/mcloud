@@ -144,10 +144,10 @@
   // Appearance (issue #74): dark, light (Apple Music's light appearance) or the system's. user.css keeps every colour
   // in --am-* tokens; light mode is body.am-light (and :root.am-light) swapping their values. The glass filters carry
   // their tone in SVG, so light mode adds one colour step to each (applyGlassScheme). Style choices are settings:
-  // artistLight (the artist page in light mode: 'light' follows it, 'dark' keeps Apple's dark artwork-coloured page),
-  // lightGlass (player and toolbar glass) and lightMenu (menus and search results).
-  const appearanceModes=['dark','light','system'],artistLightModes=['light','dark'],lightGlassModes=['apple','bright'],lightMenuModes=['estimate','glass','material'];
-  for(const [key,value] of [['appearance','dark'],['artistLight','light'],['lightGlass','apple'],['lightMenu','estimate']]){
+  // artistLight (the artist page in light mode: 'dark' keeps the dark artist-coloured page, as Music does in light,
+  // 'light' turns it pale), lightGlass (player and toolbar glass) and lightMenu (menus and search results).
+  const appearanceModes=['dark','light','system'],artistLightModes=['dark','light'],lightGlassModes=['apple','unfocused'],lightMenuModes=['apple','glass','material'];
+  for(const [key,value] of [['appearance','dark'],['artistLight','dark'],['lightGlass','apple'],['lightMenu','apple']]){
     if(!(key in settings))try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[key];settings[key]=typeof saved==='string'?saved:value;}catch{settings[key]=value;}
   }
   const systemLight=matchMedia('(prefers-color-scheme: light)');
@@ -155,14 +155,16 @@
   // Light accents: Music's own KeyColor for red (its asset catalog: #fa233b in light, #fa2d48 in dark), the others
   // NSColor's system colours resolved under aqua on macOS 27; Spotify green from its light Encore sets.
   const lightAccents={red:'#fa233b',pink:'#ff2d55',orange:'#ff8d28',yellow:'#ffcc00',green:'#34c759',teal:'#00c3d0',blue:'#0088ff',purple:'#cb30e0',spotify:'#169f47'};
-  // Glass tones by luminance (0, 32, … 255 -> output), measured with tools/glasslab.swift (research/issue74): a window
-  // kept below the desktop draws flat greys under NSGlassEffectView and NSVisualEffectView in aqua and darkAqua, read
-  // with screencapture -l. Dark NSGlassEffectView came out 20 -> 180 (unfocused window), close to the fitted focused
-  // tone the filters use (32 -> 185), which supports the method. Light mode maps each filter's dark tone onto a light one.
+  // Glass tones by luminance (0, 32, … 255 -> output), research/issue74. 'apple': Music's own window launched light and
+  // focused (2x captures): the play bar 108 + .56 L (over flat tiles L131 -> 183, L139 -> 186, over white 249-253, over
+  // its dark artist page ~110); a song's menu 170 + .34 L (over white 253, over its queue panel 240, darker artwork
+  // 197-218). 'unfocused' and the menu's 'glass' / 'material': NSGlassEffectView and NSVisualEffectView .menu drawn over
+  // flat greys in a window under aqua that never had focus (tools/glasslab.swift). Light mode maps each filter's dark
+  // tone onto the light one.
   const lightTones={
-    glass:{apple:[102,120,137,155,171,188,205,221,236],                      // NSGlassEffectView, aqua
-      bright:[163,174,184,195,205,215,225,235,244]},                          // the same, 40% nearer white
-    menu:{estimate:[160,170,180,189,199,208,217,225,233],                     // NSMenu: between the two below, placed as dark's menu sits between them
+    glass:{apple:[108,126,144,162,180,197,215,233,251],                      // Music's play bar, light, focused
+      unfocused:[102,120,137,155,171,188,205,221,236]},                       // NSGlassEffectView, aqua, unfocused
+    menu:{apple:[170,181,192,203,214,225,236,246,253],                        // Music's song menu, light, focused
       glass:[102,120,137,155,171,188,205,221,236],                            // NSGlassEffectView, aqua
       material:[174,181,190,198,207,215,224,229,229]}};                       // NSVisualEffectView .menu, aqua
   const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185],
@@ -179,11 +181,10 @@
   };
   // Live search results: one level by luminance plus some of the colour (user.css blurs first), as in dark.
   const lightSearchTone=t=>{const k=[.2126,.7152,.0722],a=t[0]/255,b=(t[t.length-1]-t[0])/255,g=.6;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';};
-  // Glass that sits on the artist page keeps the dark tone while that page stays dark (artistLight 'dark').
   function applyGlassScheme(){
-    const light=isLight(),glassLight=light&&!(settings.artistLight==='dark'&&document.body.classList.contains('am-artist-open'));
-    const tables={glass:glassLight&&schemeTable(darkTones.glass,lightTones.glass[settings.lightGlass]||lightTones.glass.apple),
-      menu:light&&schemeTable(darkTones.menu,lightTones.menu[settings.lightMenu]||lightTones.menu.estimate)};
+    const light=isLight();
+    const tables={glass:light&&schemeTable(darkTones.glass,lightTones.glass[settings.lightGlass]||lightTones.glass.apple),
+      menu:light&&schemeTable(darkTones.menu,lightTones.menu[settings.lightMenu]||lightTones.menu.apple)};
     for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"],filter[id^="am-menu-glass-"]')){
       const table=tables[f.id.startsWith('am-menu-glass-')?'menu':'glass'];let step=f.querySelector(':scope > [data-am-scheme]');
       if(!table){step?.remove();continue;}
@@ -192,7 +193,7 @@
       for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
     }
     const search=document.querySelector('#am-search-glass feColorMatrix');
-    if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu[settings.lightMenu]||lightTones.menu.estimate):search.dataset.amDark);}
+    if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu[settings.lightMenu]||lightTones.menu.apple):search.dataset.amDark);}
   }
   let appearanceLight=null;
   function applyAppearance(){
@@ -208,13 +209,12 @@
   // applySettings (accent, glass) runs first and announces itself; the light accent then replaces the dark one.
   document.addEventListener('am-settings',applyAppearance);
   systemLight.addEventListener?.('change',()=>{if(settings.appearance==='system')applyAppearance();});
-  {let open=false;new MutationObserver(()=>{const now=document.body.classList.contains('am-artist-open');if(now!==open){open=now;if(settings.artistLight==='dark'&&isLight())applyGlassScheme();}}).observe(document.body,{attributes:true,attributeFilter:['class']});}
   applyAppearance();
   function setAppearance(key,value){settings[key]=value;saveSettings();applyAppearance();}
   const appearanceLabels=()=>({appearance:[T('Görünüm','Appearance'),{dark:T('Koyu','Dark'),light:T('Açık','Light'),system:T('Sistem','System')}],
-    artistLight:[T('Açık modda sanatçı sayfası','Artist page in light mode'),{light:T('Açık','Light'),dark:T('Koyu (sanatçı rengi)','Dark (artist colour)')}],
-    lightGlass:[T('Açık modda cam','Light glass'),{apple:T('Apple (ölçülen)','Apple (measured)'),bright:T('Daha beyaz','Whiter')}],
-    lightMenu:[T('Açık modda menüler','Light menus'),{estimate:T('macOS menüsü (tahmini)','macOS menu (estimated)'),glass:T('Liquid Glass','Liquid Glass'),material:T('Buzlu (eski menü)','Frosted (classic menu)')}]});
+    artistLight:[T('Açık modda sanatçı sayfası','Artist page in light mode'),{dark:T('Koyu (sanatçı rengi, Apple gibi)','Dark (artist colour, as Apple)'),light:T('Açık','Light')}],
+    lightGlass:[T('Açık modda cam','Light glass'),{apple:T('Apple (ölçülen)','Apple (measured)'),unfocused:T('Daha koyu (odaksız pencere)','Deeper (unfocused window)')}],
+    lightMenu:[T('Açık modda menüler','Light menus'),{apple:T('Apple (ölçülen)','Apple (measured)'),glass:T('Liquid Glass','Liquid Glass'),material:T('Buzlu (eski menü)','Frosted (classic menu)')}]});
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
     if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
