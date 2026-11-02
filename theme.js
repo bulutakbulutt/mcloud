@@ -2000,6 +2000,8 @@
     if(page!==observedSpicyPage){spicyObserver.disconnect();observedSpicyPage=page;if(page)spicyObserver.observe(page,{attributes:true,attributeFilter:['class']});}
     const fullscreen=!!page?.classList.contains('Fullscreen');
     document.body.classList.toggle('am-spicy-fullscreen',fullscreen);
+    // Spicy's full screen opened from the Now Playing pane: leaving it returns to the page it was opened from.
+    if(npSpicyFrom){if(fullscreen)npSpicyFrom.entered=true;else if(npSpicyFrom.entered){const {from}=npSpicyFrom;npSpicyFrom=null;if(from!=='/SpicyLyrics'&&routePath()==='/SpicyLyrics')S.Platform.History.goBack?.();}}
     const lyricsOpen=routePath()==='/SpicyLyrics';
     if(document.body.classList.contains('am-spicy-route')!==lyricsOpen){document.body.classList.toggle('am-spicy-route',lyricsOpen);npApply();}
     const available=!!document.getElementById('SpicyLyrics_PageButton');
@@ -2070,8 +2072,8 @@
   npMeta.append(npThumb,npText,npStar,npMore);
   const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
   npLyricsBox.setAttribute('aria-live','off');
-  // Full screen: the card hands the lyrics to Spicy Lyrics' page (it hides while that page is open, so the lyrics never
-  // show twice); the docked pane, or the card without Spicy Lyrics, fills the window itself. Esc or the button again leaves.
+  // Full screen: Spicy Lyrics' full-screen view (its own button, clicked; the pane hides under it), or without Spicy
+  // Lyrics the pane fills the window itself. Esc or the button again leaves, back to the pane as it was.
   const npFull=button(T('Tam ekran sözler','Full-screen lyrics'),'expand',()=>npFullscreen(!npFullOn),'am-np-fullscreen');
   // Beside the player the pane closes itself; it comes back from the player's Now Playing button or its "…" menu.
   const npClose=button(T('Şimdi Çalan\'ı kapat','Close Now Playing'),'close',()=>npOpen(false),'am-np-close');
@@ -2082,7 +2084,7 @@
   // only"). It is always there unless the settings window's button picker hides it; the player's "…" menu does the same.
   const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npOpen((npWant??settings.nowPlaying)==='off'),'am-np-toggle');
   npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
-  const npHandsToSpicy=()=>(npWant??settings.nowPlaying)==='beside'&&settings.npLayout!=='docked'&&!!document.getElementById('SpicyLyrics_PageButton');
+  let npSpicyFrom=null;
   // Shown or hidden at once, saved after that frame is painted: saving tells the settings window, the menus and the
   // toolbar glass, which reads layout, and that forced layout cost the opening frame 20-40ms (measured in the client).
   let npWant=null;
@@ -2099,7 +2101,7 @@
   npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
   let npFullOn=false;
   function npFullscreen(on) {
-    if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
+    if(on&&document.getElementById('SpicyLyrics_FullscreenButton')){const mark=npSpicyFrom={from:routePath(),entered:false};setTimeout(()=>{if(npSpicyFrom===mark&&!mark.entered)npSpicyFrom=null;},3000);runSpicyControl('SpicyLyrics_FullscreenButton');return;}
     if(npFullOn===on)return;
     npFullOn=on;document.body.classList.toggle('am-np-full',on);npSyncFull();
     // The lines move to a new layout: back to the one being sung (or loaded, when the pane showed none).
@@ -2308,7 +2310,7 @@
     if(typeof setSetting==='function')return setSetting(key,value);
     settings[key]=value;saveSettings();npDefs.find(d=>d.key===key)?.apply?.(value);applySettings();
   }
-  if(typeof settingGroup==='function')settingGroup('nowplaying',T('Şimdi Çalan','Now Playing'),'play');
+  if(typeof settingGroup==='function')settingGroup('nowplaying',T('Şimdi Çalan','Now Playing'),'nowPlaying');
   const npApplyAll=()=>npApply();
   npSetting({key:'nowPlaying',group:'nowplaying',type:'choice',style:'segmented',default:'off',label:T('Şimdi Çalan paneli','Now Playing sidebar'),
     options:[['off',T('Kapalı','Off')],['beside',T('Oynatıcının yanında','Beside the player')],['only',T('Yalnızca panel','Sidebar only')]],
