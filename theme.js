@@ -2281,6 +2281,7 @@
     fullscreenButton.classList.toggle('am-active',fullscreen);
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
     setAttributeIfChanged(fullscreenButton,'title',fullscreen?T('Tam ekrandan çık','Exit Full Screen'):T('Tam ekran','Full Screen'));
+    npSpicyCheck();
   }
   // Playlist and album pages label Spotify's play button Play/Pause in CSS; this says whether that page is the one playing.
   function syncEntityPlaying() {
@@ -2362,6 +2363,37 @@
   npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
   // Beside the player, Spicy Lyrics' page takes the lyrics (its own full screen is a click away there).
   const npHandsToSpicy=()=>(npWant??settings.nowPlaying)==='beside'&&!!document.getElementById('SpicyLyrics_PageButton');
+  // Spicy Lyrics as the pane's lyrics (settings.npLyricsSource): Spicy draws its sidebar card only into Spotify's own Now
+  // Playing view, which stays mounted in the hidden right column, and that column can't be drawn over the pane (it is in
+  // #main, under the theme's layers). So the pane steps aside and user.css shows the column in its place, filled by the
+  // card in Spicy's expanded state (its own button, clicked). Nothing is moved. Without the card (Spicy missing or its
+  // card off, a song it has no lyrics for, the queue in that column) the pane comes back with Spotify's lyrics.
+  // Under the artwork (not Plain) the pane stays for its artwork and title, cut off where its lyrics start; the column
+  // fills the rest. The cut is measured (--am-np-split) whenever the pane or its lyrics box changes size.
+  const npSpicyCard=()=>document.querySelector('.am-native-right #SpicyLyricsNPVCard');
+  let npSpicyOn=false,npSpicySplit=false,npSpicyExpanded=false,npSpicyClicked=null;
+  const npSplitObserver=new ResizeObserver(()=>{
+    if(!npSpicySplit||np.hidden)return;
+    document.body.style.setProperty('--am-np-split',Math.round(npLyricsBox.getBoundingClientRect().top-np.getBoundingClientRect().top)+'px');
+  });
+  const npOpenFor=mode=>mode==='only'||mode==='beside'&&!document.body.classList.contains('am-spicy-route');
+  const npSpicyWanted=mode=>mode==='beside'&&npOpenFor(mode)&&!npFullOn&&settings.npLyricsSource==='spicy'&&(settings.npLyricsPlace==='below'||settings.npBg==='plain')
+    &&!document.body.classList.contains('am-panel-open')&&!!npSpicyCard();
+  function npSpicyFill() {
+    const card=npSpicyCard(),right=card?.closest('.am-native-right');if(!card)return;
+    for(let n=card.closest('aside');n&&n!==right;n=n.parentElement)if(!n.hasAttribute('data-am-np-fill'))n.setAttribute('data-am-np-fill','');
+    // Expanding a collapsed card also opens it (Spicy's own rule). Each card is clicked once: its morph takes a moment.
+    if(card.classList.contains('Expanded')||npSpicyClicked===card)return;
+    const expand=card.querySelector('#NPVCardMaximize');if(expand){npSpicyClicked=card;npSpicyExpanded=true;expand.click();}
+  }
+  // The card comes and goes inside Spotify's view (Spicy rebuilds it); the reconciliation and panel swaps check whether
+  // the pane must follow, or a new card needs filling.
+  function npSpicyCheck(){if(!npReady)return;if(npSpicyWanted(npWant??settings.nowPlaying)!==npSpicyOn)npApply();else if(npSpicyOn)npSpicyFill();}
+  function npSpicySource(value) {
+    // Back to Spotify's lyrics: the card returns to the size it had before the theme expanded it.
+    if(value!=='spicy'&&npSpicyExpanded){npSpicyExpanded=false;const card=npSpicyCard();if(card?.classList.contains('Expanded'))card.querySelector('#NPVCardMaximize')?.click();}
+    npApply();
+  }
   // Shown or hidden at once, saved after that frame is painted: saving tells the settings window, the menus and the
   // toolbar glass, which reads layout, and that forced layout cost the opening frame 20-40ms (measured in the client).
   let npWant=null;
@@ -2372,7 +2404,7 @@
   }
   // Pointing at the button gets the pane ready (text, artwork, lyrics) while it is still hidden, so opening only shows it.
   function npPrepare() {
-    if(!npReady||document.hidden||!np.hidden)return;
+    if(!npReady||document.hidden||!np.hidden||settings.npLyricsSource==='spicy'&&npSpicyCard())return;
     const item=S.Player.data?.item;if((item?.uri||'')!==npTrackKey)npTrack(item);
   }
   npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
@@ -2411,23 +2443,30 @@
   function npApply() {
     if(!npReady)return;
     // While Spicy Lyrics' page is open the pane beside the player steps aside, so the lyrics never show twice.
-    const mode=npWant??settings.nowPlaying,b=document.body.classList,open=mode==='only'||mode==='beside'&&!b.contains('am-spicy-route');
+    const mode=npWant??settings.nowPlaying,b=document.body.classList,open=npOpenFor(mode),spicy=npSpicyWanted(mode);
+    // The pane's own content is rebuilt when it comes back from Spicy's (its lyrics were not loaded meanwhile).
+    if(spicy!==npSpicyOn){npSpicyOn=spicy;b.toggle('am-np-spicy',spicy);npTrackKey='';npLyricUri=null;}
+    const split=spicy&&settings.npBg!=='plain';
+    if(split!==npSpicySplit){npSpicySplit=split;b.toggle('am-np-spicy-split',split);npSplitObserver.disconnect();if(split){npSplitObserver.observe(np);npSplitObserver.observe(npLyricsBox);}}
+    if(spicy)npSpicyFill();
     if(mode==='off'&&npFullOn){npFullOn=false;b.remove('am-np-full');npSyncFull();}
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
-    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
-    const on=mode!=='off',opening=open&&np.hidden;np.hidden=!open;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
+    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork'||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    const on=mode!=='off',shown=open&&(!spicy||split),opening=shown&&np.hidden;np.hidden=!shown;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
     // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
     const content=[settings.npBg,settings.npLyricsPlace,settings.npArt].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
-    if(!open){npStopVideo();clearTimeout(npLyricTimer);return;}
+    if(!shown){npStopVideo();clearTimeout(npLyricTimer);if(spicy)npTick();return;}
     if(opening){npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;if(npTrackKey===(S.Player.data?.item?.uri||''))npLoadMotion(S.Player.data?.item);}
     npTick();
   }
   // Called from syncPlayer (every second while the window shows, and on track and play/pause changes).
   function npTick() {
-    if(!npReady||!npVisible())return;
+    if(!npReady)return;
+    if(npSpicyOn&&!npSpicySplit){if(!document.hidden&&(S.Player.data?.item?.uri||'')!==npTrackKey)npTrack(S.Player.data?.item);return;}
+    if(!npVisible())return;
     const item=S.Player.data?.item;
     if((item?.uri||'')!==npTrackKey)npTrack(item);
     // Plain lyrics light the line being sung only while playing (paused, every line is grey, as in Music).
@@ -2440,6 +2479,8 @@
     const images=item?.images?.length?item.images:item?.album?.images||[],pick=(...labels)=>spotifyImage((labels.map(l=>images.find(i=>i.label===l)).find(Boolean)||images[0])?.url||meta.image_large_url||meta.image_url||'');
     const big=pick('xlarge','large','standard'),small=pick('small','standard');
     for(const [img,src] of [[npImg,big],[npBg,pick('standard','small')],[npThumb,small]]){if(!src)img.removeAttribute('src');else if(img.getAttribute('src')!==src)img.src=src;}
+    // Spotify's view, standing in for the pane (npSpicy), takes the pane's artwork colours from this.
+    const cover=npBg.getAttribute('src');document.body.style.setProperty('--am-np-cover',cover?`url("${cover}")`:'none');
     npTitle.set(item?.name||meta.title||'');npArtist.set(meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'');
     np.classList.toggle('am-np-empty',!item?.uri);
     if(npVisible())npLoadMotion(item);
@@ -2524,7 +2565,7 @@
   // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
   let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npScrollFrame=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
-  const npLyricsShown=()=>npFullOn||settings.npLyricsPlace==='below'||settings.npBg==='plain';
+  const npLyricsShown=()=>!npSpicyOn&&(npFullOn||settings.npLyricsPlace==='below'||settings.npBg==='plain');
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
   // Back to the line being sung, at once; flash marks where the lyrics are.
   function npJumpLyrics() { npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;npSyncLyric(); }
@@ -2603,6 +2644,10 @@
     apply:()=>{npTrackKey='';npTick();},when:()=>(npWant??settings.nowPlaying)!=='off'});
   npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
     options:[['below',T('Kapağın altında','Under the artwork')],['full',T('Yalnızca tam ekranda','Only in full screen')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npLyricsSource',group:'nowplaying',type:'choice',style:'segmented',default:'spotify',label:T('Söz kaynağı','Lyrics source'),
+    options:[['spotify','Spotify'],['spicy','Spicy Lyrics']],
+    note:T('Spicy Lyrics sözlerini kendi görünümüyle kapağın altında gösterir; “Sade” arka planda panelin tamamını doldurur ve Spicy’nin ayarlarındaki “Animated Background” açıksa arka planı Spicy’nindir.','Spicy Lyrics shows its own lyrics view under the artwork; with the Plain background it fills the whole sidebar, and with “Animated Background” on in Spicy’s settings the background is Spicy’s.'),
+    apply:npSpicySource,when:()=>(npWant??settings.nowPlaying)==='beside'&&(settings.npLyricsPlace==='below'||settings.npBg==='plain')&&!!document.getElementById('SpicyLyrics_PageButton')});
   npReady=true;npApply();
   // The fallback menu is registered after the mcloud one, which the IIFE's end registers.
   if(typeof defineSetting!=='function'&&S.Menu?.SubMenu&&S.Menu?.Item)setTimeout(()=>{
@@ -3441,7 +3486,7 @@
   },true);
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
-  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
+  const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyricsNPVCard,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
   let reconciliation=null;
   function scheduleReconcile(records) {
     if(document.hidden)return;
@@ -3449,7 +3494,7 @@
     if(records.some(record=>record.target===root))syncPreview();
     // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
     const right=document.querySelector('.am-native-right');
-    if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
+    if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]'))))){syncNativePanels();npSpicyCheck();}
     if(reconciliation!==null)return;
     const relevant=!main.isConnected||!nativeNav?.isConnected||records.some(record=>{
       if(record.target===nativeNav)return true;
