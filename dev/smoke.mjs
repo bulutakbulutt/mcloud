@@ -1652,6 +1652,86 @@ try {
     await page.evaluate(() => document.getElementById('mock-feed').remove());
   });
 
+  await check('song preview: an Apple sheet, its background from settings, the sidebar closes it (#75)', async () => {
+    // Spotify 1.3's watch feed, reduced to the structure user.css relies on: info column (feed title, song, artist,
+    // cover + progress, artist row), canvas column, button column (mute/close, actions, previous/next).
+    const cover = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c33"/></svg>');
+    await page.evaluate(cover => {
+      document.querySelector('.Root').insertAdjacentHTML('beforeend', `<div id="mock-feed" role="presentation" style="position:absolute;left:0;top:0;width:100%;height:100%;box-sizing:border-box;display:flex;justify-content:center;align-items:center;background:#000000e6;z-index:6">
+        <div data-testid="watch-feed-view" style="--aspect-ratio:16 / 10;position:relative;display:flex;flex-direction:column;container-type:inline-size;width:min(85%,min(1680px,85vh * (var(--aspect-ratio))));aspect-ratio:var(--aspect-ratio);background-color:rgb(40,60,90)">
+          <div style="display:flex;flex:1;position:relative">
+            <div style="display:flex;flex-direction:column;flex-basis:50%"><div><span data-testid="watch-feed-title">Midnight Sun</span></div>
+              <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
+                <div><div><img src="${cover}"></div><div role="progressbar" data-testid="watch-feed-progress-bar"><div style="inline-size:20%"></div></div></div></div>
+              <div><div><a href="/artist/1">Zara Larsson</a><button class="mock-secondary">Follow</button></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
+            <div style="display:flex;flex-basis:50%"><div style="position:absolute;top:0;width:41%;height:100%"><div><img src="${cover}"></div></div></div>
+            <div style="display:flex;flex-direction:column;width:128px"><div><div><button aria-label="Unmute">m</button></div><button data-testid="watch-feed-close-button" aria-label="Close" onclick="document.getElementById('mock-feed').remove()">x</button></div>
+              <div style="display:flex;flex-direction:column"><button aria-label="More">…</button><button aria-label="Add to queue">+</button></div>
+              <div style="display:flex;flex-direction:column"><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
+          </div></div></div>`);
+    }, cover);
+    await page.waitForFunction(() => document.body.classList.contains('am-preview-open'));
+    const look = await page.evaluate(() => {
+      const view = document.querySelector('[data-testid="watch-feed-view"]'), cs = (e, p) => getComputedStyle(e, p);
+      const close = document.querySelector('[data-testid="watch-feed-close-button"]'), pill = view.querySelector(':scope > div > div:first-child > div:first-child');
+      return { marked: document.getElementById('mock-feed').hasAttribute('data-am-preview'), classes: ['am-pv-artwork'].map(c => document.body.classList.contains(c)),
+        art: document.documentElement.style.getPropertyValue('--am-preview-art'), grid: cs(view.firstElementChild).display, pill: cs(pill).gridArea.split(' ')[0],
+        close: [cs(close).width, cs(close).borderRadius], radius: cs(view).borderTopLeftRadius, dim: cs(document.getElementById('am-sidebar'), '::after').content,
+        frost: cs(close).backdropFilter };
+    });
+    assert.ok(look.marked, 'the overlay is marked');
+    assert.deepEqual(look.classes, [true], 'blurred artwork by default');
+    assert.match(look.art, /^url\("data:image\/svg/, 'the cover feeds the artwork material');
+    assert.deepEqual([look.grid, look.pill, look.close, look.radius], ['grid', 'pill', ['40px', '50%'], '26px']);
+    assert.notEqual(look.dim, 'none', 'the sidebar dims with the page');
+    assert.match(look.frost, /^(blur\(12px\) saturate\(1\.4\)|none)$/, 'frosted buttons (plain in Eco)');
+    await shot('song-preview');
+    // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
+    await settingsWindow.pick('previewMaterial', 'Cam');
+    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
+    await settingsWindow.pick('previewMaterial', 'Bulanık kapak');
+    // A click on the dimmed sidebar closes it, as one on Spotify's backdrop does.
+    await page.click('#am-sidebar', { position: { x: 100, y: 400 } });
+    await page.waitForFunction(() => !document.getElementById('mock-feed') && !document.body.classList.contains('am-preview-open'));
+    assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-preview-art')), '');
+  });
+
+  await check('Browse all tiles: Apple\'s Browse Categories (#75)', async () => {
+    await page.evaluate(() => {
+      const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;
+      document.querySelector('main').insertAdjacentHTML('afterbegin', `<section id="mock-browse" data-shelf="shelf"><div><h2>Browse all</h2></div><div class="main-gridContainer-gridContainer" style="--min-column-width:254px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min-column-width),1fr))">${tile('Music', 'rgb(220, 20, 140)')}${tile('Pop', 'rgb(70, 130, 180)')}</div></section>`);
+      Spicetify.Platform.History.push('/search');
+    });
+    await page.waitForFunction(() => document.body.classList.contains('am-search-open'));
+    const look = () => page.evaluate(() => {
+      const t = document.querySelector('#mock-browse a > div'), s = getComputedStyle(t.querySelector('span')), img = getComputedStyle(t.querySelector('img')), grid = getComputedStyle(document.querySelector('#mock-browse .main-gridContainer-gridContainer'));
+      const item = t.closest('[role="listitem"]').getBoundingClientRect(), label = t.querySelector('span > span').getBoundingClientRect(), box = t.getBoundingClientRect();
+      return { label: [s.fontSize, s.fontWeight, Math.round(box.bottom - label.bottom), Math.round(label.left - box.left)], img: img.visibility, duo: t.hasAttribute('data-am-duo') && getComputedStyle(t, '::before').backgroundImage.slice(0, 10), gap: grid.columnGap, pad: getComputedStyle(t.closest('[role="listitem"]')).paddingTop, h2: getComputedStyle(document.querySelector('#mock-browse h2')).fontSize, width: Math.round(item.width) };
+    });
+    // The whole picture becomes a duotone in the tile's colour, drawn once into a blob.
+    await page.waitForFunction(() => document.querySelector('#mock-browse a > div')?.hasAttribute('data-am-duo'));
+    const apple = await look();
+    assert.deepEqual(apple.label.slice(0, 2), ['13px', '700'], 'the name is 13pt bold');
+    assert.ok(apple.label[2] >= 11 && apple.label[2] <= 14 && apple.label[3] === 12, 'at the bottom left, 12pt in: ' + apple.label);
+    assert.deepEqual([apple.img, apple.duo], ['hidden', 'url("blob:'], 'Spotify\'s tilted cover gives way to the duotone');
+    // A white picture is the tile's colour (made as vivid as Apple's: 220,20,140 becomes 222,0,140), as a photo's whites
+    // are in Apple's tiles.
+    const pixel = await page.evaluate(async () => {
+      const url = getComputedStyle(document.querySelector('#mock-browse a > div')).getPropertyValue('--am-duo').match(/blob:[^"]+/)[0];
+      const bitmap = await createImageBitmap(await (await fetch(url)).blob()), canvas = new OffscreenCanvas(1, 1), context = canvas.getContext('2d');
+      context.drawImage(bitmap, 0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    });
+    assert.deepEqual(pixel, [222, 0, 140]);
+    assert.deepEqual([apple.gap, apple.pad, apple.h2], ['16px', '0px', '15px']);
+    assert.ok(apple.width < 254, 'smaller tiles than Spotify\'s');
+    // Only on Search: elsewhere Spotify's tiles keep their own look.
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-open'));
+    const off = await look();
+    assert.deepEqual([off.label.slice(0, 2), off.duo], [['24px', '400'], false], 'Spotify\'s tiles off Search, the duotone released');
+    await page.evaluate(() => document.getElementById('mock-browse').remove());
+  });
+
   await check('toolbar glass at 125%: shared, its shapes and hairlines on device pixels', async () => {
     // The shared glass draws each shape's maps on the device pixels of its own box, so on a fractional scale the shapes
     // (and the hairlines, the glass grown by 2 device px) are placed on them.

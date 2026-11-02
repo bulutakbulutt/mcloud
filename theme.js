@@ -3167,8 +3167,116 @@
     else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
     else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
     currentMode='native';
-    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();
+    document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();syncBrowse();
   });
+  // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
+  // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
+  // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows
+  // the issue's reference loosely); the sidebar and player dim with it. Its background is a choice: the current song's
+  // cover blurred (as in the reference), the sheets' glass, or Spotify's colour from the cover. The cover is read from
+  // the info column, or from the canvas card nearest the middle when the song shows none. Spotify keeps the same nodes
+  // from song to song, so only image sources and the scrolled list are watched, never its progress bar.
+  // Browse all (Search's category tiles, what the sidebar's Browse opens) is Apple Music's Browse Categories in user.css.
+  // Browse all's pictures as Apple's duotones. Measured on Apple Music's tiles (macOS 27, focused, identical in light
+  // and dark): each pixel is the tile's colour times the photo's grey (the three channels scale alike), so the photo's
+  // whites are the tile colour and its blacks near black (5-25% of it). Apple's cut-outs are mostly bright: a tile
+  // averages 0.79-0.96 of its colour's luminance, median 1. Spotify's covers are darker and carry big titles, so their
+  // grey is stretched (2nd to 98th percentile; a flat picture is left as it is), lifted by the gamma that brings the
+  // tile's mean to 0.85, and its contrast softened so the darkest part is 25% of the colour (titles recede). The
+  // highlights stay exactly the tile colour. Drawn once per cover and colour into a blob at the tile's device size,
+  // shown while the tile is near the viewport and released (revoked) when it leaves; nothing is filtered or blended
+  // while scrolling.
+  const duoCache=new Map(),duoTiles=new Map();let duoGrid=null,duoTimer=0;
+  const duoAdded=new MutationObserver(()=>syncBrowse());
+  const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
+  function duoKey(tile){const img=tile.querySelector(':scope > img[src]');return img&&{src:img.currentSrc||img.src,color:getComputedStyle(tile).backgroundColor};}
+  // Apple's tile colours are brighter and more vivid than Spotify's (OKLCH lightness 0.53-0.79, chroma 0.10-0.22 against
+  // Spotify's 0.33-0.60 and 0.05-0.24). The colour keeps its hue and is pushed to chroma 0.26 inside sRGB (by eye, a
+  // little past Apple), lightened towards 0.58 only as far as that chroma still fits. Greys stay grey.
+  function duoColor(rgb) {
+    const lin=v=>(v/=255)<=.04045?v/12.92:((v+.055)/1.055)**2.4,enc=v=>255*(v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055);
+    const [r,g,b]=rgb.map(lin),l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),s=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+    const L=.2104542553*l+.793617785*m-.0040720468*s,A=1.9779984951*l-2.428592205*m+.4505937099*s,B=.0259040371*l+.7827717662*m-.808675766*s,C=Math.hypot(A,B);
+    if(C<.03)return rgb;
+    const out=(L,c)=>{const a=A/C*c,bb=B/C*c,l=(L+.3963377774*a+.2158037573*bb)**3,m=(L-.1055613458*a-.0638541728*bb)**3,s=(L-.0894841775*a-1.291485548*bb)**3;
+      return [4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s];};
+    const want=Math.max(C,.26),fits=(L,c)=>out(L,c).every(v=>v>=0&&v<=1),most=L=>{if(fits(L,want))return want;let lo=0,hi=want;for(let i=0;i<20;i++){const c=(lo+hi)/2;fits(L,c)?lo=c:hi=c;}return lo;};
+    let best=[L,0];for(let i=0;i<=24;i++){const L2=Math.max(L,.58)-(Math.max(L,.58)-L)*i/24,c=most(L2);if(c>best[1]+1e-4)best=[L2,c];if(c>=want-1e-4)break;}
+    return out(...best).map(v=>Math.round(enc(Math.min(1,Math.max(0,v)))));
+  }
+  function duoDraw({src,color},w,h) {
+    return new Promise(resolve=>{
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
+      img.onload=()=>{try{
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const context=canvas.getContext('2d',{willReadFrequently:true});
+        // Cover the tile, as Apple's photos do.
+        const scale=Math.max(w/img.naturalWidth,h/img.naturalHeight),dw=img.naturalWidth*scale,dh=img.naturalHeight*scale;
+        context.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
+        const data=context.getImageData(0,0,w,h),p=data.data,grey=new Uint8Array(p.length/4),hist=new Uint32Array(256);
+        for(let i=0,j=0;i<p.length;i+=4,j++){const g=Math.round(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);grey[j]=g;hist[g]++;}
+        const at=f=>{let n=0,k=0;for(;k<255&&n+hist[k]<=grey.length*f;k++)n+=hist[k];return k;},[lo,hi]=at(.98)-at(.02)<32?[0,255]:[at(.02),at(.98)];
+        // A cover that is mostly black (Charts: white type on black) cannot reach it by gamma; its shadows rise instead.
+        let floor=.25;const x=g=>Math.min(1,Math.max(0,(g-lo)/(hi-lo))),tone=(g,gamma)=>floor+(1-floor)*x(g)**gamma;
+        const mean=gamma=>{let s=0;for(let g=0;g<256;g++)s+=hist[g]*tone(g,gamma);return s/grey.length;};
+        let gamma=1;if(mean(1)<.85){let a=.1,b=1;for(let i=0;i<16;i++){const m=(a+b)/2;if(mean(m)>.85)a=m;else b=m;}gamma=(a+b)/2;}
+        if(mean(gamma)<.84){floor=0;const m=mean(gamma);floor=Math.min(.7,(.85-m)/(1-m));}
+        const c=duoColor(color.match(/[\d.]+/g).slice(0,3).map(Number)),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
+        for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
+        context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
+      }catch{resolve(null);}};
+      img.src=src;
+    });
+  }
+  function duoShow(tile) {
+    const key=duoKey(tile);if(!key)return;
+    const k=devicePixelRatio||1,w=Math.round(tile.offsetWidth*k),h=Math.round(tile.offsetHeight*k),id=`${key.src}|${key.color}|${w}x${h}`;
+    if(duoTiles.get(tile)===id||!w||!h)return;
+    duoHide(tile);duoTiles.set(tile,id);
+    let entry=duoCache.get(id);if(!entry){entry={refs:0,url:duoDraw(key,w,h)};duoCache.set(id,entry);}
+    entry.refs++;
+    entry.url.then(url=>{if(url&&duoTiles.get(tile)===id){tile.style.setProperty('--am-duo',`url("${url}")`);tile.setAttribute('data-am-duo','');}});
+  }
+  function duoHide(tile) {
+    const id=duoTiles.get(tile);if(!id)return;duoTiles.delete(tile);
+    tile.removeAttribute('data-am-duo');tile.style.removeProperty('--am-duo');
+    const entry=duoCache.get(id);if(entry&&--entry.refs<=0){duoCache.delete(id);entry.url.then(url=>url&&URL.revokeObjectURL(url));}
+  }
+  // The grid mounts a moment after Search opens; it is looked for a few times, then its tiles are watched.
+  function syncBrowse(tries=0) {
+    clearTimeout(duoTimer);
+    const grid=routePath()==='/search'&&!document.hidden?document.querySelector('.am-native-main .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"])'):null;
+    if(grid!==duoGrid){duoObserver?.disconnect();duoAdded.disconnect();for(const tile of [...duoTiles.keys()])duoHide(tile);duoGrid=grid;if(grid)duoAdded.observe(grid,{childList:true});}
+    if(!grid){if(routePath()==='/search'&&!document.hidden&&tries<20)duoTimer=setTimeout(()=>syncBrowse(tries+1),250);return;}
+    for(const tile of grid.querySelectorAll(':scope > [role="listitem"] > a > div[style*="background-color"]'))duoObserver?.observe(tile);
+  }
+  const pvMaterials=['artwork','glass','color'];
+  defineSetting({key:'previewMaterial',group:'pages',section:T('Şarkı önizlemesi','Song previews'),label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
+    options:[['artwork',T('Bulanık kapak','Blurred artwork')],['glass',T('Cam','Glass')],['color',T('Kapak rengi','Artwork colour')]],apply:v=>pvMaterials.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
+  let previewView=null,previewWatch=null,previewFrame=0;
+  function previewArt() {
+    previewFrame=0;const view=previewView;if(!view?.isConnected||document.hidden)return;
+    let art=view.querySelector(':scope > div > div:first-child img[src]');
+    if(!art){const box=view.getBoundingClientRect(),mid=box.top+box.height/2;let best=Infinity;
+      for(const img of view.querySelectorAll(':scope > div > div:nth-child(2) img[src]')){const r=img.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-mid);if(r.height&&d<best){best=d;art=img;}}}
+    const value=art?`url("${art.currentSrc||art.src}")`:'';
+    if(document.documentElement.style.getPropertyValue('--am-preview-art')!==value)value?document.documentElement.style.setProperty('--am-preview-art',value):document.documentElement.style.removeProperty('--am-preview-art');
+  }
+  const previewArtSoon=()=>{previewFrame||=requestAnimationFrame(previewArt);};
+  function syncPreview() {
+    const view=root.querySelector(':scope > * > [data-testid="watch-feed-view"]');
+    if(view===previewView)return;
+    previewWatch?.disconnect();previewWatch=null;previewView?.removeEventListener('scrollend',previewArtSoon,true);
+    previewView=view;document.body.classList.toggle('am-preview-open',!!view);
+    if(!view){document.documentElement.style.removeProperty('--am-preview-art');return;}
+    if(!view.parentElement.hasAttribute('data-am-preview'))view.parentElement.setAttribute('data-am-preview','');
+    previewWatch=new MutationObserver(previewArtSoon);previewWatch.observe(view,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
+    view.addEventListener('scrollend',previewArtSoon,{capture:true,passive:true});previewArt();
+  }
+  // The dimmed sidebar and player act as the backdrop: a click there closes the preview, as Spotify's backdrop does.
+  document.addEventListener('click',event=>{
+    if(!previewView?.isConnected||!(event.target instanceof Element)||!event.target.closest('#am-sidebar,#am-player'))return;
+    event.preventDefault();event.stopPropagation();previewView.querySelector('[data-testid="watch-feed-close-button"]')?.click();
+  },true);
   // Ignore feed cards, lyrics text and player progress mutations. Only host
   // replacements and extension/panel controls need a theme reconciliation.
   const relevantHosts='#global-nav-bar,#SpicyLyricsPage,#SpicyLyrics_PageButton,#SpicyLyrics_FullscreenButton,#SpicyLyrics_PopupLyricsButton,.fkgR9mQfUbjSxQi0FXd4,[data-testid^="buddy-feed-"],aside[aria-label]';
@@ -3176,6 +3284,7 @@
   function scheduleReconcile(records) {
     if(document.hidden)return;
     if(records.some(record=>record.target===main.parentElement&&record.addedNodes.length))bindPanes();
+    if(records.some(record=>record.target===root))syncPreview();
     // Panel swaps sync at once: the observer runs before paint, so neither panel of a cross-fade flashes.
     const right=document.querySelector('.am-native-right');
     if(right&&records.some(record=>right.contains(record.target)&&[...record.addedNodes,...record.removedNodes].some(n=>n.nodeType===1&&(n.matches('aside[aria-label]')||n.querySelector('aside[aria-label]')))))syncNativePanels();
@@ -3196,7 +3305,7 @@
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();observer.observe(root,{childList:true,subtree:true});}
+    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
