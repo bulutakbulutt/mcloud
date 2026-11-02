@@ -1503,13 +1503,14 @@ try {
     assert.deepEqual(apple.label.slice(0, 2), ['13px', '700'], 'the name is 13pt bold');
     assert.ok(apple.label[2] >= 11 && apple.label[2] <= 14 && apple.label[3] === 12, 'at the bottom left, 12pt in: ' + apple.label);
     assert.deepEqual([apple.img, apple.duo], ['hidden', 'url("blob:'], 'Spotify\'s tilted cover gives way to the duotone');
-    // A white picture is the tile's colour, as a photo's whites are in Apple's tiles.
+    // A white picture is the tile's colour (made as vivid as Apple's: 220,20,140 becomes 222,0,140), as a photo's whites
+    // are in Apple's tiles.
     const pixel = await page.evaluate(async () => {
       const url = getComputedStyle(document.querySelector('#mock-browse a > div')).getPropertyValue('--am-duo').match(/blob:[^"]+/)[0];
       const bitmap = await createImageBitmap(await (await fetch(url)).blob()), canvas = new OffscreenCanvas(1, 1), context = canvas.getContext('2d');
       context.drawImage(bitmap, 0, 0, 1, 1); return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
     });
-    assert.deepEqual(pixel, [220, 20, 140]);
+    assert.deepEqual(pixel, [222, 0, 140]);
     assert.deepEqual([apple.gap, apple.pad, apple.h2], ['16px', '0px', '15px']);
     assert.ok(apple.width < 254, 'smaller tiles than Spotify\'s');
     // Only on Search: elsewhere Spotify's tiles keep their own look.

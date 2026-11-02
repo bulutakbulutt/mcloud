@@ -2788,6 +2788,20 @@
   const duoAdded=new MutationObserver(()=>syncBrowse());
   const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
   function duoKey(tile){const img=tile.querySelector(':scope > img[src]');return img&&{src:img.currentSrc||img.src,color:getComputedStyle(tile).backgroundColor};}
+  // Apple's tile colours are brighter and more vivid than Spotify's (OKLCH lightness 0.53-0.79, chroma 0.10-0.22 against
+  // Spotify's 0.33-0.60 and 0.05-0.24). The colour keeps its hue and is pushed to chroma 0.26 inside sRGB (by eye, a
+  // little past Apple), lightened towards 0.58 only as far as that chroma still fits. Greys stay grey.
+  function duoColor(rgb) {
+    const lin=v=>(v/=255)<=.04045?v/12.92:((v+.055)/1.055)**2.4,enc=v=>255*(v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055);
+    const [r,g,b]=rgb.map(lin),l=Math.cbrt(.4122214708*r+.5363325363*g+.0514459929*b),m=Math.cbrt(.2119034982*r+.6806995451*g+.1073969566*b),s=Math.cbrt(.0883024619*r+.2817188376*g+.6299787005*b);
+    const L=.2104542553*l+.793617785*m-.0040720468*s,A=1.9779984951*l-2.428592205*m+.4505937099*s,B=.0259040371*l+.7827717662*m-.808675766*s,C=Math.hypot(A,B);
+    if(C<.03)return rgb;
+    const out=(L,c)=>{const a=A/C*c,bb=B/C*c,l=(L+.3963377774*a+.2158037573*bb)**3,m=(L-.1055613458*a-.0638541728*bb)**3,s=(L-.0894841775*a-1.291485548*bb)**3;
+      return [4.0767416621*l-3.3077115913*m+.2309699292*s,-1.2684380046*l+2.6097574011*m-.3413193965*s,-.0041960863*l-.7034186147*m+1.707614701*s];};
+    const want=Math.max(C,.26),fits=(L,c)=>out(L,c).every(v=>v>=0&&v<=1),most=L=>{if(fits(L,want))return want;let lo=0,hi=want;for(let i=0;i<20;i++){const c=(lo+hi)/2;fits(L,c)?lo=c:hi=c;}return lo;};
+    let best=[L,0];for(let i=0;i<=24;i++){const L2=Math.max(L,.58)-(Math.max(L,.58)-L)*i/24,c=most(L2);if(c>best[1]+1e-4)best=[L2,c];if(c>=want-1e-4)break;}
+    return out(...best).map(v=>Math.round(enc(Math.min(1,Math.max(0,v)))));
+  }
   function duoDraw({src,color},w,h) {
     return new Promise(resolve=>{
       const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(null);
@@ -2804,7 +2818,7 @@
         const mean=gamma=>{let s=0;for(let g=0;g<256;g++)s+=hist[g]*tone(g,gamma);return s/grey.length;};
         let gamma=1;if(mean(1)<.85){let a=.1,b=1;for(let i=0;i<16;i++){const m=(a+b)/2;if(mean(m)>.85)a=m;else b=m;}gamma=(a+b)/2;}
         if(mean(gamma)<.84){floor=0;const m=mean(gamma);floor=Math.min(.7,(.85-m)/(1-m));}
-        const c=color.match(/[\d.]+/g).slice(0,3).map(Number),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
+        const c=duoColor(color.match(/[\d.]+/g).slice(0,3).map(Number)),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
         for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
         context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
       }catch{resolve(null);}};
