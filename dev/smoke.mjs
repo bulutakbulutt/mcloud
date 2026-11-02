@@ -560,21 +560,28 @@ try {
     await page.evaluate(() => document.querySelectorAll('.mock-numbers, .mock-menu').forEach(e => e.remove()));
   });
 
+  // A setting changed the way a user does: the mcloud submenu where it is one, else the settings window (#76).
+  const flip = async (key, names, option) => {
+    const viaMenu = await page.evaluate(names => { const item = window.__menus.flatMap(m => m.items).find(i => names.includes(i.name)); item?.onClick(); return !!item; }, [names].flat());
+    if (!viaMenu) await settingsWindow.pick(key, option);
+  };
+  const saved = key => page.evaluate(key => JSON.parse(localStorage.getItem('mcloud:settings'))[key], key);
+  const playlistNumbers = ['Parça numaraları', 'Çalma listelerinde parça numaraları'], albumNumbers = 'Albümlerde parça numaraları';
+
   await check('track numbers: albums and playlists switch apart (#72)', async () => {
     const hidden = () => page.evaluate(() => document.body.classList.contains('am-no-numbers'));
-    // The album switches sit in the settings window's menu fallback (#76) or, without it, in a submenu of their own.
-    const menu = () => page.evaluate(() => window.__menus.flatMap(m => m.items).filter(i => i.name === 'Albümlerde parça numaraları').map(i => [i.name, i.checked]));
     // Playlists off, albums on: the class follows the page.
-    await page.evaluate(() => { window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick(); Spicetify.Platform.History.push('/playlist/mock'); });
+    await flip('numbers', playlistNumbers);
+    await page.evaluate(() => Spicetify.Platform.History.push('/playlist/mock'));
     assert.equal(await hidden(), true);
     await page.evaluate(() => Spicetify.Platform.History.push('/album/0'));
     assert.equal(await hidden(), false);
-    assert.deepEqual((await menu())[0], ['Albümlerde parça numaraları', true]);
-    await page.evaluate(() => window.__menus.flatMap(m => m.items).find(i => i.name === 'Albümlerde parça numaraları').onClick());
+    await flip('numbersAlbum', albumNumbers);
     assert.equal(await hidden(), true);
-    assert.deepEqual((await menu())[0], ['Albümlerde parça numaraları', false]);
-    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).numbersAlbum, false);
-    await page.evaluate(() => { window.__menus.flatMap(m => m.items).find(i => i.name === 'Albümlerde parça numaraları').onClick(); window.__menus[0].items.find(i => i.name === 'Parça numaraları').onClick(); Spicetify.Platform.History.push('/'); });
+    assert.equal(await saved('numbersAlbum'), false);
+    await flip('numbersAlbum', albumNumbers);
+    await flip('numbers', playlistNumbers);
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
     assert.equal(await hidden(), false);
   });
 
@@ -1436,8 +1443,7 @@ try {
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
-    const albums = () => page.evaluate(() => window.__menus.flatMap(m => m.items));
-    const pick = name => page.evaluate(name => window.__menus.flatMap(m => m.items).find(i => i.name === name).onClick(), name);
+    const tint = option => flip('albumTint', 'Albüm rengi: ' + option, option), font = option => flip('font', 'Yazı: ' + option, option);
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
@@ -1450,36 +1456,35 @@ try {
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('kanye'));
     assert.deepEqual(await shown(), [true, true, false]);
     // Switched off, Spotify's rows come back as they were.
-    await pick('Sade albüm listesi');
+    await flip('albumClean', 'Sade albüm listesi');
     assert.deepEqual(await shown(), [true, true, true]);
-    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).albumClean, false);
-    await pick('Sade albüm listesi');
+    assert.equal(await saved('albumClean'), false);
+    await flip('albumClean', 'Sade albüm listesi');
     // Artwork colour: off by default; subtle washes the page top, full also colours the window.
-    assert.deepEqual((await albums()).filter(i => i.name.startsWith('Albüm rengi')).map(i => [i.name, i.checked]), [['Albüm rengi: Kapalı', true], ['Albüm rengi: Hafif', false], ['Albüm rengi: Tam', false]]);
-    assert.equal(await page.evaluate(() => document.body.classList.contains('am-album-tinted')), false);
-    await pick('Albüm rengi: Hafif');
+    assert.equal(await page.evaluate(() => document.body.classList.contains('am-album-tint-off') && !document.body.classList.contains('am-album-tinted')), true);
+    await tint('Hafif');
     await page.waitForFunction(() => document.body.classList.contains('am-album-tinted'));
-    const tint = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-album-tint'));
-    assert.match(tint, /^hsl\(4\d /, 'the gold cover gives a gold hue');
+    const hue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-album-tint'));
+    assert.match(hue, /^hsl\(4\d /, 'the gold cover gives a gold hue');
     assert.notEqual(await page.$eval('#mock-album72', e => getComputedStyle(e, '::before').backgroundImage), 'none');
     const mainBg = () => page.evaluate(() => getComputedStyle(document.querySelector('.am-native-main')).backgroundColor);
     const plain = await mainBg();
-    await pick('Albüm rengi: Tam');
+    await tint('Tam');
     assert.notEqual(await mainBg(), plain, 'full colours the window');
     // Leaving the album drops the colour; numbers and colour do not leak to other pages.
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForFunction(() => !document.body.classList.contains('am-album-tinted'));
-    await pick('Albüm rengi: Kapalı');
+    await tint('Kapalı');
     // Text rendering: Spotify's thin antialiasing or the system's smoothing, and Apple's own tracking.
     const text = () => page.evaluate(() => { const s = getComputedStyle(document.querySelector('#am-sidebar .am-nav-row')); return [s.webkitFontSmoothing, s.letterSpacing]; });
     assert.equal((await text())[0], 'antialiased');
     assert.notEqual((await text())[1], 'normal');
-    await pick('Yazı: Apple Music');
+    await font('Apple Music');
     assert.deepEqual(await text(), ['auto', 'normal']);
-    await pick('Yazı: macOS yumuşatma');
+    await font('macOS yumuşatma');
     assert.equal((await text())[0], 'auto');
     assert.notEqual((await text())[1], 'normal');
-    await pick('Yazı: Tema (ince)');
+    await font('Tema (ince)');
     assert.equal((await text())[0], 'antialiased');
     await page.evaluate(() => { document.getElementById('mock-album72').remove(); document.querySelector('.mock-page').hidden = false; });
   });
