@@ -238,6 +238,12 @@
   // artist page ~110); a song's menu 170 + .34 L (over white 253, over its queue panel 240, darker artwork 197-218).
   // Light mode maps each filter's dark tone onto these.
   const lightTones={glass:[108,126,144,162,180,197,215,233,251],menu:[170,181,192,203,214,225,236,246,253]};
+  // The hairline round the glass in light mode (research b8: Music's own window light and focused, 2x, over white and a
+  // brown artist page): all the way round, at the round ends 255 -> 190, 114 -> 56, 87 -> 40, 26 -> 8 (the dark line
+  // takes white to 123: too dark on white, and it fades out along the top and bottom) and about a third of that along
+  // the top and bottom (255 -> 235, 87 -> 71). The table, L*(.2 + .5*L^.8), gives that at the buttons' weight (.85).
+  // The light inside the top and bottom edge already matches Music's (over the brown page +11/+32 against +15/+29).
+  const lightRim={top:.32,table:Array.from({length:33},(_,k)=>{const L=k/32;return (L*(.2+.5*L**.8)).toFixed(4);}).join(' ')};
   const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]};
   // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
   // out = light(dark⁻¹(in)), straight lines past either end.
@@ -267,6 +273,8 @@
         for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}f.append(step);}
       for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
     }
+    for(const t of document.querySelectorAll('[data-am-rim]'))for(const fn of t.children){
+      fn.dataset.amDark??=fn.getAttribute('tableValues');const v=light?lightRim.table:fn.dataset.amDark;if(fn.getAttribute('tableValues')!==v)fn.setAttribute('tableValues',v);}
     const search=document.querySelector('#am-search-glass feColorMatrix');
     if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu):search.dataset.amDark);}
   }
@@ -1908,23 +1916,24 @@
     // each end; over the glass. w: the line's strength (1 at 36pt, lighter on the player).
     const rimT=[0.0, 0.0098, 0.0208, 0.0326, 0.0453, 0.0591, 0.0743, 0.0904, 0.1069, 0.1238, 0.1412, 0.1595, 0.1787, 0.1996, 0.2221, 0.245, 0.2669, 0.288, 0.3089, 0.3286, 0.3462, 0.3612, 0.3747, 0.3873, 0.3996, 0.412, 0.4242, 0.4359, 0.4467, 0.4567, 0.4662, 0.475, 0.4831];let rimN=0;
     const rimFilter=(id,s,n=1)=>{const tt=`type="table" tableValues="${rimT.join(' ')}"`;
-      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
+      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt" data-am-rim=""><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
     // The map is drawn for each end only (setMaps): the line fades out within r of either end. drawn (shared()): the
     // element only sizes the map, which runs after each drawing; the shared hairline draws it. The element is the glass
     // grown by 1px, or by its data-grow (px) where the toolbar keeps it on device pixels.
     const rimF=(box,{w=1,s=.8,stretch:pressed}={},drawn)=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';el.dataset.filter=id;box.append(el);
       glass.insertAdjacentHTML('beforeend',rimFilter(id,s));
-      if(!glass.isConnected)document.body.append(glass);
+      if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
       if(!drawn)el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
       const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='',rest=null;
-      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw)return;
-        if(rest?.k===k&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
+      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1,top=isLight()?lightRim.top:0;if(!bw)return;
+        if(rest?.k===k&&rest.top===top&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
         const g=+el.dataset.grow||1,W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2*g,gh=bh-2*g,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+g)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
           for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-g,py=(y+(sy+.5)/4)/k-g,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
-          const px=(x+.5)/k-g,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
-        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);drawn?.();};
+          const px=(x+.5)/k-g,fade=Math.max(top,Math.max(0,1-Math.min(px,gw-px)/r)**3),i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
+        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);rest.top=top;drawn?.();};
+      const scheme=()=>el.isConnected?draw():document.removeEventListener('am-appearance',scheme);document.addEventListener('am-appearance',scheme);
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
     // Only mid reads the page past the glass's edge (the edge read, the halo, the wash); bend and tone take the glass's

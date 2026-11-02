@@ -1405,6 +1405,10 @@ try {
     // Menus take their own light tone (their filter's tone primitives are swapped, not mapped).
     assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not([data-am-tone="light"])').length), 0);
     assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
+    // The glass hairlines take Music's light line (b8): their own table, and a line along the top and bottom too.
+    const rims = () => page.evaluate(() => [...document.querySelectorAll('[data-am-rim] > *')].map(f => f.getAttribute('tableValues') === f.dataset.amDark));
+    const lightRims = await rims();
+    assert.ok(lightRims.length >= 3 && lightRims.every(dark => !dark), 'hairlines take the light table: ' + lightRims);
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
     // The artist page keeps its dark artist colours in light mode, as Music does; the submenu holds only the appearance.
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
@@ -1419,6 +1423,7 @@ try {
     await pick('Görünüm: Koyu');
     const back = await state();
     assert.deepEqual([back.light, back.bg, back.accent, back.steps], [false, 'rgb(31, 31, 31)', '#0a84ff', 0]);
+    assert.ok((await rims()).every(dark => dark), 'hairlines back on the dark table');
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).appearance, 'dark');
     await page.click('#am-settings .am-settings-ok');
   });

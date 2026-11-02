@@ -455,7 +455,7 @@ body.am-pv-glass [data-am-preview][data-am-preview] {--am-pv-sheet-rim:var(--am-
 body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-pv-base)!important}
 body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:-80px;z-index:-1;pointer-events:none;background:var(--am-preview-art,none) center/cover no-repeat;filter:blur(60px) saturate(1.5) brightness(.62)}
 body.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-pv-sheet)!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8)}
-body.am-solid.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-menu-solid,#2c2c2e)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-pv-color [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(160deg,#ffffff14,#00000059)}
 /* Close, previous and next: round glass buttons (Next loses its label, which stays for screen readers). */
 [data-am-preview] :is([data-testid="watch-feed-close-button"],[data-testid="watch-feed-view"] > div > div:last-child > div:last-child button) {all:unset;box-sizing:border-box;display:grid!important;place-items:center;width:40px!important;height:40px!important;min-block-size:0!important;border-radius:50%!important;cursor:pointer;color:var(--am-pv-text)!important;
@@ -1417,7 +1417,7 @@ body.am-ready.am-np-open .am-layout {grid-template-columns:var(--am-side) minmax
  background:var(--am-np-fill);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);box-shadow:inset 0 1px 0 rgb(var(--am-rim,255 255 255)/.149),inset 0 0 0 1px rgb(var(--am-rim,255 255 255)/.071),0 18px 50px #0007;
 }
 #am-nowplaying[hidden],body.am-spicy-fullscreen #am-nowplaying {display:none}
-body.am-np-docked #am-nowplaying {top:0;right:0;bottom:0;border-radius:0;box-shadow:inset 1px 0 #ffffff14}
+body.am-np-docked #am-nowplaying {top:0;right:0;bottom:0;border-radius:0;box-shadow:inset 1px 0 rgb(var(--am-ink,255 255 255)/.078)}
 /* The cover's colours: the cover itself, blurred once (a still image, so the blur is not redrawn), darkened toward the bottom. */
 .am-np-bg {display:none;position:absolute;z-index:-3;inset:-25%;width:150%;height:150%;object-fit:cover;filter:blur(64px) saturate(1.6) brightness(.62);pointer-events:none}
 body.am-np-artbg .am-np-bg[src] {display:block}
