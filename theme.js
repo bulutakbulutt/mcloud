@@ -201,10 +201,10 @@
   defineSetting({key:'artwork',group:'player',label:T('Oynatıcıda albüm kapağı','Artwork in player'),type:'toggle',default:true});
   defineSetting({key:'liquid',group:'player',label:T('Liquid Glass oynatıcı','Liquid Glass player'),type:'toggle',default:true});
   // Apple Music opens the song's menu wherever the player is right-clicked, and its title and artist — album line ask
-  // where to go; Spotify opens it over the song only and links each name (issue #85).
-  defineSetting({key:'playerMenu',group:'player',label:T('Sağ tık menüsü','Right-click menu'),type:'choice',default:'apple',
+  // where to go; Spotify opens it over the song only and links each name (issue #85). Spotify's is the default.
+  defineSetting({key:'playerMenu',group:'player',label:T('Sağ tık menüsü','Right-click menu'),type:'choice',default:'track',
     options:[['apple',T('Oynatıcının her yerinde (Apple Music)','Anywhere on the player (Apple Music)')],['track',T('Yalnızca şarkının üstünde (Spotify)','Over the song only (Spotify)')]]});
-  defineSetting({key:'lcdLinks',group:'player',label:T('Şarkı adı ve sanatçı','Song title and artist'),type:'choice',default:'apple',
+  defineSetting({key:'lcdLinks',group:'player',label:T('Şarkı adı ve sanatçı','Song title and artist'),type:'choice',default:'spotify',
     options:[['apple',T('Gidilecek yeri sorar (Apple Music)','Ask where to go (Apple Music)')],['spotify',T('Bağlantı olur (Spotify)','Open as links (Spotify)')]],
     apply:v=>document.body.classList.toggle('am-lcd-links',v==='spotify'),change:()=>syncPlayer()});
   defineSetting({key:'numbers',group:'pages',label:T('Çalma listelerinde parça numaraları','Track numbers in playlists'),type:'toggle',default:true});
