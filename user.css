@@ -259,6 +259,8 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) :is(.main-trackList-trackListContainer,[data-testid="action-bar"] + *) {margin-top:0}
 /* Track list: quiet column titles, hairlines between rows from the title on, a soft rounded hover. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeader {margin-bottom:0!important} /* Spotify: calc(--content-spacing - 8px), and --content-spacing is --am-pad here: a ~29px band above the first row */
+/* Column header off (theme.js, settings.tracklistHeader): the sticky copy is the same node, so one rule; it leaves the flow and the rows move up. */
+body.am-no-tracklist-header .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeader {display:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow {border-bottom:1px solid rgb(var(--am-ink)/.09)!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow {border-radius:6px!important}

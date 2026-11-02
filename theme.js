@@ -224,6 +224,7 @@
     options:[['apple',T('Gidilecek yeri sorar (Apple Music)','Ask where to go (Apple Music)')],['spotify',T('Bağlantı olur (Spotify)','Open as links (Spotify)')]],
     apply:v=>document.body.classList.toggle('am-lcd-links',v==='spotify'),change:()=>syncPlayer()});
   defineSetting({key:'numbers',group:'pages',label:T('Çalma listelerinde parça numaraları','Track numbers in playlists'),type:'toggle',default:true});
+  defineSetting({key:'tracklistHeader',group:'pages',label:T('Parça listesi sütun başlığı','Track list column header'),note:T('Kapalıyken #, Başlık, Albüm, Eklenme tarihi ve süre satırı gizlenir.','Off hides the #, Title, Album, Date added and time row.'),type:'toggle',default:true,apply:v=>document.body.classList.toggle('am-no-tracklist-header',!v)});
   // Appearance (issue #74): dark, light (Apple Music's light appearance) or the system's. user.css keeps every colour
   // in --am-* tokens; light mode is body.am-light (and :root.am-light) swapping their values. The glass filters carry
   // their tone in SVG, so light mode adds one colour step to each (applyGlassScheme). As in Music, the artist page keeps
