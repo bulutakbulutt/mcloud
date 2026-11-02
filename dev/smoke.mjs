@@ -1381,6 +1381,48 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('appearance: light swaps the colour tokens, the accent and the glass tone; system follows the OS (#74)', async () => {
+    // In the settings window (#76): Appearance tab, a segmented control.
+    const pick = async name => {
+      if (!await page.locator('#am-settings').count()) await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
+      await page.click('#am-settings .am-settings-tab:has-text("Görünüm")');
+      await page.click(`#am-settings [data-key="appearance"] .am-settings-option:has-text("${name.replace('Görünüm: ', '')}")`);
+    };
+    const state = () => page.evaluate(() => ({
+      light: document.body.classList.contains('am-light') && document.documentElement.classList.contains('am-light'),
+      bg: getComputedStyle(document.body).backgroundColor, row: getComputedStyle(document.querySelector('#am-sidebar .am-nav-row')).color,
+      ink: getComputedStyle(document.querySelector('.am-nav-heading')).color, accent: document.documentElement.style.getPropertyValue('--am-accent'),
+      steps: document.querySelectorAll('filter [data-am-scheme]').length, scheme: getComputedStyle(document.documentElement).colorScheme,
+      spice: getComputedStyle(document.body).getPropertyValue('--spice-main').trim(),
+    }));
+    const dark = await state();
+    assert.deepEqual([dark.light, dark.bg, dark.row, dark.ink, dark.accent, dark.steps, dark.scheme], [false, 'rgb(31, 31, 31)', 'rgba(255, 255, 255, 0.847)', 'rgba(255, 255, 255, 0.36)', '#0a84ff', 0, 'dark']);
+    await pick('Görünüm: Açık');
+    const light = await state();
+    assert.deepEqual([light.light, light.bg, light.row, light.ink, light.accent, light.scheme, light.spice], [true, 'rgb(255, 255, 255)', 'rgb(29, 29, 31)', 'rgba(0, 0, 0, 0.36)', '#0088ff', 'light', '#fff']);
+    // Every glass filter (toast, menus, player and toolbar tone layers) carries the light tone step.
+    assert.ok(light.steps >= 9, 'glass filters take the light tone: ' + light.steps);
+    // Menus take their own light tone (their filter's tone primitives are swapped, not mapped).
+    assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not([data-am-tone="light"])').length), 0);
+    assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
+    shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
+    // The artist page keeps its dark artist colours in light mode, as Music does; the submenu holds only the appearance.
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
+    assert.deepEqual(await page.locator('#am-settings [data-key="appearance"] .am-settings-option').allTextContents(), ['Koyu', 'Açık', 'Sistem']);
+    // System: follows prefers-color-scheme as it changes.
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await pick('Görünüm: Sistem');
+    assert.equal((await state()).light, false);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.waitForFunction(() => document.body.classList.contains('am-light'));
+    await page.emulateMedia({ colorScheme: null });
+    await pick('Görünüm: Koyu');
+    const back = await state();
+    assert.deepEqual([back.light, back.bg, back.accent, back.steps], [false, 'rgb(31, 31, 31)', '#0a84ff', 0]);
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).appearance, 'dark');
+    await page.click('#am-settings .am-settings-ok');
+  });
+
   await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
     await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');

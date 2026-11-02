@@ -1,16 +1,81 @@
 /* AppleMusicMac 2.8 — reference-proportioned layout for Spotify 1.3.x. */
 :root {
- color-scheme:dark; --am-bg:#1f1f1f; --am-sidebar:#282727;
  --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
- --am-text:#dedede; --am-sub:#969696; --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
+ --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
  --encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;
  --encore-title-font-stack:var(--encore-body-font-stack);
+}
+/* Colours (issue #74): every colour the theme draws comes from these tokens, so light mode is a swap of their values
+   (theme.js, settings.appearance: body.am-light, and :root.am-light for the page's own background and controls).
+   --am-ink is the foreground as an RGB triplet, used as rgb(var(--am-ink)/alpha) for hairlines, fills and secondary
+   text: AppKit's semantic colours keep the same alpha in both appearances (label .847, tertiary .26, separator and
+   quaternary .098, fills .098/.078/.047; NSColor resolved under NSAppearance aqua and darkAqua), only the ink flips.
+   --am-rim stays white: glass rims are bright in both. .am-scheme-dark keeps a region dark in light mode (the About
+   sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
+:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-image-header .am-native-main,body.am-artist-stays-dark.am-artist-open #am-artist {
+ color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
+ --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:rgb(255 255 255/.847); --am-sub:rgb(255 255 255/.549); --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
+ --am-label:rgb(255 255 255/.847); --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
+ --am-field:#1c1c1e; --am-field-2:#2b2b2b; --am-art-empty:#303030; --am-tint-floor:#161616;
+ --am-bar-glass:color-mix(in srgb,#2a2a2a 62%,transparent);
+ --am-sidebar-fill:color-mix(in srgb,#252525 76%,transparent); --am-sidebar-lite:color-mix(in srgb,#252525 62%,transparent); --am-sidebar-solid:#1a1a1a;
+ --am-panel-fill:color-mix(in srgb,#2f2f2f 64%,transparent); --am-panel-lite:color-mix(in srgb,#262626 92%,transparent); --am-panel-solid:#262626;
+ --am-player-fill:#ffffff17; --am-solid-fill:linear-gradient(180deg,#3b3b3d,#2b2b2d); --am-toast-fill:#2c2c2eeb;
+ --am-toolbar-glass:color-mix(in srgb,#1e1e1e 58%,transparent); --am-toolbar-hover:color-mix(in srgb,#3a3a3a 70%,transparent);
+ --am-toolbar-shade:linear-gradient(180deg,#0000002b,#00000012 60%,#0000);
+ --am-menu-solid:#2c2c2e; --am-menu-solid-a:#2c2c2ef0; --am-sheet-fill:#28282abf;
+ --am-rim-edge:#000000d9; --am-glass-text-shadow:0 1px 6px #0008; --am-hero-name-shadow:0 1px 18px #0003;
+ --am-rim-lines:inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12;
+ --am-hero-name:#e4e4e4; --am-hero-play:#fff; --am-hero-play-icon:var(--am-tint-top,#333);
+}
+/* Light, after Apple Music's light appearance. Sources (research/issue74/NOTES.md): window #fff and under-page #f6f6f6
+   (NSColor under aqua); text = label (.847 black: #272727) and secondary label (.498: #808080), the same cores Music's
+   album page draws. Music's own window launched light and focused (2x captures): the sidebar and the queue panel are
+   glass, 138 over a near-black page and #eeedec over white (#e2e2e2 at 61%); the play bar 108 + .56 x the page (#f5f5f5
+   at 44% as a plain fill); bars = the titlebar material (#f3f3f3 at 81%); Music's red KeyColor is #fa233b in light. */
+:root.am-light,body.am-light {
+ color-scheme:light; --am-ink:0 0 0;
+ --am-bg:#fff; --am-sidebar:#f6f6f6; --am-text:#272727; --am-sub:#808080; --am-sub-2:#6e6e73; --am-dim:#a1a1a6;
+ --am-label:#1d1d1f; --am-icon:#2b2b2b; --am-icon-2:#333; --am-time:#3d3d3d;
+ --am-field:#fff; --am-field-2:#fff; --am-art-empty:#ececec; --am-tint-floor:#f2f2f2;
+ --am-bar-glass:color-mix(in srgb,#f3f3f3 81%,transparent);
+ --am-sidebar-fill:color-mix(in srgb,#e2e2e2 61%,transparent); --am-sidebar-lite:color-mix(in srgb,#e2e2e2 70%,transparent); --am-sidebar-solid:#eeedec;
+ --am-panel-fill:color-mix(in srgb,#e7e7e7 64%,transparent); --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#eeedec;
+ --am-player-fill:color-mix(in srgb,#f5f5f5 44%,transparent); --am-solid-fill:linear-gradient(180deg,#fdfdfd,#ececec); --am-toast-fill:#f6f6f6eb;
+ --am-toolbar-glass:color-mix(in srgb,#f5f5f5 44%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
+ --am-toolbar-shade:linear-gradient(180deg,#ffffff40,#ffffff14 60%,#fff0);
+ --am-menu-solid:#f6f6f6; --am-menu-solid-a:#f6f6f6f0; --am-sheet-fill:#fbfbfbd9;
+ --am-rim-edge:#00000033; --am-glass-text-shadow:none; --am-hero-name-shadow:none;
+ --am-rim-lines:inset 0 1px #ffffff99,inset 0 1.5px #ffffff66,inset 0 -1px #ffffff4d,inset 0 -1.5px #ffffff33,inset 1px 0 #ffffff33,inset -1px 0 #ffffff33;
+ --am-hero-name:#1d1d1f; --am-hero-play:var(--am-tint-text,#333); --am-hero-play-icon:#fff;
+ /* The settings window (#76): its base and the line under its toolbar (Apple's light Settings: white, #e5e5e5). */
+ --am-settings-window:#fff; --am-settings-hairline:rgb(0 0 0/.1);
+ /* #73's plain Now Playing pane: Music's lyrics pane in light is opaque #eeedec. */
+ --am-np-plain:#eeedec;
+ --am-settings-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 12' fill='none' stroke='%23000000b3' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 4.5 2.5-2.5 2.5 2.5M1.5 7.5 4 10l2.5-2.5'/%3E%3C/svg%3E");
+ /* Spotify's own scheme (color.ini, Spicetify's --spice-* variables) in light. Spicetify writes Spotify's black as
+    --spice-sidebar and its white as --spice-text, so the inverted sets (tooltips) stay inverted. */
+ --spice-main:var(--am-bg); --spice-card:var(--am-bg); --spice-sidebar:#f6f6f6; --spice-player:#f6f6f6; --spice-main-elevated:#f5f5f5;
+ --spice-highlight:#ebebeb; --spice-highlight-elevated:#ebebeb; --spice-selected-row:#dcdcdc; --spice-tab-active:#dcdcdc; --spice-notification:#e5e5ea;
+ --spice-text:var(--am-text); --spice-subtext:var(--am-sub); --spice-misc:#8e8e93; --spice-button-disabled:#c7c7cc;
+ --spice-rgb-main:255,255,255; --spice-rgb-card:255,255,255; --spice-rgb-sidebar:246,246,246; --spice-rgb-player:246,246,246; --spice-rgb-main-elevated:245,245,245;
+ --spice-rgb-highlight:235,235,235; --spice-rgb-highlight-elevated:235,235,235; --spice-rgb-selected-row:220,220,220; --spice-rgb-tab-active:220,220,220;
+ --spice-rgb-notification:229,229,234; --spice-rgb-text:39,39,39; --spice-rgb-subtext:128,128,128; --spice-rgb-misc:142,142,147; --spice-rgb-button-disabled:199,199,204;
 }
 html,body,#main,.Root {background:var(--am-bg)!important;font-family:var(--encore-body-font-stack)!important}
 /* For non-Latin locales, Turkish included, Spotify pins its own font on <html> (.spotify-mix-non-latin) with an
    !important that no :root rule here could beat. Declared on body, the stack reaches everything below it. */
 body {--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif!important;--encore-title-font-stack:var(--encore-body-font-stack)!important}
-.encore-dark-theme,.encore-base-set {--background-base:#1f1f1f;--background-elevated-base:#292929;--background-highlight:#383838;--text-base:#dedede;--text-subdued:#969696;--text-bright-accent:var(--am-accent);--essential-bright-accent:var(--am-accent);--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;--encore-title-font-stack:var(--encore-body-font-stack)}
+.encore-dark-theme,.encore-base-set {--background-base:var(--am-bg);--background-elevated-base:#292929;--background-highlight:#383838;--text-base:var(--am-text);--text-subdued:var(--am-sub);--text-bright-accent:var(--am-accent);--essential-bright-accent:var(--am-accent);--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","Segoe UI Variable Text","Segoe UI",sans-serif;--encore-title-font-stack:var(--encore-body-font-stack)}
+/* Light: Spotify's dark Encore sets (its root and surfaces such as the app frame and muted cards) take light values,
+   after Spotify's own light theme (its base set: #fff, #f5f5f5 highlight, #e2e2e2 press). */
+.am-light :is(.encore-dark-theme,.encore-base-set,.encore-muted-accent-set,.encore-app-frame-set),.am-light:is(.encore-dark-theme,.encore-base-set) {color-scheme:light;--background-base:var(--am-bg);--background-highlight:#f2f2f2;--background-press:#e2e2e2;--background-elevated-base:#f5f5f5;--background-elevated-highlight:#ebebeb;--background-elevated-press:#e2e2e2;--background-tinted-base:rgb(0 0 0/.06);--background-tinted-highlight:rgb(0 0 0/.09);--background-tinted-press:rgb(0 0 0/.14);--text-base:var(--am-text);--text-subdued:var(--am-sub);--essential-base:var(--am-text);--essential-subdued:#8a8a8a;--decorative-base:#000;--decorative-subdued:#dedede}
+/* Pages with a full-width photo header (Today's Top Hits, Daily Mix) take the photo's bottom colour for the whole page
+   (--am-header-base, mostly dark): in light mode they keep Spotify's dark text colours there. */
+body.am-light.am-image-header .am-native-main {color-scheme:dark;--text-base:var(--am-text);--text-subdued:var(--am-sub);--essential-base:var(--am-text);--essential-subdued:#7c7c7c;--background-highlight:#383838;--background-tinted-base:#ffffff1a;--background-tinted-highlight:#ffffff24;--spice-text:#f5f5f7;--spice-subtext:#a6a6aa;--spice-rgb-text:245,245,247;--spice-rgb-subtext:166,166,170}
+/* Home's top layer takes the hovered shortcut's colour under a gradient from 60% black, which read as a shadow on
+   white even at a third of its strength. Music's light Home has no such layer: light hides it (the user's pick). */
+body.am-light .am-native-main main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]) {opacity:0}
 /* Spotify's green play buttons (card and shortcut hover, playlist header) come from this colour set, with literal
    colours that the theme's --essential-bright-accent above does not reach. */
 .encore-bright-accent-set {color-scheme:dark;--background-base:var(--am-accent);--background-highlight:var(--am-accent-focus);--background-press:var(--am-accent);--background-elevated-base:var(--am-accent-focus);--background-elevated-highlight:var(--am-accent-focus);--background-elevated-press:var(--am-accent);--background-tinted-base:var(--am-accent);--background-tinted-highlight:var(--am-accent-focus);--background-tinted-press:var(--am-accent);--text-base:#fff;--text-subdued:#fff;--text-bright-accent:#fff;--essential-base:#fff;--essential-subdued:#fff;--essential-bright-accent:#fff;--decorative-subdued:var(--am-accent)}
@@ -58,7 +123,7 @@ body.am-ready .am-native-main .main-topBar-container {padding-left:var(--am-side
 body.am-ready .am-native-main :is(:is([data-testid$="-page"],[data-testid="entity-header"]) > [style*="background-color"],:is([data-testid="entity-header"],.playlist-playlist-playlistContent) > [style*="--background-base"]:first-child) {left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important}
 /* Spotify's scrolled top bars (the home chips row, playlist and album titles) fill with the page's colour; here they
    are the theme's glass instead, reaching under the sidebar. They are the colour layers that fade in by opacity. */
-body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {top:calc(-1 * var(--am-page-top))!important;left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;border-radius:0!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 #ffffff0f}
+body.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]) {top:calc(-1 * var(--am-page-top))!important;left:calc(-1 * var(--am-side))!important;right:0!important;width:auto!important;border-radius:0!important;background:var(--am-bar-glass)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 rgb(var(--am-ink)/.059)}
 /* Spotify darkens its coloured bars with a 60% black overlay (an element on playlist title bars, ::after on the
    home chips bar), which turned the glass nearly black. */
 body.am-ready .am-native-main .main-topBar-overlay,body.am-ready .am-native-main [data-am-glass]::after {background:none!important}
@@ -70,13 +135,19 @@ body.am-ready .am-native-main .main-topBar-overlay,body.am-ready .am-native-main
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {box-shadow:inset 0 -1px 0 transparent!important;transition:background-color .2s ease-out,box-shadow .2s ease-out,backdrop-filter .2s ease-out,-webkit-backdrop-filter .2s ease-out}
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] .main-trackList-trackListHeaderRow {transition:border-color .2s ease-out}
 body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"][data-am-stuck] .main-trackList-trackListHeaderRow {border-bottom-color:transparent!important}
-body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"][data-am-stuck] {box-shadow:inset 0 -1px 0 #ffffff17!important;background:color-mix(in srgb,#2a2a2a 62%,transparent)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8)}
+body.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"][data-am-stuck] {box-shadow:inset 0 -1px 0 rgb(var(--am-ink)/.09)!important;background:var(--am-bar-glass)!important;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8)}
 /* Spotify keeps 16-24px from the sidebar; give pages Apple Music's wider margin. */
 body.am-ready .am-native-main :is(.main-view-container__scroll-node-child > main,.main-topBar-container) {--content-spacing:var(--am-pad)!important}
 /* Rows snap to a card only near one, so Shift+wheel and trackpad swipes move freely back and forth; mandatory
    snapping jumped a whole card per wheel notch and fought quick reversals. Spotify's carousels are the scrollers
    among a shelf's presentation nodes (the property does nothing on the others). */
 body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-type:x proximity!important}
+/* A carousel's edges fade into the page under its arrows; Spotify hard-codes that colour to a dark #121212b3, which in
+   light drew grey bands with hard top and bottom edges over the cards. */
+body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
+/* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
+   carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
+body.am-light :is(.main-cardImage-imageWrapper,.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
 /* Playlist and album pages, laid out like Apple Music's: a flat page, the artwork on the left, title and owner beside
    it and the play controls along the artwork's bottom edge. Spotify's action bar is a sibling below the header, so
    its scroll host is pulled up into the header's text column (the text column keeps that strip free); everything
@@ -94,13 +165,13 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText {justify-content:center!important;gap:0!important;min-height:var(--am-art);padding-bottom:calc(var(--am-btn) + 12px)!important;box-sizing:border-box}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > span.encore-text-body-small:first-child {display:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText h1 {font-size:clamp(20px,2.1cqi,28px)!important;font-weight:700!important;letter-spacing:-.015em!important;line-height:1.18!important;white-space:normal!important;display:-webkit-box!important;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin:0!important;padding:0!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) {display:flex!important;flex-wrap:wrap;align-items:baseline;gap:0 5px;margin:0!important;--text-subdued:#ffffff80!important;color:#ffffff80}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) {display:flex!important;flex-wrap:wrap;align-items:baseline;gap:0 5px;margin:0!important;--text-subdued:rgb(var(--am-ink)/.502)!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper {display:flex!important;justify-content:flex-start!important;flex-basis:100%;margin:0 0 6px!important;color:var(--am-accent)!important;font-size:clamp(20px,2.1cqi,28px)!important;line-height:1.18;letter-spacing:-.015em}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper :is(span,a) {font:inherit!important;font-weight:400!important;color:inherit!important;letter-spacing:inherit}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper :is(figure,button,svg,div:has(> :is(figure,button))),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper + span {display:none!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper) * {font-size:12px!important;color:#ffffff80!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistDescription {font-size:12px;color:#ffffff80;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-top:4px}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistDescription a {color:#ffffffb3}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper) * {font-size:12px!important;color:rgb(var(--am-ink)/.502)!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistDescription {font-size:12px;color:rgb(var(--am-ink)/.502);display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin-top:4px}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistDescription a {color:rgb(var(--am-ink)/.702)}
 /* The action bar's scroll host moves up beside the artwork; its bottom lines up with the artwork's. Its negative margin
    pulls the playlist content block up with it, so that block must not paint over the artwork. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistContent {background:none!important}
@@ -121,23 +192,23 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] > div:first-child > div:first-child:not(:last-child) {display:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] {transform:none!important}
 /* Wide enough for "Duraklat" (the longest label, set by theme.js), so the pill keeps its size when the label changes. */
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span {width:128px!important;min-width:0;height:var(--am-btn)!important;min-height:0!important;padding:0!important;justify-content:center!important;gap:5px;border-radius:999px!important;background:#ffffff1a!important;color:var(--am-accent)!important;box-shadow:none!important;font-size:14px;font-weight:600;letter-spacing:-.01em}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span {width:128px!important;min-width:0;height:var(--am-btn)!important;min-height:0!important;padding:0!important;justify-content:center!important;gap:5px;border-radius:999px!important;background:rgb(var(--am-ink)/.102)!important;color:var(--am-accent)!important;box-shadow:none!important;font-size:14px;font-weight:600;letter-spacing:-.01em}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span::after {content:var(--am-t-play,"Çal")}
 body.am-ready.am-entity-playing .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] > span::after {content:var(--am-t-pause,"Duraklat")}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"]:hover > span {background:#ffffff26!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"]:hover > span {background:rgb(var(--am-ink)/.149)!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] button[data-encore-id="buttonPrimary"] svg {width:15px!important;height:15px!important;fill:currentColor!important;--encore-icon-fill:currentColor!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] :is([data-encore-id="buttonTertiary"],[data-testid="watch-feed-entity-button"]) {order:1;flex:none;display:grid!important;place-items:center;width:var(--am-btn)!important;height:var(--am-btn)!important;min-width:0!important;min-block-size:0!important;padding:0!important;margin:0!important;border-radius:50%!important;background:#ffffff12!important;color:#ffffffb3!important;transform:none!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"]:hover {background:#ffffff21!important;color:#fff!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] :is([data-encore-id="buttonTertiary"],[data-testid="watch-feed-entity-button"]) {order:1;flex:none;display:grid!important;place-items:center;width:var(--am-btn)!important;height:var(--am-btn)!important;min-width:0!important;min-block-size:0!important;padding:0!important;margin:0!important;border-radius:50%!important;background:rgb(var(--am-ink)/.071)!important;color:rgb(var(--am-ink)/.702)!important;transform:none!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"]:hover {background:rgb(var(--am-ink)/.129)!important;color:rgb(var(--am-ink))!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] svg {width:17px!important;height:17px!important}
 /* Shuffle leads, as in Apple Music, and takes the accent with the play button. */
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [class*="button-tertiary--condensed-all"] {order:-1;background:#ffffff1a!important;color:var(--am-accent)!important;--text-bright-accent:var(--am-accent)}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [class*="button-tertiary--condensed-all"] {order:-1;background:rgb(var(--am-ink)/.102)!important;color:var(--am-accent)!important;--text-bright-accent:var(--am-accent)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row"] [class*="button-tertiary--condensed-all"]::after {bottom:3px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="watch-feed-entity-button"] {overflow:hidden}
 /* Spotify draws the preview as a 30x40 portrait card 4px into its button; it fills the round button here, centred. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="watch-feed-entity-button"] div:has(> img) {position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;border-radius:50%!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="watch-feed-entity-button"] div:has(> img) > div {inset:0!important;width:100%!important;height:100%!important;align-items:center;justify-content:center}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="watch-feed-entity-button"] img {width:100%!important;height:100%!important;object-fit:cover;border:0!important;border-radius:50%!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-trailing"] {display:flex!important;align-items:center;order:2;margin-inline-start:auto!important;color:#ffffff99}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="action-bar-row-trailing"] {display:flex!important;align-items:center;order:2;margin-inline-start:auto!important;color:rgb(var(--am-ink)/.6)}
 /* Spotify shows the title bar once the header has scrolled past its own, taller height, which the compact header
    reports at once; theme.js marks the page top (am-entity-top) until the play controls pass under the bar. */
 body.am-ready.am-entity-top .am-native-main:has(:is([data-testid="playlist-page"],[data-testid="album-page"]) > [data-testid="entity-header"] .main-entityHeader-imageContainer,section > div > [data-testid="entity-header"] [data-testid="user-image"]) .main-topBar-topbarContentWrapper {opacity:0!important;visibility:hidden}
@@ -155,13 +226,13 @@ body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] 
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText {justify-content:flex-end!important;gap:3px!important;padding-bottom:calc(var(--am-av-off) + var(--am-btn) + 12px)!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText > span.encore-text-body-small:first-child {display:none!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText h1 {font-size:28px!important;font-weight:700!important;line-height:34px!important;letter-spacing:0!important}
-body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText > div:last-child :is(span,a) {font-size:13px!important;color:#ffffff8c!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) .main-entityHeader-headerText > div:last-child :is(span,a) {font-size:13px!important;color:rgb(var(--am-ink)/.549)!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) div:has(> div > [data-testid="action-bar"]) {position:relative;z-index:1;margin-top:calc(-1 * (var(--am-av-off) + var(--am-btn)))!important;margin-bottom:calc(var(--am-av-off) + 28px)!important;height:var(--am-btn)!important;min-height:0!important;overflow:visible!important;pointer-events:none}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) div:has(> [data-testid="action-bar"]) {overflow:visible!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar"] {height:var(--am-btn)!important;padding-block:0!important;padding-inline-start:calc(var(--content-spacing) + var(--am-av) + var(--am-av-gap))!important;background:none!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] {pointer-events:auto;height:var(--am-btn)!important;min-height:0!important;padding:0!important;gap:10px!important;align-items:center!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row-actions"] {display:contents!important}
-body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] {width:var(--am-btn)!important;height:var(--am-btn)!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:#ffffff1f!important;display:grid!important;place-items:center!important;color:#ffffffd9!important}
+body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] {width:var(--am-btn)!important;height:var(--am-btn)!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(var(--am-ink)/.122)!important;display:grid!important;place-items:center!important;color:rgb(var(--am-ink)/.851)!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonTertiary"] svg {width:16px!important;height:16px!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) [data-testid="action-bar-row"] [data-encore-id="buttonSecondary"] {min-block-size:0!important;height:var(--am-btn)!important;padding:0 16px!important;border:0!important;border-radius:14px!important;background:var(--am-accent)!important;color:#fff!important;font-size:13px!important;font-weight:600!important}
 body.am-ready .am-native-main section:has(> div > [data-testid="entity-header"] [data-testid="user-image"]) section h2 {font-size:17px!important;font-weight:700!important}
@@ -174,11 +245,11 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
    and flattening every div put the two side by side, so the pill took no clicks and its glow landed elsewhere. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] :is([data-overlayscrollbars],[data-overlayscrollbars-viewport],[data-overlayscrollbars-viewport] > div) {overflow:visible!important;width:auto!important;height:auto!important;margin:0!important;padding:0!important;position:static!important;inset:auto!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] .os-scrollbar {display:none!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] > div > div > div {display:flex!important;align-items:center;gap:2px!important;padding:3px!important;border-radius:999px;background:#ffffff14;box-shadow:inset 0 1px 1px #ffffff1a;backdrop-filter:blur(16px)}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"] > span {display:flex!important;align-items:center;justify-content:center;width:34px!important;height:34px!important;min-width:0!important;min-height:0!important;padding:0!important;font-size:0!important;border-radius:50%!important;background:none!important;box-shadow:none!important;color:#ffffffd9!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] > div > div > div {display:flex!important;align-items:center;gap:2px!important;padding:3px!important;border-radius:999px;background:rgb(var(--am-ink)/.078);box-shadow:inset 0 1px 1px rgb(var(--am-ink)/.102);backdrop-filter:blur(16px)}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"] > span {display:flex!important;align-items:center;justify-content:center;width:34px!important;height:34px!important;min-width:0!important;min-height:0!important;padding:0!important;font-size:0!important;border-radius:50%!important;background:none!important;box-shadow:none!important;color:rgb(var(--am-ink)/.851)!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"] > span > [class*="icon-wrapper"] {position:static!important;inset:auto!important;margin:0!important;transform:none!important;line-height:0}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"] svg {display:block;width:15px!important;height:15px!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"]:hover > span {background:#ffffff1f!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonPrimary"]:hover > span {background:rgb(var(--am-ink)/.122)!important}
 /* With mixing on, the pill over the Mix button takes the button's circle, so its glow rings the icon. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonSecondary"] {display:flex!important;align-items:center;justify-content:center;width:34px!important;height:34px!important;min-width:0!important;min-height:0!important;padding:0!important;gap:0!important;font-size:0!important;border-radius:50%!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonSecondary"] svg {display:block;width:15px!important;height:15px!important}
@@ -187,14 +258,14 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) [data-testid="playlist-toolbar"] button[data-encore-id="buttonSecondary"] > [class*="icon-wrapper"] {position:static!important;inset:auto!important;margin:0!important;transform:none!important;line-height:0}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) :is(.main-trackList-trackListContainer,[data-testid="action-bar"] + *) {margin-top:0}
 /* Track list: quiet column titles, hairlines between rows from the title on, a soft rounded hover. */
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow {border-bottom:1px solid #ffffff17!important;color:#ffffff80}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:#ffffff80}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow {border-bottom:1px solid rgb(var(--am-ink)/.09)!important;color:rgb(var(--am-ink)/.502)}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow {border-radius:6px!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow::after {content:"";position:absolute;left:100px;right:8px;bottom:0;height:1px;background:#ffffff12;pointer-events:none}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow::after {content:"";position:absolute;left:100px;right:8px;bottom:0;height:1px;background:rgb(var(--am-ink)/.071);pointer-events:none}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:is(:hover,[aria-selected="true"])::after {opacity:0}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:#ffffff0f!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:rgb(var(--am-ink)/.059)!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:#ffffff66}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:rgb(var(--am-ink)/.4)}
 /* Spotify's playing equaliser is a green GIF; #am-accent-fill (theme.js) fills its shape with the accent. */
 :is(#am-accent-fill,#am-accent-swap) feFlood {flood-color:var(--am-accent)}
 img[src*="equaliser-animated-green"] {filter:url(#am-accent-fill)}
@@ -257,7 +328,7 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
    through. Over a dark page that reads as nearly the page's colour; over colour (artist tints, playlist headers,
    artwork) it stays a deep version of it instead of taking it on (macOS 26 screenshots: page (46,39,39) gives
    sidebar (48,39,38); page (112,77,52) gives (65,49,39)). Rows, insets and type are in fixed points. */
-#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:color-mix(in srgb,#252525 76%,transparent);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 #ffffff0a;display:flex;flex-direction:column;padding:0 10px;font-size:13px}
+#am-sidebar {position:fixed;inset:0 auto 0 0;width:var(--am-side);z-index:40;background:var(--am-sidebar-fill);backdrop-filter:blur(40px) saturate(1.1);-webkit-backdrop-filter:blur(40px) saturate(1.1);box-shadow:inset -1px 0 rgb(var(--am-ink)/.039);display:flex;flex-direction:column;padding:0 10px;font-size:13px}
 /* Edge glow under the sidebar glass: a heavily blurred backdrop reaching --am-glow past the sidebar, so the
    artwork beside the edge bleeds its colour in, as on Apple Music; masked to the sidebar, strongest at the edge;
    #am-glow-cap (theme.js) keeps big coloured areas from blowing out. */
@@ -265,10 +336,11 @@ body.am-ready .am-native-global {height:64px!important;background:var(--am-bg)!i
    the sidebar, where the mask already ends. Unclipped, the box overlapped the player's left end: every frame the
    player's glass redrew (progress, marquee) re-ran this blur and the toolbar glass under it (55fps, 80% of a core). */
 #am-sidebar-glow {--am-glow:140px;position:fixed;inset:0 auto 0 0;width:calc(var(--am-side) + var(--am-glow));clip-path:inset(0 var(--am-glow) 0 0);z-index:39;pointer-events:none;backdrop-filter:blur(56px) saturate(3.5) brightness(1.25);backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap);-webkit-mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side));mask-image:linear-gradient(90deg,transparent calc(var(--am-side) - 160px),#0007 calc(var(--am-side) - 70px),#000 calc(var(--am-side) - 1px),transparent var(--am-side))}
+body.am-light #am-sidebar-glow {backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap-light);-webkit-backdrop-filter:blur(56px) saturate(3.5) brightness(1.25) url(#am-glow-cap-light)}
 /* Same height as the toolbar row, so the first item lines up with the page content. */
 .am-drag {height:var(--am-header);flex-shrink:0;-webkit-app-region:drag}
 .am-sidebar-resizer {position:absolute;top:0;bottom:0;right:-4px;width:8px;z-index:1;cursor:col-resize;-webkit-app-region:no-drag;outline:0}
-.am-sidebar-resizer::after {content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;background:#ffffff2e;opacity:0;transition:opacity .15s}
+.am-sidebar-resizer::after {content:"";position:absolute;top:0;bottom:0;left:3px;width:2px;background:rgb(var(--am-ink)/.18);opacity:0;transition:opacity .15s}
 .am-sidebar-resizer:hover::after,.am-sidebar-resizer:focus-visible::after,.am-resizing .am-sidebar-resizer::after {opacity:1}
 body.am-resizing {cursor:col-resize;user-select:none}
 body.am-resizing * {transition:none!important}
@@ -276,40 +348,40 @@ body.am-resizing * {transition:none!important}
 /* While rows run on under the account row (.am-more-below, theme.js) they fade out above it instead of being cut at
    its edge, and a hairline sets the row off. */
 #am-sidebar .am-navigation.am-more-below {-webkit-mask-image:linear-gradient(to top,transparent,#000 16px);mask-image:linear-gradient(to top,transparent,#000 16px)}
-#am-sidebar .am-navigation.am-more-below ~ .am-account {box-shadow:0 -1px #ffffff14}
+#am-sidebar .am-navigation.am-more-below ~ .am-account {box-shadow:0 -1px rgb(var(--am-ink)/.078)}
 .am-nav-end {height:1px}
-#am-sidebar .am-nav-row {display:flex;align-items:center;gap:10px;height:32px;width:100%;padding:0 16px;border-radius:8px;white-space:nowrap;font-weight:500;color:#f2f2f2}
+#am-sidebar .am-nav-row {display:flex;align-items:center;gap:10px;height:32px;width:100%;padding:0 16px;border-radius:8px;white-space:nowrap;font-weight:500;color:var(--am-label)}
 .am-nav-row svg {width:18px;height:18px;color:var(--am-accent);flex-shrink:0}
-#am-sidebar .am-nav-row:hover{background:#ffffff0d}
-#am-sidebar .am-nav-row.am-selected{background:#ffffff1f;font-weight:650}
+#am-sidebar .am-nav-row:hover{background:rgb(var(--am-ink)/.051)}
+#am-sidebar .am-nav-row.am-selected{background:rgb(var(--am-ink)/.122);font-weight:650}
 /* Account chip in the bottom-left corner, as in Apple Music. The avatar is centred on the icon column and the name
    starts on the text column; the right padding puts the friends button on the pin column above. */
-#am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;padding:6px 7px 0 0;flex-shrink:0;box-shadow:0 -1px #ffffff00;transition:box-shadow .2s}
-#am-sidebar .am-account-button {display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:#a9a9a9;flex-shrink:0;transition:background-color .15s,color .15s}
+#am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;padding:6px 7px 0 0;flex-shrink:0;box-shadow:0 -1px rgb(var(--am-ink)/0);transition:box-shadow .2s}
+#am-sidebar .am-account-button {display:grid;place-items:center;width:30px;height:30px;border-radius:8px;color:var(--am-sub-2);flex-shrink:0;transition:background-color .15s,color .15s}
 #am-sidebar .am-account-button svg {width:18px;height:18px}
-#am-sidebar .am-account-button:hover {background:#ffffff0d;color:#f2f2f2}
+#am-sidebar .am-account-button:hover {background:rgb(var(--am-ink)/.051);color:var(--am-label)}
 #am-sidebar .am-account-button.am-active {color:var(--am-accent-focus)}
 /* The chip gives way first (its name ellipsizes), so the two buttons stay inside a narrow sidebar. */
-#am-sidebar .am-profile {display:flex;align-items:center;gap:7px;flex:1 1 auto;width:auto;min-width:0;margin:0;padding:6px 8px 6px 13px;border-radius:8px;font-weight:600;color:#f2f2f2}
+#am-sidebar .am-profile {display:flex;align-items:center;gap:7px;flex:1 1 auto;width:auto;min-width:0;margin:0;padding:6px 8px 6px 13px;border-radius:8px;font-weight:600;color:var(--am-label)}
 #am-sidebar .am-profile[hidden] {display:none}
-#am-sidebar .am-profile:hover {background:#ffffff0d}
+#am-sidebar .am-profile:hover {background:rgb(var(--am-ink)/.051)}
 .am-avatar {position:relative;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;overflow:hidden;flex-shrink:0;background:linear-gradient(160deg,#a6b4d6,#6d7ba0);color:white;font-size:.78em;font-weight:650;letter-spacing:0}
 .am-avatar img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .am-profile-name {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:#ffffff5c;margin:16px 6px 4px}
+.am-nav-heading {font-size:11px;font-weight:650;letter-spacing:0;color:rgb(var(--am-ink)/.361);margin:16px 6px 4px}
 /* Playlists under "All Playlists" (theme.js): 22px artwork in the icon column, the name lined up with the rows above.
    "+" on the heading keeps the heading's height (negative margins). It is centred on the pin column below, and 1px
    below the line box's centre: between the heading's cap-height and x-height centres. */
 .am-nav-heading {display:flex;align-items:center;min-height:13px}
-#am-sidebar .am-nav-add {display:grid;place-items:center;width:22px;height:22px;margin:-5px 5px -7px auto;border-radius:6px;color:#ffffff8c;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-add {display:grid;place-items:center;width:22px;height:22px;margin:-5px 5px -7px auto;border-radius:6px;color:rgb(var(--am-ink)/.549);transition:background-color .15s,color .15s}
 #am-sidebar .am-nav-add svg {width:15px;height:15px}
-#am-sidebar .am-nav-add:hover,#am-sidebar .am-nav-add[aria-expanded="true"] {background:#ffffff14;color:#f2f2f2}
+#am-sidebar .am-nav-add:hover,#am-sidebar .am-nav-add[aria-expanded="true"] {background:rgb(var(--am-ink)/.078);color:var(--am-label)}
 #am-sidebar .am-list-row {gap:8px;padding:0 16px 0 14px}
-.am-list-art {display:grid;place-items:center;width:22px;height:22px;border-radius:4px;overflow:hidden;flex-shrink:0;background:#ffffff14}
+.am-list-art {display:grid;place-items:center;width:22px;height:22px;border-radius:4px;overflow:hidden;flex-shrink:0;background:rgb(var(--am-ink)/.078)}
 .am-list-art img {width:100%;height:100%;object-fit:cover}
 #am-sidebar .am-list-art svg {width:14px;height:14px}
 .am-list-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:left}
-.am-list-pin {display:grid;flex-shrink:0;color:#ffffff59}
+.am-list-pin {display:grid;flex-shrink:0;color:rgb(var(--am-ink)/.349)}
 #am-sidebar .am-list-pin svg {width:12px;height:12px;color:inherit}
 /* Drag and drop onto the sidebar (theme.js): a row taking the drop is ringed in the accent; a pin lands at the line. */
 #am-sidebar .am-nav-row.am-drop-into {box-shadow:inset 0 0 0 2px var(--am-accent)!important}
@@ -318,9 +390,9 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-nav-row.am-drop-before::before {top:-1px}
 #am-sidebar .am-nav-row.am-drop-after::before {bottom:-1px}
 .am-list-row.am-playing::after {content:"";flex-shrink:0;width:14px;height:14px;background:var(--am-accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9h4l5-5v16l-5-5H3z'/%3E%3Cpath d='M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat}
-#am-sidebar .am-list-more {color:#ffffff8c;font-weight:500}
+#am-sidebar .am-list-more {color:rgb(var(--am-ink)/.549);font-weight:500}
 #am-sidebar .am-list-more svg {width:12px;height:12px;margin:0 3px;color:inherit;transition:transform .2s}
-#am-sidebar .am-list-more:hover {color:#f2f2f2}
+#am-sidebar .am-list-more:hover {color:var(--am-label)}
 /* Rows pushed out of the list fade where they were (theme.js renderLists), which also keeps the scroll position when
    rows move; the browser's own scroll anchoring would correct it a second time. */
 #am-sidebar .am-navigation {overflow-anchor:none}
@@ -335,17 +407,17 @@ body.am-resizing * {transition:none!important}
 #am-sidebar .am-heading-spacer {visibility:hidden}
 #am-sidebar .am-navigation.am-masked {-webkit-mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px));mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px))}
 #am-sidebar .am-navigation.am-masked.am-more-below {-webkit-mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px),#000 calc(100% - 16px),transparent);mask-image:linear-gradient(to bottom,transparent var(--am-mask-edge),#000 calc(var(--am-mask-edge) + 16px),#000 calc(100% - 16px),transparent)}
-#am-sidebar .am-nav-less {height:20px;margin:-4px 4px -4px auto;padding:0 8px;border-radius:10px;background:#ffffff0f;color:#ffffff8c;font:inherit;font-size:11px;font-weight:600;white-space:nowrap;transition:background-color .15s,color .15s}
+#am-sidebar .am-nav-less {height:20px;margin:-4px 4px -4px auto;padding:0 8px;border-radius:10px;background:rgb(var(--am-ink)/.059);color:rgb(var(--am-ink)/.549);font:inherit;font-size:11px;font-weight:600;white-space:nowrap;transition:background-color .15s,color .15s}
 #am-sidebar .am-nav-less[hidden] {display:none}
-#am-sidebar .am-nav-less:hover {background:#ffffff1f;color:#f2f2f2}
+#am-sidebar .am-nav-less:hover {background:rgb(var(--am-ink)/.122);color:var(--am-label)}
 #am-sidebar .am-nav-less:not([hidden]) + .am-nav-add {margin-left:0}
-.am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:#1c1c1e;color:#f2f2f2;font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
+.am-list-input {flex:1;min-width:0;height:24px;margin:0 0 0 -6px;padding:0 6px;border:0;border-radius:5px;background:var(--am-field);color:var(--am-label);font:inherit;font-weight:500;outline:0;box-shadow:0 0 0 2px var(--am-accent-focus)}
 /* Apple Music keeps the player at ~700pt: it grows with the window up to that width, then stays centred over the content. */
 /* Spotify's own snackbars are retold as the theme's glass toast (theme.js); theirs stay in the DOM, unseen, so their
    buttons (Undo, Change) still work from the toast. */
 body.am-ready .notistack-SnackbarContainer {visibility:hidden!important;pointer-events:none!important}
 .am-toasts {position:fixed;z-index:70;bottom:84px;left:calc(var(--am-side) + (100vw - var(--am-side))/2);transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none}
-.am-toast {position:relative;transform:translateY(8px);max-width:min(420px,calc(100vw - var(--am-side) - 48px));padding:9px 16px;border-radius:999px;background:#2c2c2eeb;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px #ffffff26,0 8px 24px #0006;color:#f2f2f2;font:600 13px var(--encore-body-font-stack);letter-spacing:-.01em;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.am-toast {position:relative;transform:translateY(8px);max-width:min(420px,calc(100vw - var(--am-side) - 48px));padding:9px 16px;border-radius:999px;background:var(--am-toast-fill);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:inset 0 0 0 .5px rgb(var(--am-ink)/.149),0 8px 24px #0006;color:var(--am-label);font:600 13px var(--encore-body-font-stack);letter-spacing:-.01em;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
 .am-toast.am-toast-show {opacity:1;transform:none}
 /* A toast that has gone leaves the stack (after its fade), so the others close up. */
 .am-toast:not(.am-toast-show):not(.am-toast-leaving) {position:absolute;bottom:0;visibility:hidden}
@@ -359,25 +431,25 @@ body.am-ready .Root > div:has(> [data-testid="watch-feed-view"]) {padding:var(--
 body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1680px,85cqh*var(--aspect-ratio)))}
 /* Whole device pixels for the glass: --am-side is in vw, so a centred player could land on a half pixel, which blurs
    its edge and highlight on 1x screens. The width is rounded to an even number and the left edge to a whole pixel. */
-#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid #ffffff24;background:#ffffff17;backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px #ffffff26,0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
+#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid rgb(var(--am-rim)/.141);background:var(--am-player-fill);backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px rgb(var(--am-rim)/.149),0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
-#am-player button {display:grid;place-items:center;width:28px;height:32px;color:#e8e8e8;transition:color .15s,transform .12s}
+#am-player button {display:grid;place-items:center;width:28px;height:32px;color:var(--am-icon);transition:color .15s,transform .12s}
 #am-player button[hidden] {display:none}
-#am-player button:hover {color:white}
+#am-player button:hover {color:rgb(var(--am-ink))}
 #am-player button:active {transform:scale(.92)}
 /* Icons are swapped in place; letting the button own the pointer keeps hover and leave events reliable. */
 #am-player svg {width:19px;height:19px;pointer-events:none}
-#am-player .am-dim {color:#8d8d8d}
+#am-player .am-dim {color:var(--am-dim)}
 #am-player .am-dim svg {width:14px;height:14px}
 #am-player .am-play svg {width:26px;height:26px;animation:am-icon-in .22s cubic-bezier(.2,.9,.3,1.3)}
 #am-player .am-active {color:var(--am-accent-focus)}
 @keyframes am-icon-in {from{transform:scale(.55);opacity:0}}
 /* LCD: artwork, title row, marquee subtitle and the hairline scrubber. */
 .am-player-track {position:relative;min-width:0;height:100%}
-.am-apple {position:absolute;inset:0 0 12px;display:grid;place-items:center;font-size:2.1vw;line-height:1;color:#969696}
+.am-apple {position:absolute;inset:0 0 12px;display:grid;place-items:center;font-size:2.1vw;line-height:1;color:var(--am-sub)}
 .am-has-track .am-apple,.am-player-track:not(.am-has-track) .am-lcd {display:none}
 .am-lcd {position:absolute;inset:6px 0 13px 0;display:flex;align-items:center;gap:9px;min-width:0;transition:opacity .25s,filter .25s}
-#am-player .am-track-art {position:relative;flex:0 0 auto;width:auto;height:100%;min-height:0;aspect-ratio:1;border-radius:5px;overflow:hidden;background:#ffffff14;box-shadow:0 1px 3px #0006}
+#am-player .am-track-art {position:relative;flex:0 0 auto;width:auto;height:100%;min-height:0;aspect-ratio:1;border-radius:5px;overflow:hidden;background:rgb(var(--am-ink)/.078);box-shadow:0 1px 3px #0006}
 .am-track-art img {display:block;width:100%;height:100%;object-fit:cover}
 .am-track-art img[hidden] {display:none}
 .am-art-expand {position:absolute;inset:0;display:grid;place-items:center;background:#0000008c;color:white;opacity:0;transition:opacity .15s}
@@ -386,19 +458,19 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 .am-no-artwork #am-player .am-track-art {display:none}
 .am-lcd-text {flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:1px}
 .am-title-row {display:flex;align-items:center;gap:6px;min-width:0}
-#am-player .am-star {width:auto;min-width:0;height:auto;min-height:0;color:#9a9a9a;opacity:0;transition:opacity .15s,color .15s}
+#am-player .am-star {width:auto;min-width:0;height:auto;min-height:0;color:var(--am-sub);opacity:0;transition:opacity .15s,color .15s}
 /* The star spans the title's cap height, but its arms sit above its middle; half a pixel down centres it optically. */
 #am-player .am-star svg {width:13px;height:13px;transform:translateY(-.5px)}
 #am-player .am-star.am-active {color:var(--am-accent);opacity:1}
 #am-player .am-star.am-active svg path {fill:currentColor}
 #am-player .am-lcd:hover .am-star,#am-player .am-star:focus-visible {opacity:1}
-.am-track-title {flex:0 1 auto;font-size:13px;font-weight:650;letter-spacing:-.01em;color:#f5f5f5;cursor:pointer}
-.am-track-subtitle {font-size:13px;color:#ffffffd0;cursor:pointer;border-radius:4px}
+.am-track-title {flex:0 1 auto;font-size:13px;font-weight:650;letter-spacing:-.01em;color:var(--am-label);cursor:pointer}
+.am-track-subtitle {font-size:13px;color:rgb(var(--am-ink)/.816);cursor:pointer;border-radius:4px}
 .am-track-title:focus-visible,.am-track-subtitle:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
 .am-lcd-links .am-track-subtitle {cursor:default}
 .am-lcd-link {cursor:pointer}
 .am-lcd-links .am-track-title:hover,.am-lcd-link:hover {text-decoration:underline}
-#am-player .am-more {flex:0 0 auto;color:#e0e0e0}
+#am-player .am-more {flex:0 0 auto;color:var(--am-icon-2)}
 #am-player .am-more svg {width:20px;height:20px}
 .am-marquee {overflow:hidden;white-space:nowrap;min-width:0;line-height:1.3}
 .am-marquee-inner {display:inline-flex}
@@ -411,12 +483,12 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 .am-swap .am-lcd-text,.am-swap .am-track-art {animation:am-swap .45s ease-out}
 @keyframes am-swap {from{opacity:0;filter:blur(6px)}}
 .am-scrub {position:absolute;inset:0;pointer-events:none}
-.am-bar {position:absolute;left:0;right:0;bottom:6px;height:3px;border-radius:3px;background:#ffffff33;overflow:hidden;transition:height .2s cubic-bezier(.3,.7,.3,1),bottom .2s cubic-bezier(.3,.7,.3,1)}
-.am-bar-fill {display:block;width:100%;height:100%;background:#e9e9e9;transform:scaleX(0);transform-origin:left}
+.am-bar {position:absolute;left:0;right:0;bottom:6px;height:3px;border-radius:3px;background:rgb(var(--am-ink)/.2);overflow:hidden;transition:height .2s cubic-bezier(.3,.7,.3,1),bottom .2s cubic-bezier(.3,.7,.3,1)}
+.am-bar-fill {display:block;width:100%;height:100%;background:var(--am-icon);transform:scaleX(0);transform-origin:left}
 .am-player-track:not(.am-has-track) .am-bar-fill {opacity:0}
 .am-scrubbing .am-lcd {opacity:.2;filter:blur(6px)}
 .am-scrubbing .am-bar {height:9px;bottom:5px;border-radius:5px}
-.am-time {position:absolute;bottom:19px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:#d4d4d4;opacity:0;transition:opacity .2s;white-space:nowrap}
+.am-time {position:absolute;bottom:19px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--am-time);opacity:0;transition:opacity .2s;white-space:nowrap}
 .am-time-elapsed {left:1px}
 .am-time-remaining {right:1px}
 .am-scrubbing .am-time {opacity:1}
@@ -436,34 +508,34 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 .am-player-track:not(.am-has-track) .am-seek {display:none}
 /* Volume, as in Apple Music: a glass capsule grows out of the speaker over the lyrics and queue buttons. */
 .am-volume-wrap {position:relative;display:flex;align-items:center}
-.am-volume-capsule {position:absolute;right:-8px;top:50%;width:110px;height:38px;margin-top:-19px;box-sizing:border-box;padding:0 40px 0 16px;display:flex;align-items:center;border-radius:19px;background:#ffffff1a;box-shadow:inset 0 1px 0 #ffffff47,inset 0 0 0 1px #ffffff1f;backdrop-filter:brightness(1.13);-webkit-backdrop-filter:brightness(1.13);opacity:0;clip-path:inset(0 0 0 calc(100% - 38px) round 19px);pointer-events:none;transition:opacity .2s,clip-path .35s cubic-bezier(.2,.9,.3,1)}
+.am-volume-capsule {position:absolute;right:-8px;top:50%;width:110px;height:38px;margin-top:-19px;box-sizing:border-box;padding:0 40px 0 16px;display:flex;align-items:center;border-radius:19px;background:rgb(var(--am-ink)/.102);box-shadow:inset 0 1px 0 rgb(var(--am-rim)/.278),inset 0 0 0 1px rgb(var(--am-rim)/.122);backdrop-filter:brightness(1.13);-webkit-backdrop-filter:brightness(1.13);opacity:0;clip-path:inset(0 0 0 calc(100% - 38px) round 19px);pointer-events:none;transition:opacity .2s,clip-path .35s cubic-bezier(.2,.9,.3,1)}
 #am-player.am-volume-open .am-volume-capsule {opacity:1;clip-path:inset(0 round 19px);pointer-events:auto}
 .am-player-extras > button {transition:opacity .2s,color .15s,transform .12s}
 #am-player.am-volume-open .am-player-extras > button {opacity:0;pointer-events:none}
 .am-volume {appearance:none;-webkit-appearance:none;width:100%;height:24px;margin:0;background:none;cursor:pointer}
-.am-volume::-webkit-slider-runnable-track {height:8px;border-radius:4px;background:linear-gradient(90deg,#fff var(--am-level,50%),#ffffff4d 0)}
+.am-volume::-webkit-slider-runnable-track {height:8px;border-radius:4px;background:linear-gradient(90deg,rgb(var(--am-ink)) var(--am-level,50%),rgb(var(--am-ink)/.302) 0)}
 .am-volume::-webkit-slider-thumb {-webkit-appearance:none;width:8px;height:8px;opacity:0}
 .am-volume:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px;border-radius:6px}
 #am-player .am-volume-button {position:relative;height:28px;border-radius:50%;transition:background-color .15s,color .15s,transform .12s}
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
-:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2}
+:is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:var(--am-label)}
 /* Tooltips (Spotify's [data-tippy-root] holding #hover-or-focus-tooltip; its own is a flat #1e1e1e box in 14px text) in the
    menus' material: a small glass box in 12pt text, fading in. In Eco a plain fill. */
-body > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {padding:4px 9px!important;border-radius:8px!important;background:color-mix(in srgb,#2c2c2e 72%,transparent)!important;backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:inset 0 0 0 .5px #ffffff26,inset 0 1px #ffffff1a,0 6px 16px #00000059!important;color:#ffffffeb!important;max-width:300px!important;animation:am-tip-in .12s ease-out}
+body > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {padding:4px 9px!important;border-radius:8px!important;background:color-mix(in srgb,var(--am-menu-solid) 72%,transparent)!important;backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:inset 0 0 0 .5px rgb(var(--am-rim)/.149),inset 0 1px rgb(var(--am-rim)/.1),0 6px 16px #00000059!important;color:rgb(var(--am-ink)/.92)!important;max-width:300px!important;animation:am-tip-in .12s ease-out}
 body > [data-tippy-root] #hover-or-focus-tooltip {font:500 12px/16px var(--encore-body-font-stack)!important;letter-spacing:-.01em}
-body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {background:var(--am-menu-solid)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 @keyframes am-tip-in {from{opacity:0}}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
    1pt brighter, strongest along top and bottom. Without Liquid Glass menus stay frosted, in Eco solid. */
-:is(#am-popover,#am-popover-sub),[data-tippy-root][data-am-glass]::before {border:0;border-radius:13px;background:var(--am-menu-fill,#2c2c2ef0);backdrop-filter:var(--am-menu-filter,blur(24px));-webkit-backdrop-filter:var(--am-menu-filter,blur(24px));
- box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 14px 36px #00000080}
+:is(#am-popover,#am-popover-sub),[data-tippy-root][data-am-glass]::before {border:0;border-radius:13px;background:var(--am-menu-fill,var(--am-menu-solid-a));backdrop-filter:var(--am-menu-filter,blur(24px));-webkit-backdrop-filter:var(--am-menu-filter,blur(24px));
+ box-shadow:inset 0 0 0 .5px var(--am-rim-edge),var(--am-rim-lines),0 14px 36px #00000080}
 /* Spotify's: the glass behind the list (theme.js puts it on the root, which its transform already makes the stacking
    context and the submenus' containing block); a list the theme has not reached keeps a plain box. */
 [data-tippy-root][data-am-glass]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none}
-:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:#2c2c2ef0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] {border-radius:13px!important;padding:5px!important;background:var(--am-menu-solid-a)!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"][data-am-glass-list] {background:none!important;box-shadow:none!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) {border-radius:8px!important}
 /* Spotify's menus in the theme's (macOS) measure, so right-click menus read the same everywhere: 13px labels on 24px
@@ -486,7 +558,7 @@ body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {ba
 /* "Opens outside" marks (Account, Support, Report) are smaller and quieter than the labels: Spotify's external-link
    icon carries an aria-label, a check does not. */
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button) > :last-child:not(:first-child) svg[aria-label] {width:11px!important;height:11px!important;opacity:.5}
-:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:empty:not([data-tippy-root]),:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:not([data-tippy-root]) > div:empty {width:auto!important;height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:#ffffff24!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:empty:not([data-tippy-root]),:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] > div:not([data-tippy-root]) > div:empty {width:auto!important;height:1px!important;margin:5px 11px!important;padding:0!important;border:0!important;background:rgb(var(--am-ink)/.141)!important}
 /* Spotify gives a long submenu's list (Add to playlist, Move to folder) a height counted in its own rows, 40px each with
    a 32px search, so ours left that much empty glass under the last row. Counted in the theme's rows instead (a
    separator is 1px between 5px margins); past 50vh the menu scrolls, as Spotify's does. */
@@ -495,7 +567,7 @@ body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {ba
    submenu instead of Spotify's filled triangle (submenu rows carry aria-expanded). */
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) {background:var(--am-accent)!important;color:#fff!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button):not([aria-disabled="true"],:disabled,:has([role="search"])):is(:hover,:focus-visible) :is(span,p) {color:#fff!important}
-:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:#ffffff1f!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] :is([role^="menuitem"],li > [role="link"],li > button)[aria-expanded="true"]:not(:hover) {background:rgb(var(--am-ink)/.122)!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child) svg {display:none!important}
 /* A submenu that opens down from its row (popper anchors it by its top) sits 5px higher, so its first row is level
    with the row it came from, as macOS places them; at the side it already meets that row's highlight. One pushed up
@@ -511,8 +583,8 @@ body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {ba
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] > div > span {padding:6px 8px!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] svg {width:12px!important;height:12px!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] button {width:24px!important;height:24px!important;padding:6px!important}
-:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:#ffffff17!important;box-shadow:none!important;color:#f2f2f2!important;font-size:13px!important;line-height:24px!important;outline:0!important}
-:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input::placeholder {color:#ffffff73!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input {height:24px!important;padding:0 28px 0 27px!important;border-radius:7px!important;background:rgb(var(--am-ink)/.09)!important;box-shadow:none!important;color:var(--am-label)!important;font-size:13px!important;line-height:24px!important;outline:0!important}
+:is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input::placeholder {color:rgb(var(--am-ink)/.451)!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) [role="search"] input:focus {box-shadow:inset 0 0 0 1.5px var(--am-accent)!important}
 :is(body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]) ul[role="menu"] [aria-expanded] > :last-child:not(:first-child)::after {content:'›';font-size:15px;line-height:1;opacity:.6}
 /* Spotify draws its menu icons a fixed grey (150) under near-white text; macOS draws them in the label colour. */
@@ -538,9 +610,9 @@ body.am-liquid:not(.am-solid) [data-am-glass="4"] {--am-menu-filter:url(#am-menu
 body.am-liquid:not(.am-solid) [data-am-glass="5"] {--am-menu-filter:url(#am-menu-glass-5)}
 body.am-liquid:not(.am-solid) [data-am-glass="6"] {--am-menu-filter:url(#am-menu-glass-6)}
 body.am-liquid:not(.am-solid) [data-am-glass="7"] {--am-menu-filter:url(#am-menu-glass-7)}
-body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
+body.am-solid {--am-menu-fill:var(--am-menu-solid);--am-menu-filter:none}
 :is(#am-popover,#am-popover-sub)::-webkit-scrollbar {width:5px}
-:is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:#ffffff26;border-radius:3px}
+:is(#am-popover,#am-popover-sub)::-webkit-scrollbar-thumb {background:rgb(var(--am-ink)/.149);border-radius:3px}
 :is(#am-popover,#am-popover-sub)[hidden] {display:none}
 /* Menus, ours and Spotify's, open on their first frame with no fade, as macOS's do. A fade from 30% left their glass
    see-through for 0.1s, so moving between submenus flashed the page sharp behind each new one. */
@@ -556,10 +628,10 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 @keyframes am-artwork-in {from{scale:.6}}
 .am-popover-item {display:block;width:100%;padding:3px 10px;line-height:18px;border:0;border-radius:8px;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-popover-item:hover,.am-popover-item:focus-visible,.am-popover-item.am-active {background:var(--am-accent);color:white;outline:0}
-.am-popover-item.am-active.am-parent {background:#ffffff1f;color:inherit}
+.am-popover-item.am-active.am-parent {background:rgb(var(--am-ink)/.122);color:inherit}
 .am-popover-item.am-has-submenu {display:flex;align-items:center;justify-content:space-between}
 .am-popover-item.am-has-submenu::after {content:'›';font-size:15px;line-height:1;opacity:.6;margin-left:8px}
-.am-popover-separator {height:1px;margin:5px 11px;background:#ffffff24}
+.am-popover-separator {height:1px;margin:5px 11px;background:rgb(var(--am-ink)/.141)}
 /* Our menus' rows carry their icon in the same column as Spotify's (Apple Music's measure, above); a row without one
    keeps its text at the column. */
 .am-popover-item.am-has-icon {display:flex;align-items:center;gap:8px}
@@ -568,7 +640,7 @@ body.am-solid {--am-menu-fill:#2c2c2e;--am-menu-filter:none}
 .am-popover-item .am-menu-icon {display:block;width:12px;height:12px;flex:none;margin:0 1px}
 /* Edit details (our menus' playlist action): a small sheet over the window. */
 .am-edit-back {position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#00000059;-webkit-app-region:no-drag}
-.am-edit-box {box-sizing:border-box;width:min(420px,calc(100vw - 48px));display:grid;gap:12px;padding:20px;color:#f2f2f2;font:13px var(--encore-body-font-stack)}
+.am-edit-box {box-sizing:border-box;width:min(420px,calc(100vw - 48px));display:grid;gap:12px;padding:20px;color:var(--am-label);font:13px var(--encore-body-font-stack)}
 /* Sheets: Spotify's dialogs (credits, keyboard shortcuts, confirmations) and the theme's own, in frosted glass with the
    menus' rim. The menus' bending glass let the page's text read through at this size; a heavier blur keeps only its
    colours. Spotify's card is either the dialog's only child (credits) or the dialog itself, holding a header and a body. */
@@ -583,26 +655,26 @@ dialog[open]::backdrop {background:#00000059!important;animation:am-dim-in .24s 
 @keyframes am-dim-in {from{opacity:0}}
 @keyframes am-dim-bg-in {from{background-color:transparent}}
 .am-edit-back {animation:am-dim-bg-in .24s ease-out}
-:is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1);border-radius:16px!important;background:#28282abf!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
- box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 22px 70px #0000008c!important}
+:is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1);border-radius:16px!important;background:var(--am-sheet-fill)!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8);
+ box-shadow:inset 0 0 0 .5px var(--am-rim-edge),var(--am-rim-lines),0 22px 70px #0000008c!important}
 .am-edit-title {margin:0;font-size:17px;font-weight:600}
-.am-edit-name,.am-edit-desc {box-sizing:border-box;width:100%;padding:8px 10px;border:0;border-radius:8px;background:#ffffff14;color:inherit;font:inherit;outline:0}
+.am-edit-name,.am-edit-desc {box-sizing:border-box;width:100%;padding:8px 10px;border:0;border-radius:8px;background:rgb(var(--am-ink)/.078);color:inherit;font:inherit;outline:0}
 .am-edit-name:focus-visible,.am-edit-desc:focus-visible {box-shadow:0 0 0 2px var(--am-accent-focus)}
 .am-edit-desc {min-height:96px;resize:vertical}
 .am-edit-actions {display:flex;justify-content:flex-end;gap:8px}
 .am-edit-actions button {padding:6px 16px;border:0;border-radius:999px;font:inherit;cursor:pointer}
-.am-edit-cancel {background:#ffffff1f;color:inherit}
+.am-edit-cancel {background:rgb(var(--am-ink)/.122);color:inherit}
 .am-edit-save {background:var(--am-accent);color:#fff}
-body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid :is(dialog[open] > div:only-child,dialog[open]:has(> :nth-child(2)),.ReactModalPortal [role="dialog"] > [data-testid$="modal"],.am-edit-box) {background:var(--am-menu-solid)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Credits as Apple lists them (iOS, music.apple.com; Music on the Mac has none): grey captions over rounded groups of
    rows, hairlines between rows inset to the text. Encore's listRow ids, not Spotify's hashed classes. */
-dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em!important;text-transform:uppercase;color:#ffffff80!important}
-dialog[open] [data-encore-id="listRow"] {margin:0!important;width:auto!important;padding:9px 16px!important;border-radius:0;background:#ffffff0f}
-dialog[open] [data-encore-id="listRow"] + [data-encore-id="listRow"] {background:linear-gradient(#ffffff1c,#ffffff1c) 16px 0/calc(100% - 16px) .5px no-repeat,#ffffff0f}
+dialog[open] [data-encore-id="text"]:has(+ [data-encore-id="listRow"]) {padding:0 16px 6px!important;font-size:12px!important;font-weight:500!important;letter-spacing:.03em!important;text-transform:uppercase;color:rgb(var(--am-ink)/.502)!important}
+dialog[open] [data-encore-id="listRow"] {margin:0!important;width:auto!important;padding:9px 16px!important;border-radius:0;background:rgb(var(--am-ink)/.059)}
+dialog[open] [data-encore-id="listRow"] + [data-encore-id="listRow"] {background:linear-gradient(rgb(var(--am-ink)/.11),rgb(var(--am-ink)/.11)) 16px 0/calc(100% - 16px) .5px no-repeat,rgb(var(--am-ink)/.059)}
 dialog[open] :is(:not([data-encore-id="listRow"]) + [data-encore-id="listRow"],[data-encore-id="listRow"]:first-child) {border-top-left-radius:10px!important;border-top-right-radius:10px!important}
 dialog[open] [data-encore-id="listRow"]:not(:has(+ [data-encore-id="listRow"])) {border-bottom-left-radius:10px!important;border-bottom-right-radius:10px!important}
-dialog[open] [data-encore-id="listRow"] [data-encore-id="text"]:not(p *,.encore-internal-color-text-subdued) {font-size:15px!important;font-weight:400!important;color:#f5f5f7!important}
-dialog[open] [data-encore-id="listRow"] :is([data-encore-id="listRowSubtitle"],.encore-internal-color-text-subdued) {font-size:13px!important;color:#ffffff80!important}
+dialog[open] [data-encore-id="listRow"] [data-encore-id="text"]:not(p *,.encore-internal-color-text-subdued) {font-size:15px!important;font-weight:400!important;color:var(--am-label)!important}
+dialog[open] [data-encore-id="listRow"] :is([data-encore-id="listRowSubtitle"],.encore-internal-color-text-subdued) {font-size:13px!important;color:rgb(var(--am-ink)/.502)!important}
 /* Follow / Following in the credits: Spotify draws "Follow" until it has read the follow state (~100ms on a first open,
    measured), then "Following". The button waits that out unseen (keeping its place) and fades in. */
 @keyframes am-follow-in {from{opacity:0}}
@@ -612,8 +684,8 @@ dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] {mar
 dialog[open] [data-encore-id="listRow"] ~ [data-encore-id="buttonTertiary"] svg {width:12px!important;height:12px!important;fill:currentColor!important}
 .am-popover-swatches {display:flex;flex-wrap:wrap;gap:7px;padding:6px 8px}
 .am-swatch {width:18px;height:18px;padding:0;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px #0003}
-.am-swatch.am-selected {outline:2px solid #f2f2f2;outline-offset:2px}
-.am-swatch:focus-visible {outline:2px solid white;outline-offset:2px}
+.am-swatch.am-selected {outline:2px solid var(--am-label);outline-offset:2px}
+.am-swatch:focus-visible {outline:2px solid rgb(var(--am-ink));outline-offset:2px}
 body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 @media(max-width:900px){:root{--am-side:200px;--am-font:13px}#am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - 24px),2px);gap:8px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}#am-player .am-play svg,.ReactModalPortal [role="dialog"],dialog[open],dialog[open] > div,dialog[open]::backdrop,.am-edit-box,.am-edit-back{animation:none}}
@@ -626,20 +698,20 @@ body.am-library-open .am-native-main {visibility:hidden!important;opacity:0!impo
 .am-library-title {font-size:28px;letter-spacing:-.04em;margin:0 0 8px;font-weight:650}
 .am-library-status {font-size:13px;color:var(--am-sub);margin:0 0 24px}
 .am-library-tools {display:flex;align-items:center;gap:10px;margin:14px 0 10px}
-.am-library-filter,.am-library-sort {box-sizing:border-box;height:30px;border:1px solid #ffffff14;border-radius:8px;background:#ffffff0a;color:var(--am-text);font:13px var(--encore-body-font-stack);outline-color:var(--am-accent-focus)}
+.am-library-filter,.am-library-sort {box-sizing:border-box;height:30px;border:1px solid rgb(var(--am-ink)/.078);border-radius:8px;background:rgb(var(--am-ink)/.039);color:var(--am-text);font:13px var(--encore-body-font-stack);outline-color:var(--am-accent-focus)}
 .am-library-filter {flex:0 1 260px;min-width:0;padding:0 10px}
-.am-library-sort {padding:0 8px;background:#2b2b2b}
+.am-library-sort {padding:0 8px;background:var(--am-field-2)}
 .am-library-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 22px}
 .am-library-card {appearance:none;border:0;padding:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:5px}
 .am-library-card:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:6px;border-radius:8px}
-.am-library-art {display:grid;place-items:center;aspect-ratio:1;width:100%;background:#303030;border-radius:8px;overflow:hidden;margin-bottom:4px}
+.am-library-art {display:grid;place-items:center;aspect-ratio:1;width:100%;background:var(--am-art-empty);border-radius:8px;overflow:hidden;margin-bottom:4px}
 .am-library-art img {width:100%;height:100%;object-fit:cover}
-.am-library-art svg {width:40%;height:40%;color:#999}
+.am-library-art svg {width:40%;height:40%;color:var(--am-sub)}
 .am-artist-art {border-radius:50%}
 .am-library-card:hover .am-library-art {filter:brightness(1.1)}
 .am-library-name {font-size:14px;font-weight:500;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .am-library-sub {font-size:12px;color:var(--am-sub)}
-.am-library-retry {border:1px solid #666;border-radius:8px;background:#333;color:white;padding:8px 14px;cursor:pointer}
+.am-library-retry {border:1px solid var(--am-sub);border-radius:8px;background:rgb(var(--am-ink)/.12);color:var(--am-text);padding:8px 14px;cursor:pointer}
 
 /* macOS toolbar: retain the original nodes, handlers, menus and extension buttons. */
 body.am-ready #global-nav-bar {
@@ -652,7 +724,7 @@ body.am-ready #global-nav-bar {
 }
 /* The page shows through the toolbar's row; a soft shade from the top keeps the controls readable over bright
    colours and artwork; the controls themselves are dark glass (below). */
-body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:linear-gradient(180deg,#0000002b,#00000012 60%,#0000);pointer-events:none;z-index:-1}
+body.am-ready #global-nav-bar::before {content:"";position:fixed;inset:0 0 auto var(--am-side);height:var(--am-header);background:var(--am-toolbar-shade);pointer-events:none;z-index:-1}
 /* Notifications, Friend Activity and the account menu are in the sidebar's account row (#am-sidebar .am-account),
    whose buttons click these. They stay laid out, hidden, under that row, so the menus and panels Spotify anchors
    to them open there; the search field gets the freed width. */
@@ -668,18 +740,18 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar .am-toolbar-center > div {width:min(100%,620px);min-width:0;gap:8px}
 /* The controls are small dark glass, as on macOS 26: over a bright photo (Daily Mix headers) a faint fill left grey
    icons on light grey; the dark fill and blur keep them readable on any colour. */
-#global-nav-bar :is(button,input) {--am-toolbar-fill:color-mix(in srgb,#1e1e1e 58%,transparent);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
-#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;color:#e6e6e6;box-shadow:inset 0 0 0 .5px #ffffff1f!important;transform:none!important}
-#global-nav-bar button:hover {background:color-mix(in srgb,#3a3a3a 70%,transparent)!important;color:#fff}
+#global-nav-bar :is(button,input) {--am-toolbar-fill:var(--am-toolbar-glass);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6)}
+#global-nav-bar button {height:32px!important;min-height:32px!important;min-width:30px!important;padding:5px!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;color:var(--am-icon);box-shadow:inset 0 0 0 .5px rgb(var(--am-ink)/.122)!important;transform:none!important}
+#global-nav-bar button:hover {background:var(--am-toolbar-hover)!important;color:rgb(var(--am-ink))}
 #global-nav-bar button:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
-#global-nav-bar button:disabled {color:#ffffff4d}
+#global-nav-bar button:disabled {color:rgb(var(--am-ink)/.302)}
 #global-nav-bar button svg {width:18px!important;height:18px!important}
 #global-nav-bar button img {width:28px!important;height:28px!important;border-radius:7px}
-#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;box-shadow:inset 0 0 0 .5px #ffffff1f!important;outline-color:var(--am-accent-focus)!important}
+#global-nav-bar input {height:34px!important;min-height:34px!important;font:13px var(--encore-body-font-stack)!important;border-radius:8px!important;background:var(--am-toolbar-fill)!important;box-shadow:inset 0 0 0 .5px rgb(var(--am-ink)/.122)!important;outline-color:var(--am-accent-focus)!important}
 #global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
 #global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
-#global-nav-bar input::placeholder {color:#ffffffa6!important}
-body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:#2c2c2e;backdrop-filter:none;-webkit-backdrop-filter:none}
+#global-nav-bar input::placeholder {color:rgb(var(--am-ink)/.651)!important}
+body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:var(--am-menu-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Liquid Glass toolbar (theme.js "Toolbar glass"): the glass is ours, in #am-toolbar-glass under the toolbar, laid on
    Spotify's controls, which keep their icons and handlers but lose their own fill: back + forward, the extension icons
    and Home become 36px circles side by side (the glass groups them into capsules), the search field a 36px capsule.
@@ -718,7 +790,7 @@ body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!i
 #global-nav-bar.searchInputCollapsed form {width:100%!important}
 #global-nav-bar.searchInputCollapsed form > :last-child {opacity:1!important;visibility:visible!important}
 #global-nav-bar.searchInputCollapsed input {color:var(--text-base)!important;padding-inline-end:96px!important}
-#global-nav-bar.searchInputCollapsed input::placeholder {color:#ffffffa6!important}
+#global-nav-bar.searchInputCollapsed input::placeholder {color:rgb(var(--am-ink)/.651)!important}
 /* Live results (#search-dropdown): macOS 27 Music's suggestions popover, measured (AX frames and 2x captures; numbers
    in STATUS.md): 1pt under the field's focus ring, 13pt corners, 5pt top and bottom; queries in 24pt rows with a small
    grey magnifier, then results in 52pt rows with 46pt artwork, an 11pt gap with a hairline inset 16pt between them;
@@ -730,26 +802,26 @@ body.am-tglass-on #global-nav-bar input {height:36px!important;min-height:36px!i
    are matched by data-encore-id and parts. */
 :is(#search-dropdown,#search-suggestions-loading-dropdown) {top:40px!important}
 :is(#search-dropdown,#search-suggestions-loading-dropdown) > :first-child {margin:0 1px!important;padding:0!important;width:auto!important;height:auto!important;max-height:min(523px,calc(100vh - 120px))!important;border-radius:13px!important;background:var(--am-sd-fill)!important;backdrop-filter:var(--am-sd-filter);-webkit-backdrop-filter:var(--am-sd-filter);-webkit-app-region:no-drag;
- box-shadow:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12,0 14px 36px #00000080!important}
+ box-shadow:inset 0 0 0 .5px var(--am-rim-edge),var(--am-rim-lines),0 14px 36px #00000080!important}
 body {--am-sd-fill:transparent;--am-sd-filter:blur(21px) url(#am-search-glass)}
-body.am-solid {--am-sd-fill:#2c2c2e;--am-sd-filter:none}
+body.am-solid {--am-sd-fill:var(--am-menu-solid);--am-sd-filter:none}
 :is(#search-dropdown,#search-suggestions-loading-dropdown) [data-overlayscrollbars-viewport] {padding:5px 0!important}
 #search-dropdown [data-overlayscrollbars-viewport] > div:first-child {display:none!important}
 #search-dropdown [data-encore-id="typeList"] {padding:0!important;margin:0!important}
 #search-dropdown [role="row"] {position:relative;isolation:isolate;height:24px!important;min-height:0!important;margin:0!important;padding:0 16px 0 17px!important;grid-template-columns:14px minmax(0,1fr)!important;column-gap:7px!important;align-items:center!important;border-radius:0!important;background:none!important}
 #search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]) {height:52px!important;grid-template-columns:46px minmax(0,1fr)!important;column-gap:8px!important}
 #search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]):not(:first-child) {margin-top:11px!important}
-#search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]):not(:first-child)::before,#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4)::before {content:"";position:absolute;left:16px;right:16px;top:-6px;height:1px;background:#ffffff4d;pointer-events:none}
+#search-dropdown [role="row"]:has([data-encore-id="listRowSubtitle"]):not(:first-child)::before,#search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4)::before {content:"";position:absolute;left:16px;right:16px;top:-6px;height:1px;background:rgb(var(--am-ink)/.302);pointer-events:none}
 /* While results load, Spotify shows a second list (#search-suggestions-loading-dropdown) of six grey placeholders, a
    picture and two bars each: drawn as the rows they stand for, three queries then results, in the same glass. */
 #search-suggestions-loading-dropdown [data-encore-id="listRow"] {position:relative;height:24px!important;min-height:0!important;margin:0!important;padding:0 16px 0 17px!important;grid-template-columns:14px minmax(0,1fr)!important;column-gap:7px!important;align-items:center!important;border-radius:0!important;background:none!important}
 #search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4) {height:52px!important;margin-top:11px!important;grid-template-columns:46px minmax(0,1fr)!important;column-gap:8px!important}
 #search-suggestions-loading-dropdown [class*="list-row__header-side"] {display:flex!important;align-items:center;justify-content:center;width:auto!important;height:auto!important}
-#search-suggestions-loading-dropdown [class*="list-row__header-side"] > * > * {width:12px!important;height:12px!important;border-radius:50%!important;background:#ffffff1a!important}
+#search-suggestions-loading-dropdown [class*="list-row__header-side"] > * > * {width:12px!important;height:12px!important;border-radius:50%!important;background:rgb(var(--am-ink)/.102)!important}
 #search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(n+4) [class*="list-row__header-side"] > * > * {width:46px!important;height:46px!important;border-radius:5px!important}
 #search-suggestions-loading-dropdown [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
 #search-suggestions-loading-dropdown [class*="list-row__column"] {gap:7px!important;justify-content:center}
-#search-suggestions-loading-dropdown [data-encore-id="text"] {height:9px!important;max-width:60%;border-radius:999px!important;background:#ffffff1a!important}
+#search-suggestions-loading-dropdown [data-encore-id="text"] {height:9px!important;max-width:60%;border-radius:999px!important;background:rgb(var(--am-ink)/.102)!important}
 #search-suggestions-loading-dropdown [data-encore-id="text"] + [data-encore-id="text"] {height:7px!important}
 #search-suggestions-loading-dropdown [data-encore-id="listRow"]:nth-child(-n+3) [data-encore-id="text"] + [data-encore-id="text"] {display:none!important}
 #search-dropdown [role="row"]::after {content:"";position:absolute;inset:0 5px;z-index:-1;border-radius:6px;pointer-events:none}
@@ -757,7 +829,7 @@ body.am-solid {--am-sd-fill:#2c2c2e;--am-sd-filter:none}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) :is([data-encore-id^="listRow"],[data-encore-id^="listRow"] *) {color:#fff!important}
 #search-dropdown [role="row"] [class*="list-row__header-side"] {width:auto!important;height:auto!important}
 #search-dropdown [role="row"]:not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] :is(a,div) {display:flex;align-items:center;justify-content:center;width:14px!important;height:14px!important;min-width:0!important;background:none!important}
-#search-dropdown [role="row"]:not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {width:14px!important;height:14px!important;fill:#ffffff8c!important}
+#search-dropdown [role="row"]:not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {width:14px!important;height:14px!important;fill:rgb(var(--am-ink)/.549)!important}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]):not(:has([data-encore-id="listRowSubtitle"])) [class*="list-row__header-side"] svg {fill:#fff!important}
 #search-dropdown [role="row"] [class*="list-row__header-side"] :is(a,div,img):has(> img),#search-dropdown [role="row"] [class*="list-row__header-side"] img {width:46px!important;height:46px!important}
 #search-dropdown [role="row"]:not(:has([id$="-title"] a:is([href*="/artist/"],[href*="/user/"]))) [class*="list-row__header-side"] :has(> img) {border-radius:5px!important}
@@ -776,14 +848,14 @@ body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loadi
 #search-dropdown [role="row"] [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
 #search-dropdown [role="row"] [class*="list-row__column"] {gap:0!important}
 #search-dropdown [role="row"] a {text-decoration:none!important}
-#search-dropdown [data-encore-id="listRowTitle"],#search-dropdown [data-encore-id="listRowTitle"] * {font:400 13px/16px var(--encore-body-font-stack)!important;letter-spacing:0!important;color:#ffffffd9!important}
-#search-dropdown [data-encore-id="listRowTitle"] ~ * svg {fill:currentColor!important;color:#ffffff8c!important}
+#search-dropdown [data-encore-id="listRowTitle"],#search-dropdown [data-encore-id="listRowTitle"] * {font:400 13px/16px var(--encore-body-font-stack)!important;letter-spacing:0!important;color:rgb(var(--am-ink)/.851)!important}
+#search-dropdown [data-encore-id="listRowTitle"] ~ * svg {fill:currentColor!important;color:rgb(var(--am-ink)/.549)!important}
 /* A query: what was typed in the label colour, Spotify's completion in the secondary one, both regular (Apple: 223 and
    159 over its glass); with no typed prefix (ö for o) all of it in the label colour, as Apple's. */
-#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] {color:#ffffff8c!important}
-#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"]:not(:has(*)) {color:#ffffffd9!important}
-#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] > * {color:#ffffffd9!important;font-weight:400!important}
-#search-dropdown [data-encore-id="listRowSubtitle"] {margin:0!important;font:400 11px/14px var(--encore-body-font-stack)!important;color:#ffffff8c!important}
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] {color:rgb(var(--am-ink)/.549)!important}
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"]:not(:has(*)) {color:rgb(var(--am-ink)/.851)!important}
+#search-dropdown :where([role="row"]:not(:has([data-encore-id="listRowSubtitle"]))) [data-encore-id="listRowTitle"] [class*="color-text-subdued"] > * {color:rgb(var(--am-ink)/.851)!important;font-weight:400!important}
+#search-dropdown [data-encore-id="listRowSubtitle"] {margin:0!important;font:400 11px/14px var(--encore-body-font-stack)!important;color:rgb(var(--am-ink)/.549)!important}
 #search-dropdown [data-encore-id="listRowSubtitle"] * {color:inherit!important}
 /* "Song • No Doubt" -> "Song · No Doubt". Spotify's bullet is a bare text node: sized away, Apple's dot drawn instead.
    The type icon before "Song" goes too. */
@@ -792,7 +864,7 @@ body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loadi
 #search-dropdown [data-encore-id="listRowSubtitle"] > [class*="line-clamp"] > * + *::before {content:"\00a0·\00a0"}
 #search-dropdown [data-encore-id="listRowSubtitle"] :is(svg,[class]:has(> svg):not(:has(> :not(svg)))) {display:none!important}
 /* "Recent searches" (an empty field), "View all results" and "Clear recent searches": quiet text rows. */
-#search-dropdown [data-overlayscrollbars-viewport] > p {margin:0!important;padding:0 17px!important;font:600 11px/24px var(--encore-body-font-stack)!important;color:#ffffff8c!important}
+#search-dropdown [data-overlayscrollbars-viewport] > p {margin:0!important;padding:0 17px!important;font:600 11px/24px var(--encore-body-font-stack)!important;color:rgb(var(--am-ink)/.549)!important}
 #search-dropdown [data-overlayscrollbars-viewport] > button {display:block!important;width:auto!important;height:24px!important;min-height:0!important;margin:5px 0 0!important;padding:0 17px!important;border:0!important;background:none!important;box-shadow:none!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 13px/24px var(--encore-body-font-stack)!important;color:var(--am-accent-focus)!important}
 /* Over the library, the loading list is lifted with #main as the results are (below). */
 body.am-library-open #main:has(#search-suggestions-loading-dropdown) {z-index:30!important;pointer-events:none;background:transparent!important;transition:none!important}
@@ -829,8 +901,8 @@ body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) :is(#am-toolbar-glass,
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-toolbar-glass .am-tglass-face::before {content:"";position:absolute;inset:var(--am-tg-m,0px);border-radius:999px;box-shadow:inset 0 0 0 .5px rgb(255 255 255/.24)}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player.am-player-glass {box-shadow:inset 0 0 0 .5px rgb(255 255 255/.24)}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player:not(.am-player-glass) {background:linear-gradient(180deg,rgb(255 255 255/.17),rgb(255 255 255/.08));backdrop-filter:none;-webkit-backdrop-filter:none;border-color:rgb(255 255 255/.18);box-shadow:inset 0 1px 0 rgb(255 255 255/.3),0 8px 24px rgb(0 0 0/.22)}
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-sidebar {background:color-mix(in srgb,#252525 62%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) .am-native-panel-open::before {background:color-mix(in srgb,#262626 92%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-sidebar {background:var(--am-sidebar-lite);backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) .am-native-panel-open::before {background:var(--am-panel-lite);backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #global-nav-bar :is(button,input) {--am-toolbar-fill:color-mix(in srgb,#ffffff 14%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* When Spotify restarts on the lyrics route, Spicy can mount its page twice and remove only one, leaving lyrics
    over every other page. Off the /SpicyLyrics route, a page left in the main view is hidden. */
@@ -854,8 +926,8 @@ body.am-ready .am-native-panel-open {
 }
 body.am-ready .am-native-panel-open::before {
  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
- background:var(--am-panel-fill,color-mix(in srgb,#2f2f2f 64%,transparent));backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
- box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12;
+ background:var(--am-panel-fill);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
+ box-shadow:inset 0 1px 0 rgb(var(--am-rim)/.149),inset 0 0 0 1px rgb(var(--am-rim)/.071);
 }
 /* It fades in by its layers: below opacity 1 the sheet would cut its glass off from the page (a backdrop root). */
 body.am-ready .am-native-panel-open::before,body.am-ready .am-native-panel-open > * {transition:opacity .25s ease}
@@ -905,13 +977,16 @@ body.am-ready [data-am-sheet] [data-encore-id="listRow"]:hover::after {backgroun
 body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"]) {position:relative}
 body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"])::before {content:"";position:absolute;top:0;left:68px;right:8px;height:1px;background:rgb(var(--am-ink,255 255 255)/.1);pointer-events:none}
 
-/* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
+/* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode Music keeps the
+   artist page dark (white text over the artist colour) under its light glass sidebar, queue and play bar
+   (.am-artist-stays-dark: the page takes the dark tokens above, the glass stays light; measured on 25 artists, the
+   name is never dark). */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
-body.am-tinted .am-nav-heading {color:#ffffff73}
+body.am-tinted .am-nav-heading {color:rgb(var(--am-ink)/.451)}
 /* Over an artist's colour Apple Music's sidebar is a dark material that lets ~15% of the page through: about half the
    page's brightness and less saturated (measured on a macOS 26 screenshot: page (112,77,52), sidebar (65,49,39)).
    The edge glow is off here: a page of one colour has nothing beside the sidebar to pick up, it only turned orange. */
-body.am-tinted #am-sidebar {background:color-mix(in srgb,color-mix(in srgb,var(--am-tint-top) 34%,#161616) 85%,transparent)}
+body.am-tinted #am-sidebar {background:color-mix(in srgb,color-mix(in srgb,var(--am-tint-top) 34%,var(--am-tint-floor)) 85%,transparent)}
 body.am-tinted #am-sidebar-glow {display:none}
 body:not(.am-artist-open) #am-artist {display:none!important}
 body.am-artist-open .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
@@ -919,23 +994,23 @@ body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:
 /* The page has its own glass buttons; the toolbar's glass showed as empty capsules once a sheet lifted #main. */
 body.am-artist-open #am-toolbar-glass {display:none!important}
 /* The artist page fills the window under the glass sidebar; its content starts beside it. */
-#am-artist {box-sizing:border-box;position:fixed;inset:0;z-index:10;overflow:auto;overflow-x:hidden;color:white;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:none}
+#am-artist {box-sizing:border-box;position:fixed;inset:0;z-index:10;overflow:auto;overflow-x:hidden;color:rgb(var(--am-ink));font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:none}
 #am-artist *,#am-artist *::before {box-sizing:border-box}
 /* Overlay scrollbar (theme.js): Windows' classic one took a column and cut the artwork and colour short. */
 #am-library {scrollbar-width:none}
-.am-scroll-thumb {position:fixed;top:0;right:3px;z-index:58;width:7px;border-radius:4px;background:#ffffff59;opacity:0;transition:opacity .3s,width .15s,background-color .15s;-webkit-app-region:no-drag}
-.am-scroll-thumb:hover,.am-scroll-thumb.am-dragging {width:9px;opacity:1;background:#ffffff8c}
+.am-scroll-thumb {position:fixed;top:0;right:3px;z-index:58;width:7px;border-radius:4px;background:rgb(var(--am-ink)/.349);opacity:0;transition:opacity .3s,width .15s,background-color .15s;-webkit-app-region:no-drag}
+.am-scroll-thumb:hover,.am-scroll-thumb.am-dragging {width:9px;opacity:1;background:rgb(var(--am-ink)/.549)}
 body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scroll-library {display:none}
 #am-artist button {appearance:none;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:0;cursor:pointer;text-align:left}
-#am-artist button:focus-visible {outline:2px solid white;outline-offset:2px}
+#am-artist button:focus-visible {outline:2px solid rgb(var(--am-ink));outline-offset:2px}
 #am-artist svg {width:18px;height:18px;flex-shrink:0}
-.am-artist-loading {margin:0;padding:120px 32px 120px calc(var(--am-side) + 32px);color:#ffffff99;font-size:13px}
+.am-artist-loading {margin:0;padding:120px 32px 120px calc(var(--am-side) + 32px);color:rgb(var(--am-ink)/.6);font-size:13px}
 /* These sit in the window's title-bar strip, which Spotify marks draggable; no-drag gives them clicks back. */
-#am-artist .am-artist-back,#am-artist .am-artist-actions {-webkit-app-region:no-drag;position:fixed;top:12px;z-index:3;display:flex;align-items:center;height:36px;border-radius:999px;background:color-mix(in srgb,var(--am-tint-top,#555) 70%,#fff 12%);box-shadow:inset 0 1px 1px #ffffff2e,0 2px 8px #0002;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#am-artist .am-artist-back,#am-artist .am-artist-actions {-webkit-app-region:no-drag;position:fixed;top:12px;z-index:3;display:flex;align-items:center;height:36px;border-radius:999px;background:color-mix(in srgb,var(--am-tint-top,#555) 70%,#fff 12%);box-shadow:inset 0 1px 1px rgb(255 255 255/.18),0 2px 8px #0002;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
 #am-artist .am-artist-back {left:calc(var(--am-side) + 12px);width:36px;justify-content:center}
 #am-artist .am-artist-actions {right:14px;padding:0 4px;gap:2px}
 #am-artist .am-artist-actions button {display:grid;place-items:center;width:32px;height:32px;border-radius:50%}
-#am-artist .am-artist-actions button:hover,#am-artist .am-artist-back:hover {background:#ffffff1f}
+#am-artist .am-artist-actions button:hover,#am-artist .am-artist-back:hover {background:rgb(var(--am-ink)/.122)}
 /* Fitted to Apple Music's artist page: its original wideArtwork was registered onto screenshots (1100 and 1500pt wide
    windows) and, per 10pt band, the Gaussian blur and linear fade that best explain the pixels were solved for (rms 1-3
    of 255). With W the width right of the sidebar: the photo fills W×W/2 from the sidebar's edge (not under it), the
@@ -968,17 +1043,17 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist .am-haze-2 {filter:blur(14px);opacity:clamp(0,calc(var(--am-hero-progress,0) * 2 - 1),1)}
 /* Artists without a wide header image: the round portrait over a glow of their colour, as in Apple Music. */
 .am-artist-hero.am-hero-avatar {height:auto;min-height:clamp(380px,62vh,620px);align-items:center;padding-top:48px;background:radial-gradient(60% 55% at calc(50% + var(--am-side) / 2) 34%,color-mix(in srgb,var(--am-tint-top,#555),#fff 16%),transparent 75%)}
-.am-hero-portrait {width:clamp(170px,17vw,250px);aspect-ratio:1;border-radius:50%;object-fit:cover;box-shadow:0 12px 40px #0006;margin-bottom:10px;background:#ffffff14}
+.am-hero-portrait {width:clamp(170px,17vw,250px);aspect-ratio:1;border-radius:50%;object-fit:cover;box-shadow:0 12px 40px #0006;margin-bottom:10px;background:rgb(var(--am-ink)/.078)}
 .am-hero-content {position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;padding:0 32px 26px;text-align:center}
 .am-hero-pill {padding:4px 10px;border-radius:7px;background:#00000040;backdrop-filter:blur(10px);font-size:11px;font-weight:600}
 /* Measured on Apple Music's header (1100 and 1500pt windows): the name is a fixed 40pt (#e4e4e4), its baseline 23pt
    above the buttons; ⓘ 48, play 72 and follow 48pt sit 24pt apart on one centre line, play centred on the name. */
-.am-artist-name {margin:0;font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:44px;color:#e4e4e4;text-shadow:0 1px 18px #0003}
+.am-artist-name {margin:0;font-size:40px;font-weight:700;letter-spacing:-.02em;line-height:44px;color:var(--am-hero-name);text-shadow:var(--am-hero-name-shadow)}
 .am-hero-actions {display:flex;align-items:center;gap:24px;margin-top:3.5px}
-#am-artist .am-hero-play {display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:white;color:var(--am-tint-top,#333);box-shadow:0 4px 16px #0003;transition:transform .12s}
+#am-artist .am-hero-play {display:grid;place-items:center;width:72px;height:72px;border-radius:50%;background:var(--am-hero-play);color:var(--am-hero-play-icon);box-shadow:0 4px 16px #0003;transition:transform .12s}
 #am-artist .am-hero-play svg {width:35px;height:35px}
 #am-artist .am-hero-play:active {transform:scale(.94)}
-#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:#ffffff14;box-shadow:inset 0 0 0 1px #ffffff0d;backdrop-filter:blur(10px)}
+#am-artist :is(.am-hero-follow,.am-hero-info) {display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:rgb(var(--am-ink)/.078);box-shadow:inset 0 0 0 1px rgb(var(--am-ink)/.051);backdrop-filter:blur(10px)}
 #am-artist .am-hero-follow svg {width:20.5px;height:20.5px}
 #am-artist .am-hero-info svg {width:20px;height:20px}
 #am-artist .am-hero-follow.am-active svg path {fill:currentColor}
@@ -1058,7 +1133,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-artist-body {display:flex;flex-direction:column;gap:30px;padding:10px 0 0 var(--am-side)}
 .am-shelf {position:relative}
 #am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}
-#am-artist button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:#ffffffa0}
+#am-artist button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:rgb(var(--am-ink)/.627)}
 .am-shelf-track {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 32px;padding:0 32px 4px;scrollbar-width:none}
 .am-shelf-track::-webkit-scrollbar {display:none}
 /* Rows reach under the sidebar, so cards slide behind the glass as they scroll. */
@@ -1072,7 +1147,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 #am-artist .am-next {right:4px}
 #am-artist .am-card {position:relative;min-width:0}
 #am-artist .am-card-open {display:flex;flex-direction:column;gap:2px;width:100%;min-width:0}
-.am-card-art {display:block;aspect-ratio:1;margin-bottom:6px;border-radius:8px;overflow:hidden;background:#ffffff14;box-shadow:0 0 0 1px #ffffff12 inset}
+.am-card-art {display:block;aspect-ratio:1;margin-bottom:6px;border-radius:8px;overflow:hidden;background:rgb(var(--am-ink)/.078);box-shadow:0 0 0 1px rgb(var(--am-ink)/.071) inset}
 .am-card-art img {display:block;width:100%;height:100%;object-fit:cover}
 /* Hover as on Apple Music: the artwork dims a little and a round glass play (bottom left) and "…" (bottom right) appear. */
 #am-artist :is(.am-card,.am-latest-cover):is(:hover,:focus-within) img {filter:brightness(.92)}
@@ -1088,42 +1163,42 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-card-round .am-card-art {border-radius:50%}
 .am-card-round .am-card-open {align-items:center;text-align:center}
 .am-card-name {font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.am-card-sub {font-size:13px;line-height:1.3;color:var(--am-tint-text,#ffffff99);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-card-sub {font-size:13px;line-height:1.3;color:var(--am-tint-text,rgb(var(--am-ink)/.6));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-shelf-artists .am-shelf-track {grid-auto-columns:150px}
 .am-shelf-top .am-shelf-track {grid-auto-columns:auto;gap:30px}
 .am-shelf-top .am-shelf-title {padding:0!important}
 .am-latest {width:300px}
 .am-latest-card {display:flex;gap:16px}
 .am-latest-cover {position:relative;flex:0 0 150px;height:150px}
-#am-artist .am-latest-art {display:block;width:100%;height:100%;border-radius:8px;overflow:hidden;background:#ffffff14}
+#am-artist .am-latest-art {display:block;width:100%;height:100%;border-radius:8px;overflow:hidden;background:rgb(var(--am-ink)/.078)}
 .am-latest-art img {display:block;width:100%;height:100%;object-fit:cover}
 .am-latest-info {display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0}
-.am-latest-date {font-size:11px;font-weight:600;color:#ffffffa6}
+.am-latest-date {font-size:11px;font-weight:600;color:rgb(var(--am-ink)/.651)}
 .am-latest-name {font-size:15px;line-height:1.25}
-.am-latest-count {font-size:15px;color:var(--am-tint-text,#ffffff99)}
-#am-artist .am-latest-add {display:grid;place-items:center;width:28px;height:28px;margin-top:10px;border-radius:50%;background:#ffffff26}
+.am-latest-count {font-size:15px;color:var(--am-tint-text,rgb(var(--am-ink)/.6))}
+#am-artist .am-latest-add {display:grid;place-items:center;width:28px;height:28px;margin-top:10px;border-radius:50%;background:rgb(var(--am-ink)/.149)}
 #am-artist .am-latest-add svg {width:14px;height:14px;stroke-width:2.4}
 .am-song-grid {display:grid;grid-template-rows:repeat(3,auto);grid-auto-flow:column;grid-auto-columns:310px;column-gap:30px}
-.am-song {display:flex;align-items:center;gap:6px;min-width:0;border-bottom:1px solid #ffffff1c}
+.am-song {display:flex;align-items:center;gap:6px;min-width:0;border-bottom:1px solid rgb(var(--am-ink)/.11)}
 .am-song:nth-child(3n) {border-bottom:0}
 #am-artist .am-song-main {flex:1;display:flex;align-items:center;gap:12px;min-width:0;padding:5px 0}
-.am-song-thumb {position:relative;flex:0 0 44px;height:44px;border-radius:5px;background:#ffffff14}
-.am-song-art {display:block;width:44px;height:44px;border-radius:5px;object-fit:cover;background:#ffffff14}
+.am-song-thumb {position:relative;flex:0 0 44px;height:44px;border-radius:5px;background:rgb(var(--am-ink)/.078)}
+.am-song-art {display:block;width:44px;height:44px;border-radius:5px;object-fit:cover;background:rgb(var(--am-ink)/.078)}
 #am-artist .am-song-thumb svg {position:absolute;inset:0;margin:auto;width:16px;height:16px;color:#fff;opacity:0;transition:opacity .15s}
 #am-artist .am-song-main:is(:hover,:focus-visible) .am-song-art {filter:brightness(.6)}
 #am-artist .am-song-main:is(:hover,:focus-visible) .am-song-thumb svg {opacity:1}
 .am-song-text {display:flex;flex-direction:column;min-width:0}
 .am-song-name,.am-song-sub {font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.am-song-sub {color:var(--am-tint-text,#ffffff99)}
-#am-artist .am-song-more {display:grid;place-items:center;width:28px;height:28px;color:#ffffffc0;opacity:.85}
+.am-song-sub {color:var(--am-tint-text,rgb(var(--am-ink)/.6))}
+#am-artist .am-song-more {display:grid;place-items:center;width:28px;height:28px;color:rgb(var(--am-ink)/.753);opacity:.85}
 .am-concert-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 30px;padding:0 32px}
-.am-concert {display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #ffffff1c}
-.am-concert-day {display:grid;place-items:center;width:36px;height:36px;border-radius:7px;background:#ffffff1f;font-size:17px;font-weight:600}
+.am-concert {display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgb(var(--am-ink)/.11)}
+.am-concert-day {display:grid;place-items:center;width:36px;height:36px;border-radius:7px;background:rgb(var(--am-ink)/.122);font-size:17px;font-weight:600}
 .am-concert-text {display:flex;flex-direction:column;min-width:0}
 .am-concert-place {font-size:13px;font-weight:500}
-.am-concert-detail {font-size:11px;color:var(--am-tint-text,#ffffff99);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.am-about-text {max-width:760px;margin:0;padding:0 32px;font-size:13px;line-height:1.5;color:#ffffffd0;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
-.am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,#ffffff99)}
+.am-concert-detail {font-size:11px;color:var(--am-tint-text,rgb(var(--am-ink)/.6));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-about-text {max-width:760px;margin:0;padding:0 32px;font-size:13px;line-height:1.5;color:rgb(var(--am-ink)/.816);display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,rgb(var(--am-ink)/.6))}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none}#am-artist .am-hero-haze{display:none}}
 
 /* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
@@ -1134,19 +1209,19 @@ body.am-liquid #am-player {background:none;border-color:transparent;box-shadow:n
 #am-player.am-player-glass {backdrop-filter:none;-webkit-backdrop-filter:none}
 #am-player > .am-player-face {position:absolute;inset:-13px;z-index:-1;pointer-events:none}
 #am-player > .am-tglass-rim {inset:-2px;z-index:-1}
-body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:0 1px 6px #0008}
+body.am-liquid .am-track-title,body.am-liquid .am-track-subtitle,body.am-liquid .am-time {text-shadow:var(--am-glass-text-shadow)}
 /* The toast is the same glass, with its own lens map (#am-glass-toast) drawn at its size. */
-body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:0 1px 6px #0008}
+body.am-liquid .am-toast {background:none;backdrop-filter:url(#am-glass-toast);-webkit-backdrop-filter:url(#am-glass-toast);box-shadow:none;text-shadow:var(--am-glass-text-shadow)}
 body.am-liquid .am-toast[data-slot="1"] {backdrop-filter:url(#am-glass-toast-1);-webkit-backdrop-filter:url(#am-glass-toast-1)}
 body.am-liquid .am-toast[data-slot="2"] {backdrop-filter:url(#am-glass-toast-2);-webkit-backdrop-filter:url(#am-glass-toast-2)}
 /* Eco mode, or Windows' "Transparency effects" off (reduced transparency), sets body.am-solid (theme.js): glass becomes
    solid but keeps its depth, and nothing re-blurs the page on every frame. */
-body.am-solid #am-player,body.am-solid.am-liquid #am-player,body.am-solid.am-tinted #am-player {background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
-body.am-solid #am-sidebar,body.am-solid.am-tinted #am-sidebar {background:#1a1a1a;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid #am-player,body.am-solid.am-liquid #am-player,body.am-solid.am-tinted #am-player {background:var(--am-solid-fill);backdrop-filter:none;-webkit-backdrop-filter:none;border-color:transparent;box-shadow:inset 0 1px 0 rgb(var(--am-rim)/.149),inset 0 0 0 1px rgb(var(--am-rim)/.071),0 8px 24px #0005}
+body.am-solid #am-sidebar,body.am-solid.am-tinted #am-sidebar {background:var(--am-sidebar-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-solid #am-sidebar-glow {display:none}
-body.am-solid .am-toast,body.am-solid.am-liquid .am-toast {background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
+body.am-solid .am-toast,body.am-solid.am-liquid .am-toast {background:var(--am-solid-fill);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 rgb(var(--am-rim)/.149),inset 0 0 0 1px rgb(var(--am-rim)/.071),0 8px 24px #0005}
 body.am-solid.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-solid.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
-body.am-solid.am-ready .am-native-panel-open::before {background:#262626;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid.am-ready .am-native-panel-open::before {background:var(--am-panel-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
 
 /* Settings window (#am-settings, theme.js), drawn from the settings definitions: Apple Music's Settings window. A toolbar
    band of tabs (icon over label, the selected one on a tile, in the accent) with a hairline under it, a form of
@@ -1308,6 +1383,7 @@ body.am-np-lyrics-below:not(.am-np-plain,.am-np-full) #am-nowplaying .am-np-lyri
    wallpaper's tint; a light appearance sets --am-np-plain to #eeedec), no artwork or header, only large bold lines fading
    toward the bottom. Paused, every line is grey; playing, the line being sung is bright. Its buttons show on hover. */
 #am-nowplaying {--am-np-plain:#2c2c2c}
+body.am-light #am-nowplaying {--am-np-plain:#eeedec}
 body.am-np-plain #am-nowplaying {background:var(--am-np-plain);backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-np-plain.am-np-docked #am-nowplaying {box-shadow:none}
 body.am-np-plain #am-nowplaying :is(.am-np-art,.am-np-meta,.am-np-bg,.am-np-bleed) {display:none}
