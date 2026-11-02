@@ -794,7 +794,7 @@ body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-toolbar-glass .am-
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player.am-player-glass {box-shadow:inset 0 0 0 .5px rgb(255 255 255/.24)}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-player:not(.am-player-glass) {background:linear-gradient(180deg,rgb(255 255 255/.17),rgb(255 255 255/.08));backdrop-filter:none;-webkit-backdrop-filter:none;border-color:rgb(255 255 255/.18);box-shadow:inset 0 1px 0 rgb(255 255 255/.3),0 8px 24px rgb(0 0 0/.22)}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #am-sidebar {background:color-mix(in srgb,#252525 62%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
-body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) .am-native-panel-open {background:color-mix(in srgb,#262626 92%,transparent)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) .am-native-panel-open::before {background:color-mix(in srgb,#262626 92%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-balanced.am-spicy-route:not(.am-spicy-fullscreen) #global-nav-bar :is(button,input) {--am-toolbar-fill:color-mix(in srgb,#ffffff 14%,transparent);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* When Spotify restarts on the lyrics route, Spicy can mount its page twice and remove only one, leaving lyrics
    over every other page. Off the /SpicyLyrics route, a page left in the main view is hidden. */
@@ -806,16 +806,24 @@ body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-ev
 
 /* Friend Activity opens in Spotify's right panel. The theme shows that pane (not a copy) as a glass sheet that
    fades in at the right edge; the queue uses the same sheet. It does not slide: moving, its edge lands on
-   fractional pixels and the anti-aliased column shimmers against the page. */
+   fractional pixels and the anti-aliased column shimmers against the page. Its glass is Apple's Playing Next panel, measured:
+   about 36% of the page shows through, as soft colour. --am-panel-fill (light mode) overrides the dark fill.
+   The glass is a layer behind the feed, not the sheet: on the sheet, each scrolled or hovered row re-ran the blur over
+   the whole sheet (10-20ms of GPU a frame in the client, measured); behind the feed it is drawn once. */
 body.am-ready .am-native-panel-open {
  display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
  position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:min(340px,calc(100vw - var(--am-side) - 40px))!important;
  min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;overflow:hidden;color:var(--am-text);
- border-radius:18px;background:color-mix(in srgb,#262626 74%,transparent)!important;backdrop-filter:blur(40px) saturate(1.6);-webkit-backdrop-filter:blur(40px) saturate(1.6);
- box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 18px 50px #0007;
- transition:opacity .25s ease;
+ border-radius:18px;background:transparent!important;box-shadow:0 18px 50px #0007;transition:box-shadow .25s ease;
 }
-@starting-style {body.am-ready .am-native-panel-open {opacity:0}}
+body.am-ready .am-native-panel-open::before {
+ content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+ background:var(--am-panel-fill,color-mix(in srgb,#2f2f2f 64%,transparent));backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
+ box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12;
+}
+/* It fades in by its layers: below opacity 1 the sheet would cut its glass off from the page (a backdrop root). */
+body.am-ready .am-native-panel-open::before,body.am-ready .am-native-panel-open > * {transition:opacity .25s ease}
+@starting-style {body.am-ready .am-native-panel-open::before,body.am-ready .am-native-panel-open > * {opacity:0}body.am-ready .am-native-panel-open {box-shadow:0 18px 50px #0000}}
 /* While panels cross-fade the outgoing one (often the hidden Now Playing view) is still mounted; show only the current. */
 body.am-ready .am-native-panel-open aside[aria-label]:not([data-am-current]) {display:none!important}
 body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-panel-open {display:none!important}
@@ -832,15 +840,34 @@ body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#s
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
+/* The fill is Spotify's .Root__right-sidebar-peek, painted solid rgb(31,31,31): it hid the sheet's glass entirely. */
 body.am-ready .am-native-panel-open [data-am-fill] {
  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
+ background:transparent!important;
 }
 /* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. The :has()
    is on the button: with a bare :has() subject Chromium tests every element against it, and any element added
    anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
 body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
+/* Scrolled, Spotify drops a dark shadow under the panel's header and cuts the rows at its edge. On glass the rows fade
+   out under the header instead, as at a macOS scroll edge. The header is the sibling before the list's OverlayScrollbars box.
+   The list's 16px top padding, under 4px of header below the tabs, left a gap before "Now playing"; the list starts 16px
+   higher, under the header (which stays on top for clicks), so that padding is the fade. */
+body.am-ready [data-am-sheet] div:has(+ div > .os-scrollbar) {box-shadow:none!important;position:relative;z-index:1;margin-bottom:-16px!important}
+body.am-ready [data-am-sheet] [data-overlayscrollbars-viewport] {-webkit-mask-image:linear-gradient(transparent,#000 16px);mask-image:linear-gradient(transparent,#000 16px)}
+/* The fade is on the scroller, not the box, and the scrollbar starts below it. */
+body.am-ready [data-am-sheet] .os-scrollbar-vertical {top:16px!important}
+/* Friend Activity's list opens with an empty item, which with the list's 24px gap pushed the first friend down. */
+body.am-ready [data-am-sheet] ul > li:first-child:empty {display:none!important}
+/* As in Apple's panel, the artwork lies flat (Spotify's casts a 60px shadow), a row takes no grey under the pointer (its
+   play button and "…" still show), and rows part with a 1pt hairline from the title's edge to 16px short of the sheet's.
+   Recently played lists its rows side by side; the queue wraps each in two divs. */
+body.am-ready [data-am-sheet] [class*="list-row__header-side"] * {box-shadow:none!important}
+body.am-ready [data-am-sheet] [data-encore-id="listRow"]:hover::after {background:transparent!important}
+body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"]) {position:relative}
+body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"])::before {content:"";position:absolute;top:0;left:68px;right:8px;height:1px;background:rgb(var(--am-ink,255 255 255)/.1);pointer-events:none}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
@@ -1067,7 +1094,7 @@ body.am-solid #am-sidebar,body.am-solid.am-tinted #am-sidebar {background:#1a1a1
 body.am-solid #am-sidebar-glow {display:none}
 body.am-solid .am-toast,body.am-solid.am-liquid .am-toast {background:linear-gradient(180deg,#3b3b3d,#2b2b2d);backdrop-filter:none;-webkit-backdrop-filter:none;box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 8px 24px #0005}
 body.am-solid.am-ready .am-native-main :is([style*="--background-base"][style*="opacity"],[data-am-glass]),body.am-solid.am-ready .am-native-main [role="grid"] > [role="presentation"][style*="top"] {background:var(--am-bg)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
-body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid.am-ready .am-native-panel-open::before {background:#262626;backdrop-filter:none;-webkit-backdrop-filter:none}
 
 /* Settings window (#am-settings, theme.js), drawn from the settings definitions: Apple Music's Settings window. A toolbar
    band of tabs (icon over label, the selected one on a tile, in the accent) with a hairline under it, a form of

@@ -13,6 +13,8 @@
   .Root {background:#121212;transition:background .5s cubic-bezier(.3,0,.4,1)}
   .left {grid-area:left-sidebar;background:#111}
   .right {grid-area:right-sidebar}
+  /* Spotify's panel holder (.Root__right-sidebar-peek) paints a solid background under the panel. */
+  .right > div {background:rgb(31,31,31)}
   .bar {grid-area:now-playing-bar;background:#000}
   .view {grid-area:main-view;position:relative;container:main-view-grid-area / inline-size;background:#121212;color:#fff;font:14px sans-serif}
   .main-view-container,.main-view-container__scroll-node,.main-view-container__scroll-node > [data-overlayscrollbars-viewport] {height:100%}
@@ -72,7 +74,9 @@
   function mockPanel(button) {
     const label = button.getAttribute('aria-label'), open = [...document.querySelectorAll('.right aside')].pop();
     if (open?.getAttribute('aria-label') === label) { swapPanel(npv); return; }
-    setTimeout(() => swapPanel(`<aside aria-label="${label}"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
+    // A header, then the list in an OverlayScrollbars box (Friend Activity's opens with an empty item); scrolled, Spotify
+    // shades the header.
+    setTimeout(() => swapPanel(`<aside aria-label="${label}"><div data-testid="mock-panel-header" style="box-shadow:rgba(0,0,0,.6) 0 6px 10px"><h1>${label}</h1><button aria-label="Kapat" onclick="swapPanel(npv)">×</button></div><div data-testid="mock-panel-list" style="position:relative"><div data-overlayscrollbars-viewport><ul style="display:flex;flex-direction:column;gap:24px;margin:0"><li></li><li>…</li></ul></div><div class="os-scrollbar os-scrollbar-vertical" style="position:absolute;top:0;bottom:0;right:0;width:8px"></div></div></aside>`), button.dataset.restoreFocusKey === 'buddy_feed' ? 400 : 0);
   }
   // Typing in the search field opens Spotify's live results under it (#search-dropdown, absolute inside the toolbar's
   // form); a click elsewhere closes them.
