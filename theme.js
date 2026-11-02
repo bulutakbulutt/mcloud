@@ -3536,7 +3536,7 @@
     if(typeof setSetting==='function')return setSetting(key,value);
     settings[key]=value;saveSettings();ownSettings.find(def=>def.key===key)?.apply?.(value);applySettings();
   }
-  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
+  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'',playlistId=()=>/^\/playlist\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
   // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
   // the page. Someone who had hid them keeps them hidden on albums too.
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
@@ -3546,7 +3546,7 @@
   // An album's artists, artwork colour and length, from Spotify's own album query (one per album, kept for the session).
   // The artist rule is a stylesheet keyed on the artists' ids, so React re-rendering rows needs no work here.
   const albumInfo=new Map(),albumStyle=el('style','');albumStyle.id='am-album-style';document.head.append(albumStyle);
-  const playlistId=()=>/^\/playlist\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'',playlistColors=new Map();
+  const playlistColors=new Map();
   let albumRequest=0;
   // Under the track list, as in Apple Music: "18 songs, 1 hour, 8 minutes" (a playlist counts items). user.css draws it
   // from --am-list-info and hides Spotify's count in the header while it is set (#97).
@@ -3576,10 +3576,10 @@
     if(info){if(albumInfo.size>50)albumInfo.delete(albumInfo.keys().next().value);albumInfo.set(id,info);}
     return info;
   }
-  // Albums take their colour level from albumTint, playlists from playlistTint (#97); other pages have none.
+  // Albums and playlists (#97) take their colour level from albumTint; other pages have none.
   const albumTints=['off','subtle','full'];
   function tintLevel() {
-    const level=albumId()?settings.albumTint:playlistId()?settings.playlistTint:'off';
+    const level=albumId()||playlistId()?settings.albumTint:'off';
     for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===level);
     return level;
   }
@@ -3601,7 +3601,10 @@
     if(!info){albumStyle.textContent='';return;}
     setListInfo(info.list);
     const sub='.main-trackList-rowMainContent > :last-child';
-    albumStyle.textContent=settings.albumClean&&info.artists.length?`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')})) ${sub}{display:none!important}`:'';
+    // Without its artist line a row's title sits in the middle, so its number is centred too (Spotify lifts it 4px to
+    // meet a title on the top line; #93).
+    const own=`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')}))`;
+    albumStyle.textContent=settings.albumClean&&info.artists.length?`${own} ${sub}{display:none!important}${own} .main-trackList-rowMarker > span{top:50%!important;translate:0 -50%}`:'';
     if(!tint)return;
     if(info.color===undefined)info.color=await artworkColor(info.cover);
     if(request===albumRequest)pageTint(info.color);
@@ -3630,8 +3633,7 @@
   pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
   // Album and playlist pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
   const tintOptions=[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]];
-  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',options:tintOptions,apply:syncAlbum});
-  pageSetting({key:'playlistTint',group:'pages',section:T('Çalma listeleri','Playlists'),label:T('Çalma listesi rengi','Playlist colour'),type:'choice',style:'segmented',default:'off',options:tintOptions,apply:syncAlbum});
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm ve çalma listesi rengi','Album and playlist colour'),type:'choice',style:'segmented',default:'off',options:tintOptions,apply:syncAlbum});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
   // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.

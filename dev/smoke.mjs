@@ -1580,22 +1580,33 @@ try {
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     const albumPage = id => page.evaluate(id => {
       document.querySelector('.mock-page').hidden = true; document.getElementById('mock-album72')?.remove();
-      const row = (n, title, artists) => `<div role="row" aria-rowindex="${n + 1}"><div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="presentation"><div class="main-trackList-rowSectionIndex" role="gridcell"><div class="main-trackList-rowMarker"><span>${n}</span></div></div><div class="main-trackList-rowSectionStart" role="gridcell"><div class="main-trackList-rowMainContent"><div class="main-trackList-rowTitle">${title}</div><span class="mock-badges"><span data-encore-id="tagIcon">E</span><span class="mock-video">Music video</span></span><span class="mock-artists"><span>${artists.map(([a, name]) => `<a href="/artist/${a}">${name}</a>`).join(', ')}</span></span></div></div><div class="main-trackList-rowSectionVariable" role="gridcell"><div>1,000</div></div><div class="main-trackList-rowSectionEnd" role="gridcell"><div class="main-trackList-rowDuration">3:50</div></div></div></div>`;
+      const row = (n, title, artists) => `<div role="row" aria-rowindex="${n + 1}"><div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="presentation"><div class="main-trackList-rowSectionIndex" role="gridcell"><div class="main-trackList-rowMarker" style="position:relative;height:16px"><span style="position:absolute;top:-4px;line-height:20px">${n}</span></div></div><div class="main-trackList-rowSectionStart" role="gridcell"><div class="main-trackList-rowMainContent"><div class="main-trackList-rowTitle">${title}</div><span class="mock-badges"><span data-encore-id="tagIcon">E</span><span class="mock-video">Music video</span></span><span class="mock-artists"><span>${artists.map(([a, name]) => `<a href="/artist/${a}">${name}</a>`).join(', ')}</span></span></div></div><div class="main-trackList-rowSectionVariable" role="gridcell"><div>1,000</div></div><div class="main-trackList-rowSectionEnd" role="gridcell"><button aria-checked="${n === 1}" class="mock-like"><svg></svg></button><div class="main-trackList-rowDuration">3:50</div></div></div></div>`;
       document.querySelector('main').insertAdjacentHTML('beforeend', `<section data-testid="album-page" id="mock-album72" style="position:relative">
-        <div data-testid="entity-header"><div class="main-entityHeader-contentWrapper"><div class="main-entityHeader-imageContainer"></div><div class="main-entityHeader-headerText"><span class="encore-text-body-small">Album</span><h1 style="font-size:6rem;letter-spacing:-.04em">Blonde</h1><div><div class="main-entityHeader-creatorWrapper"><a href="/artist/frank">Frank Ocean</a></div><span class="mock-year">2016</span></div></div></div></div>
+        <div data-testid="entity-header"><div class="main-entityHeader-contentWrapper"><div class="main-entityHeader-imageContainer"></div><div class="main-entityHeader-headerText"><span class="encore-text-body-small">Album</span><h1 style="font-size:6rem;letter-spacing:-.04em">Blonde</h1><div><div class="main-entityHeader-creatorWrapper"><a href="/artist/frank">Frank Ocean</a></div><span>•</span><span class="mock-year">2016</span><span class="mock-dot">•</span><div class="mock-count"><span>3 songs</span><span>,</span><span><span>12 min</span></span></div></div></div></div></div>
         <style>#mock-album72 .main-trackList-trackListRowGrid{display:grid;grid-template-columns:var(--grid-template-columns);height:56px}#mock-album72 .main-trackList-rowMainContent{display:grid;grid-template-areas:"title title title" "badges prefix subtitle"}#mock-album72 .mock-badges{grid-area:badges;display:flex;justify-content:center}#mock-album72 .mock-artists{grid-area:subtitle}</style>
         <style>#mock-album72 .main-trackList-trackListHeader{height:36px;margin:0 calc(var(--content-spacing) * -1) calc(var(--content-spacing) - 8px)}</style>
-        <div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] 16px [first] 4fr [var1] 2fr [last] 1fr">
+        <div class="main-trackList-trackListContainer"><div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] 16px [first] 4fr [var1] 2fr [last] 1fr">
           <div class="main-trackList-trackListHeader"><div class="main-trackList-trackListHeaderRow" role="row">Title</div></div>
-          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></section>`);
+          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></div><div><div><p class="mock-date">August 20, 2016</p><div><p>© 2016 Boys Don't Cry</p></div></div></div></section>`);
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
-    const tint = option => flip('albumTint', 'Albüm rengi: ' + option, option);
+    const tint = option => flip('albumTint', 'Albüm ve çalma listesi rengi: ' + option, option);
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
     assert.deepEqual(await shown(), [false, true, true]);
+    // #93: without its artist line a row's number is centred on its title, not lifted as Spotify lifts it for a title
+    // on the top line; an album's lines start under the titles.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#mock-album72 .main-trackList-rowMarker')].map(m => { const s = m.firstElementChild.getBoundingClientRect(), r = m.getBoundingClientRect(); return Math.round(s.top + s.height / 2 - r.top - r.height / 2); })), [0, -2, -2]);
+    assert.equal(await page.$eval('#mock-album72 .main-trackList-trackListRow', e => getComputedStyle(e, '::after').left), '48px');
+    // #97: the length moves from the header to the end of the list, under the release date, in Music's words.
+    await page.waitForFunction(() => document.body.classList.contains('am-list-info'));
+    assert.deepEqual(await page.evaluate(() => { const p = document.getElementById('mock-album72'), d = e => getComputedStyle(p.querySelector(e)).display;
+      return [getComputedStyle(document.documentElement).getPropertyValue('--am-list-info'), d('.mock-count'), d('.mock-dot'), d('.mock-year'), getComputedStyle(p.querySelector('.mock-date'), '::after').content]; }),
+      ['"3 şarkı, 1 saat, 2 dakika"', 'none', 'none', 'block', '"3 şarkı, 1 saat, 2 dakika"']);
+    // #97: a song's like button is Music's favourite star, outlined until it is liked, then filled.
+    assert.deepEqual(await page.$$eval('#mock-album72 .mock-like', l => l.map(b => [/fill='none'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage), /fill='%23000'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage)])), [[false, true], [true, false], [true, false]]);
     // Spotify spaces the column header from the first row by the page padding minus 8px; the first row follows it directly, as in Apple Music.
     assert.equal(await page.evaluate(() => { const h = document.querySelector('#mock-album72 .main-trackList-trackListHeader'), r = document.querySelector('#mock-album72 .main-trackList-trackListRow'); return Math.round(r.getBoundingClientRect().top - h.getBoundingClientRect().bottom); }), 0);
     // The column header can be switched off (B6): it leaves the flow, the first row takes its place, and it comes back.
@@ -1632,6 +1643,15 @@ try {
     assert.notEqual(await mainBg(), plain, 'full colours the window');
     // Leaving the album drops the colour; numbers and colour do not leak to other pages.
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-album-tinted'));
+    // A playlist takes its cover's colour too (#97), from the cover in its metadata.
+    await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 8; const x = c.getContext('2d'); x.fillStyle = '#2050e0'; x.fillRect(0, 0, 8, 8);
+      window.__mockPlaylistMeta = { 'spotify:playlist:mock97': { images: [{ url: c.toDataURL(), label: 'standard' }] } };
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<section data-testid="playlist-page" id="mock-pl97"><div data-testid="entity-header"><div class="main-entityHeader-imageContainer"><img src="${c.toDataURL()}"></div></div></section>`);
+      Spicetify.Platform.History.push('/playlist/mock97'); });
+    await page.waitForFunction(() => document.body.classList.contains('am-album-tinted'));
+    assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-album-tint')), /^hsl\(22\d /, 'the blue cover gives a blue hue');
+    await page.evaluate(() => { document.getElementById('mock-pl97').remove(); delete window.__mockPlaylistMeta; Spicetify.Platform.History.push('/'); });
     await page.waitForFunction(() => !document.body.classList.contains('am-album-tinted'));
     await tint('Kapalı');
     // Text is drawn as Music draws it: the system's smoothing, no negative tracking (Spotify's or the theme's).
@@ -1692,19 +1712,19 @@ try {
     const [desc, creator, row] = [await box('.playlist-playlist-playlistDescription'), await box('.main-entityHeader-creatorWrapper'), await box('[data-testid="action-bar-row"]')];
     assert.ok(desc.y > creator.y + creator.height, 'the description follows the creator line');
     assert.ok(desc.y + desc.height <= row.y && row.y - (desc.y + desc.height) < 40, 'the description sits just above the play controls');
-    // Playlist colour (playlistTint): off by default; full colours the page and takes shuffle and the star with it.
+    // Album and playlist colour (albumTint): off by default; full colours the page and takes shuffle and the star with it.
     assert.equal(await page.evaluate(() => document.body.classList.contains('am-album-tinted')), false);
     const shuffleBg = await css('.e-1-button-tertiary--condensed-all', 'backgroundColor');
-    await flip('playlistTint', 'Çalma listesi rengi: Tam', 'Tam');
+    await flip('albumTint', 'Albüm ve çalma listesi rengi: Tam', 'Tam');
     await page.waitForFunction(() => document.body.classList.contains('am-album-tinted') && document.body.classList.contains('am-album-tint-full'));
     assert.match(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--am-album-tint')), /^hsl\(4\d /, 'the gold cover gives a gold hue');
     assert.notEqual(await css('.e-1-button-tertiary--condensed-all', 'backgroundColor'), shuffleBg, 'shuffle takes the colour');
     assert.notEqual(await css('.mock-save', 'color'), accent, 'the star takes the colour');
-    assert.equal(await saved('playlistTint'), 'full');
-    // Albums keep their own level (albumTint is off).
-    await mount('album', 0);
+    assert.equal(await saved('albumTint'), 'full');
+    // Other pages have no colour level.
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForFunction(() => document.body.classList.contains('am-album-tint-off') && !document.body.classList.contains('am-album-tinted'));
-    await flip('playlistTint', 'Çalma listesi rengi: Kapalı', 'Kapalı');
+    await flip('albumTint', 'Albüm ve çalma listesi rengi: Kapalı', 'Kapalı');
     await page.evaluate(() => { document.getElementById('mock-97').remove(); delete window.__mockPlaylistMeta; document.querySelector('.mock-page').hidden = false; Spicetify.Platform.History.push('/'); });
     await page.waitForFunction(() => !document.body.classList.contains('am-list-info'));
   });

@@ -283,6 +283,8 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow {border-radius:6px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow::after {content:"";position:absolute;left:100px;right:8px;bottom:0;height:1px;background:rgb(var(--am-ink)/.071);pointer-events:none}
+/* An album's rows have no artwork: the line starts under the title, as in Music (#93). */
+body.am-ready .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(.main-trackList-rowImage))::after {left:48px}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:is(:hover,[aria-selected="true"])::after {opacity:0}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:rgb(var(--am-ink)/.059)!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
@@ -324,7 +326,7 @@ body,body *,body *::before,body *::after {-webkit-font-smoothing:auto!important;
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText h1 {font-size:26px!important;line-height:32px!important;letter-spacing:normal!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-creatorWrapper {font-size:26px!important;line-height:32px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :not(.main-entityHeader-creatorWrapper) * {font-weight:600!important}
-/* Album and playlist colour (#72, #97; settings.albumTint and playlistTint, theme.js sets --am-album-tint from the artwork). Subtle washes the top of
+/* Album and playlist colour (#72, #97; settings.albumTint, theme.js sets --am-album-tint from the artwork). Subtle washes the top of
    the page and fades into the window; full colours the whole window and the page's controls. Mixed with --am-bg and
    --am-text, so a light theme gets light tints. The wash scrolls with the page and reaches under the sidebar. */
 body.am-album-tinted .am-native-main :is([data-testid="album-page"],[data-testid="playlist-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) {isolation:isolate}
