@@ -13,6 +13,8 @@
   .Root {background:#121212;transition:background .5s cubic-bezier(.3,0,.4,1)}
   .left {grid-area:left-sidebar;background:#111}
   .right {grid-area:right-sidebar}
+  /* Spotify's panel holder (.Root__right-sidebar-peek) paints a solid background under the panel. */
+  .right > div {background:rgb(31,31,31)}
   .bar {grid-area:now-playing-bar;background:#000}
   .view {grid-area:main-view;position:relative;container:main-view-grid-area / inline-size;background:#121212;color:#fff;font:14px sans-serif}
   .main-view-container,.main-view-container__scroll-node,.main-view-container__scroll-node > [data-overlayscrollbars-viewport] {height:100%}

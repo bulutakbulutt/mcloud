@@ -152,6 +152,8 @@ try {
     // It fades in where it ends up; a sliding edge on fractional pixels shimmers.
     assert.equal(box.x, 1440 - 16 - box.width, 'sheet moves while opening');
     assert.equal(await page.getAttribute(friends, 'aria-pressed'), 'true');
+    // Spotify's panel holder is solid; left alone it hides the sheet's glass.
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-native-panel-open [data-am-fill]')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)')), [], 'panel holder paints over the glass');
     // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
     await page.click(friends);

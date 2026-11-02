@@ -810,10 +810,12 @@ body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#s
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
+/* The fill is Spotify's .Root__right-sidebar-peek, painted solid rgb(31,31,31): it hid the sheet's glass entirely. */
 body.am-ready .am-native-panel-open [data-am-fill] {
  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
+ background:transparent!important;
 }
 /* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. The :has()
    is on the button: with a bare :has() subject Chromium tests every element against it, and any element added
