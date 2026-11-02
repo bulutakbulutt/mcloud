@@ -1600,7 +1600,8 @@ body.am-home-apple .am-native-main .main-card-PlayButtonContainer button > span,
 body.am-home-apple .am-native-main .main-card-PlayButtonContainer button:hover > span,body.am-home-apple .am-card-more:hover {background:var(--am-accent)!important}
 body.am-home-apple .am-native-main .main-card-PlayButtonContainer svg {width:12px!important;height:12px!important;fill:#fff!important}
 .am-card-more {display:none}
-body.am-home-apple .am-card-more {position:absolute;right:8px;bottom:8px;z-index:2;display:grid;place-items:center;border:0;cursor:pointer;opacity:0;transition:opacity .15s}
+/* Spotify's image container takes no pointer events (its click layer opens the item), and "…" inherited that. */
+body.am-home-apple .am-card-more {position:absolute;right:8px;bottom:8px;z-index:2;pointer-events:auto;display:grid;place-items:center;border:0;cursor:pointer;opacity:0;transition:opacity .15s}
 body.am-home-apple .am-card-more svg {width:14px;height:14px;stroke:none}
 body.am-home-apple .main-card-cardContainer:is(:hover,:focus-within) .am-card-more {opacity:1}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] {font-size:17px!important;font-weight:700!important;letter-spacing:-.01em}

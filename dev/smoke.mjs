@@ -2148,7 +2148,7 @@ try {
       await page.route(host, r => r.fulfill({ contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: png }));
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     await page.evaluate(() => {
-      const card = (name, src) => `<div data-encore-id="card" class="main-card-cardContainer" role="listitem"><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper" style="position:relative;padding-bottom:100%"><div><img class="main-cardImage-image" style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div></div><div class="main-card-PlayButtonContainer"><button><span></span></button></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
+      const card = (name, src) => `<div data-encore-id="card" class="main-card-cardContainer" role="listitem" style="position:relative"><div class="card__on-click" style="position:absolute;inset:0" onclick="window.__cardOpened=true"></div><div class="main-card-imageContainer" style="pointer-events:none"><div class="main-cardImage-imageWrapper" style="position:relative;padding-bottom:100%"><div><img class="main-cardImage-image" style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div></div><div class="main-card-PlayButtonContainer" style="pointer-events:auto"><button><span></span></button></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
       const pick = 'https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/';
       const s = document.createElement('section');s.id = 'mock-home';s.dataset.testid = 'component-shelf';s.style.width = '600px';
       s.innerHTML = '<div style="display:flex">' + card('Daily Mix 2', pick + 'daily/2/ab6761610000e5eb97f323784adb2a66291c0cd4/en') + card('Chill Mix', pick + 'topic/chill/0ECwFtbIWEVNwjlrfc6xoL/en')
@@ -2173,10 +2173,14 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
     // "…" comes on the first hover and opens Spotify's card menu (a contextmenu on the card).
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-apple')));
-    await page.hover('#mock-home [data-encore-id="card"]:nth-child(4) img');
+    // The pointer lands on the card's click layer over the artwork, as in Spotify.
+    const art = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) img').boundingBox();
+    await page.mouse.move(art.x + art.width / 2, art.y + art.height / 2);
     await page.evaluate(() => document.querySelector('#mock-home [data-encore-id="card"]:nth-child(4)').addEventListener('contextmenu', e => { window.__cardMenu = e.clientX > 0; e.preventDefault(); }));
-    await page.click('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more');
-    assert.equal(await page.evaluate(() => window.__cardMenu), true);
+    // A real click at the button: Spotify's card layer sits under it and must not get it.
+    const more = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more').boundingBox();
+    await page.mouse.click(more.x + more.width / 2, more.y + more.height / 2);
+    assert.deepEqual(await page.evaluate(() => [window.__cardMenu, !!window.__cardOpened]), [true, false], '"…" opens the card menu, not the item');
     await settingsWindow.pick('homeShortcuts');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
     await settingsWindow.pick('homeShortcuts');
