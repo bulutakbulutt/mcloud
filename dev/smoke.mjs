@@ -915,6 +915,15 @@ try {
     await page.waitForFunction(() => !document.getElementById('search-suggestions-loading-dropdown'));
   });
 
+  await check('Spotify\'s tooltips in the menus\' glass', async () => {
+    // Spotify's markup (1.3.6): a popper root on <body>, a box, and the text in #hover-or-focus-tooltip.
+    await page.evaluate(() => document.body.insertAdjacentHTML('beforeend', '<div data-tippy-root id="mock-tip" style="position:absolute;top:100px;left:100px;z-index:9999"><div><div class="mock-tip-box" style="background:rgb(30,30,30);padding:4px 8px;border-radius:4px"><span id="hover-or-focus-tooltip" role="tooltip">Geri git</span></div></div></div>'));
+    assert.deepEqual(await page.evaluate(() => { const box = document.querySelector('#mock-tip .mock-tip-box'), cs = getComputedStyle(box); return [cs.borderRadius, getComputedStyle(box.firstElementChild).fontSize, cs.padding, cs.backgroundColor !== 'rgb(30, 30, 30)']; }), ['8px', '12px', '4px 9px', true]);
+    // In Eco a plain fill.
+    assert.deepEqual(await page.evaluate(() => { document.body.classList.add('am-solid'); const cs = getComputedStyle(document.querySelector('#mock-tip .mock-tip-box')), r = [cs.backgroundColor, cs.backdropFilter]; document.body.classList.remove('am-solid'); return r; }), ['rgb(44, 44, 46)', 'none']);
+    await page.evaluate(() => document.getElementById('mock-tip').remove());
+  });
+
   await check('a menu\'s glass keeps its loaded map pieces when it opens again', async () => {
     // An feImage given its href again paints nothing until it reloads: a new menu showed a sharp square for a frame.
     // A two-row menu (a folder's) moves to a slot already holding its smaller corners, and back.
