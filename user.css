@@ -1113,16 +1113,15 @@ body.am-windows #am-nowplaying .am-np-body {padding-top:44px}
  -webkit-mask-image:linear-gradient(#0000,#000 10%,#000 85%,#0000);mask-image:linear-gradient(#0000,#000 10%,#000 85%,#0000)}
 #am-nowplaying.am-np-lyrics-on .am-np-lyrics,body.am-np-lyrics-below .am-np-lyrics {display:block}
 /* Under the artwork (a variant), smaller, and the artwork gives way to them first. */
-body.am-np-lyrics-below #am-nowplaying:not(.am-np-lyrics-on) .am-np-lyrics {padding:12px 22px 30vh;-webkit-mask-image:linear-gradient(#0000,#000 12%,#000 80%,#0000);mask-image:linear-gradient(#0000,#000 12%,#000 80%,#0000)}
-body.am-np-lyrics-below #am-nowplaying:not(.am-np-lyrics-on) .am-np-line {font-size:clamp(17px,1.35vw,21px)}
-body.am-np-lyrics-below #am-nowplaying:not(.am-np-lyrics-on) .am-np-line + .am-np-line {margin-top:12px}
-body.am-np-lyrics-below #am-nowplaying:not(.am-np-lyrics-on) .am-np-lyrics-note {margin-top:24px}
+body.am-np-lyrics-below:not(.am-np-plain) #am-nowplaying:not(.am-np-lyrics-on) .am-np-lyrics {padding:12px 22px 30vh;-webkit-mask-image:linear-gradient(#0000,#000 12%,#000 80%,#0000);mask-image:linear-gradient(#0000,#000 12%,#000 80%,#0000)}
+body.am-np-lyrics-below:not(.am-np-plain) #am-nowplaying:not(.am-np-lyrics-on) .am-np-line {font-size:clamp(17px,1.35vw,21px)}
+body.am-np-lyrics-below:not(.am-np-plain) #am-nowplaying:not(.am-np-lyrics-on) .am-np-line + .am-np-line {margin-top:12px}
+body.am-np-lyrics-below:not(.am-np-plain) #am-nowplaying:not(.am-np-lyrics-on) .am-np-lyrics-note {margin-top:24px}
 #am-nowplaying.am-np-lyrics-on .am-np-art {display:none}
 #am-nowplaying.am-np-lyrics-on .am-np-thumb[src] {display:block}
 #am-nowplaying.am-np-lyrics-on .am-np-meta {order:-1}
 #am-nowplaying.am-np-lyrics-on .am-np-title {font-size:15px}
 #am-nowplaying.am-np-lyrics-on .am-np-artist {font-size:14px}
-body.am-np-center .am-np-lyrics {text-align:center}
 #am-nowplaying .am-np-line {display:block;width:100%;padding:0;text-align:inherit;font:700 clamp(21px,1.75vw,28px)/1.22 var(--encore-body-font-stack);letter-spacing:-.02em;color:var(--am-np-text);opacity:.32;overflow-wrap:anywhere;transition:opacity .35s}
 #am-nowplaying .am-np-line + .am-np-line {margin-top:18px}
 #am-nowplaying .am-np-line:hover {opacity:.6}
@@ -1131,6 +1130,20 @@ body.am-np-center .am-np-lyrics {text-align:center}
 .am-np-unsynced .am-np-line {opacity:.9!important;cursor:default!important}
 .am-np-lyrics-note {margin-top:40%;text-align:center;font-size:15px;color:var(--am-np-sub)}
 .am-np-lyrics-credit {margin-top:32px;font-size:12px;color:var(--am-np-sub)}
+/* Plain (npBg: plain), Apple Music's lyrics pane on the Mac: opaque (#2c2c2c, neutral: Music's warmth there is the
+   wallpaper's tint; a light appearance sets --am-np-plain to #eeedec), no artwork or header, only large bold lines fading
+   toward the bottom. Paused, every line is grey; playing, the line being sung is bright. Its buttons show on hover. */
+#am-nowplaying {--am-np-plain:#2c2c2c}
+body.am-np-plain #am-nowplaying {background:var(--am-np-plain);backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-np-plain.am-np-docked #am-nowplaying {box-shadow:none}
+body.am-np-plain #am-nowplaying :is(.am-np-art,.am-np-meta,.am-np-bg,.am-np-bleed,.am-np-lyrics-toggle) {display:none}
+body.am-np-plain #am-nowplaying .am-np-lyrics {display:block;padding:28px 22px 40vh;-webkit-mask-image:linear-gradient(#000 45%,#0000 95%);mask-image:linear-gradient(#000 45%,#0000 95%)}
+body.am-np-plain #am-nowplaying .am-np-line {opacity:.42}
+body.am-np-plain #am-nowplaying .am-np-line + .am-np-line {margin-top:26px}
+body.am-np-plain #am-nowplaying.am-np-playing .am-np-line.am-current {opacity:1}
+body.am-np-plain #am-nowplaying .am-np-line:hover {opacity:.7}
+body.am-np-plain #am-nowplaying :is(.am-np-close,.am-np-full-lyrics) {opacity:0;transition:opacity .2s}
+body.am-np-plain #am-nowplaying:is(:hover,:focus-within) :is(.am-np-close,.am-np-full-lyrics) {opacity:1}
 /* Sidebar only: the player's own controls, moved in (theme.js npMove), laid out as on iOS. */
 body.am-np-only #am-player {display:none!important}
 .am-np-controls {display:none;flex:0 0 auto;flex-direction:column;gap:6px}

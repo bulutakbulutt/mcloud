@@ -2113,7 +2113,7 @@
     if(!npReady)return;
     const mode=settings.nowPlaying,open=mode==='only'||(mode==='beside'&&settings.npOpen),b=document.body.classList;
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
-    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-center',settings.npLyricsAlign==='center');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
     np.hidden=!open;npToggle.hidden=mode==='off';npToggle.classList.toggle('am-active',open);setAttributeIfChanged(npToggle,'aria-pressed',String(open));
     setAttributeIfChanged(npToggle,'title',open?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
@@ -2125,6 +2125,8 @@
     if(!npReady||!npVisible())return;
     const item=S.Player.data?.item;
     if((item?.uri||'')!==npTrackKey)npTrack(item);
+    // Plain lyrics light the line being sung only while playing (paused, every line is grey, as in Music).
+    const playing=!!S.Player.isPlaying?.();if(np.classList.contains('am-np-playing')!==playing)np.classList.toggle('am-np-playing',playing);
     const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
     npSyncCanvas();npPlayVideo();npSyncLyric();npSyncFullLyrics();
   }
@@ -2163,7 +2165,7 @@
   }
   async function npLoadMotion(item) {
     const token=++npMotionToken,kind=settings.npArt;npStopVideo();
-    if(!item?.uri||kind==='cover')return;
+    if(!item?.uri||kind==='cover'||settings.npBg==='plain')return;
     if(kind==='canvas'){npCanvasFrom=null;npCanvasSrc='';npSyncCanvas();return;}
     if(!h264)return;
     const source=await appleMotion(item,kind==='appleTall');
@@ -2217,7 +2219,7 @@
   // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
   let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
-  const npLyricsShown=()=>np.classList.contains('am-np-lyrics-on')||settings.npLyricsPlace==='below';
+  const npLyricsShown=()=>np.classList.contains('am-np-lyrics-on')||settings.npLyricsPlace==='below'||settings.npBg==='plain';
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
   // Back to the line being sung, at once; flash marks where the lyrics are.
   function npJumpLyrics(flash) {
@@ -2290,13 +2292,12 @@
   npSetting({key:'npLayout',group:'nowplaying',type:'choice',style:'segmented',default:'card',label:T('Panel görünümü','Sidebar style'),
     options:[['card',T('Cam kart','Glass card')],['docked',T('Kenara yapışık','Docked')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'artwork',label:T('Panel arka planı','Sidebar background'),
-    options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
+    options:[['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')],['plain',T('Sade (Apple)','Plain (Apple)')]],
+    note:T('“Sade”: Apple Music’in Mac’teki söz paneli gibi; kapak ve başlık yok, yalnızca sözler.','“Plain”: like Apple Music’s lyrics pane on the Mac: no artwork or header, only the lyrics.'),apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
     options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],...(h264?[['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')]]:[]),['canvas','Spotify Canvas']],
     note:h264?T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'):undefined,
     apply:()=>{npTrackKey='';npTick();},when:()=>settings.nowPlaying!=='off'});
-  npSetting({key:'npLyricsAlign',group:'nowplaying',type:'choice',style:'segmented',default:'left',label:T('Söz hizası','Lyrics alignment'),
-    options:[['left',T('Sola','Left')],['center',T('Ortaya','Centre')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
     options:[['below',T('Kapağın altında','Under the artwork')],['button',T('Sözler düğmesiyle','With the lyrics button')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npOpen',group:'nowplaying',type:'toggle',default:true,label:T('Panel açık','Sidebar open'),apply:npApplyAll,hidden:true,when:()=>false});

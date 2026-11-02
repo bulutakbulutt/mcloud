@@ -1382,7 +1382,7 @@ try {
 
   await check('Now Playing sidebar: off, beside the player, sidebar only; Spotify lyrics, Canvas and Apple motion artwork', async () => {
     const pick = (key, value) => page.evaluate(([key, value]) => {
-      const menu = window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan'), def = { nowPlaying: 'Şimdi Çalan paneli', npArt: 'Hareketli kapak', npLayout: 'Panel görünümü', npLyricsPlace: 'Sözler' }[key];
+      const menu = window.__menus.find(m => m.name === 'mcloud: Şimdi Çalan'), def = { nowPlaying: 'Şimdi Çalan paneli', npArt: 'Hareketli kapak', npLayout: 'Panel görünümü', npLyricsPlace: 'Sözler', npBg: 'Panel arka planı' }[key];
       menu.items.find(i => i.name === def + ': ' + value).onClick();
     }, [key, value]);
     const rect = sel => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width }; }, sel);
@@ -1450,6 +1450,22 @@ try {
       assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')) && await page.isVisible('#am-nowplaying .am-np-art'));
       await pick('npLyricsPlace', 'Kapağın altında');
 
+      // Plain (Apple Music's lyrics pane): opaque, no artwork or header, only the lyrics; paused every line is grey, playing
+      // the line being sung is bright; the pane's buttons show on hover.
+      await pick('npBg', 'Sade (Apple)');
+      await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+      const plain = () => page.evaluate(() => { const np = document.getElementById('am-nowplaying'), shown = s => !!np.querySelector(s)?.getClientRects().length;
+        return { bg: getComputedStyle(np).backgroundColor, art: shown('.am-np-art'), meta: shown('.am-np-meta'), lyrics: shown('.am-np-lyrics'), current: getComputedStyle(np.querySelector('.am-np-line.am-current')).opacity, other: getComputedStyle(np.querySelector('.am-np-line:not(.am-current)')).opacity }; });
+      await page.evaluate(() => { window.__mockState.playing = false; window.__firePlayer('onplaypause'); });
+      await page.waitForFunction(() => !document.getElementById('am-nowplaying').classList.contains('am-np-playing'));
+      await page.waitForTimeout(400);
+      assert.deepEqual(await plain(), { bg: 'rgb(44, 44, 44)', art: false, meta: false, lyrics: true, current: '0.42', other: '0.42' });
+      await page.evaluate(() => { window.__mockState.playing = true; window.__firePlayer('onplaypause'); });
+      await page.waitForFunction(() => document.getElementById('am-nowplaying').classList.contains('am-np-playing'));
+      await page.waitForTimeout(400);
+      assert.equal((await plain()).current, '1');
+      await pick('npBg', 'Kapak renkleri');
+
       // The player's lyrics button keeps opening Spicy Lyrics (its own page button, clicked) with the pane on; the pane links to
       // the full page too (and never closes it), closes with its × and comes back from the player's "…" menu, for people
       // who hide its button.
@@ -1498,12 +1514,12 @@ try {
       await page.evaluate(() => {
         const c = document.createElement('canvas'); c.width = 90; c.height = 160; const x = c.getContext('2d');
         window.__canvasTimer = setInterval(() => { x.fillStyle = `hsl(${Date.now() / 10 % 360} 70% 50%)`; x.fillRect(0, 0, 90, 160); }, 50);
-        const v = document.createElement('video'); v.id = 'mock-canvas'; v.muted = true; v.srcObject = c.captureStream(20); v.play();
+        const v = document.createElement('video'); v.id = 'mock-canvas'; v.muted = true; v.srcObject = c.captureStream(20); v.play().catch(() => {});
         document.querySelector('[data-testid="mock-npv"]').append(v); window.__mockState.playing = true;
       });
       await pick('npArt', 'Spotify Canvas');
-      await page.waitForFunction(() => document.getElementById('am-nowplaying').classList.contains('am-np-bleeding'), null, { timeout: 5000 });
-      assert.ok(await page.evaluate(() => document.querySelector('#am-nowplaying .am-np-bleed').srcObject instanceof MediaStream));
+      // The frames are shared (srcObject); the clip shows once it plays, which headless Chrome may delay.
+      await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-bleed').srcObject instanceof MediaStream && document.getElementById('am-nowplaying').classList.contains('am-np-bleed-canvas'), null, { timeout: 10000 });
       assert.ok(!requests.some(u => u.includes('canvaz')), requests.join());
       // A track without Canvas: the still cover.
       await page.evaluate(() => { delete Spicetify.Player.data.item.metadata['canvas.url']; });
