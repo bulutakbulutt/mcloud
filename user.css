@@ -1258,15 +1258,18 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-card-art img {display:block;width:100%;height:100%;object-fit:cover}
 /* Hover as on Apple Music: the artwork dims a little and a round glass play (bottom left) and "…" (bottom right) appear. */
 #am-artist :is(.am-card,.am-latest-cover):is(:hover,:focus-within) img {filter:brightness(.92)}
-#am-artist .am-card-tools,.am-library-item .am-card-tools {position:absolute;left:0;top:0;width:100%;aspect-ratio:1;pointer-events:none;opacity:0;transition:opacity .15s}
+/* The buttons fade, not their box: an ancestor below opacity 1 is the buttons' backdrop root, so their blur saw nothing
+   but the box while it faded and snapped onto the artwork at 1 (the flicker). The library's buttons get the artist page's
+   button reset here (no UA border or padding). */
+:is(#am-artist,#am-library) .am-card-tools {position:absolute;left:0;top:0;width:100%;aspect-ratio:1;pointer-events:none}
 #am-artist .am-latest-cover .am-card-tools {height:100%}
-#am-artist :is(.am-card,.am-latest-cover):is(:hover,:focus-within) .am-card-tools,.am-library-item:is(:hover,:focus-within) .am-card-tools {opacity:1}
-#am-artist .am-card-tools button,.am-library-item .am-card-tools button {position:absolute;bottom:8px;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgb(0 0 0/.42);-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff;pointer-events:auto;transition:background-color .15s}
-#am-artist .am-card-tools button:hover,.am-library-item .am-card-tools button:hover {background:var(--am-accent)}
-#am-artist .am-tool-play,.am-library-item .am-tool-play {left:8px}
-#am-artist .am-tool-more,.am-library-item .am-tool-more {right:8px}
-#am-artist .am-tool-play svg,.am-library-item .am-tool-play svg {width:13px;height:13px}
-#am-artist .am-tool-more svg,.am-library-item .am-tool-more svg {width:15px;height:15px}
+:is(#am-artist,#am-library) .am-card-tools button {appearance:none;position:absolute;bottom:8px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgb(0 0 0/.42);-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff;cursor:pointer;pointer-events:auto;opacity:0;transition:opacity .15s,background-color .15s}
+:is(#am-artist :is(.am-card,.am-latest-cover),#am-library .am-library-item):is(:hover,:focus-within) .am-card-tools button {opacity:1}
+:is(#am-artist,#am-library) .am-card-tools button:hover {background:var(--am-accent)}
+:is(#am-artist,#am-library) .am-tool-play {left:8px}
+:is(#am-artist,#am-library) .am-tool-more {right:8px}
+:is(#am-artist,#am-library) .am-tool-play svg {width:13px;height:13px}
+:is(#am-artist,#am-library) .am-tool-more svg {width:15px;height:15px}
 .am-card-round .am-card-art {border-radius:50%}
 .am-card-round .am-card-open {align-items:center;text-align:center}
 .am-card-name {font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
