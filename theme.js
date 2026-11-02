@@ -2,6 +2,61 @@
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
+  // Marketplace loads theme.js and user.css from GitHub Pages. Its deploy (.github/workflows/pages.yml) writes the
+  // commit here and on both files' first line; jsDelivr and local copies keep 'dev'.
+  const BUILD = 'dev', REPO = 'mcloudHQ/mcloud', PAGES = 'https://mcloudhq.github.io/mcloud/';
+  const pages = window.__amPages = { build: BUILD };
+  // Installs made before Pages stored jsDelivr @main URLs (or raw ones Marketplace sends to jsDelivr). Marketplace
+  // read them before this script ran and can write its in-memory copy back (its update check rebuilds the record from
+  // manifest.json, whose usercss stays relative so the record's key does not change), so this runs on every start
+  // and writes only when a URL changed. IndexedDB for Marketplace 1.0.9+, localStorage before; never creates the db.
+  // The repo moved from bulutakbulutt to mcloudHQ: installs made before keep the old owner in their key and URLs, and
+  // Marketplace's casing of the owner is not ours, so both owners match case-insensitively.
+  pages.migration = (async () => {
+    const OWNERS = ['bulutakbulutt', 'mcloudhq'];
+    const OLD = new Set(OWNERS.flatMap(o => ['theme.js', 'user.css'].flatMap(f => [`https://cdn.jsdelivr.net/gh/${o}/mcloud@main/${f}`, `https://raw.githubusercontent.com/${o}/mcloud/main/${f}`])));
+    const toPages = u => typeof u === 'string' && OLD.has(u.toLowerCase()) ? PAGES + u.slice(u.lastIndexOf('/') + 1) : u;
+    const rewrite = json => {
+      let r; try { r = JSON.parse(json); } catch { return null; }
+      if (!r || !OWNERS.includes(String(r.user).toLowerCase()) || r.repo !== 'mcloud') return null;
+      const urls = () => JSON.stringify([r.cssURL, r.include, r.manifest?.include]), before = urls();
+      r.cssURL = toPages(r.cssURL);
+      if (Array.isArray(r.include)) r.include = r.include.map(toPages);
+      if (Array.isArray(r.manifest?.include)) r.manifest.include = r.manifest.include.map(toPages);
+      return urls() === before ? null : JSON.stringify(r);
+    };
+    const ACTIVE = 'marketplace:theme-installed', mine = k => typeof k === 'string' && OWNERS.some(o => k.toLowerCase().startsWith(`marketplace:installed:${o}/mcloud/`));
+    const db = await new Promise(res => {
+      try { const q = indexedDB.open('spicetify-marketplace'); q.onupgradeneeded = () => q.transaction.abort(); q.onsuccess = () => res(q.result); q.onerror = q.onblocked = () => res(null); }
+      catch { res(null); }
+    });
+    if (db && !db.objectStoreNames.contains('settings')) { db.close(); return 'no-store'; }
+    const tx = (mode, fn) => new Promise(res => { const t = db.transaction('settings', mode), q = fn(t.objectStore('settings'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => res(undefined); });
+    const get = k => db ? tx('readonly', s => s.get(k)).then(r => r?.value) : localStorage.getItem(k);
+    const set = (k, v) => db ? tx('readwrite', s => s.put({ key: k, value: v })) : (localStorage.setItem(k, v), true);
+    try {
+      const k = await get(ACTIVE); if (!mine(k)) return 'not-active';
+      const v = rewrite(await get(k)); if (!v) return 'unchanged';
+      // Move only once Pages serves the theme: an install pointed at a missing site would load no theme at all.
+      if (!(await fetch(PAGES + 'theme.js', { method: 'HEAD', cache: 'no-store' }).catch(() => null))?.ok) return 'pages-down';
+      return await set(k, v) ? 'migrated' : 'error';
+    } catch { return 'error'; } finally { db?.close(); }
+  })();
+  // Pages deploys both files together, but each edge caches them separately (and a record rebuilt from manifest.json
+  // loads the CSS from jsDelivr until the next start), so a start can pair this script with another commit's CSS.
+  // A stamped script wins: it loads its own commit's user.css from an immutable URL into Marketplace's style.
+  pages.css = (async () => {
+    if (!/^[0-9a-f]{40}$/.test(BUILD)) return 'unstamped';
+    const st = document.querySelector('style.marketplaceUserCSS'), head = st?.textContent.slice(0, 300) || '';
+    if (!head.includes('AppleMusicMac')) return 'no-css';
+    if (head.startsWith(`/* mcloud build ${BUILD} */`)) return 'match';
+    for (const u of [`https://cdn.jsdelivr.net/gh/${REPO}@${BUILD}/user.css`, `https://raw.githubusercontent.com/${REPO}/${BUILD}/user.css`]) {
+      try { const r = await fetch(u), css = r.ok ? await r.text() : ''; if (css.slice(0, 200).includes('AppleMusicMac')) { st.textContent = `/* mcloud build ${BUILD} */\n` + css; return 'replaced'; } }
+      catch {}
+    }
+    return 'failed';
+  })();
   const wait = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 240 && !window.Spicetify?.Platform?.History; i++) await wait(250);
   const S = window.Spicetify;
@@ -3235,6 +3290,92 @@
     currentMode='native';
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();syncBrowse();
   });
+  // Home as Apple Music's (issue #84): square cards without a plate, play and "…" on the artwork, bold shelf titles
+  // without "Show all" (homeStyle, body.am-home-apple). The cards stay Spotify's; "…" opens Spotify's own card menu.
+  settingGroup('home',T('Ana Sayfa','Home'),'home');
+  defineSetting({key:'homeStyle',group:'home',label:T('Kartlar','Cards'),type:'choice',default:'apple',style:'segmented',
+    options:[['apple','Apple Music'],['spotify','Spotify']],note:T('Ana sayfadaki ve aramadaki kart rafları.','The card shelves on Home and in search.'),
+    apply:v=>document.body.classList.toggle('am-home-apple',v==='apple')});
+  defineSetting({key:'homeShortcuts',group:'home',label:T('Üstteki kısayollar','Shortcuts at the top'),type:'toggle',default:true,
+    apply:v=>document.body.classList.toggle('am-home-no-shortcuts',!v)});
+  // One "…" per card, added the first time the card is hovered.
+  document.addEventListener('mouseover',event=>{
+    // The pointer is over the card's click layer, which covers the card beside its artwork.
+    const box=settings.homeStyle==='apple'&&event.target.closest?.('.am-native-main [data-encore-id="card"]')?.querySelector('.main-card-imageContainer');
+    if(!box||box.querySelector(':scope > .am-card-more'))return;
+    const more=button(T('Diğer','More'),'more',e=>{
+      e.preventDefault();e.stopPropagation();
+      const r=more.getBoundingClientRect();
+      more.closest('[data-encore-id="card"]')?.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2,buttons:2,clientX:r.left+r.width/2,clientY:r.bottom+4}));
+    },'am-card-more');
+    box.append(more);
+  });
+  // Spotify's mixes (Daily Mix, "… Mix", radios, This Is, Discover Weekly) have their name drawn into the image. The
+  // image's URL names the photo it was made from (a Daily Mix its image id, the others an artist or a track), so the
+  // cover is drawn again as Apple's (settings.mixCovers): a colour band with the name over the photo (Essentials), a
+  // gradient with the name (personal mixes), the photo in a circle (stations) or the photo alone. Mood mixes and
+  // Discover Weekly have no photo and get the gradient. The image keeps its src; its parent gets .am-mix and the
+  // custom properties user.css draws from. Images are caught as they load (a capture listener, no DOM observer).
+  const mixImages='img[src^="https://pickasso.spotifycdn.com/"],img[src^="https://seed-mix-image.spotifycdn.com/"],img[src^="https://daylist.spotifycdn.com/"]';
+  const mixUrl=/^https:\/\/(?:pickasso\.spotifycdn\.com\/image\/[^/]+\/dt\/v1\/img\/([^?#]+)|seed-mix-image\.spotifycdn\.com\/|daylist\.spotifycdn\.com\/)/;
+  function mixSource(url) {
+    const path=(mixUrl.exec(url)?.[1]||'').split('/');
+    if(path[0]==='daily'&&/^ab67[0-9a-f]{20,}$/.test(path[2]||''))return {photo:'https://i.scdn.co/image/'+path[2]};
+    const id=path.find(p=>/^[A-Za-z0-9]{22}$/.test(p));
+    return !id?{}:path[0]==='radio'&&path[1]==='track'?{track:id}:{artist:id};
+  }
+  // Covers worked out before (photo and colour by image URL), so a mix seen before draws at once. The newest 200 are kept.
+  const mixCovers=new Map(),mixJobs=new Map();
+  try{for(const [url,cover] of JSON.parse(localStorage.getItem('mcloud:mix-covers')||'[]'))if(typeof cover?.color==='string')mixCovers.set(url,cover);}catch{}
+  function mixCover(url) {
+    if(mixJobs.has(url))return mixJobs.get(url);
+    const job=(async()=>{
+      const source=mixSource(url),G=S.GraphQL,D=G?.Definitions;let photo=source.photo||'';
+      try{
+        if(source.artist&&D?.fetchExtractedColorAndImageForArtistEntity)photo=spotifyImage(bySize((await G.Request(D.fetchExtractedColorAndImageForArtistEntity,{uri:'spotify:artist:'+source.artist}))?.data?.artistUnion?.visuals?.avatarImage).at(-1)?.url||'');
+        if(source.track&&D?.fetchExtractedColorAndImageForTrackEntity)photo=spotifyImage(bySize((await G.Request(D.fetchExtractedColorAndImageForTrackEntity,{uri:'spotify:track:'+source.track}))?.data?.trackUnion?.albumOfTrack?.coverArt).at(-1)?.url||'');
+      }catch{}
+      const color=await artworkColor(photo||url);
+      mixJobs.delete(url);if(!color)return null;
+      const cover={photo,color};mixCovers.delete(url);mixCovers.set(url,cover);
+      while(mixCovers.size>200)mixCovers.delete(mixCovers.keys().next().value);
+      try{localStorage.setItem('mcloud:mix-covers',JSON.stringify([...mixCovers]));}catch{}
+      return cover;
+    })();
+    mixJobs.set(url,job);return job;
+  }
+  function drawMix(box,cover) {
+    const [h,s,l]=hexToHsl(cover.color)||[0,0,.4],hue=Math.round(h),sat=Math.round(Math.min(.7,s)*100),style=box.style;
+    // Apple's bands are the photo's colour made light and soft, with black text.
+    const band=Math.min(.78,Math.max(.6,l+.25));
+    style.setProperty('--am-mix-photo',cover.photo?`url("${cover.photo}")`:'none');
+    style.setProperty('--am-mix-band',`hsl(${hue} ${Math.round(Math.min(.55,s)*100)}% ${Math.round(band*100)}%)`);
+    const mid=Math.min(.6,Math.max(.4,l));
+    style.setProperty('--am-mix-from',`hsl(${hue} ${sat}% ${Math.round((mid+.12)*100)}%)`);
+    style.setProperty('--am-mix-to',`hsl(${(hue+330)%360} ${Math.min(90,sat+10)}% ${Math.round((mid-.14)*100)}%)`);
+    box.classList.toggle('am-mix-plain',!cover.photo);box.classList.add('am-mix-ready');
+  }
+  // Apple's own pairing: radios as its stations (the photo in a circle), the other mixes as Essentials (the band).
+  const mixStyle=url=>settings.mixCovers!=='apple'?settings.mixCovers:/\/img\/radio\//.test(url)?'station':'band';
+  function markMix(img) {
+    // A card's image sits absolute in a square wrapper (its own parent has no height); a page header's in its parent.
+    const box=img.closest('.main-cardImage-imageWrapper')||img.parentElement,url=img.getAttribute('src')||'';if(!box||!img.closest('.am-native-main'))return;
+    if(!mixUrl.test(url)||settings.mixCovers==='spotify'){if(box.classList.contains('am-mix'))box.classList.remove('am-mix','am-mix-ready','am-mix-plain');delete box.dataset.amMixSrc;return;}
+    box.dataset.amMixStyle=mixStyle(url);
+    if(box.dataset.amMixSrc===url&&box.classList.contains('am-mix-ready'))return;
+    const card=img.closest('[data-encore-id="card"]');
+    box.dataset.amMix=(card?card.querySelector('[data-encore-id="cardTitle"]')?.textContent:img.closest('[data-testid="playlist-page"]')?.querySelector('h1')?.textContent)?.trim()||'';
+    box.dataset.amMixSrc=url;box.classList.add('am-mix');box.style.setProperty('--am-mix-radius',getComputedStyle(img).borderRadius);
+    const known=mixCovers.get(url);
+    if(known){drawMix(box,known);return;}
+    box.classList.remove('am-mix-ready');
+    mixCover(url).then(cover=>{if(cover&&box.dataset.amMixSrc===url&&img.getAttribute('src')===url)drawMix(box,cover);});
+  }
+  document.addEventListener('load',event=>{if(event.target.tagName==='IMG'&&(settings.mixCovers!=='spotify'||event.target.closest('.am-mix')))markMix(event.target);},true);
+  defineSetting({key:'mixCovers',group:'home',label:T('Mix kapakları','Mix covers'),type:'choice',default:'apple',
+    options:[['apple',T('Apple Music gibi','As Apple Music')],['band',T('Şerit (Essentials)','Band (Essentials)')],['gradient',T('Renk geçişi (kişisel mix)','Gradient (personal mix)')],['station',T('Yuvarlak fotoğraf (istasyon)','Round photo (station)')],['photo',T('Yalnız fotoğraf','Photo only')],['spotify','Spotify']],
+    note:T('Daily Mix, "… Mix", radyo ve This Is kapakları. Fotoğraf Spotify\'ın kendi görselinden gelir.','Daily Mix, "… Mix", radio and This Is covers. The photo comes from Spotify\'s own image.'),
+    apply:()=>{for(const img of document.querySelectorAll(mixImages))markMix(img);}});
   // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
   // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
   // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows

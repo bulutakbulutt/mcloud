@@ -1336,7 +1336,7 @@ try {
     await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.waitForSelector('#am-settings .am-settings-box[role="dialog"]');
     const tabs = () => page.locator('#am-settings .am-settings-tab').allTextContents();
-    assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler', 'Şimdi Çalan']);
+    assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler', 'Şimdi Çalan', 'Ana Sayfa']);
     // It reopens on the last tab (Albums & Playlists, from the track numbers check), as macOS does; the title names it.
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
     // A form: labels right-aligned with a colon, toggles as checkboxes. Real clicks from here on.
@@ -2055,13 +2055,78 @@ try {
       assert.deepEqual(await english.evaluate(() => window.__menuItems.map(i => i.name)), ['mcloud Settings']);
       const englishSettings = settingsOf(english);
       assert.equal(await englishSettings.state('lang'), 'Automatic');
-      assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists', 'Now Playing']);
+      assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists', 'Now Playing', 'Home']);
       await Promise.all([english.waitForEvent('load'), englishSettings.pick('lang', 'Türkçe', true)]);
       await english.waitForSelector('body.am-ready #am-sidebar');
       assert.equal(await english.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
       assert.equal(JSON.parse(await english.evaluate(() => localStorage.getItem('mcloud:settings'))).lang, 'tr');
       assert.deepEqual(englishErrors, []);
     } finally { await english.close(); }
+  });
+
+  await check('Marketplace installs move to GitHub Pages, and a stamped theme.js loads its own commit\'s CSS', async () => {
+    // A local copy (the preview) has no Marketplace and no stamp: nothing is written or fetched.
+    assert.deepEqual(await page.evaluate(async () => [await __amPages.migration, await __amPages.css]), ['not-active', 'unstamped']);
+    const sha = 'a'.repeat(40), REPO = 'mcloudHQ/mcloud', OLD_REPO = 'bulutakbulutt/mcloud', PAGES = 'https://mcloudhq.github.io/mcloud/';
+    const source = fs.readFileSync(path.join(here, '..', 'theme.js'), 'utf8');
+    const stamped = source.replace("const BUILD = 'dev'", `const BUILD = '${sha}'`);
+    assert.notEqual(stamped, source, 'theme.js keeps the BUILD the Pages deploy stamps');
+    const ctx = await browser.newContext(), fetched = [];
+    try {
+      const mp = await ctx.newPage();
+      await mp.route('https://xpui.app.spotify.com/**', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><body></body>' }));
+      await mp.route('https://cdn.jsdelivr.net/**', r => { fetched.push(r.request().url()); r.fulfill({ contentType: 'text/css', headers: { 'access-control-allow-origin': '*' }, body: '/* AppleMusicMac at the commit */' }); });
+      let pagesUp = false;
+      await mp.route('https://mcloudhq.github.io/**', r => r.fulfill({ status: pagesUp ? 200 : 404, headers: { 'access-control-allow-origin': '*' }, body: '' }));
+      // What Marketplace 1.0.12 keeps for an install from the old manifest (Dexie db, IDB version 20, store "settings"),
+      // made before the repo moved to mcloudHQ, and the CSS it injected: Pages' other build.
+      const key = `marketplace:installed:${OLD_REPO}/user.css`, old = `https://cdn.jsdelivr.net/gh/${OLD_REPO}@main/theme.js`;
+      const record = { manifest: { name: 'mcloud', usercss: 'user.css', include: [old] }, type: 'theme', user: 'bulutakbulutt', repo: 'mcloud', branch: 'main',
+        cssURL: `https://raw.githubusercontent.com/${OLD_REPO}/main/user.css`, include: [old], schemes: { Dark: { text: 'ffffff' } }, activeScheme: 'Dark' };
+      const start = async css => {
+        await mp.goto('https://xpui.app.spotify.com/index.html');
+        await mp.evaluate(css => { const s = document.body.appendChild(document.createElement('style')); s.className = 'marketplaceCSS marketplaceUserCSS'; s.textContent = css; }, css);
+        await mp.addScriptTag({ content: stamped });
+        return mp.evaluate(async () => ({ migration: await __amPages.migration, css: await __amPages.css, style: document.querySelector('style.marketplaceUserCSS').textContent }));
+      };
+      await mp.goto('https://xpui.app.spotify.com/index.html');
+      await mp.evaluate(rows => new Promise((res, rej) => {
+        const q = indexedDB.open('spicetify-marketplace', 20);
+        q.onupgradeneeded = () => q.result.createObjectStore('settings', { keyPath: 'key' });
+        q.onerror = () => rej(q.error);
+        q.onsuccess = () => { const db = q.result, tx = db.transaction('settings', 'readwrite'); for (const r of rows) tx.objectStore('settings').put(r); tx.oncomplete = () => { db.close(); res(); }; };
+      }), [{ key: 'marketplace:theme-installed', value: key }, { key, value: JSON.stringify(record) }]);
+      // Pages not live yet (the owner has not enabled it): the install keeps its URLs.
+      const early = await start('/* AppleMusicMac 2.8 */');
+      assert.deepEqual([early.migration, early.css], ['pages-down', 'replaced']);
+      pagesUp = true; fetched.length = 0;
+      const first = await start(`/* mcloud build ${'b'.repeat(40)} */\n/* AppleMusicMac 2.8 */`);
+      assert.equal(first.migration, 'migrated');
+      assert.equal(first.css, 'replaced');
+      assert.equal(first.style, `/* mcloud build ${sha} */\n/* AppleMusicMac at the commit */`);
+      assert.deepEqual(fetched, [`https://cdn.jsdelivr.net/gh/${REPO}@${sha}/user.css`]);
+      const stored = JSON.parse(await mp.evaluate(key => new Promise(res => { indexedDB.open('spicetify-marketplace').onsuccess = e => {
+        e.target.result.transaction('settings').objectStore('settings').get(key).onsuccess = g => res(g.target.result.value); }; }), key));
+      assert.deepEqual([stored.cssURL, stored.include, stored.manifest.include, stored.manifest.usercss, stored.activeScheme],
+        [PAGES + 'user.css', [PAGES + 'theme.js'], [PAGES + 'theme.js'], 'user.css', 'Dark']);
+      // Next start: nothing left to migrate. A CSS with no stamp (from jsDelivr) is replaced too.
+      const second = await start('/* AppleMusicMac 2.8 */');
+      assert.equal(second.migration, 'unchanged');
+      assert.equal(second.css, 'replaced');
+      assert.equal(fetched.length, 2);
+      const third = await start(`/* mcloud build ${sha} */\n/* AppleMusicMac 2.8 */`);
+      assert.deepEqual([third.migration, third.css, fetched.length], ['unchanged', 'match', 2]);
+      // An install made after the move (Marketplace's owner casing): theme.js already from Pages, the CSS from
+      // jsDelivr, which moves too.
+      const newKey = 'marketplace:installed:mcloudHQ/mcloud/user.css', pagesJs = PAGES + 'theme.js';
+      const newRecord = { ...record, user: 'mcloudHQ', manifest: { ...record.manifest, include: [pagesJs] }, include: [pagesJs], cssURL: `https://cdn.jsdelivr.net/gh/${REPO}@main/user.css` };
+      await mp.evaluate(rows => new Promise(res => { indexedDB.open('spicetify-marketplace').onsuccess = e => { const db = e.target.result, tx = db.transaction('settings', 'readwrite');
+        for (const r of rows) tx.objectStore('settings').put(r); tx.oncomplete = () => { db.close(); res(); }; }; }), [{ key: 'marketplace:theme-installed', value: newKey }, { key: newKey, value: JSON.stringify(newRecord) }]);
+      assert.equal((await start(`/* mcloud build ${sha} */\n/* AppleMusicMac 2.8 */`)).migration, 'migrated');
+      const moved = JSON.parse(await mp.evaluate(key => new Promise(res => { indexedDB.open('spicetify-marketplace').onsuccess = e => {
+        e.target.result.transaction('settings').objectStore('settings').get(key).onsuccess = g => res(g.target.result.value); }; }), newKey));
+      assert.deepEqual([moved.cssURL, moved.include], [PAGES + 'user.css', [pagesJs]]);
+    } finally { await ctx.close(); }
   });
 
   await check('settings fallback: the mcloud submenu, drawn from the same definitions, when the window cannot open', async () => {
@@ -2126,6 +2191,55 @@ try {
       assert.equal(Array.isArray(await stored()), false);
       assert.deepEqual(otherErrors, []);
     } finally { await other.evaluate(v => localStorage.setItem('mcloud:settings', v), before); await other.close(); }
+  });
+
+  await check('Home: Apple cards with "…", mix covers redrawn from the photo their image names', async () => {
+    // A 1x1 PNG for Spotify's image CDNs, which send CORS headers as these do.
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
+    for (const host of ['https://pickasso.spotifycdn.com/**', 'https://i.scdn.co/**'])
+      await page.route(host, r => r.fulfill({ contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: png }));
+    await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
+    await page.evaluate(() => {
+      const card = (name, src) => `<div data-encore-id="card" class="main-card-cardContainer" role="listitem" style="position:relative"><div class="card__on-click" style="position:absolute;inset:0" onclick="window.__cardOpened=true"></div><div class="main-card-imageContainer" style="pointer-events:none"><div class="main-cardImage-imageWrapper" style="position:relative;padding-bottom:100%"><div><img class="main-cardImage-image" style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div></div><div class="main-card-PlayButtonContainer" style="pointer-events:auto"><button><span></span></button></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
+      const pick = 'https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/';
+      const s = document.createElement('section');s.id = 'mock-home';s.dataset.testid = 'component-shelf';s.style.width = '600px';
+      s.innerHTML = '<div style="display:flex">' + card('Daily Mix 2', pick + 'daily/2/ab6761610000e5eb97f323784adb2a66291c0cd4/en') + card('Chill Mix', pick + 'topic/chill/0ECwFtbIWEVNwjlrfc6xoL/en')
+        + card('Ginkgo Radio', pick + 'radio/track/1Czqh6tbb9gqCQpSkXsqDT/en') + card('Rebel', 'https://i.scdn.co/image/ab67616d00001e02cff4bd68d5d0dd9a0a748045') + '</div>';
+      document.querySelector('.am-native-main main').prepend(s);
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
+    const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .main-cardImage-imageWrapper')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
+    assert.deepEqual(await covers(), [['Daily Mix 2', 'band', true], ['Chill Mix', 'band', true], ['Ginkgo Radio', 'station', true], ['', '', false]]);
+    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track.
+    assert.match(await page.evaluate(() => document.querySelector('#mock-home .am-mix').style.getPropertyValue('--am-mix-photo')), /i\.scdn\.co\/image\/ab6761610000e5eb97f3/);
+    assert.deepEqual(await page.evaluate(() => window.__mixRequests), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:mix-covers')).length), 3);
+    // The hidden title shows under a redrawn cover, the image under it is hidden, and the band is drawn.
+    assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), t = b.closest('[data-encore-id="card"]').querySelector('[data-encore-id="cardTitle"]');
+      return [t.offsetHeight > 0, getComputedStyle(b.querySelector('img')).opacity, getComputedStyle(b, '::after').content]; }), [true, '0', '"Daily Mix 2"']);
+    await settingsWindow.pick('mixCovers', 'Renk geçişi (kişisel mix)');
+    assert.deepEqual((await covers()).map(c => c[1]), ['gradient', 'gradient', 'gradient', '']);
+    await settingsWindow.pick('mixCovers', 'Spotify');
+    assert.deepEqual(await page.evaluate(() => document.querySelectorAll('#mock-home .am-mix').length), 0);
+    await settingsWindow.pick('mixCovers', 'Apple Music gibi');
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
+    // "…" comes on the first hover and opens Spotify's card menu (a contextmenu on the card).
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-apple')));
+    // The pointer lands on the card's click layer over the artwork, as in Spotify.
+    const art = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) img').boundingBox();
+    await page.mouse.move(art.x + art.width / 2, art.y + art.height / 2);
+    await page.evaluate(() => document.querySelector('#mock-home [data-encore-id="card"]:nth-child(4)').addEventListener('contextmenu', e => { window.__cardMenu = e.clientX > 0; e.preventDefault(); }));
+    // A real click at the button: Spotify's card layer sits under it and must not get it.
+    const more = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more').boundingBox();
+    await page.mouse.click(more.x + more.width / 2, more.y + more.height / 2);
+    assert.deepEqual(await page.evaluate(() => [window.__cardMenu, !!window.__cardOpened]), [true, false], '"…" opens the card menu, not the item');
+    await settingsWindow.pick('homeShortcuts');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
+    await settingsWindow.pick('homeShortcuts');
+    await settingsWindow.pick('homeStyle', 'Spotify');
+    assert.ok(await page.evaluate(() => !document.body.classList.contains('am-home-apple')));
+    await settingsWindow.pick('homeStyle', 'Apple Music');
+    await page.evaluate(() => document.getElementById('mock-home').remove());
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));

@@ -1,7 +1,7 @@
 # mcloud - one-line theme installer for Windows.
 #
-#   iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1 | iex
-#   & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1))) -Uninstall
+#   iwr -useb https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.ps1 | iex
+#   & ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.ps1))) -Uninstall
 #
 # Installs only the theme; Spicetify must already be installed. Downloads the
 # theme into Spicetify's Themes folder, selects it and applies it. Running it
@@ -20,7 +20,7 @@ $ProgressPreference = 'SilentlyContinue'
 # Spicetify prints UTF-8; decode it as such and let the console show Turkish letters.
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8; $OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 
-$Repo = if ($env:MCLOUD_REPO) { $env:MCLOUD_REPO } else { 'bulutakbulutt/mcloud' }
+$Repo = if ($env:MCLOUD_REPO) { $env:MCLOUD_REPO } else { 'mcloudHQ/mcloud' }
 $Theme = 'AppleMusicMac'
 $Scheme = 'Dark'
 $Files = 'theme.js', 'user.css', 'color.ini'
