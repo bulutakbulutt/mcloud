@@ -412,6 +412,12 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
 #am-player.am-volume-open .am-volume-button:hover {background:#0000001f}
 /* Shared popover for the "…" track menu and the profile menu. */
 :is(#am-popover,#am-popover-sub) {outline:0;position:fixed;z-index:70;min-width:200px;max-width:280px;max-height:calc(100vh - 40px);overflow-y:auto;overflow-x:hidden;padding:5px;font:13px var(--encore-body-font-stack);color:#f2f2f2}
+/* Tooltips (Spotify's [data-tippy-root] holding #hover-or-focus-tooltip; its own is a flat #1e1e1e box in 14px text) in the
+   menus' material: a small glass box in 12pt text, fading in. In Eco a plain fill. */
+body > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {padding:4px 9px!important;border-radius:8px!important;background:color-mix(in srgb,#2c2c2e 72%,transparent)!important;backdrop-filter:blur(20px) saturate(1.8);-webkit-backdrop-filter:blur(20px) saturate(1.8);box-shadow:inset 0 0 0 .5px #ffffff26,inset 0 1px #ffffff1a,0 6px 16px #00000059!important;color:#ffffffeb!important;max-width:300px!important;animation:am-tip-in .12s ease-out}
+body > [data-tippy-root] #hover-or-focus-tooltip {font:500 12px/16px var(--encore-body-font-stack)!important;letter-spacing:-.01em}
+body.am-solid > [data-tippy-root] > div > div:has(> #hover-or-focus-tooltip) {background:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+@keyframes am-tip-in {from{opacity:0}}
 /* Menus, ours and Spotify's (lists in [data-tippy-root]s, which its hashed classes draw as flat #1e1e1e boxes):
    macOS 27's menu (research/menus/REPORT.md §10-12). theme.js gives each menu a filter (data-am-glass) with the bend
    and the tone, so the glass has no fill; the shadows are its rim: a near-black device pixel outside the glass, then
