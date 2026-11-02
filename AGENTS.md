@@ -30,7 +30,7 @@ There is no build step and no runtime dependency. Spotify loads `theme.js` and `
 - The page runs under the glass sidebar, as in Apple Music: `user.css` spans Spotify's main view across the `left-sidebar` column and pads `.main-view-container__scroll-node-child` by `--am-side` (the `main-view-grid-area` size container moves with it). `#am-artist` fills the window the same way. Keep page content out of the first `--am-side` pixels.
 - Spotify's toolbar (`#global-nav-bar`), Friend Activity and the queue keep their native React nodes; the theme only adds classes and repositions them. Do not move or clone React-owned nodes.
 - A `MutationObserver` reconciles bindings after Spotify replaces host nodes. It deliberately ignores lyric-line and progress churn; keep it that way.
-- User settings live in `localStorage['mcloud:settings']`. Each one is declared once with `defineSetting({key, group, label, type, default, options, …})` (the API is documented above it in `theme.js`); the settings window (`#am-settings`, opened by the profile menu's `mcloud` entry or ⌘⌥,) and its fallback, the `Spicetify.Menu.SubMenu('mcloud', …)` submenu, are both drawn from those definitions. A new setting needs no change to either. Everything degrades gracefully when an API such as `Spicetify.Menu` is missing.
+- User settings live in `localStorage['mcloud:settings']` and are exposed in the profile menu via `Spicetify.Menu.SubMenu('mcloud', …)`. Everything degrades gracefully when an API such as `Spicetify.Menu` is missing.
 
 ## Conventions
 

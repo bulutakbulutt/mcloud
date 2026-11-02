@@ -29,9 +29,7 @@
     // notistack's provider; the theme closes a snackbar it retold by the id on its React fiber.
     Snackbar: { closeSnackbar: id => { (window.__closedSnacks ||= []).push(id); }, handleExitedSnack: () => {} },
     Menu: {
-      // Profile-menu entries: register()ed items land in __menuItems. ?menu=submenu mocks a Spicetify whose items cannot
-      // register, so the theme falls back to its mcloud submenu.
-      Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } register() { (window.__menuItems ||= []).push(this); } deregister() { window.__menuItems = (window.__menuItems || []).filter(i => i !== this); } },
+      Item: class { constructor(name, checked, onClick) { Object.assign(this, { name, checked, onClick }); } setState(v) { this.checked = v; } },
       SubMenu: class { constructor(name, items) { Object.assign(this, { name, items }); } register() { window.__menus.push(this); } deregister() {} },
     },
     Player: {
@@ -109,7 +107,6 @@
       relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
     },
   };
-  if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
   Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
   Spicetify.GraphQL = {
     Definitions: { queryArtistOverview: { name: 'queryArtistOverview' } },
