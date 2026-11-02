@@ -20,13 +20,13 @@ A persistent sidebar, a floating player, a cover-art library view and Spicy Lyri
 **macOS / Linux**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.sh | sh
 ```
 
 **Windows** (PowerShell, *not* run as administrator)
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.ps1 | iex
 ```
 
 The script:
@@ -96,12 +96,12 @@ To uninstall:
 
 ```sh
 # macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.sh | sh -s -- --uninstall
+curl -fsSL https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.sh | sh -s -- --uninstall
 ```
 
 ```powershell
 # Windows
-& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.ps1))) -Uninstall
+& ([scriptblock]::Create((iwr -useb https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.ps1))) -Uninstall
 ```
 
 Uninstalling switches Spotify back to the theme you had before mcloud. If you had none and the Spicetify Marketplace is installed, it selects Marketplace's `marketplace` theme, so themes from the Marketplace install again. If an older uninstall already cleared it, run `spicetify config current_theme marketplace` and `spicetify apply`.
@@ -162,7 +162,7 @@ Spicy Lyrics is either not installed or hasn't loaded yet. Install the extension
 
 ## Compatibility
 
-Built on macOS with Spotify 1.3.6.1921 and Spicetify 2.46.2. The install scripts work on macOS, Linux and Windows, but the theme has been tested most on macOS. Spotify UI updates may require adjustments; if you run into a problem, please [open an issue](https://github.com/bulutakbulutt/mcloud/issues) with your Spotify and Spicetify versions.
+Built on macOS with Spotify 1.3.6.1921 and Spicetify 2.46.2. The install scripts work on macOS, Linux and Windows, but the theme has been tested most on macOS. Spotify UI updates may require adjustments; if you run into a problem, please [open an issue](https://github.com/mcloudHQ/mcloud/issues) with your Spotify and Spicetify versions.
 
 ## License
 

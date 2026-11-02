@@ -14,7 +14,7 @@ mcloud is distributed as a client-side Spicetify theme directly from the `main` 
 If you discover a security vulnerability within mcloud, please do not open a public issue.
 
 Instead, please report it privately:
-- Through GitHub's [Private Vulnerability Reporting](https://github.com/bulutakbulutt/mcloud/security/advisories/new) feature on this repository.
+- Through GitHub's [Private Vulnerability Reporting](https://github.com/mcloudHQ/mcloud/security/advisories/new) feature on this repository.
 - Or by reaching out directly to the repository maintainers.
 
 We appreciate responsible disclosure and will address verified vulnerabilities promptly.

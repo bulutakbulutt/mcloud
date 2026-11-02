@@ -1,15 +1,15 @@
 #!/bin/sh
 # mcloud — macOS ve Linux için tek komutla kurulum.
 #
-#   curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.sh | sh
-#   curl -fsSL https://raw.githubusercontent.com/bulutakbulutt/mcloud/main/install.sh | sh -s -- --uninstall
+#   curl -fsSL https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/mcloudHQ/mcloud/main/install.sh | sh -s -- --uninstall
 #
 # Yalnızca temayı kurar; Spicetify'ın önceden kurulu olması gerekir. Tema
 # dosyalarını Spicetify'ın Themes klasörüne indirir, temayı seçer ve uygular.
 # Tekrar çalıştırmak temayı günceller.
 set -eu
 
-REPO="${MCLOUD_REPO:-bulutakbulutt/mcloud}"
+REPO="${MCLOUD_REPO:-mcloudHQ/mcloud}"
 REF="${MCLOUD_REF:-main}"
 THEME="AppleMusicMac"
 SCHEME="Dark"
