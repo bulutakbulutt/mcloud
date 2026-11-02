@@ -160,14 +160,21 @@ try {
     // The list starts under the header, so its top padding is the fade and not a gap below the tabs.
     assert.equal(await page.evaluate(() => Math.round(document.querySelector('[data-testid="mock-panel-list"]').getBoundingClientRect().top - document.querySelector('[data-testid="mock-panel-header"]').getBoundingClientRect().bottom)), -16);
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.am-native-panel-open [data-am-fill]')].map(e => getComputedStyle(e).backgroundColor).filter(c => c !== 'rgba(0, 0, 0, 0)')), [], 'panel holder paints over the glass');
-    // Apple's panel: 64% #2f2f2f over the page, flat artwork, a hairline between rows (not above the first).
+    // Apple's panel: 64% #2f2f2f over the page, on a layer behind the feed (on the sheet, every hovered row re-ran the
+    // blur), flat artwork, a hairline between rows (not above the first) in either list shape, no grey on hover.
     assert.deepEqual(await page.evaluate(() => {
-      const row = '<li role="row"><div data-encore-id="listRow"><div class="e-10860-legacy-list-row__header-side"><div style="box-shadow:0 4px 60px #0008"><img alt=""></div></div></div></li>';
-      document.querySelector('[data-testid="mock-panel-list"] ul').insertAdjacentHTML('beforeend', row + row);
-      const rows = document.querySelectorAll('[data-testid="mock-panel-list"] li[role="row"]'), line = getComputedStyle(rows[1], '::before');
-      const out = [getComputedStyle(document.querySelector('.am-native-panel-open')).backgroundColor, getComputedStyle(rows[0].querySelector('img').parentElement).boxShadow, getComputedStyle(rows[0], '::before').content, line.height, line.backgroundColor];
+      const row = '<li role="row"><div data-encore-id="listRow" class="mock-hover-row"><div class="e-10860-legacy-list-row__header-side"><div style="box-shadow:0 4px 60px #0008"><img alt=""></div></div></div></li>';
+      const ul = document.querySelector('[data-testid="mock-panel-list"] ul');
+      ul.insertAdjacentHTML('beforeend', row + row);
+      ul.insertAdjacentHTML('afterend', `<ul role="treegrid" id="mock-queue"><div><div>${row}</div></div><div><div>${row}</div></div></ul><style id="mock-hover">.mock-hover-row::after{content:"";background:#f2f2f2}</style>`);
+      const rows = ul.querySelectorAll('li[role="row"]'), queue = document.querySelectorAll('#mock-queue li[role="row"]'), line = getComputedStyle(rows[1], '::before');
+      const sheet = document.querySelector('.am-native-panel-open'), glass = getComputedStyle(sheet, '::before');
+      const out = [getComputedStyle(sheet).backgroundColor, getComputedStyle(sheet).backdropFilter, glass.backgroundColor, glass.backdropFilter, getComputedStyle(rows[0].querySelector('img').parentElement).boxShadow, getComputedStyle(rows[0], '::before').content, line.height, line.backgroundColor, getComputedStyle(queue[0], '::before').content, getComputedStyle(queue[1], '::before').height];
       rows.forEach(r => r.remove()); return out;
-    }), ['color(srgb 0.184314 0.184314 0.184314 / 0.64)', 'none', 'none', '1px', 'rgba(255, 255, 255, 0.1)']);
+    }), ['rgba(0, 0, 0, 0)', 'none', 'color(srgb 0.184314 0.184314 0.184314 / 0.64)', 'blur(20px) saturate(1.6)', 'none', 'none', '1px', 'rgba(255, 255, 255, 0.1)', 'none', '1px']);
+    await page.hover('#mock-queue li');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-queue .mock-hover-row'), '::after').backgroundColor), 'rgba(0, 0, 0, 0)', 'grey under the pointer');
+    await page.evaluate(() => document.querySelectorAll('#mock-queue,#mock-hover').forEach(e => e.remove()));
     // Mid cross-fade the outgoing Now Playing view is still mounted; only the feed may show.
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('[data-testid="mock-npv"]')).display), 'none', 'Now Playing view shows in the sheet');
     await page.click(friends);
