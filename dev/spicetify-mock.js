@@ -88,7 +88,9 @@
   const solid = hex => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${hex}"/></svg>`);
   const albumArtist = (id, name) => ({ uri: 'spotify:artist:' + id, profile: { name } });
   window.__mockAlbums = {
-    0: { __typename: 'Album', name: 'Blonde', uri: 'spotify:album:0', artists: { items: [albumArtist('frank', 'Frank Ocean')] }, coverArt: { sources: [{ url: solid('#2a7fd4'), width: 64, height: 64 }] } },
+    // Three tracks, 62 minutes in all: the list line under the tracks reads "3 şarkı, 1 saat, 2 dakika" (#97).
+    0: { __typename: 'Album', name: 'Blonde', uri: 'spotify:album:0', artists: { items: [albumArtist('frank', 'Frank Ocean')] }, coverArt: { sources: [{ url: solid('#2a7fd4'), width: 64, height: 64 }] },
+      tracksV2: { totalCount: 3, items: [1200000, 1500000, 1025000].map(ms => ({ track: { duration: { totalMilliseconds: ms } } })) } },
     1: { __typename: 'Album', name: 'Watch the Throne', uri: 'spotify:album:1', artists: { items: [albumArtist('jay', 'JAY-Z'), albumArtist('kanye', 'Kanye West')] }, coverArt: { sources: [{ url: solid('#c8a040'), width: 64, height: 64 }] } },
   };
   window.__mockArtist = {
@@ -117,7 +119,7 @@
     },
   };
   if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
-  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
+  Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs', save_to_your_library: 'Save to Your Library', remove_from_your_library: 'Remove from Your Library' })[key] ?? key };
   Spicetify.GraphQL = {
     Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
     // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id. The mix
@@ -142,8 +144,9 @@
     getIsPinned: async (...uris) => uris.map(u => !!library.find(i => i.uri === u)?.pinned),
   });
   // Your own playlists can be deleted and shown on your profile (the first one is); a playlist in window.__followed is only saved.
+  // window.__mockPlaylistMeta adds fields by uri (length, cover: totalLength, duration, images).
   Object.assign(Spicetify.Platform.PlaylistAPI, {
-    getMetadata: async uri => { await new Promise(r => setTimeout(r, window.__apiDelay || 0)); const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', description: '', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own, canEditMetadata: own, permissions: { canAdministratePermissions: own, isPrivate: false } }; },
+    getMetadata: async uri => { await new Promise(r => setTimeout(r, window.__apiDelay || 0)); const own = !(window.__followed || []).includes(uri); return { uri, name: document.querySelector(`[data-uri="${uri}"]`)?.title || 'Liste', description: '', isOwnedBySelf: own, isSaved: true, isPublished: /:0$/.test(uri), canRemove: own, canEditMetadata: own, permissions: { canAdministratePermissions: own, isPrivate: false }, ...(window.__mockPlaylistMeta || {})[uri] }; },
     updateDetails: async (uri, details) => { (window.__details ||= []).push({ uri, ...details }); },
     remove: async (uri, items) => { (window.__playlistRemoves ||= []).push({ uri, items }); },
   });

@@ -3547,54 +3547,104 @@
     if(typeof setSetting==='function')return setSetting(key,value);
     settings[key]=value;saveSettings();ownSettings.find(def=>def.key===key)?.apply?.(value);applySettings();
   }
-  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
+  const albumId=()=>/^\/album\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'',playlistId=()=>/^\/playlist\/([A-Za-z0-9]+)/.exec(routePath())?.[1]||'';
   // Track numbers are set apart for albums (numbersAlbum) and every other list (numbers): body.am-no-numbers follows
   // the page. Someone who had hid them keeps them hidden on albums too.
   try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}');if(saved.numbers===false&&!('numbersAlbum' in saved))settings.numbersAlbum=false;}catch{}
   const numbersKey=()=>albumId()?'numbersAlbum':'numbers';
   function syncNumbers(){document.body.classList.toggle('am-no-numbers',!settings[numbersKey()]);}
   document.addEventListener('am-settings',syncNumbers);H.listen(syncNumbers);
-  // An album's artists and artwork colour, from Spotify's own album query (one per album, kept for the session).
+  // An album's artists, artwork colour and length, from Spotify's own album query (one per album, kept for the session).
   // The artist rule is a stylesheet keyed on the artists' ids, so React re-rendering rows needs no work here.
   const albumInfo=new Map(),albumStyle=el('style','');albumStyle.id='am-album-style';document.head.append(albumStyle);
+  const playlistColors=new Map();
   let albumRequest=0;
+  // Under the track list, as in Apple Music: "18 songs, 1 hour, 8 minutes" (a playlist counts items). user.css draws it
+  // from --am-list-info and hides Spotify's count in the header while it is set (#97).
+  function listInfo(count,ms,items) {
+    const locale=lang==='tr'?'tr':'en',unit=(name,n)=>new Intl.NumberFormat(locale,{style:'unit',unit:name,unitDisplay:'long'}).format(n);
+    const n=count.toLocaleString(locale),minutes=Math.floor(ms/60000),hours=Math.floor(minutes/60),parts=[items?T(n+' öğe',count===1?'1 item':n+' items'):T(n+' şarkı',count===1?'1 song':n+' songs')];
+    if(ms>0){if(hours)parts.push(unit('hour',hours));if(minutes%60||!hours)parts.push(unit('minute',minutes%60));}
+    return parts.join(', ');
+  }
+  function setListInfo(text) {
+    const root=document.documentElement.style;
+    if(text)root.setProperty('--am-list-info',JSON.stringify(text));else root.removeProperty('--am-list-info');
+    document.body.classList.toggle('am-list-info',!!text);
+  }
   async function albumData(id) {
     if(albumInfo.has(id))return albumInfo.get(id);
     let info=null;
     try{
-      const album=(await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:1}))?.data?.albumUnion;
-      if(album?.name)info={artists:(album.artists?.items||[]).map(a=>/[A-Za-z0-9]+$/.exec(a.uri||'')?.[0]).filter(Boolean),cover:smallImage(album.coverArt)};
+      const album=(await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:300}))?.data?.albumUnion;
+      if(album?.name){
+        const tracks=album.tracksV2?.items||[],count=album.tracksV2?.totalCount??tracks.length;
+        // The length only when every track came back (albums of more than 300 show their count alone).
+        const ms=tracks.length===count?tracks.reduce((sum,item)=>sum+(item?.track?.duration?.totalMilliseconds||0),0):0;
+        info={artists:(album.artists?.items||[]).map(a=>/[A-Za-z0-9]+$/.exec(a.uri||'')?.[0]).filter(Boolean),cover:smallImage(album.coverArt),list:count?listInfo(count,ms):''};
+      }
     }catch{}
     if(info){if(albumInfo.size>50)albumInfo.delete(albumInfo.keys().next().value);albumInfo.set(id,info);}
     return info;
   }
-  async function syncAlbum() {
-    const id=albumId(),request=++albumRequest,tint=settings.albumTint!=='off',body=document.body.classList;
-    if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum||!settings.albumClean&&!tint){albumStyle.textContent='';body.remove('am-album-tinted');return;}
-    const cached=albumInfo.get(id);if(!cached?.color)body.remove('am-album-tinted');
-    const info=cached||await albumData(id);
-    if(request!==albumRequest)return;
-    if(!info){albumStyle.textContent='';return;}
-    const sub='.main-trackList-rowMainContent > :last-child';
-    albumStyle.textContent=settings.albumClean&&info.artists.length?`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')})) ${sub}{display:none!important}`:'';
-    if(!tint)return;
-    if(info.color===undefined)info.color=await artworkColor(info.cover);
-    if(request!==albumRequest)return;
-    const hsl=hexToHsl(info.color);if(!hsl)return;
+  // Albums and playlists (#97) take their colour level from albumTint; other pages have none.
+  const albumTints=['off','subtle','full'];
+  function tintLevel() {
+    const level=albumId()||playlistId()?settings.albumTint:'off';
+    for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===level);
+    return level;
+  }
+  function pageTint(hex) {
+    const hsl=hexToHsl(hex);if(!hsl)return;
     // A grey cover keeps a grey page (see setTint); other colours are kept clear of muddy and neon extremes.
     const [h,s,l]=hsl,sat=Math.round((s<.1?s:Math.min(.8,Math.max(.35,s)))*100),light=Math.round(Math.min(.55,Math.max(.32,l))*100);
     document.documentElement.style.setProperty('--am-album-tint',`hsl(${Math.round(h)} ${sat}% ${light}%)`);
-    body.add('am-album-tinted');
+    document.body.classList.add('am-album-tinted');
+  }
+  async function syncAlbum() {
+    const id=albumId(),playlist=playlistId(),request=++albumRequest,tint=tintLevel()!=='off',body=document.body.classList;
+    if(playlist)return syncPlaylist(playlist,request,tint);
+    if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum){albumStyle.textContent='';body.remove('am-album-tinted');setListInfo('');return;}
+    const cached=albumInfo.get(id);if(!tint||!cached?.color)body.remove('am-album-tinted');
+    setListInfo(cached?.list);
+    const info=cached||await albumData(id);
+    if(request!==albumRequest)return;
+    if(!info){albumStyle.textContent='';return;}
+    setListInfo(info.list);
+    const sub='.main-trackList-rowMainContent > :last-child';
+    // Without its artist line a row's title sits in the middle, so its number is centred too (Spotify lifts it 4px to
+    // meet a title on the top line; #93).
+    const own=`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')}))`;
+    albumStyle.textContent=settings.albumClean&&info.artists.length?`${own} ${sub}{display:none!important}${own} .main-trackList-rowMarker > span{top:50%!important;translate:0 -50%}`:'';
+    if(!tint)return;
+    if(info.color===undefined)info.color=await artworkColor(info.cover);
+    if(request===albumRequest)pageTint(info.color);
+  }
+  // Playlists: length from PlaylistAPI's metadata (asked again on each visit, as the list can change), colour from the cover.
+  async function syncPlaylist(id,request,tint) {
+    const body=document.body.classList;albumStyle.textContent='';
+    let meta=null;try{meta=await S.Platform.PlaylistAPI?.getMetadata?.('spotify:playlist:'+id);}catch{}
+    if(request!==albumRequest)return;
+    setListInfo(Number.isFinite(meta?.totalLength)&&meta.totalLength>0?listInfo(meta.totalLength,meta.duration?.milliseconds||0,true):'');
+    const images=meta?.images||[],cover=(images.find(image=>image.label==='standard')||images[0])?.url;
+    if(!tint||!cover){body.remove('am-album-tinted');return;}
+    if(!playlistColors.has(cover)){body.remove('am-album-tinted');if(playlistColors.size>50)playlistColors.delete(playlistColors.keys().next().value);playlistColors.set(cover,await artworkColor(spotifyImage(cover)));}
+    if(request===albumRequest)pageTint(playlistColors.get(cover));
   }
   H.listen(syncAlbum);
+  // Spotify's save buttons are Apple's star (#97): outlined, filled once saved. A row's has the row's only aria-checked
+  // (user.css); the page's shares aria-checked with Download, so it is matched by Spotify's own labels for it.
+  const starStyle=el('style','');starStyle.id='am-star-style';document.head.append(starStyle);
+  const saveLabels=['save_to_your_library','remove_from_your_library'].map(key=>S.Locale?.get?.(key)).filter(label=>label&&!/^[a-z_.-]+$/.test(label));
+  if(!saveLabels.length)saveLabels.push('Save to Your Library','Remove from Your Library');
+  const saveButton=`.am-native-main [data-testid="action-bar-row"] button:is(${saveLabels.map(label=>`[aria-label=${JSON.stringify(label)}]`).join(',')}):not(#am-none)`;
+  starStyle.textContent=`${saveButton}{color:var(--am-star-color,var(--am-accent))!important}${saveButton} svg{background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}${saveButton} svg path{display:none}${saveButton}[aria-checked="true"] svg{-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}`;
   pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
   // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
   pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
-  // Album pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
-  const albumTints=['off','subtle','full'];
-  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm rengi','Album colour'),type:'choice',style:'segmented',default:'off',
-    options:[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]],
-    apply:value=>{for(const tint of albumTints)document.body.classList.toggle('am-album-tint-'+tint,tint===value);syncAlbum();}});
+  // Album and playlist pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
+  const tintOptions=[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]];
+  pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm ve çalma listesi rengi','Album and playlist colour'),type:'choice',style:'segmented',default:'off',options:tintOptions,apply:syncAlbum});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
   // placed first, as the column is. The same switch sits under mcloud for builds where the menu differs.
