@@ -2777,10 +2777,13 @@
   // Browse all (Search's category tiles, what the sidebar's Browse opens) is Apple Music's Browse Categories in user.css.
   // Browse all's pictures as Apple's duotones. Measured on Apple Music's tiles (macOS 27, focused, identical in light
   // and dark): each pixel is the tile's colour times the photo's grey (the three channels scale alike), so the photo's
-  // whites are the tile colour and its blacks near black (5-25% of it). Spotify's covers are darker and busier than
-  // Apple's cut-outs, so their grey is stretched first (2nd to 98th percentile to a 10-100% range; a flat picture is
-  // left as it is) and every tile spans the same range Apple's do. Drawn once per cover and colour into a blob at the tile's device size, shown while the
-  // tile is near the viewport and released (revoked) when it leaves; nothing is filtered or blended while scrolling.
+  // whites are the tile colour and its blacks near black (5-25% of it). Apple's cut-outs are mostly bright: a tile
+  // averages 0.79-0.96 of its colour's luminance, median 1. Spotify's covers are darker and carry big titles, so their
+  // grey is stretched (2nd to 98th percentile; a flat picture is left as it is), lifted by the gamma that brings the
+  // tile's mean to 0.85, and its contrast softened so the darkest part is 25% of the colour (titles recede). The
+  // highlights stay exactly the tile colour. Drawn once per cover and colour into a blob at the tile's device size,
+  // shown while the tile is near the viewport and released (revoked) when it leaves; nothing is filtered or blended
+  // while scrolling.
   const duoCache=new Map(),duoTiles=new Map();let duoGrid=null,duoTimer=0;
   const duoAdded=new MutationObserver(()=>syncBrowse());
   const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
@@ -2796,7 +2799,10 @@
         const data=context.getImageData(0,0,w,h),p=data.data,grey=new Uint8Array(p.length/4),hist=new Uint32Array(256);
         for(let i=0,j=0;i<p.length;i+=4,j++){const g=Math.round(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);grey[j]=g;hist[g]++;}
         const at=f=>{let n=0,k=0;for(;k<255&&n+hist[k]<=grey.length*f;k++)n+=hist[k];return k;},[lo,hi]=at(.98)-at(.02)<32?[0,255]:[at(.02),at(.98)];
-        const c=color.match(/[\d.]+/g).slice(0,3).map(Number),lut=Array.from({length:256},(_,g)=>.1+.9*Math.min(1,Math.max(0,(g-lo)/(hi-lo))));
+        const x=g=>Math.min(1,Math.max(0,(g-lo)/(hi-lo))),tone=(g,gamma)=>.25+.75*x(g)**gamma;
+        const mean=gamma=>{let s=0;for(let g=0;g<256;g++)s+=hist[g]*tone(g,gamma);return s/grey.length;};
+        let gamma=1;if(mean(1)<.85){let a=.1,b=1;for(let i=0;i<16;i++){const m=(a+b)/2;if(mean(m)>.85)a=m;else b=m;}gamma=(a+b)/2;}
+        const c=color.match(/[\d.]+/g).slice(0,3).map(Number),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
         for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
         context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
       }catch{resolve(null);}};
