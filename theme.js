@@ -142,6 +142,15 @@
   // 152 -> 118, 184-216 -> 148. The dark end keeps the lab NSMenu fit (REPORT.md §12: 0 -> 32, 31 -> 57); the middle is
   // ~15 levels darker than that fit (95 -> 105, 127 -> 122 there), the bright end the same (~148).
   const menuTonePoints=[[0,32],[31,57],[63,79],[95,90],[127,105],[159,128],[191,146],[223,148],[255,150]];
+  // The menu's tone as filter primitives (marked data-am-tone, so light mode can swap them): luminance through pts.
+  function menuToneMarkup(pts){
+      const k=[.2126,.7152,.0722],g=1.05;
+      const T=L=>{let i=0;while(i<pts.length-2&&L>pts[i+1][0])i++;const [a,ta]=pts[i],[b,tb]=pts[i+1];return ta+(tb-ta)*(L-a)/(b-a);};
+      const U=Array.from({length:65},(_,i)=>{const L=Math.max(0,i/32-1)*255;return (T(L)-L)/255;}),lo=Math.min(...U),s=Math.max(...U)-lo,f=v=>v.toFixed(4);
+      const row=c=>k.map((v,j)=>f((j===c?g:0)+(1-g)*v)).join(' ')+' 0 0',add=` ${f(2*s)} ${f(lo-s)}`,floor=`type="table" tableValues="${[32/255,32/255,.25,.375,.5,.625,.75,.875,1].map(f).join(' ')}"`;
+      return `<feColorMatrix data-am-tone="" values="${row(0)} ${row(1)} ${row(2)} ${k.map(v=>f(v/2)).join(' ')} 0 .5"/><feComponentTransfer data-am-tone=""><feFuncA type="table" tableValues="${U.map(u=>f(.5+.5*(u-lo)/s)).join(' ')}"/></feComponentTransfer>`
+        +`<feColorMatrix data-am-tone="" values="1 0 0${add} 0 1 0${add} 0 0 1${add} 0 0 0 0 1"/><feComponentTransfer data-am-tone=""><feFuncR ${floor}/><feFuncG ${floor}/><feFuncB ${floor}/></feComponentTransfer>`;
+  }
   const glassModes=['full','balanced','eco'],reducedTransparency=matchMedia('(prefers-reduced-transparency: reduce)');reducedTransparency.addEventListener?.('change',applySettings);
   applySettings();
   const accentListeners=[];
@@ -162,8 +171,7 @@
   // artist page ~110); a song's menu 170 + .34 L (over white 253, over its queue panel 240, darker artwork 197-218).
   // Light mode maps each filter's dark tone onto these.
   const lightTones={glass:[108,126,144,162,180,197,215,233,251],menu:[170,181,192,203,214,225,236,246,253]};
-  const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185],
-    menu:menuTonePoints.map(([,t])=>t)};
+  const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]};
   // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
   // out = light(dark⁻¹(in)), straight lines past either end.
   const schemeTable=(dark,light)=>{
@@ -178,10 +186,15 @@
   const lightSearchTone=t=>{const k=[.2126,.7152,.0722],a=t[0]/255,b=(t[t.length-1]-t[0])/255,g=.6;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';};
   function applyGlassScheme(){
     const light=isLight();
-    const tables={glass:light&&schemeTable(darkTones.glass,lightTones.glass),
-      menu:light&&schemeTable(darkTones.menu,lightTones.menu)};
-    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"],filter[id^="am-menu-glass-"]')){
-      const table=tables[f.id.startsWith('am-menu-glass-')?'menu':'glass'];let step=f.querySelector(':scope > [data-am-scheme]');
+    const tables={glass:light&&schemeTable(darkTones.glass,lightTones.glass)};
+    const mode=light?'light':'dark';
+    for(const f of document.querySelectorAll('filter[id^="am-menu-glass-"]')){
+      if(f.dataset.amTone===mode)continue;f.dataset.amTone=mode;
+      f.querySelectorAll(':scope > [data-am-tone],:scope > [data-am-scheme]').forEach(n=>n.remove());
+      f.insertAdjacentHTML('beforeend',menuToneMarkup(light?lightTones.menu.map((t,i)=>[Math.min(255,i*32),t]):menuTonePoints));
+    }
+    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
+      const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
       if(!table){step?.remove();continue;}
       if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
         for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}f.append(step);}
@@ -1112,14 +1125,7 @@
     // Apple's menu tone (menuTonePoints, by luminance), the colour around it kept (x1.05), no channel under 32. Colour steps only, which Skia folds
     // into one pass reading the bent page once: luminance rides in alpha as L/2 + 1/2 through the table (a colour stored
     // premultiplied by an alpha near 0 would be lost) and is added back. 4.2 from Apple over 16 surfaces, the CSS fill 19.6.
-    const tone=(()=>{
-      const pts=menuTonePoints,k=[.2126,.7152,.0722],g=1.05;
-      const T=L=>{let i=0;while(i<pts.length-2&&L>pts[i+1][0])i++;const [a,ta]=pts[i],[b,tb]=pts[i+1];return ta+(tb-ta)*(L-a)/(b-a);};
-      const U=Array.from({length:65},(_,i)=>{const L=Math.max(0,i/32-1)*255;return (T(L)-L)/255;}),lo=Math.min(...U),s=Math.max(...U)-lo,f=v=>v.toFixed(4);
-      const row=c=>k.map((v,j)=>f((j===c?g:0)+(1-g)*v)).join(' ')+' 0 0',add=` ${f(2*s)} ${f(lo-s)}`,floor=`type="table" tableValues="${[32/255,32/255,.25,.375,.5,.625,.75,.875,1].map(f).join(' ')}"`;
-      return `<feColorMatrix values="${row(0)} ${row(1)} ${row(2)} ${k.map(v=>f(v/2)).join(' ')} 0 .5"/><feComponentTransfer><feFuncA type="table" tableValues="${U.map(u=>f(.5+.5*(u-lo)/s)).join(' ')}"/></feComponentTransfer>`
-        +`<feColorMatrix values="1 0 0${add} 0 1 0${add} 0 0 1${add} 0 0 0 0 1"/><feComponentTransfer><feFuncR ${floor}/><feFuncG ${floor}/><feFuncB ${floor}/></feComponentTransfer>`;
-    })();
+    const tone=menuToneMarkup(menuTonePoints);
     // The pieces of a box 2C + 1 device pixel wide and high: its corners and the single pixels between them.
     const pieces=(k,C)=>{
       const key=k+'/'+C;if(drawn.has(key))return drawn.get(key);

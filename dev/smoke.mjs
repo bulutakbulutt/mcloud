@@ -1217,7 +1217,8 @@ try {
     assert.deepEqual([light.light, light.bg, light.row, light.ink, light.accent, light.scheme, light.spice], [true, 'rgb(255, 255, 255)', 'rgb(29, 29, 31)', 'rgba(0, 0, 0, 0.36)', '#0088ff', 'light', '#fff']);
     // Every glass filter (toast, menus, player and toolbar tone layers) carries the light tone step.
     assert.ok(light.steps >= 9, 'glass filters take the light tone: ' + light.steps);
-    assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not(:has([data-am-scheme]))').length), 0);
+    // Menus take their own light tone (their filter's tone primitives are swapped, not mapped).
+    assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not([data-am-tone="light"])').length), 0);
     assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
     // The artist page keeps its dark artist colours in light mode, as Music does; the submenu holds only the appearance.
