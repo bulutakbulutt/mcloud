@@ -12,7 +12,7 @@
    quaternary .098, fills .098/.078/.047; NSColor resolved under NSAppearance aqua and darkAqua), only the ink flips.
    --am-rim stays white: glass rims are bright in both. .am-scheme-dark keeps a region dark in light mode (the About
    sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
-:root,.am-scheme-dark,#am-artist-info,body.am-artist-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
+:root,.am-scheme-dark,#am-artist-info,body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
  color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
  --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:#dedede; --am-sub:#969696; --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
  --am-label:#f2f2f2; --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
@@ -883,8 +883,8 @@ body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:non
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode (artistLight
    'light') the colour is a pale page with deep text (theme.js setTint); with 'dark' the page, sidebar and player keep
-   the dark artist colours (.am-artist-dark, the dark tokens above). */
-body.am-light:not(.am-artist-dark) {--am-tint-top:var(--am-tint-top-light,#ececec);--am-tint-bg:var(--am-tint-bg-light,var(--am-bg));--am-tint-text:var(--am-tint-text-light,var(--am-sub))}
+   the dark artist colours (.am-artist-stays-dark, the dark tokens above). */
+body.am-light:not(.am-artist-stays-dark) {--am-tint-top:var(--am-tint-top-light,#ececec);--am-tint-bg:var(--am-tint-bg-light,var(--am-bg));--am-tint-text:var(--am-tint-text-light,var(--am-sub))}
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
 body.am-tinted .am-nav-heading {color:rgb(var(--am-ink)/.451)}
 /* Over an artist's colour Apple Music's sidebar is a dark material that lets ~15% of the page through: about half the

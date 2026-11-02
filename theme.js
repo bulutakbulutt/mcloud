@@ -198,7 +198,7 @@
   function applyAppearance(){
     const light=isLight(),root=document.documentElement;
     root.classList.toggle('am-light',light);document.body.classList.toggle('am-light',light);
-    document.body.classList.toggle('am-artist-dark',light&&settings.artistLight==='dark');
+    document.body.classList.toggle('am-artist-stays-dark',light&&settings.artistLight==='dark');
     const [,dark,darkFocus]=accents[settings.accent]||accents.red,accent=light?lightAccents[settings.accent]||lightAccents.red:dark;
     root.style.setProperty('--am-accent',accent);root.style.setProperty('--am-accent-focus',light?`color-mix(in srgb,${accent} 86%,#000)`:darkFocus);
     applyGlassScheme();

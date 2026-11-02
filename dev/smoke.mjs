@@ -1222,7 +1222,7 @@ try {
     shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
     // The artist page can keep its dark artist colours in light mode.
     await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi)');
-    assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-dark')));
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-stays-dark')));
     await pick('Açık modda sanatçı sayfası: Açık');
     // System: follows prefers-color-scheme as it changes.
     await page.emulateMedia({ colorScheme: 'dark' });
