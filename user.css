@@ -40,7 +40,7 @@
  --am-field:#fff; --am-field-2:#fff; --am-art-empty:#ececec; --am-tint-floor:#f2f2f2;
  --am-bar-glass:color-mix(in srgb,#f3f3f3 81%,transparent);
  --am-sidebar-fill:color-mix(in srgb,#e2e2e2 61%,transparent); --am-sidebar-lite:color-mix(in srgb,#e2e2e2 70%,transparent); --am-sidebar-solid:#eeedec;
- --am-panel-fill:color-mix(in srgb,#e2e2e2 61%,transparent); --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#eeedec;
+ --am-panel-fill:color-mix(in srgb,#e7e7e7 64%,transparent); --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#eeedec;
  --am-player-fill:color-mix(in srgb,#f5f5f5 44%,transparent); --am-solid-fill:linear-gradient(180deg,#fdfdfd,#ececec); --am-toast-fill:#f6f6f6eb;
  --am-toolbar-glass:color-mix(in srgb,#f5f5f5 44%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
  --am-toolbar-shade:linear-gradient(180deg,#ffffff40,#ffffff14 60%,#fff0);
