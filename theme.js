@@ -886,8 +886,7 @@
     }
   }
   const extras=el('div','am-player-extras');player.append(extras);
-  // With the Now Playing pane beside the player, the lyrics button can open the pane's lyrics instead (npPlayerLyrics).
-  const lyricsButton=button(T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'),'lyrics',()=>npOwnsLyricsButton()?npPlayerLyrics():settings.nowPlaying==='beside'?openLyricsPage(true):toggleSpicyLyrics());
+  const lyricsButton=button(T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'),'lyrics',toggleSpicyLyrics);
   lyricsButton.id='am-lyrics-toggle';
   const popupLyricsButton=button(T('Spicy Lyrics açılır pencere','Spicy Lyrics popup'),'popup',()=>runSpicyControl('SpicyLyrics_PopupLyricsButton'));popupLyricsButton.hidden=true;
   // Spotify Connect opens its device list in the right panel, shown as the same glass sheet as the queue.
@@ -2005,10 +2004,9 @@
     document.body.classList.toggle('am-spicy-route',lyricsOpen);
     const available=!!document.getElementById('SpicyLyrics_PageButton');
     popupLyricsButton.hidden=!document.getElementById('SpicyLyrics_PopupLyricsButton');
-    if(npOwnsLyricsButton()){npSyncLyricsButton();}else{
-    lyricsButton.classList.toggle('am-active',lyricsOpen);setAttributeIfChanged(lyricsButton,'aria-label',T('Spicy Lyrics sözlerini aç / kapat','Show / hide Spicy Lyrics'));
+    lyricsButton.classList.toggle('am-active',lyricsOpen);
     setAttributeIfChanged(lyricsButton,'aria-pressed',String(lyricsOpen));
-    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?T('Spicy Lyrics sözlerini kapat','Hide Spicy Lyrics'):T('Spicy Lyrics sözlerini aç','Show Spicy Lyrics')):T('Spicy Lyrics yükleniyor…','Spicy Lyrics is loading…'));}
+    setAttributeIfChanged(lyricsButton,'title',available?(lyricsOpen?T('Spicy Lyrics sözlerini kapat','Hide Spicy Lyrics'):T('Spicy Lyrics sözlerini aç','Show Spicy Lyrics')):T('Spicy Lyrics yükleniyor…','Spicy Lyrics is loading…'));
     fullscreenButton.classList.toggle('am-active',fullscreen);
     setAttributeIfChanged(fullscreenButton,'aria-pressed',String(fullscreen));
     setAttributeIfChanged(fullscreenButton,'title',fullscreen?T('Tam ekrandan çık','Exit Full Screen'):T('Tam ekran','Full Screen'));
@@ -2074,29 +2072,23 @@
   // The pane's lyrics button: the lyrics view on and off, or (lyrics under the artwork) back to the line being sung.
   const npLyricsButton=button(T('Sözler','Lyrics'),'lyrics',()=>settings.npLyricsPlace==='below'?npJumpLyrics(true):npShowLyrics(!np.classList.contains('am-np-lyrics-on')),'am-np-lyrics-toggle');
   // Full lyrics: Spicy Lyrics' page through its own button, or Spotify's lyrics page without it.
-  const npFullLyrics=button(T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'),'expand',()=>openLyricsPage(false),'am-np-full-lyrics');
-  // Beside the player the pane closes itself; it comes back from the player's lyrics button or its "…" menu.
+  const npFullLyrics=button(T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'),'expand',()=>openLyricsPage(),'am-np-full-lyrics');
+  // Beside the player the pane closes itself; it comes back from the player's Now Playing button or its "…" menu.
   const npClose=button(T('Şimdi Çalan\'ı kapat','Close Now Playing'),'close',()=>npSet('npOpen',false),'am-np-close');
   npActions.append(npLyricsButton,npFullLyrics);np.append(npClose);
   npBody.append(npArt,npMeta,npLyricsBox,npControls,npActions);np.append(npBg,npBleed,npBody);document.body.append(np);
   np.addEventListener('contextmenu',event=>{if(popover.contains(event.target)||!S.Player.data?.item?.uri)return;event.preventDefault();openTrackMenu({x:event.clientX,y:event.clientY});});
-  // In 'beside' mode the player's lyrics button opens and closes the pane with its lyrics, as Apple Music's opens the
-  // lyrics pane on the Mac; there is no separate pane button. With the pane off it keeps driving Spicy Lyrics.
-  function npPlayerLyrics() {
-    const open=!settings.npOpen;
-    if(open&&settings.npLyricsPlace==='button')np.classList.add('am-np-lyrics-on');
-    npSet('npOpen',open);if(open)npJumpLyrics();
-  }
-  // The lyrics button setting: 'panel' (it opens the pane, as Music's does) or 'page' (what it opened before the pane:
-  // Spicy Lyrics, or Spotify's lyrics page). Only beside the player; with the pane off it is untouched.
-  function npOwnsLyricsButton() { return settings.nowPlaying==='beside'&&settings.lyricsButton!=='page'; }
-  // Opens the full lyrics page, never closes it (toggle: the player's button in 'page' mode closes it again, as before).
-  function openLyricsPage(toggle) {
+  // The player's Now Playing button opens and closes the pane beside the player (shown while the pane is on; the settings
+  // window's button picker can hide it, and the player's "…" menu does the same).
+  const npToggle=button(T('Şimdi Çalan','Now Playing'),'nowPlaying',()=>npSet('npOpen',!settings.npOpen),'am-np-toggle');
+  npToggle.hidden=true;npToggle.dataset.amButton='nowplaying';npToggle.dataset.amLabel=T('Şimdi Çalan','Now Playing');lyricsButton.after(npToggle);
+  // Opens the full lyrics page (Spicy Lyrics through its own button, else Spotify's), never closes it.
+  function openLyricsPage() {
     const spicy=document.getElementById('SpicyLyrics_PageButton');
-    if(spicy){if(toggle||routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
+    if(spicy){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
     const native=document.querySelector('[data-testid="lyrics-button"]');
     if(!native){notify(T('Sözler bu Spotify sürümünde kullanılamıyor.','Lyrics aren\'t available in this version of Spotify.'));return;}
-    if(toggle||routePath()!=='/lyrics')native.click();
+    if(routePath()!=='/lyrics')native.click();
   }
   function npSyncFullLyrics() {
     const spicy=!!document.getElementById('SpicyLyrics_PageButton'),label=spicy?T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'):T('Tam sözler','Full lyrics');
@@ -2107,12 +2099,7 @@
     if(settings.nowPlaying!=='beside')return [];
     return [{label:settings.npOpen?T('Şimdi Çalan\'ı Gizle','Hide Now Playing'):T('Şimdi Çalan\'ı Göster','Show Now Playing'),action:()=>npSet('npOpen',!settings.npOpen)}];
   }
-  function npSyncLyricsButton() {
-    const open=settings.nowPlaying==='beside'&&!!settings.npOpen;
-    lyricsButton.classList.toggle('am-active',open);setAttributeIfChanged(lyricsButton,'aria-pressed',String(open));
-    setAttributeIfChanged(lyricsButton,'aria-label',T('Sözler','Lyrics'));
-    setAttributeIfChanged(lyricsButton,'title',open?T('Sözleri gizle','Hide Lyrics'):T('Sözleri göster','Show Lyrics'));
-  }
+
   // The player's optional buttons, named for the settings window's button picker (kept if it named them first).
   for(const [b,id] of [[shuffle,'shuffle'],[back,'previous'],[next,'next'],[repeat,'repeat'],[star,'love'],[more,'more'],[popupLyricsButton,'popup-lyrics'],[lyricsButton,'lyrics'],[connectButton,'connect'],[queueButton,'queue'],[volumeWrap,'volume']])b.dataset.amButton??=id;
   // 'only' mode moves the player's own controls in, and back out of it.
@@ -2127,7 +2114,8 @@
     const mode=settings.nowPlaying,open=mode==='only'||(mode==='beside'&&settings.npOpen),b=document.body.classList;
     b.toggle('am-np-open',open);b.toggle('am-np-only',mode==='only');b.toggle('am-np-beside',mode==='beside');b.toggle('am-np-docked',settings.npLayout==='docked');
     b.toggle('am-np-artbg',settings.npBg==='artwork');np.classList.toggle('am-scheme-dark',settings.npBg==='artwork');b.toggle('am-np-center',settings.npLyricsAlign==='center');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
-    np.hidden=!open;syncSpicyControls();
+    np.hidden=!open;npToggle.hidden=mode==='off';npToggle.classList.toggle('am-active',open);setAttributeIfChanged(npToggle,'aria-pressed',String(open));
+    setAttributeIfChanged(npToggle,'title',open?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
     npTrackKey='';npLyricUri=null;if(open)npTick();else{npStopVideo();clearTimeout(npLyricTimer);}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;}
@@ -2311,10 +2299,6 @@
     options:[['left',T('Sola','Left')],['center',T('Ortaya','Centre')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
   npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
     options:[['below',T('Kapağın altında','Under the artwork')],['button',T('Sözler düğmesiyle','With the lyrics button')]],apply:npApplyAll,when:()=>settings.nowPlaying!=='off'});
-  npSetting({key:'lyricsButton',group:'nowplaying',type:'choice',style:'segmented',default:'panel',label:T('Oynatıcının sözler düğmesi','Player\'s lyrics button'),
-    options:[['panel',T('Paneli açar','Opens the sidebar')],['page',T('Sözler sayfasını açar','Opens the lyrics page')]],
-    note:T('“Sözler sayfası”: Spicy Lyrics yüklüyse onu, değilse Spotify’ın sözler sayfasını açar. Panel o zaman kendi × düğmesiyle kapanır, oynatıcının “…” menüsünden açılır.','“Lyrics page” opens Spicy Lyrics if it’s installed, otherwise Spotify’s lyrics page. The sidebar then closes with its own × and opens from the player’s “…” menu.'),
-    apply:npApplyAll,when:()=>settings.nowPlaying==='beside'});
   npSetting({key:'npOpen',group:'nowplaying',type:'toggle',default:true,label:T('Panel açık','Sidebar open'),apply:npApplyAll,hidden:true,when:()=>false});
   npReady=true;npApply();
   // The fallback menu is registered after the mcloud one, which the IIFE's end registers.
