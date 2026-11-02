@@ -457,7 +457,7 @@ body.am-pv-glass [data-am-preview][data-am-preview] {--am-pv-sheet-rim:var(--am-
 body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-pv-base)!important}
 body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:-80px;z-index:-1;pointer-events:none;background:var(--am-preview-art,none) center/cover no-repeat;filter:blur(60px) saturate(1.5) brightness(.62)}
 body.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-pv-sheet)!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8)}
-body.am-solid.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:#2c2c2e!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+body.am-solid.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-menu-solid,#2c2c2e)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 body.am-pv-color [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(160deg,#ffffff14,#00000059)}
 /* Close, previous and next: round glass buttons (Next loses its label, which stays for screen readers). */
 [data-am-preview] :is([data-testid="watch-feed-close-button"],[data-testid="watch-feed-view"] > div > div:last-child > div:last-child button) {all:unset;box-sizing:border-box;display:grid!important;place-items:center;width:40px!important;height:40px!important;min-block-size:0!important;border-radius:50%!important;cursor:pointer;color:var(--am-pv-text)!important;
@@ -527,8 +527,12 @@ body.am-search-open .main-gridContainer-gridContainer:has(> [role="listitem"] > 
 body.am-search-open section[data-shelf]:has(> .main-gridContainer-gridContainer > [role="listitem"] > a[href*="/genre/"]) h2 {font-size:15px!important;line-height:20px!important;font-weight:700!important;letter-spacing:0!important;color:var(--am-text,#dedede)!important}
 /* Whole device pixels for the glass: --am-side is in vw, so a centred player could land on a half pixel, which blurs
    its edge and highlight on 1x screens. The width is rounded to an even number and the left edge to a whole pixel. */
-#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid rgb(var(--am-rim)/.141);background:var(--am-player-fill);backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px rgb(var(--am-rim)/.149),0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 14px 0 16px;gap:14px;font-size:13px}
+#am-player {--am-player-w:round(down,min(calc(100vw - var(--am-side) - 64px),700px),2px);position:fixed;z-index:60;bottom:16px;left:round(down,calc(var(--am-side) + (100vw - var(--am-side) - var(--am-player-w))/2),1px);width:var(--am-player-w);height:54px;border-radius:999px;border:1px solid rgb(var(--am-rim)/.141);background:var(--am-player-fill);backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);-webkit-backdrop-filter:blur(30px) saturate(1.3) brightness(1.1);box-shadow:inset 0 1px 1px rgb(var(--am-rim)/.149),0 8px 24px #0003;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;padding:0 12px 0 8px;gap:9px;font-size:13px}
+/* Music's mini player (macOS 27, AX frames and 2x captures): the transport starts 9pt in, 28pt buttons with the play
+   button 36pt, back to back (centres 23, 51, 83, 115, 143), the title area 9pt after them, the last button centred 27pt
+   from the right end. The glyphs are drawn to Music's boxes (theme.js icons). */
 .am-transport,.am-player-extras {display:flex;align-items:center;gap:4px}
+#am-player .am-transport {gap:0}
 #am-player button {display:grid;place-items:center;width:28px;height:32px;color:var(--am-icon);transition:color .15s,transform .12s}
 #am-player button[hidden] {display:none}
 #am-player button:hover {color:rgb(var(--am-ink))}
@@ -537,7 +541,9 @@ body.am-search-open section[data-shelf]:has(> .main-gridContainer-gridContainer 
 #am-player svg {width:19px;height:19px;pointer-events:none}
 #am-player .am-dim {color:var(--am-dim)}
 #am-player .am-dim svg {width:14px;height:14px}
-#am-player .am-play svg {width:26px;height:26px;animation:am-icon-in .22s cubic-bezier(.2,.9,.3,1.3)}
+#am-player .am-play {width:36px;height:36px}
+#am-player .am-play svg {width:32px;height:32px;animation:am-icon-in .22s cubic-bezier(.2,.9,.3,1.3)}
+#am-player :is([data-am-button="previous"],[data-am-button="next"]) svg {width:20px;height:20px}
 #am-player .am-active {color:var(--am-accent-focus)}
 @keyframes am-icon-in {from{transform:scale(.55);opacity:0}}
 /* LCD: artwork, title row, marquee subtitle and the hairline scrubber. */
@@ -847,6 +853,10 @@ body.am-ready #global-nav-bar .am-toolbar-trailing {position:fixed!important;lef
 #global-nav-bar [role="search"] {border-radius:9px!important;background:transparent!important}
 #global-nav-bar [role="search"] button {background:transparent!important;box-shadow:none!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 #global-nav-bar input::placeholder {color:rgb(var(--am-ink)/.651)!important}
+/* Light: Music's light search field draws its magnifier and placeholder in the same soft grey (L 125 over a 250 face,
+   2x captures, focused): half black. Its standalone toolbar buttons keep black icons. */
+body.am-light #global-nav-bar input::placeholder {color:rgb(var(--am-ink)/.5)!important}
+body.am-light #global-nav-bar form[role="search"] > :first-child svg {color:rgb(var(--am-ink)/.5)!important;fill:currentColor!important}
 body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:var(--am-menu-solid);backdrop-filter:none;-webkit-backdrop-filter:none}
 /* Liquid Glass toolbar (theme.js "Toolbar glass"): the glass is ours, in #am-toolbar-glass under the toolbar, laid on
    Spotify's controls, which keep their icons and handlers but lose their own fill: back + forward, the extension icons
@@ -1419,7 +1429,7 @@ body.am-ready.am-np-open .am-layout {grid-template-columns:var(--am-side) minmax
  background:var(--am-np-fill);backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);box-shadow:inset 0 1px 0 rgb(var(--am-rim,255 255 255)/.149),inset 0 0 0 1px rgb(var(--am-rim,255 255 255)/.071),0 18px 50px #0007;
 }
 #am-nowplaying[hidden],body.am-spicy-fullscreen #am-nowplaying {display:none}
-body.am-np-docked #am-nowplaying {top:0;right:0;bottom:0;border-radius:0;box-shadow:inset 1px 0 #ffffff14}
+body.am-np-docked #am-nowplaying {top:0;right:0;bottom:0;border-radius:0;box-shadow:inset 1px 0 rgb(var(--am-ink,255 255 255)/.078)}
 /* The cover's colours: the cover itself, blurred once (a still image, so the blur is not redrawn), darkened toward the bottom. */
 .am-np-bg {display:none;position:absolute;z-index:-3;inset:-25%;width:150%;height:150%;object-fit:cover;filter:blur(64px) saturate(1.6) brightness(.62);pointer-events:none}
 body.am-np-artbg .am-np-bg[src] {display:block}

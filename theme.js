@@ -18,7 +18,9 @@
     music:'<path d="M10 17V5l10-3v12M10 7l10-3"/><ellipse cx="7" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="15" rx="3" ry="2"/>',
     browse:'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>',
     grid:'<path d="M3 3h4v4H3zM10 3h4v4h-4zM17 3h4v4h-4zM3 10h4v4H3zM10 10h4v4h-4zM17 10h4v4h-4zM3 17h4v4H3zM10 17h4v4h-4zM17 17h4v4h-4z"/>',
-    play:'<path d="M8.25 4.56c-.76-.46-1.75.09-1.75.98v12.92c0 .89.99 1.44 1.75.98l10.74-6.46c.73-.44.73-1.52 0-1.96L8.25 4.56z" fill="currentColor" stroke="none"/>',
+    // The player's transport, drawn to the boxes of Music's mini player glyphs (macOS 27, 2x, in pt: play 19 x 21,
+    // previous/next 19.5 x 11, shuffle 13 x 10.5, repeat 12 x 10.5) at the sizes user.css gives them.
+    play:'<path d="M7.97 4.56c-.81-.46-1.86.09-1.86.98v12.92c0 .89 1.05 1.44 1.86.98l11.38-6.46c.77-.44.77-1.52 0-1.96L7.97 4.56z" fill="currentColor" stroke="none"/>',
     // Apple Music's artist play: round corners (stroke joins), box centre 1/18 of its width right of the circle's centre.
     heroPlay:'<path d="M5.5 3 20.5 12 5.5 21z" fill="currentColor" stroke-width="3"/>',
     // Apple's "info" (SF Symbols' slab i), traced pixel by pixel from the Music app at 2x: a 2.4pt dot, a serif, a 1.5pt
@@ -41,13 +43,13 @@
     ban:'<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
     credits:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
     radio:'<circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 5a10 10 0 0 0 0 14M19 5a10 10 0 0 1 0 14"/>',
-    pause:'<path d="M7 3h4v18H7zM15 3h4v18h-4z" fill="currentColor" stroke="none"/>',
-    next:'<path d="m3 5 10 7L3 19zm10 0 10 7-10 7z" fill="currentColor" stroke="none"/>',
-    back:'<path d="m21 5-10 7 10 7zm-10 0L1 12l10 7z" fill="currentColor" stroke="none"/>',
-    shuffle:'<path d="M3 6h3c5 0 7 12 12 12h3m-4-4 4 4-4 4M3 18h3c2 0 4-3 5-6m3-3c1-2 3-3 5-3h2m-4-4 4 4-4 4"/>',
-    repeat:'<path d="M4 10V7a2 2 0 0 1 2-2h14l-4-4M20 14v3a2 2 0 0 1-2 2H4l4 4M20 5l-4 4M4 19l4-4"/>',
+    pause:'<rect x="6.4" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/><rect x="13.6" y="4.9" width="4" height="14.2" rx="1.1" fill="currentColor" stroke="none"/>',
+    next:'<path d="m.3 5.4 11.7 6.6L.3 18.6zm11.7 0 11.7 6.6L12 18.6z" fill="currentColor" stroke="none"/>',
+    back:'<path d="M23.7 5.4 12 12l11.7 6.6zm-11.7 0L.3 12 12 18.6z" fill="currentColor" stroke="none"/>',
+    shuffle:'<path d="M1.7 7.08h3.43c5.72 0 8.01 9.84 13.73 9.84h3.43m-3.28-3.28 3.28 3.28-3.28 3.28M1.7 16.92h3.43c2.29 0 4.58-2.46 5.72-4.92m3.43-2.46c1.14-1.64 3.43-2.46 5.72-2.46h2.29m-3.28-3.28 3.28 3.28-3.28 3.28"/>',
+    repeat:'<path d="M2.55 12v-1.6a3 3 0 0 1 3-3h15.9m-3.6-3.6 3.6 3.6-3.6 3.6M21.45 12v1.6a3 3 0 0 1-3 3H2.55m3.6 3.6-3.6-3.6 3.6-3.6"/>',
     lyrics:'<rect x="3" y="3" width="18" height="15" rx="3"/><path d="m8 18 1 4 5-4M8 8h2v4H8M14 8h2v4h-2"/>',
-    queue:'<path d="M8 5h14M8 12h14M8 19h14"/><circle cx="3" cy="5" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="19" r=".8"/>',
+    queue:'<path d="M8 5.6h14M8 12h14M8 18.4h14"/><circle cx="3" cy="5.6" r=".8"/><circle cx="3" cy="12" r=".8"/><circle cx="3" cy="18.4" r=".8"/>',
     volume:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10M20.5 4.5a10.6 10.6 0 0 1 0 15"/>',
     volume2:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>',
     volume1:'<path d="M3 9h4l5-5v16l-5-5H3z" fill="currentColor"/><path d="M15.5 9.5a3.5 3.5 0 0 1 0 5"/>',
@@ -239,6 +241,18 @@
   // artist page ~110); a song's menu 170 + .34 L (over white 253, over its queue panel 240, darker artwork 197-218).
   // Light mode maps each filter's dark tone onto these.
   const lightTones={glass:[108,126,144,162,180,197,215,233,251],menu:[170,181,192,203,214,225,236,246,253]};
+  // The hairline round the glass in light mode (research b8: Music's own window light and focused, 2x, over white and a
+  // brown artist page): all the way round, at the round ends 255 -> 190, 114 -> 56, 87 -> 40, 26 -> 8 (the dark line
+  // takes white to 123: too dark on white, and it fades out along the top and bottom) and about a third of that along
+  // the top and bottom (255 -> 235, 87 -> 71). The table, L*(.2 + .5*L^.8), gives that at the buttons' weight (.85).
+  // The light inside the top and bottom edge already matches Music's (over the brown page +11/+32 against +15/+29).
+  // Music's light glass keeps more of a coloured page's colour than the dark tone mapped onto the light one: over 13 flat
+  // pages (research b8: BtnLab forced light, equal to Music's button on white and brown) green 60,180,90 -> 88,228,123
+  // where the mapped tone gave 119,238,137. A saturation step after the table (a colour step folded into the same pass:
+  // render passes per frame unchanged) fits the faces of the button and the player to 5.0 per channel instead of 8.3;
+  // greys are unchanged.
+  const lightGlassSaturate='1.35';
+  const lightRim={top:.32,table:Array.from({length:33},(_,k)=>{const L=k/32;return (L*(.2+.5*L**.8)).toFixed(4);}).join(' ')};
   const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]};
   // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
   // out = light(dark⁻¹(in)), straight lines past either end.
@@ -263,11 +277,14 @@
     }
     for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
       const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
-      if(!table){step?.remove();continue;}
+      if(!table){f.querySelectorAll(':scope > [data-am-scheme]').forEach(n=>n.remove());continue;}
       if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
-        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}f.append(step);}
+        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}
+        const sat=document.createElementNS(ns,'feColorMatrix');sat.setAttribute('type','saturate');sat.setAttribute('values',lightGlassSaturate);sat.setAttribute('data-am-scheme','');f.append(step,sat);}
       for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
     }
+    for(const t of document.querySelectorAll('[data-am-rim]'))for(const fn of t.children){
+      fn.dataset.amDark??=fn.getAttribute('tableValues');const v=light?lightRim.table:fn.dataset.amDark;if(fn.getAttribute('tableValues')!==v)fn.setAttribute('tableValues',v);}
     const search=document.querySelector('#am-search-glass feColorMatrix');
     if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu):search.dataset.amDark);}
   }
@@ -944,7 +961,9 @@
   const safe = fn => () => { try { const result=fn();result?.catch?.(()=>notify(T('Bu işlem şu anda kullanılamıyor.','This isn\'t available right now.'))); } catch { notify(T('Oynatıcı henüz hazır değil.','The player isn\'t ready yet.')); } };
   const shuffle=button(T('Karıştır','Shuffle'),'shuffle',safe(()=>S.Player.toggleShuffle()),'am-dim');
   const back=button(T('Önceki parça','Previous'),'back',safe(()=>S.Player.back()));
-  const play=button(T('Çal','Play'),'play',safe(()=>S.Player.togglePlay()),'am-play');
+  // The icon turns at the click, as in Music, instead of after Spotify's playback event (~100-300ms, longer on a
+  // Connect device). Until playback follows, syncPlayer keeps it; if it has not 1.2s later, the real state shows again.
+  let playWant=null,playCheck=0;const play=button(T('Çal','Play'),'play',safe(()=>{playWant=!S.Player.isPlaying();const result=S.Player.togglePlay();showPlaying(playWant);clearTimeout(playCheck);playCheck=setTimeout(()=>{playWant=null;syncPlayer();},1200);return result;}),'am-play');
   const next=button(T('Sonraki parça','Next'),'next',safe(()=>S.Player.next()));
   const repeat=button(T('Yinele','Repeat'),'repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
   playerButton(shuffle,'shuffle');playerButton(back,'previous',T('Önceki','Previous'));playerButton(next,'next',T('Sonraki','Next'));playerButton(repeat,'repeat');play.dataset.amLocked='play';
@@ -1909,23 +1928,24 @@
     // each end; over the glass. w: the line's strength (1 at 36pt, lighter on the player).
     const rimT=[0.0, 0.0098, 0.0208, 0.0326, 0.0453, 0.0591, 0.0743, 0.0904, 0.1069, 0.1238, 0.1412, 0.1595, 0.1787, 0.1996, 0.2221, 0.245, 0.2669, 0.288, 0.3089, 0.3286, 0.3462, 0.3612, 0.3747, 0.3873, 0.3996, 0.412, 0.4242, 0.4359, 0.4467, 0.4567, 0.4662, 0.475, 0.4831];let rimN=0;
     const rimFilter=(id,s,n=1)=>{const tt=`type="table" tableValues="${rimT.join(' ')}"`;
-      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt"><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
+      return `<filter id="${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" values=".2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 .2126 .7152 .0722 0 0 0 0 0 1 0" result="rl"/><feComponentTransfer in="rl" result="rt" data-am-rim=""><feFuncR ${tt}/><feFuncG ${tt}/><feFuncB ${tt}/></feComponentTransfer><feComposite in="SourceGraphic" in2="rl" operator="arithmetic" k2="1" k3="-1" k4=".5" result="rc"/><feComposite in="rt" in2="rc" operator="arithmetic" k2="1" k3="${s}" k4="${(-s/2).toFixed(3)}" result="rd"/>${mapImage('rm',n)}<feComposite in="rd" in2="rm" operator="in" result="rdm"/><feComposite in="rdm" in2="SourceGraphic" operator="over"/></filter>`;};
     // The map is drawn for each end only (setMaps): the line fades out within r of either end. drawn (shared()): the
     // element only sizes the map, which runs after each drawing; the shared hairline draws it. The element is the glass
     // grown by 1px, or by its data-grow (px) where the toolbar keeps it on device pixels.
     const rimF=(box,{w=1,s=.8,stretch:pressed}={},drawn)=>{
       const id='am-tglass-rim-'+(++rimN),el=document.createElement('div');el.className='am-tglass-rim';el.dataset.filter=id;box.append(el);
       glass.insertAdjacentHTML('beforeend',rimFilter(id,s));
-      if(!glass.isConnected)document.body.append(glass);
+      if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
       if(!drawn)el.style.backdropFilter=el.style.webkitBackdropFilter=`url(#${id})`;
       const maps=[...glass.querySelectorAll(`#${id} feImage`)];let size='',rest=null;
-      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1;if(!bw)return;
-        if(rest?.k===k&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
+      const draw=()=>{const {width:bw,height:bh}=el.getBoundingClientRect(),k=devicePixelRatio||1,top=isLight()?lightRim.top:0;if(!bw)return;
+        if(rest?.k===k&&rest.top===top&&(size===bw+'x'+bh+'@'+k||pressed?.())){stretch(rest,bw,bh,+el.dataset.grow||1);drawn?.();return;}size=bw+'x'+bh+'@'+k;
         const g=+el.dataset.grow||1,W=Math.round(bw*k),H=Math.round(bh*k),gw=bw-2*g,gh=bh-2*g,r=gh/2,{cols,split}=mapColumns(W,Math.ceil((r+g)*k)+1),CW=cols.length,img=new ImageData(CW,H),dd=img.data;
         for(let y=0;y<H;y++)for(let c=0;c<CW;c++){const x=cols[c];let cov=0;
           for(let sy=0;sy<4;sy++)for(let sx=0;sx<4;sx++){const px=(x+(sx+.5)/4)/k-g,py=(y+(sy+.5)/4)/k-g,cx=Math.min(gw-r,Math.max(r,px)),d=(Math.hypot(px-cx,py-r)-r)*k;if(d>=0&&d<1)cov++;}
-          const px=(x+.5)/k-g,fade=Math.max(0,1-Math.min(px,gw-px)/r)**3,i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
-        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);drawn?.();};
+          const px=(x+.5)/k-g,fade=Math.max(top,Math.max(0,1-Math.min(px,gw-px)/r)**3),i=(y*CW+c)*4;dd[i]=dd[i+1]=dd[i+2]=255;dd[i+3]=Math.round(255*Math.min(1,w*cov/16*fade));}
+        setMaps(maps,{rm:img},{w:bw,h:bh,k,W,H,split});rest=placed(bw,bh,maps);rest.top=top;drawn?.();};
+      const scheme=()=>el.isConnected?draw():document.removeEventListener('am-appearance',scheme);document.addEventListener('am-appearance',scheme);
       if(typeof ResizeObserver==='function')new ResizeObserver(draw).observe(el);draw();return el;
     };
     // Only mid reads the page past the glass's edge (the edge read, the halo, the wash); bend and tone take the glass's
@@ -2214,11 +2234,11 @@
     document.body.classList.toggle('am-entity-playing',playing);
   }
   let previousTrack='',previousPlaying=null;
+  function showPlaying(playing){if(playing===previousPlaying)return;previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
   function syncPlayer() {
     if(document.hidden||!S.Player.origin?._state) return;
     syncEntityPlaying();
-    const playing=S.Player.isPlaying();
-    if(playing!==previousPlaying){previousPlaying=playing;play.innerHTML=svg(playing?'pause':'play');play.setAttribute('aria-label',playing?T('Duraklat','Pause'):T('Çal','Play'));play.title=playing?T('Duraklat','Pause'):T('Çal','Play');}
+    const playing=S.Player.isPlaying();if(playWant===null||playing===playWant){playWant=null;showPlaying(playing);}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
