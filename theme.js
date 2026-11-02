@@ -245,6 +245,12 @@
   // takes white to 123: too dark on white, and it fades out along the top and bottom) and about a third of that along
   // the top and bottom (255 -> 235, 87 -> 71). The table, L*(.2 + .5*L^.8), gives that at the buttons' weight (.85).
   // The light inside the top and bottom edge already matches Music's (over the brown page +11/+32 against +15/+29).
+  // Music's light glass keeps more of a coloured page's colour than the dark tone mapped onto the light one: over 13 flat
+  // pages (research b8: BtnLab forced light, equal to Music's button on white and brown) green 60,180,90 -> 88,228,123
+  // where the mapped tone gave 119,238,137. A saturation step after the table (a colour step folded into the same pass:
+  // render passes per frame unchanged) fits the faces of the button and the player to 5.0 per channel instead of 8.3;
+  // greys are unchanged.
+  const lightGlassSaturate='1.35';
   const lightRim={top:.32,table:Array.from({length:33},(_,k)=>{const L=k/32;return (L*(.2+.5*L**.8)).toFixed(4);}).join(' ')};
   const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]};
   // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
@@ -270,9 +276,10 @@
     }
     for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
       const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
-      if(!table){step?.remove();continue;}
+      if(!table){f.querySelectorAll(':scope > [data-am-scheme]').forEach(n=>n.remove());continue;}
       if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
-        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}f.append(step);}
+        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}
+        const sat=document.createElementNS(ns,'feColorMatrix');sat.setAttribute('type','saturate');sat.setAttribute('values',lightGlassSaturate);sat.setAttribute('data-am-scheme','');f.append(step,sat);}
       for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
     }
     for(const t of document.querySelectorAll('[data-am-rim]'))for(const fn of t.children){
