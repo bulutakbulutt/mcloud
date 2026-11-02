@@ -1199,6 +1199,44 @@ try {
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
   });
 
+  await check('appearance: light swaps the colour tokens, the accent and the glass tone; system follows the OS (#74)', async () => {
+    const menu = await page.evaluate(() => window.__menus.findIndex(m => m.name === 'mcloud görünüm'));
+    assert.ok(menu > 0, 'appearance submenu');
+    const pick = name => page.evaluate(([i, name]) => window.__menus[i].items.find(item => item.name === name).onClick(), [menu, name]);
+    const state = () => page.evaluate(() => ({
+      light: document.body.classList.contains('am-light') && document.documentElement.classList.contains('am-light'),
+      bg: getComputedStyle(document.body).backgroundColor, row: getComputedStyle(document.querySelector('#am-sidebar .am-nav-row')).color,
+      ink: getComputedStyle(document.querySelector('.am-nav-heading')).color, accent: document.documentElement.style.getPropertyValue('--am-accent'),
+      steps: document.querySelectorAll('filter [data-am-scheme]').length, scheme: getComputedStyle(document.documentElement).colorScheme,
+      spice: getComputedStyle(document.body).getPropertyValue('--spice-main').trim(),
+    }));
+    const dark = await state();
+    assert.deepEqual([dark.light, dark.bg, dark.row, dark.ink, dark.accent, dark.steps, dark.scheme], [false, 'rgb(31, 31, 31)', 'rgb(242, 242, 242)', 'rgba(255, 255, 255, 0.36)', '#0a84ff', 0, 'dark']);
+    await pick('Görünüm: Açık');
+    const light = await state();
+    assert.deepEqual([light.light, light.bg, light.row, light.ink, light.accent, light.scheme, light.spice], [true, 'rgb(255, 255, 255)', 'rgb(29, 29, 31)', 'rgba(0, 0, 0, 0.36)', '#0088ff', 'light', '#fff']);
+    // Every glass filter (toast, menus, player and toolbar tone layers) carries the light tone step.
+    assert.ok(light.steps >= 9, 'glass filters take the light tone: ' + light.steps);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('filter[id^="am-menu-glass-"]:not(:has([data-am-scheme]))').length), 0);
+    assert.notEqual(await page.$eval('#am-search-glass feColorMatrix', e => e.getAttribute('values')), await page.$eval('#am-search-glass feColorMatrix', e => e.dataset.amDark));
+    shots && await page.screenshot({ path: path.join(shots, 'light-home.png') });
+    // The artist page can keep its dark artist colours in light mode.
+    await pick('Açık modda sanatçı sayfası: Koyu (sanatçı rengi)');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-artist-dark')));
+    await pick('Açık modda sanatçı sayfası: Açık');
+    // System: follows prefers-color-scheme as it changes.
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await pick('Görünüm: Sistem');
+    assert.equal((await state()).light, false);
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.waitForFunction(() => document.body.classList.contains('am-light'));
+    await page.emulateMedia({ colorScheme: null });
+    await pick('Görünüm: Koyu');
+    const back = await state();
+    assert.deepEqual([back.light, back.bg, back.accent, back.steps], [false, 'rgb(31, 31, 31)', '#0a84ff', 0]);
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).appearance, 'dark');
+  });
+
   await check('glass modes: balanced runs the lite glass on the Spicy page only, full keeps the layers, eco is solid', async () => {
     // player/toolbar: the glass layers that run (null when the glass is not built); rims: hairline filters that run.
     const state = () => page.evaluate(() => {
