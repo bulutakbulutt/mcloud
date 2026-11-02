@@ -3,6 +3,8 @@ name: Purge jsDelivr
 # Marketplace loads theme.js and user.css from cdn.jsdelivr.net/gh/…@main, which
 # caches a branch for up to 12 hours (its ?time= query does not bypass that).
 # Purge both together so installs never mix a new theme.js with an old user.css.
+# Installs made before the repo moved to mcloudHQ load the old owner's path until theme.js moves them to GitHub
+# Pages (#77), so both paths are purged; drop the old one once those installs have moved.
 on:
   push:
     branches: [main]
@@ -34,25 +36,25 @@ jobs:
       # while a file is stale purge once more after a long wait (20, 40, 80 minutes), never in a quick loop.
       - name: Purge and verify
         run: |
-          cdn="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main"
+          repos="$GITHUB_REPOSITORY bulutakbulutt/mcloud"
           purge() {
             longest=0
-            for f in theme.js user.css; do
-              r=$(curl -fsS "https://purge.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main/$f" || echo '{}')
-              echo "$f: $(echo "$r" | tr -d '\n' | cut -c1-300)" >&2
+            for repo in $repos; do for f in theme.js user.css; do
+              r=$(curl -fsS "https://purge.jsdelivr.net/gh/$repo@main/$f" || echo '{}')
+              echo "$repo $f: $(echo "$r" | tr -d '\n' | cut -c1-300)" >&2
               t=$(echo "$r" | jq -r '[.paths[]? | select(.throttled) | (.throttlingReset // 60)] | max // 0')
               [ "$t" -gt "$longest" ] && longest=$t
-            done
+            done; done
             echo "$longest"
           }
           fresh() {
             for attempt in $(seq 1 10); do
               stale=0
-              for f in theme.js user.css; do
+              for repo in $repos; do for f in theme.js user.css; do
                 want=$(sha256sum "$f" | cut -d' ' -f1)
-                got=$(curl -fsS "$cdn/$f?ci=$GITHUB_RUN_ID-$round-$attempt" | sha256sum | cut -d' ' -f1)
-                if [ "$want" = "$got" ]; then echo "$f: fresh"; else echo "$f: stale"; stale=1; fi
-              done
+                got=$(curl -fsS "https://cdn.jsdelivr.net/gh/$repo@main/$f?ci=$GITHUB_RUN_ID-$round-$attempt" | sha256sum | cut -d' ' -f1)
+                if [ "$want" = "$got" ]; then echo "$repo $f: fresh"; else echo "$repo $f: stale"; stale=1; fi
+              done; done
               [ "$stale" = 0 ] && return 0
               sleep 30
             done

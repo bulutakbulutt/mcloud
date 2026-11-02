@@ -2,6 +2,61 @@
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
+  // Marketplace loads theme.js and user.css from GitHub Pages. Its deploy (.github/workflows/pages.yml) writes the
+  // commit here and on both files' first line; jsDelivr and local copies keep 'dev'.
+  const BUILD = 'dev', REPO = 'mcloudHQ/mcloud', PAGES = 'https://mcloudhq.github.io/mcloud/';
+  const pages = window.__amPages = { build: BUILD };
+  // Installs made before Pages stored jsDelivr @main URLs (or raw ones Marketplace sends to jsDelivr). Marketplace
+  // read them before this script ran and can write its in-memory copy back (its update check rebuilds the record from
+  // manifest.json, whose usercss stays relative so the record's key does not change), so this runs on every start
+  // and writes only when a URL changed. IndexedDB for Marketplace 1.0.9+, localStorage before; never creates the db.
+  // The repo moved from bulutakbulutt to mcloudHQ: installs made before keep the old owner in their key and URLs, and
+  // Marketplace's casing of the owner is not ours, so both owners match case-insensitively.
+  pages.migration = (async () => {
+    const OWNERS = ['bulutakbulutt', 'mcloudhq'];
+    const OLD = new Set(OWNERS.flatMap(o => ['theme.js', 'user.css'].flatMap(f => [`https://cdn.jsdelivr.net/gh/${o}/mcloud@main/${f}`, `https://raw.githubusercontent.com/${o}/mcloud/main/${f}`])));
+    const toPages = u => typeof u === 'string' && OLD.has(u.toLowerCase()) ? PAGES + u.slice(u.lastIndexOf('/') + 1) : u;
+    const rewrite = json => {
+      let r; try { r = JSON.parse(json); } catch { return null; }
+      if (!r || !OWNERS.includes(String(r.user).toLowerCase()) || r.repo !== 'mcloud') return null;
+      const urls = () => JSON.stringify([r.cssURL, r.include, r.manifest?.include]), before = urls();
+      r.cssURL = toPages(r.cssURL);
+      if (Array.isArray(r.include)) r.include = r.include.map(toPages);
+      if (Array.isArray(r.manifest?.include)) r.manifest.include = r.manifest.include.map(toPages);
+      return urls() === before ? null : JSON.stringify(r);
+    };
+    const ACTIVE = 'marketplace:theme-installed', mine = k => typeof k === 'string' && OWNERS.some(o => k.toLowerCase().startsWith(`marketplace:installed:${o}/mcloud/`));
+    const db = await new Promise(res => {
+      try { const q = indexedDB.open('spicetify-marketplace'); q.onupgradeneeded = () => q.transaction.abort(); q.onsuccess = () => res(q.result); q.onerror = q.onblocked = () => res(null); }
+      catch { res(null); }
+    });
+    if (db && !db.objectStoreNames.contains('settings')) { db.close(); return 'no-store'; }
+    const tx = (mode, fn) => new Promise(res => { const t = db.transaction('settings', mode), q = fn(t.objectStore('settings'));
+      t.oncomplete = () => res(q.result); t.onerror = t.onabort = () => res(undefined); });
+    const get = k => db ? tx('readonly', s => s.get(k)).then(r => r?.value) : localStorage.getItem(k);
+    const set = (k, v) => db ? tx('readwrite', s => s.put({ key: k, value: v })) : (localStorage.setItem(k, v), true);
+    try {
+      const k = await get(ACTIVE); if (!mine(k)) return 'not-active';
+      const v = rewrite(await get(k)); if (!v) return 'unchanged';
+      // Move only once Pages serves the theme: an install pointed at a missing site would load no theme at all.
+      if (!(await fetch(PAGES + 'theme.js', { method: 'HEAD', cache: 'no-store' }).catch(() => null))?.ok) return 'pages-down';
+      return await set(k, v) ? 'migrated' : 'error';
+    } catch { return 'error'; } finally { db?.close(); }
+  })();
+  // Pages deploys both files together, but each edge caches them separately (and a record rebuilt from manifest.json
+  // loads the CSS from jsDelivr until the next start), so a start can pair this script with another commit's CSS.
+  // A stamped script wins: it loads its own commit's user.css from an immutable URL into Marketplace's style.
+  pages.css = (async () => {
+    if (!/^[0-9a-f]{40}$/.test(BUILD)) return 'unstamped';
+    const st = document.querySelector('style.marketplaceUserCSS'), head = st?.textContent.slice(0, 300) || '';
+    if (!head.includes('AppleMusicMac')) return 'no-css';
+    if (head.startsWith(`/* mcloud build ${BUILD} */`)) return 'match';
+    for (const u of [`https://cdn.jsdelivr.net/gh/${REPO}@${BUILD}/user.css`, `https://raw.githubusercontent.com/${REPO}/${BUILD}/user.css`]) {
+      try { const r = await fetch(u), css = r.ok ? await r.text() : ''; if (css.slice(0, 200).includes('AppleMusicMac')) { st.textContent = `/* mcloud build ${BUILD} */\n` + css; return 'replaced'; } }
+      catch {}
+    }
+    return 'failed';
+  })();
   const wait = ms => new Promise(r => setTimeout(r, ms));
   for (let i = 0; i < 240 && !window.Spicetify?.Platform?.History; i++) await wait(250);
   const S = window.Spicetify;

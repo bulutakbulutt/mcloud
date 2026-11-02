@@ -1,0 +1,136 @@
+name: Pages
+
+# Marketplace installs load theme.js and user.css from GitHub Pages (manifest.json; theme.js moves older installs
+# off jsDelivr @main, which served stale and mixed pairs for hours). Each deploy stamps the commit into both files:
+# a first line `/* mcloud build <sha> */` and theme.js's BUILD, so theme.js can tell when an edge pairs it with
+# another commit's CSS. The files in the repo stay unchanged. Needs Settings > Pages > Source: GitHub Actions.
+on:
+  push:
+    branches: [main]
+    paths: [theme.js, user.css, .github/workflows/pages.yml]
+  workflow_dispatch:
+    inputs:
+      attempt:
+        description: Retry count (set by a failed run)
+        type: number
+        default: 0
+  # Last resort for a site left behind (a run that failed all its retries): redeploy when the live stamp is not main's.
+  schedule:
+    - cron: '23 * * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.live.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+      # The stamp is the last commit that changed a served file, so a run for any later commit stamps the same build.
+      - name: Compare the live files with main
+        id: live
+        run: |
+          want=$(git log -1 --format=%H -- theme.js user.css)
+          base="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}"
+          live=""
+          for f in theme.js user.css; do
+            curl -fsSL "$base/$f" -o "/tmp/$f" || : > "/tmp/$f"
+            live="$live $(head -1 "/tmp/$f" | sed -n 's/^\/\* mcloud build \([0-9a-f]\{40\}\) \*\/$/\1/p')"
+          done
+          echo "main: $want; live:$live"
+          # On schedule, leave a fresh commit to its own push run (deploying here would cancel it and start over).
+          age=$(( $(date +%s) - $(git log -1 --format=%ct "$want") ))
+          if [ "$GITHUB_EVENT_NAME" != schedule ] || { [ "$live" != " $want $want" ] && [ "$age" -gt 1200 ]; }; then
+            echo deploy=true >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: check
+    if: needs.check.outputs.deploy == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      actions: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.redeploy.outputs.page_url }}
+    # A newer run cancels this one; GitHub keeps the newest pending run, so the last push always deploys. Runs check
+    # out main when they start, so a scheduled run that starts later never deploys an older commit than a push.
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          filter: blob:none
+      - name: Stamp the build
+        id: stamp
+        run: |
+          sha=$(git log -1 --format=%H -- theme.js user.css)
+          mkdir _site
+          for f in theme.js user.css; do printf '/* mcloud build %s */\n' "$sha" | cat - "$f" > "_site/$f"; done
+          sed -i "s/const BUILD = 'dev'/const BUILD = '$sha'/" _site/theme.js
+          [ "$(grep -c "const BUILD = '$sha'" _site/theme.js)" = 1 ] || { echo "::error::theme.js has no single BUILD = 'dev'"; exit 1; }
+          node --check _site/theme.js
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+      - name: Deploy
+        id: deploy
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+      # A deploy that reports success can still leave the old files live, so poll until both files carry the new
+      # stamp twice in a row (the edge keeps serving the old ones for a few seconds after the deploy reports success).
+      - name: Verify
+        id: verify
+        if: steps.deploy.outcome == 'success'
+        continue-on-error: true
+        env:
+          LEVEL: warning
+        run: &verify |
+          base="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}"
+          want="/* mcloud build ${{ steps.stamp.outputs.sha }} */"
+          seen=0
+          for i in $(seq 1 40); do
+            ok=1
+            for f in theme.js user.css; do
+              curl -fsSL "$base/$f?time=$(date +%s%N)" -o "/tmp/$f" || { ok=0; continue; }
+              got=$(head -1 "/tmp/$f")
+              [ "$got" = "$want" ] || { ok=0; echo "$f: ${got:0:80}"; }
+            done
+            if [ "$ok" = 1 ]; then seen=$((seen + 1)); else seen=0; fi
+            [ "$seen" = 2 ] && { echo "Both files serve ${{ steps.stamp.outputs.sha }}."; exit 0; }
+            sleep 15
+          done
+          echo "::$LEVEL::Pages still serves another build after 10 minutes"
+          exit 1
+      - name: Deploy again
+        id: redeploy
+        if: steps.deploy.outcome != 'success' || steps.verify.outcome != 'success'
+        uses: actions/deploy-pages@v5
+      - name: Verify again
+        if: steps.deploy.outcome != 'success' || steps.verify.outcome != 'success'
+        env:
+          LEVEL: error
+        run: *verify
+      # Both attempts failed (GitHub's cron can lag for hours, so don't wait for it): run the workflow again in
+      # 5 minutes, twice at most. A cancelled run (a newer push) does not get here.
+      - name: Try again in 5 minutes
+        if: failure() && inputs.attempt < 2
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATTEMPT: ${{ inputs.attempt }}
+        run: sleep 300 && gh workflow run pages.yml -R "$GITHUB_REPOSITORY" --ref main -f attempt=$(( ${ATTEMPT:-0} + 1 ))
