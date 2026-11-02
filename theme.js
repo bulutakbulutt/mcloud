@@ -1630,9 +1630,10 @@
     const item=S.Player.data?.item,meta=item?.metadata||{};if(!item?.uri)return [];
     const albumUri=item.album?.uri||meta.album_uri,artists=(item.artists||[]).filter(artist=>artist?.uri);
     if(!artists.length&&meta.artist_uri)artists.push({uri:meta.artist_uri,name:meta.artist_name||''});
+    // Album first, as Music's own menu.
     return [
-      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
       ...(albumUri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(albumUri)}]:[]),
+      ...artists.map(artist=>({label:artists.length>1?T('Sanatçıya Git: ','Go to Artist: ')+artist.name:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(artist.uri)})),
     ];
   }
   let boundToolbar=null, toolbarChildren=[];

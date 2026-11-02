@@ -162,7 +162,7 @@ try {
 
   await check('subtitle asks between artist and album', async () => {
     await page.click('.am-track-subtitle');
-    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Sanatçıya Git', 'Albüme Git']);
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Albüme Git', 'Sanatçıya Git']);
     await page.keyboard.press('Escape');
   });
 
@@ -174,7 +174,7 @@ try {
     assert.equal(await right('#am-player .am-transport .am-dim'), true, 'apple: shuffle');
     await page.keyboard.press('Escape');
     await page.click('.am-track-title');
-    assert.deepEqual(await items(), ['Sanatçıya Git', 'Albüme Git']);
+    assert.deepEqual(await items(), ['Albüme Git', 'Sanatçıya Git']);
     await page.keyboard.press('Escape');
     await settingsWindow.pick('playerMenu', 'Yalnızca şarkının üstünde (Spotify)');
     assert.equal(await right('#am-player .am-transport .am-dim'), false, 'track: shuffle');
