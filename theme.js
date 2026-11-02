@@ -3565,7 +3565,10 @@
     if(request!==albumRequest)return;
     if(!info){albumStyle.textContent='';return;}
     const sub='.main-trackList-rowMainContent > :last-child';
-    albumStyle.textContent=settings.albumClean&&info.artists.length?`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')})) ${sub}{display:none!important}`:'';
+    // Without its artist line a row's title sits in the middle, so its number is centred too (Spotify lifts it 4px to
+    // meet a title on the top line; #93).
+    const own=`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')}))`;
+    albumStyle.textContent=settings.albumClean&&info.artists.length?`${own} ${sub}{display:none!important}${own} .main-trackList-rowMarker > span{top:50%!important;translate:0 -50%}`:'';
     if(!tint)return;
     if(info.color===undefined)info.color=await artworkColor(info.cover);
     if(request!==albumRequest)return;

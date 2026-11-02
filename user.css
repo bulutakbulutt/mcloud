@@ -265,6 +265,8 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow {border-radius:6px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow::after {content:"";position:absolute;left:100px;right:8px;bottom:0;height:1px;background:rgb(var(--am-ink)/.071);pointer-events:none}
+/* An album's rows have no artwork: the line starts under the title, as in Music (#93). */
+body.am-ready .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(.main-trackList-rowImage))::after {left:48px}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:is(:hover,[aria-selected="true"])::after {opacity:0}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:rgb(var(--am-ink)/.059)!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
