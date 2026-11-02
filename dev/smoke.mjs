@@ -1479,7 +1479,7 @@ try {
     // Text is drawn as Music draws it: the system's smoothing, no negative tracking (Spotify's or the theme's).
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-sidebar .am-nav-row, #mock-album72 h1')].slice(-2).map(e => [getComputedStyle(e).webkitFontSmoothing, getComputedStyle(e).letterSpacing])), [['auto', 'normal'], ['auto', 'normal']]);
     // The heading at Music's sizes: title 26pt bold, artist 26pt, the year line semibold.
-    assert.deepEqual(await page.evaluate(() => { const style = s => getComputedStyle(document.querySelector('#mock-album72 ' + s)); return [style('h1').fontSize, style('h1').fontWeight, style('.main-entityHeader-creatorWrapper').fontSize, style('.mock-year').fontWeight]; }), ['26px', '700', '26px', '600']);
+    assert.deepEqual(await page.evaluate(() => { const style = s => getComputedStyle(document.querySelector('#mock-album72 ' + s)); return [style('h1').fontSize, style('h1').fontWeight, style('h1').letterSpacing, style('.main-entityHeader-creatorWrapper').fontSize, style('.mock-year').fontWeight]; }), ['26px', '700', 'normal', '26px', '600']);
     await page.evaluate(() => { document.getElementById('mock-album72').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
