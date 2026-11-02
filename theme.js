@@ -2795,7 +2795,7 @@
     const value=art?`url("${art.currentSrc||art.src}")`:'';
     if(document.documentElement.style.getPropertyValue('--am-preview-art')!==value)value?document.documentElement.style.setProperty('--am-preview-art',value):document.documentElement.style.removeProperty('--am-preview-art');
     // The small round controls and the title capsule take the menus' Liquid Glass (a filter each, freed on close).
-    for(const node of view.querySelectorAll('[data-testid="watch-feed-close-button"],:scope > div > div:last-child > div:last-child > button,:scope > div > div:first-child > div:first-child'))
+    for(const node of view.querySelectorAll('[data-testid="watch-feed-close-button"],:scope > div > div:last-child > div:last-child button,:scope > div > div:first-child > div:first-child'))
       if(!previewGlass.has(node)){previewGlass.add(node);menuGlass.sync();menuGlass.attach(node);}
   }
   const previewArtSoon=()=>{previewFrame||=requestAnimationFrame(previewArt);};
