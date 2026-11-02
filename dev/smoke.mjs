@@ -166,6 +166,36 @@ try {
     await page.keyboard.press('Escape');
   });
 
+  await check('player right-click and title links follow playerMenu and lcdLinks (issue #85)', async () => {
+    const items = () => page.locator('#am-popover .am-popover-item').allTextContents();
+    const right = async sel => { await page.click(sel, { button: 'right' }); return page.evaluate(() => !document.getElementById('am-popover').hidden); };
+    const where = () => page.evaluate(() => Spicetify.Platform.History.location.pathname), before = await where();
+    // Apple Music: the song's menu anywhere on the player; the title asks where to go, as the subtitle does.
+    assert.equal(await right('#am-player .am-transport .am-dim'), true, 'apple: shuffle');
+    await page.keyboard.press('Escape');
+    await page.click('.am-track-title');
+    assert.deepEqual(await items(), ['Sanatçıya Git', 'Albüme Git']);
+    await page.keyboard.press('Escape');
+    await settingsWindow.pick('playerMenu', 'Yalnızca şarkının üstünde (Spotify)');
+    assert.equal(await right('#am-player .am-transport .am-dim'), false, 'track: shuffle');
+    assert.equal(await right('.am-track-art'), true, 'track: artwork');
+    await page.keyboard.press('Escape');
+    assert.equal(await right('.am-track-subtitle'), true, 'track: subtitle');
+    await page.keyboard.press('Escape');
+    // Spotify: each name is a link, the title opens the album.
+    await settingsWindow.pick('lcdLinks', 'Bağlantı olur (Spotify)');
+    assert.deepEqual(await page.locator('.am-track-subtitle .am-marquee-inner > span:first-child .am-lcd-link').evaluateAll(n => n.map(l => l.textContent + ' ' + l.dataset.uri)), ['Frank Ocean spotify:artist:0', 'Blonde spotify:album:0']);
+    await page.click('.am-track-subtitle .am-marquee-inner > span:first-child .am-lcd-link >> nth=0');
+    assert.equal(await where(), '/artist/0');
+    await page.click('.am-track-title');
+    assert.equal(await where(), '/album/0');
+    assert.equal(await page.evaluate(() => document.getElementById('am-popover').hidden), true, 'links open no menu');
+    await settingsWindow.pick('lcdLinks', 'Gidilecek yeri sorar (Apple Music)');
+    await settingsWindow.pick('playerMenu', 'Oynatıcının her yerinde (Apple Music)');
+    assert.equal(await page.locator('.am-track-subtitle .am-lcd-link').count(), 0);
+    await page.evaluate(path => Spicetify.Platform.History.push(path), before);
+  });
+
   await check('Friend Activity opens as a sheet from the sidebar\'s account row', async () => {
     const friends = '#am-sidebar [aria-label="Arkadaş etkinliği"]';
     await page.click(friends);
@@ -1225,7 +1255,7 @@ try {
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
     // A form: labels right-aligned with a colon, toggles as checkboxes. Real clicks from here on.
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
-    assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı', 'Oynatıcı düğmeleri']);
+    assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı', 'Sağ tık menüsü', 'Şarkı adı ve sanatçı', 'Oynatıcı düğmeleri']);
     assert.deepEqual(await page.evaluate(() => { const l = getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label')); return [l.textAlign, getComputedStyle(document.querySelector('#am-settings [data-key="artwork"] .am-settings-label'), '::after').content]; }), ['right', '":"']);
     await page.click('#am-settings [data-key="artwork"] .am-settings-switch');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-artwork')));
