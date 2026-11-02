@@ -784,12 +784,12 @@ body.am-spicy-fullscreen #global-nav-bar {visibility:hidden!important;pointer-ev
 
 /* Friend Activity opens in Spotify's right panel. The theme shows that pane (not a copy) as a glass sheet that
    fades in at the right edge; the queue uses the same sheet. It does not slide: moving, its edge lands on
-   fractional pixels and the anti-aliased column shimmers against the page. */
+   fractional pixels and the anti-aliased column shimmers against the page. Its glass is the search field's recipe. */
 body.am-ready .am-native-panel-open {
  display:flex!important;flex-direction:column!important;visibility:visible!important;pointer-events:auto!important;
  position:fixed!important;inset:var(--am-header) 16px 96px auto!important;width:min(340px,calc(100vw - var(--am-side) - 40px))!important;
  min-width:0!important;height:auto!important;min-height:0!important;z-index:55!important;overflow:hidden;color:var(--am-text);
- border-radius:18px;background:color-mix(in srgb,#262626 74%,transparent)!important;backdrop-filter:blur(40px) saturate(1.6);-webkit-backdrop-filter:blur(40px) saturate(1.6);
+ border-radius:18px;background:color-mix(in srgb,#1e1e1e 58%,transparent)!important;backdrop-filter:blur(20px) saturate(1.6);-webkit-backdrop-filter:blur(20px) saturate(1.6);
  box-shadow:inset 0 1px 0 #ffffff26,inset 0 0 0 1px #ffffff12,0 18px 50px #0007;
  transition:opacity .25s ease;
 }
@@ -810,15 +810,27 @@ body.am-panel-open :is(#main,.Root,.am-layout),body.am-library-open #main:has(#s
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
 
+/* The fill is Spotify's .Root__right-sidebar-peek, painted solid rgb(31,31,31): it hid the sheet's glass entirely. */
 body.am-ready .am-native-panel-open [data-am-fill] {
  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
  width:100%!important;max-width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;
  position:relative!important;inset:auto!important;transform:none!important;margin:0!important;box-sizing:border-box;
+ background:transparent!important;
 }
 /* Closing, Spotify adds a back button before the queue's tabs, which pushed them 16px right as they faded. The :has()
    is on the button: with a bare :has() subject Chromium tests every element against it, and any element added
    anywhere (a menu's rows) then restyled the whole page (~28ms, 3.7k elements, measured). */
 body.am-ready [data-am-sheet] button:has(~ [data-encore-id="tabs"]) {display:none!important}
+/* Scrolled, Spotify drops a dark shadow under the panel's header and cuts the rows at its edge. On glass the rows fade
+   out under the header instead, as at a macOS scroll edge. The header is the sibling before the list's OverlayScrollbars box.
+   The list's 16px top padding, under 4px of header below the tabs, left a gap before "Now playing"; the list starts 16px
+   higher, under the header (which stays on top for clicks), so that padding is the fade. */
+body.am-ready [data-am-sheet] div:has(+ div > .os-scrollbar) {box-shadow:none!important;position:relative;z-index:1;margin-bottom:-16px!important}
+body.am-ready [data-am-sheet] [data-overlayscrollbars-viewport] {-webkit-mask-image:linear-gradient(transparent,#000 16px);mask-image:linear-gradient(transparent,#000 16px)}
+/* The fade is on the scroller, not the box, and the scrollbar starts below it. */
+body.am-ready [data-am-sheet] .os-scrollbar-vertical {top:16px!important}
+/* Friend Activity's list opens with an empty item, which with the list's 24px gap pushed the first friend down. */
+body.am-ready [data-am-sheet] ul > li:first-child:empty {display:none!important}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. */
 body.am-tinted #am-player {background:color-mix(in srgb,var(--am-tint-top) 50%,transparent)}
