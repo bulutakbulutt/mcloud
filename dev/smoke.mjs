@@ -1441,7 +1441,7 @@ try {
     await page.evaluate(() => document.getElementById('mock-feed').remove());
   });
 
-  await check('song preview: an Apple sheet, its layout and material from settings, the sidebar closes it (#75)', async () => {
+  await check('song preview: an Apple sheet, its background from settings, the sidebar closes it (#75)', async () => {
     // Spotify 1.3's watch feed, reduced to the structure user.css relies on: info column (feed title, song, artist,
     // cover + progress, artist row), canvas column, button column (mute/close, actions, previous/next).
     const cover = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c33"/></svg>');
@@ -1463,29 +1463,29 @@ try {
     const look = await page.evaluate(() => {
       const view = document.querySelector('[data-testid="watch-feed-view"]'), cs = (e, p) => getComputedStyle(e, p);
       const close = document.querySelector('[data-testid="watch-feed-close-button"]'), pill = view.querySelector(':scope > div > div:first-child > div:first-child');
-      return { marked: document.getElementById('mock-feed').hasAttribute('data-am-preview'), classes: ['am-pv-apple', 'am-pv-artwork'].map(c => document.body.classList.contains(c)),
+      return { marked: document.getElementById('mock-feed').hasAttribute('data-am-preview'), classes: ['am-pv-artwork'].map(c => document.body.classList.contains(c)),
         art: document.documentElement.style.getPropertyValue('--am-preview-art'), grid: cs(view.firstElementChild).display, pill: cs(pill).gridArea.split(' ')[0],
         close: [cs(close).width, cs(close).borderRadius], radius: cs(view).borderTopLeftRadius, dim: cs(document.getElementById('am-sidebar'), '::after').content,
         frost: cs(close).backdropFilter };
     });
     assert.ok(look.marked, 'the overlay is marked');
-    assert.deepEqual(look.classes, [true, true], 'Apple layout and blurred artwork by default');
+    assert.deepEqual(look.classes, [true], 'blurred artwork by default');
     assert.match(look.art, /^url\("data:image\/svg/, 'the cover feeds the artwork material');
     assert.deepEqual([look.grid, look.pill, look.close, look.radius], ['grid', 'pill', ['40px', '50%'], '26px']);
     assert.notEqual(look.dim, 'none', 'the sidebar dims with the page');
     assert.match(look.frost, /^(blur\(12px\) saturate\(1\.4\)|none)$/, 'frosted buttons (plain in Eco)');
     await shot('song-preview');
-    // Settings: the mcloud submenu lists the options; Three columns switches the layout and is saved.
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme düzeni: Üç sütun').onClick());
-    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-split'), document.body.classList.contains('am-pv-apple'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"] > div')).display, JSON.parse(localStorage.getItem('mcloud:settings')).previewLayout]), [true, false, 'flex', 'split']);
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme düzeni: Apple').onClick());
+    // Settings: the mcloud submenu lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
+    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme zemini: Cam').onClick());
+    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
+    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Önizleme zemini: Bulanık kapak').onClick());
     // A click on the dimmed sidebar closes it, as one on Spotify's backdrop does.
     await page.click('#am-sidebar', { position: { x: 100, y: 400 } });
     await page.waitForFunction(() => !document.getElementById('mock-feed') && !document.body.classList.contains('am-preview-open'));
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-preview-art')), '');
   });
 
-  await check('Browse all tiles: Apple\'s Browse Categories, picture style from settings (#75)', async () => {
+  await check('Browse all tiles: Apple\'s Browse Categories (#75)', async () => {
     await page.evaluate(() => {
       const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;
       document.querySelector('main').insertAdjacentHTML('afterbegin', `<section id="mock-browse" data-shelf="shelf"><div><h2>Browse all</h2></div><div class="main-gridContainer-gridContainer" style="--min-column-width:254px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min-column-width),1fr))">${tile('Music', 'rgb(220, 20, 140)')}${tile('Pop', 'rgb(70, 130, 180)')}</div></section>`);
@@ -1503,11 +1503,11 @@ try {
     assert.deepEqual(apple.img, ['multiply', 'none', 'block'], 'the cover is a duotone, not tilted');
     assert.deepEqual([apple.gap, apple.pad, apple.h2], ['16px', '0px', '15px']);
     assert.ok(apple.width < 254, 'smaller tiles than Spotify\'s');
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Kategori kutuları: Düz renk').onClick());
-    assert.equal((await look()).img[2], 'none', 'Plain colour hides the cover');
-    await page.evaluate(() => window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Kategori kutuları: Spotify').onClick());
-    assert.deepEqual((await look()).label.slice(0, 2), ['24px', '400'], 'Spotify keeps its own tiles');
-    await page.evaluate(() => { window.__menus.find(m => m.name === 'mcloud').items.find(i => i.name === 'Kategori kutuları: Apple (çift ton)').onClick(); document.getElementById('mock-browse').remove(); Spicetify.Platform.History.push('/'); });
+    // Only on Search: elsewhere Spotify's tiles keep their own look.
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-open'));
+    assert.deepEqual((await look()).label.slice(0, 2), ['24px', '400'], 'Spotify\'s tiles off Search');
+    await page.evaluate(() => document.getElementById('mock-browse').remove());
   });
 
   await check('toolbar glass at 125%: shared, its shapes and hairlines on device pixels', async () => {

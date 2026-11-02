@@ -2769,22 +2769,15 @@
   });
   // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
   // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
-  // the overlay (data-am-preview) and user.css restyles it as an Apple sheet in the layout and material picked here (it
-  // has no Apple counterpart, so these follow the issue's reference loosely); the sidebar and player dim with it.
-  // The artwork material is the current song's cover, blurred: read from the info column, or from the canvas card
-  // nearest the middle when the song shows none. Spotify keeps the same nodes from song to song, so only image
-  // sources and the scrolled list are watched, never its progress bar.
-  const pvLayouts=['apple','split','spotify'],pvMaterials=['artwork','glass','color'],pvSection=T('Şarkı önizlemesi','Song previews');
-  defineSetting({key:'previewLayout',group:'pages',section:pvSection,label:T('Önizleme düzeni','Preview layout'),type:'choice',default:'apple',
-    options:[['apple',T('Apple','Apple')],['split',T('Üç sütun','Three columns')],['spotify','Spotify']],apply:v=>pvLayouts.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
-  defineSetting({key:'previewMaterial',group:'pages',section:pvSection,label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
+  // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows
+  // the issue's reference loosely); the sidebar and player dim with it. Its background is a choice: the current song's
+  // cover blurred (as in the reference), the sheets' glass, or Spotify's colour from the cover. The cover is read from
+  // the info column, or from the canvas card nearest the middle when the song shows none. Spotify keeps the same nodes
+  // from song to song, so only image sources and the scrolled list are watched, never its progress bar.
+  // Browse all (Search's category tiles, what the sidebar's Browse opens) is Apple Music's Browse Categories in user.css.
+  const pvMaterials=['artwork','glass','color'];
+  defineSetting({key:'previewMaterial',group:'pages',section:T('Şarkı önizlemesi','Song previews'),label:T('Önizleme zemini','Preview background'),type:'choice',default:'artwork',
     options:[['artwork',T('Bulanık kapak','Blurred artwork')],['glass',T('Cam','Glass')],['color',T('Kapak rengi','Artwork colour')]],apply:v=>pvMaterials.forEach(k=>document.body.classList.toggle('am-pv-'+k,k===v))});
-  // Browse all (Search's category tiles, what the sidebar's Browse opens), as Apple Music's Browse Categories: smaller
-  // tiles with the name at the bottom (user.css). The picture is a style choice: Apple's duotone (the cover in grey,
-  // multiplied into the tile's colour), Spotify's tilted cover, or the colour alone.
-  const browseStyles=['apple','tilted','flat','spotify'];
-  defineSetting({key:'browseTiles',group:'browse',label:T('Kategori kutuları','Category tiles'),type:'choice',default:'apple',
-    options:[['apple',T('Apple (çift ton)','Apple (duotone)')],['tilted',T('Eğik kapak','Tilted cover')],['flat',T('Düz renk','Plain colour')],['spotify','Spotify']],apply:v=>browseStyles.forEach(k=>document.body.classList.toggle('am-browse-'+k,k===v))});
   let previewView=null,previewWatch=null,previewFrame=0;
   function previewArt() {
     previewFrame=0;const view=previewView;if(!view?.isConnected||document.hidden)return;
