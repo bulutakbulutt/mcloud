@@ -1401,53 +1401,67 @@ try {
       body: '#EXTM3U\n#EXT-X-MAP:URI="clip-.mp4",BYTERANGE="898@0"\n#EXTINF:4,\n#EXT-X-BYTERANGE:5000@898\nclip-.mp4\n#EXT-X-ENDLIST' }));
     await page.route(/\.mp4$/, r => r.fulfill({ status: 200, contentType: 'video/mp4', body: 'not a video' }));
     try {
-      // Off by default: no pane, no pane button, nothing requested, the lyrics button as before. The player's optional
-      // buttons are named for the settings window's button picker.
+      // Off by default: no pane, nothing requested, the lyrics button as before. The Now Playing button is always in the
+      // player. The player's optional buttons are named for the settings window's button picker.
       assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
       assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
       assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-player [data-am-button]')].map(b => b.dataset.amButton).sort()),
         ['connect', 'love', 'lyrics', 'more', 'next', 'nowplaying', 'popup-lyrics', 'previous', 'queue', 'repeat', 'shuffle', 'volume']);
-      assert.ok(await page.evaluate(() => document.querySelector('#am-player [data-am-button="nowplaying"]').hidden), 'the pane button only with the pane on');
+      assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#am-player .am-np-toggle'); return [b.hidden, b.getAttribute('aria-pressed'), b.title, b.dataset.amLabel]; }), [false, 'false', 'Şimdi Çalan\'ı göster', 'Şimdi Çalan']);
+      assert.ok(await page.isVisible('#am-player .am-np-toggle'), 'the Now Playing button is always in the player');
       await page.waitForFunction(() => window.__menus.some(m => m.name === 'mcloud: Şimdi Çalan'));
 
-      // Beside the player: the pane at the right edge, the page and the player kept clear of it, Spotify's lyrics under the cover.
+      // The button turns the pane on (beside the player): a glass card that floats over the page like the queue sheet (same
+      // inset, radius and shadow), so the page and the player keep their width. Spotify's lyrics under the cover.
       await page.evaluate(() => { window.__mockState.progress = 83000; });
-      await pick('nowPlaying', 'Oynatıcının yanında');
+      await page.click('#am-player .am-np-toggle');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying), 'beside');
       assert.ok(await page.isVisible('#am-nowplaying'));
       const pane = await rect('#am-nowplaying');
-      assert.ok(pane.right <= 1440 && pane.right > 1400 && pane.width >= 300, JSON.stringify(pane));
-      assert.ok((await rect('#am-player')).right <= pane.left, 'the player stays left of the pane');
-      assert.ok((await rect('.am-native-main')).right <= pane.left + 1, 'Spotify\'s page narrows');
+      assert.ok(pane.right === 1424 && pane.top === 76 && pane.bottom === 900 - 96 && pane.width >= 300, JSON.stringify(pane));
+      assert.deepEqual(await page.evaluate(() => { const c = getComputedStyle(document.getElementById('am-nowplaying')); return [c.borderRadius, c.boxShadow.includes('0px 18px 50px')]; }), ['18px', true]);
+      assert.ok((await rect('.am-native-main')).right > 1430, 'the page runs under the card');
+      assert.ok((await rect('#am-player')).bottom < pane.bottom + 96 && (await rect('#am-player')).top > pane.bottom, 'the player stays below the card');
       assert.equal(await page.textContent('#am-nowplaying .am-np-title .am-marquee-inner > span'), 'Nights');
       assert.ok(await page.isVisible('#am-player .am-transport'), 'the floating player keeps its controls');
       assert.equal(await page.locator('#am-nowplaying .am-transport').count(), 0, 'no second set of transport controls');
+      assert.equal(await page.locator('#am-nowplaying .am-np-lyrics-toggle').count(), 0, 'no lyrics button in the pane');
       await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
       assert.equal(await page.textContent('#am-nowplaying .am-np-line.am-current'), 'No, you can\'t make everybody equal');
       assert.ok(await page.evaluate(() => window.__cosmos.some(u => u.includes('spclient.wg.spotify.com/color-lyrics/v2/track/1?'))));
       // A line plays from where it is clicked.
       await page.click('#am-nowplaying .am-np-line >> nth=3');
       assert.equal(await page.evaluate(() => window.__mockState.progress), 90000);
-      // The pane's lyrics button (lyrics under the artwork) brings the line being sung back into view.
-      await page.evaluate(() => { document.querySelector('#am-nowplaying .am-np-lyrics').scrollTop = 0; window.__mockState.progress = 125000; });
-      await page.click('#am-nowplaying .am-np-lyrics-toggle');
-      assert.equal(await page.textContent('#am-nowplaying .am-np-line.am-current'), 'Every day patches the night up');
-      assert.ok(await page.evaluate(() => { const box = document.querySelector('#am-nowplaying .am-np-lyrics'), line = box.querySelector('.am-current'); return box.scrollTop > 0 && line.offsetTop >= box.scrollTop && line.offsetTop < box.scrollTop + box.clientHeight; }));
-      // The player's Now Playing button opens and closes the pane; the page takes the room back. The lyrics button is untouched.
-      assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
-      assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#am-player .am-np-toggle'); return [b.hidden, b.getAttribute('aria-pressed'), b.title, b.dataset.amLabel]; }), [false, 'true', 'Şimdi Çalan\'ı gizle', 'Şimdi Çalan']);
+      // The button turns it off again; the lyrics button is untouched.
+      assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#am-player .am-np-toggle'); return [b.getAttribute('aria-pressed'), b.title]; }), ['true', 'Şimdi Çalan\'ı gizle']);
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
-      assert.equal(await page.getAttribute('#am-player .am-np-toggle', 'aria-pressed'), 'false');
-      assert.ok((await rect('.am-native-main')).right > 1430);
+      assert.deepEqual([await page.getAttribute('#am-player .am-np-toggle', 'aria-pressed'), await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying)], ['false', 'off']);
+      assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));
-      // The lyrics button variant: lyrics in their own view, the artwork shrunk to a thumbnail.
-      await pick('npLyricsPlace', 'Sözler düğmesiyle');
-      assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')));
-      await page.click('#am-nowplaying .am-np-lyrics-toggle');
-      assert.ok(await page.isVisible('#am-nowplaying .am-np-lyrics') && await page.isVisible('#am-nowplaying .am-np-thumb') && !(await page.isVisible('#am-nowplaying .am-np-art')));
-      await page.click('#am-nowplaying .am-np-lyrics-toggle');
+
+      // Full screen without Spicy Lyrics: the pane fills the window, artwork left and lyrics right, the floating player
+      // over it; lyrics kept for full screen only show there. Esc or the button again brings the card back as it was.
+      await pick('npLyricsPlace', 'Yalnızca tam ekranda');
       assert.ok(!(await page.isVisible('#am-nowplaying .am-np-lyrics')) && await page.isVisible('#am-nowplaying .am-np-art'));
+      assert.equal(await page.getAttribute('#am-nowplaying .am-np-fullscreen', 'title'), 'Tam ekran sözler');
+      await page.evaluate(() => { window.__mockState.progress = 125000; });
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      const full = await rect('#am-nowplaying');
+      assert.ok(full.left === 0 && full.top === 0 && full.right === 1440 && full.bottom === 900, JSON.stringify(full));
+      await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+      assert.equal(await page.textContent('#am-nowplaying .am-np-line.am-current'), 'Every day patches the night up');
+      assert.ok((await rect('#am-nowplaying .am-np-lyrics')).left > (await rect('#am-nowplaying .am-np-art')).right, 'lyrics right of the artwork');
+      assert.ok(await page.evaluate(() => { const box = document.querySelector('#am-nowplaying .am-np-lyrics'), line = box.querySelector('.am-current'); return line.offsetTop >= box.scrollTop && line.offsetTop < box.scrollTop + box.clientHeight; }));
+      assert.ok(await page.evaluate(() => { const r = document.querySelector('#am-player .am-play').getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('#am-player'); }), 'the player stays on top');
+      assert.deepEqual([await page.getAttribute('#am-nowplaying .am-np-fullscreen', 'aria-pressed'), await page.getAttribute('#am-nowplaying .am-np-fullscreen', 'title')], ['true', 'Tam ekrandan çık']);
+      await page.keyboard.press('Escape');
+      assert.ok(!(await page.evaluate(() => document.body.classList.contains('am-np-full'))) && !(await page.isVisible('#am-nowplaying .am-np-lyrics')));
+      assert.deepEqual(await rect('#am-nowplaying'), pane);
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      assert.ok(!(await page.evaluate(() => document.body.classList.contains('am-np-full'))));
       await pick('npLyricsPlace', 'Kapağın altında');
 
       // Plain (Apple Music's lyrics pane): opaque, no artwork or header, only the lyrics; paused every line is grey, playing
@@ -1465,32 +1479,38 @@ try {
       await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-nowplaying .am-np-line.am-current')).opacity === '1');
       await pick('npBg', 'Kapak renkleri');
 
-      // The player's lyrics button keeps opening Spicy Lyrics (its own page button, clicked) with the pane on; the pane links to
-      // the full page too (and never closes it), closes with its × and comes back from the player's "…" menu, for people
-      // who hide its button.
+      // With Spicy Lyrics the card's full screen is Spicy's page (its own button, clicked); while that page is open the card
+      // steps aside, so the lyrics never show twice, and it comes back when the page closes. The player's lyrics button
+      // keeps opening Spicy Lyrics. The docked pane's full screen stays its own.
       await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
         b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); }; document.body.append(b); });
       const route = () => page.evaluate(() => Spicetify.Platform.History.location.pathname);
-      await page.click('#am-lyrics-toggle');
-      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks)], ['/SpicyLyrics', 1]);
-      assert.ok(await page.isVisible('#am-nowplaying'), 'the pane stays');
+      const paneShown = () => page.evaluate(() => !document.getElementById('am-nowplaying').hidden && document.body.classList.contains('am-np-open'));
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks), await paneShown()], ['/SpicyLyrics', 1, false]);
+      assert.ok(!(await page.evaluate(() => document.body.classList.contains('am-np-full'))));
       await page.click('#am-lyrics-toggle');
       assert.equal(await route(), '/');
-      await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-full-lyrics').title === 'Spicy Lyrics\'te aç');
-      await page.click('#am-nowplaying .am-np-full-lyrics');
-      await page.click('#am-nowplaying .am-np-full-lyrics');
-      assert.deepEqual([await route(), await page.evaluate(() => window.__spicyClicks)], ['/SpicyLyrics', 3]);
-      await page.evaluate(() => { Spicetify.Platform.History.push('/'); document.getElementById('SpicyLyrics_PageButton').remove(); });
-      // Without Spicy Lyrics the link opens Spotify's own lyrics page through its (hidden) button.
-      await page.evaluate(() => { const b = document.createElement('button'); b.dataset.testid = 'lyrics-button'; b.onclick = () => Spicetify.Platform.History.push('/lyrics'); document.querySelector('.am-native-player').append(b); });
-      await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-full-lyrics').title === 'Tam sözler');
-      await page.click('#am-nowplaying .am-np-full-lyrics');
-      assert.equal(await route(), '/lyrics');
-      await page.evaluate(() => { Spicetify.Platform.History.push('/'); document.querySelector('[data-testid="lyrics-button"]').remove(); });
+      await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden);
+      assert.deepEqual(await rect('#am-nowplaying'), pane, 'the card comes back as it was');
+      await page.click('#am-lyrics-toggle');
+      assert.deepEqual([await route(), await paneShown()], ['/SpicyLyrics', false]);
+      await page.evaluate(() => Spicetify.Platform.History.push('/'));
+      await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden);
+      await pick('npLayout', 'Kenara yapışık');
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      assert.deepEqual([await route(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/', true]);
+      await page.click('#am-nowplaying .am-np-fullscreen');
+      await pick('npLayout', 'Cam kart');
+      await page.evaluate(() => document.getElementById('SpicyLyrics_PageButton').remove());
+      // The × turns the pane off, and so does the player's "…" menu.
       await page.click('#am-nowplaying .am-np-close');
       assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      await page.click('#am-player .am-np-toggle');
       await page.click('#am-player .am-more');
-      await page.click('#am-popover .am-popover-item:has-text("Şimdi Çalan\'ı Göster")');
+      await page.click('#am-popover .am-popover-item:has-text("Şimdi Çalan\'ı Gizle")');
+      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden));
+      await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));
 
       // Sidebar only: the floating player goes, its own controls move into the pane and still work.
