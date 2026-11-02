@@ -141,6 +141,80 @@
   applySettings();
   const accentListeners=[];
   function setAccent(key){settings.accent=key;saveSettings();applySettings();accentListeners.forEach(fn=>fn());}
+  // Appearance (issue #74): dark, light (Apple Music's light appearance) or the system's. user.css keeps every colour
+  // in --am-* tokens; light mode is body.am-light (and :root.am-light) swapping their values. The glass filters carry
+  // their tone in SVG, so light mode adds one colour step to each (applyGlassScheme). Style choices are settings:
+  // artistLight (the artist page in light mode: 'light' follows it, 'dark' keeps Apple's dark artwork-coloured page),
+  // lightGlass (player and toolbar glass) and lightMenu (menus and search results).
+  const appearanceModes=['dark','light','system'],artistLightModes=['light','dark'],lightGlassModes=['apple','bright'],lightMenuModes=['estimate','glass','material'];
+  for(const [key,value] of [['appearance','dark'],['artistLight','light'],['lightGlass','apple'],['lightMenu','estimate']]){
+    if(!(key in settings))try{const saved=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')[key];settings[key]=typeof saved==='string'?saved:value;}catch{settings[key]=value;}
+  }
+  const systemLight=matchMedia('(prefers-color-scheme: light)');
+  const isLight=()=>settings.appearance==='light'||settings.appearance==='system'&&systemLight.matches;
+  // Light accents: Music's own KeyColor for red (its asset catalog: #fa233b in light, #fa2d48 in dark), the others
+  // NSColor's system colours resolved under aqua on macOS 27; Spotify green from its light Encore sets.
+  const lightAccents={red:'#fa233b',pink:'#ff2d55',orange:'#ff8d28',yellow:'#ffcc00',green:'#34c759',teal:'#00c3d0',blue:'#0088ff',purple:'#cb30e0',spotify:'#169f47'};
+  // Glass tones by luminance (0, 32, … 255 -> output), measured with tools/glasslab.swift (research/issue74): a window
+  // kept below the desktop draws flat greys under NSGlassEffectView and NSVisualEffectView in aqua and darkAqua, read
+  // with screencapture -l. Dark NSGlassEffectView came out 20 -> 180 (unfocused window), close to the fitted focused
+  // tone the filters use (32 -> 185), which supports the method. Light mode maps each filter's dark tone onto a light one.
+  const lightTones={
+    glass:{apple:[102,120,137,155,171,188,205,221,236],                      // NSGlassEffectView, aqua
+      bright:[163,174,184,195,205,215,225,235,244]},                          // the same, 40% nearer white
+    menu:{estimate:[160,170,180,189,199,208,217,225,233],                     // NSMenu: between the two below, placed as dark's menu sits between them
+      glass:[102,120,137,155,171,188,205,221,236],                            // NSGlassEffectView, aqua
+      material:[174,181,190,198,207,215,224,229,229]}};                       // NSVisualEffectView .menu, aqua
+  const darkTones={glass:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185],
+    menu:[32,57,82,105,122,135,143,147,147]};
+  // A table that takes the dark tone's output to the light tone's at the same luminance (per channel, after the filter):
+  // out = light(dark⁻¹(in)), straight lines past either end.
+  const schemeTable=(dark,light)=>{
+    const at=(t,L)=>{const x=L/255*(t.length-1),i=Math.min(t.length-2,Math.max(0,Math.floor(x)));return t[i]+(t[i+1]-t[i])*(x-i);};
+    const d=dark.map((v,i)=>Math.max(...dark.slice(0,i+1))),lo=d[0],hi=d[d.length-1],slope=(at(light,255)-at(light,0))/(hi-lo);
+    return Array.from({length:33},(_,k)=>{const y=k/32*255;let out;
+      if(y<=lo)out=at(light,0)-(lo-y)*slope;else if(y>=hi)out=at(light,255)+(y-hi)*slope;
+      else{let i=0;while(i<d.length-2&&y>d[i+1])i++;const L=(i+(d[i+1]>d[i]?(y-d[i])/(d[i+1]-d[i]):0))/(d.length-1)*255;out=at(light,L);}
+      return (Math.min(255,Math.max(0,out))/255).toFixed(4);}).join(' ');
+  };
+  // Live search results: one level by luminance plus some of the colour (user.css blurs first), as in dark.
+  const lightSearchTone=t=>{const k=[.2126,.7152,.0722],a=t[0]/255,b=(t[t.length-1]-t[0])/255,g=.6;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';};
+  // Glass that sits on the artist page keeps the dark tone while that page stays dark (artistLight 'dark').
+  function applyGlassScheme(){
+    const light=isLight(),glassLight=light&&!(settings.artistLight==='dark'&&document.body.classList.contains('am-artist-open'));
+    const tables={glass:glassLight&&schemeTable(darkTones.glass,lightTones.glass[settings.lightGlass]||lightTones.glass.apple),
+      menu:light&&schemeTable(darkTones.menu,lightTones.menu[settings.lightMenu]||lightTones.menu.estimate)};
+    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"],filter[id^="am-menu-glass-"]')){
+      const table=tables[f.id.startsWith('am-menu-glass-')?'menu':'glass'];let step=f.querySelector(':scope > [data-am-scheme]');
+      if(!table){step?.remove();continue;}
+      if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
+        for(const c of 'RGB'){const fn=document.createElementNS(ns,'feFunc'+c);fn.setAttribute('type','table');step.append(fn);}f.append(step);}
+      for(const fn of step.children)if(fn.getAttribute('tableValues')!==table)fn.setAttribute('tableValues',table);
+    }
+    const search=document.querySelector('#am-search-glass feColorMatrix');
+    if(search){search.dataset.amDark??=search.getAttribute('values');search.setAttribute('values',light?lightSearchTone(lightTones.menu[settings.lightMenu]||lightTones.menu.estimate):search.dataset.amDark);}
+  }
+  let appearanceLight=null;
+  function applyAppearance(){
+    const light=isLight(),root=document.documentElement;
+    root.classList.toggle('am-light',light);document.body.classList.toggle('am-light',light);
+    document.body.classList.toggle('am-artist-dark',light&&settings.artistLight==='dark');
+    const [,dark,darkFocus]=accents[settings.accent]||accents.red,accent=light?lightAccents[settings.accent]||lightAccents.red:dark;
+    root.style.setProperty('--am-accent',accent);root.style.setProperty('--am-accent-focus',light?`color-mix(in srgb,${accent} 86%,#000)`:darkFocus);
+    applyGlassScheme();
+    if(appearanceLight!==null&&appearanceLight!==light)document.dispatchEvent(new Event('am-appearance'));
+    appearanceLight=light;
+  }
+  // applySettings (accent, glass) runs first and announces itself; the light accent then replaces the dark one.
+  document.addEventListener('am-settings',applyAppearance);
+  systemLight.addEventListener?.('change',()=>{if(settings.appearance==='system')applyAppearance();});
+  {let open=false;new MutationObserver(()=>{const now=document.body.classList.contains('am-artist-open');if(now!==open){open=now;if(settings.artistLight==='dark'&&isLight())applyGlassScheme();}}).observe(document.body,{attributes:true,attributeFilter:['class']});}
+  applyAppearance();
+  function setAppearance(key,value){settings[key]=value;saveSettings();applyAppearance();}
+  const appearanceLabels=()=>({appearance:[T('Görünüm','Appearance'),{dark:T('Koyu','Dark'),light:T('Açık','Light'),system:T('Sistem','System')}],
+    artistLight:[T('Açık modda sanatçı sayfası','Artist page in light mode'),{light:T('Açık','Light'),dark:T('Koyu (sanatçı rengi)','Dark (artist colour)')}],
+    lightGlass:[T('Açık modda cam','Light glass'),{apple:T('Apple (ölçülen)','Apple (measured)'),bright:T('Daha beyaz','Whiter')}],
+    lightMenu:[T('Açık modda menüler','Light menus'),{estimate:T('macOS menüsü (tahmini)','macOS menu (estimated)'),glass:T('Liquid Glass','Liquid Glass'),material:T('Buzlu (eski menü)','Frosted (classic menu)')}]});
   function spotifyImage(source='') {
     if(source.startsWith('spotify:image:')) source='https://i.scdn.co/image/'+source.slice(14);
     if(source.startsWith('spotify:mosaic:')) source='https://mosaic.scdn.co/300/'+source.slice(15).replaceAll(':','');
@@ -1001,7 +1075,7 @@
   // sRGB (headless Chromium, most Windows screens) 1.078 matched, so this one gives a little more colour there.
   const searchTone=(()=>{const k=[.2126,.7152,.0722],a=43.7/255,b=.044,g=1.14;return [0,1,2].map(c=>k.map((v,j)=>((j===c?g:0)+(b-g)*v).toFixed(4)).join(' ')+' 0 '+a.toFixed(4)).join(' ')+' 0 0 0 1 0';})();
   glass.insertAdjacentHTML('beforeend',`<filter id="am-search-glass" color-interpolation-filters="sRGB"><feColorMatrix values="${searchTone}"/></filter>`);
-  document.body.append(glass);
+  document.body.append(glass);applyGlassScheme();
   // sRGB transfer functions, for undoing P3's blue row (B' = .0171R + .0724G + .9108B in linear light).
   const linear=v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4,encode=v=>v<=.0031308?v*12.92:1.055*v**(1/2.4)-.055;
   const wideGamut=matchMedia('(color-gamut: p3)').matches;
@@ -1093,7 +1167,7 @@
       const slot={i:slots.length},k=devicePixelRatio||1,p=pieces(k,C);slots.push(slot);
       glass.insertAdjacentHTML('beforeend',`<filter id="am-menu-glass-${slot.i}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feFlood flood-color="rgb(128,128,128)" result="n"/>${parts.map(p=>`<feImage data-piece="${p}" result="${p}" preserveAspectRatio="none"/>`).join('')}<feMerge result="map"><feMergeNode in="n"/>${parts.map(p=>`<feMergeNode in="${p}"/>`).join('')}</feMerge><feGaussianBlur in="SourceGraphic" stdDeviation="${C<turn?thinBlur:6.8}" edgeMode="duplicate" result="soft"/><feDisplacementMap in="soft" in2="map" xChannelSelector="R" yChannelSelector="B" scale="${2*peak}"/>${tone}</filter>`);
       slot.images=[...glass.lastElementChild.querySelectorAll('feImage')];slot.blur=glass.lastElementChild.querySelector('feGaussianBlur');slot.watch=new ResizeObserver(entries=>place(slot,entries[0].borderBoxSize?.[0]));
-      for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);slot.key=k+'/'+C;
+      for(const image of slot.images)image.setAttribute('href',p[image.dataset.piece]);slot.key=k+'/'+C;applyGlassScheme();
       return slot;
     };
     // The theme's menu and submenu, Spotify's menu and submenu, then one- and two-row menus (34px and 58px tall).
@@ -1746,7 +1820,7 @@
       // No edge line in the layered glass (the toast's): its map would be all white.
       const state={...glassStates[over?.state||'focused'],...over,line:0},id='am-tglass-'+(++n),exact=Number.isInteger(devicePixelRatio||1);
       glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact)).join(''));
-      if(!glass.isConnected)document.body.append(glass);
+      if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
       node.style.setProperty('--am-tg-hair',1/(devicePixelRatio||1)+'px');node.style.setProperty('--am-tg-m',(state.margin||0)+'px');
       node.style.backdropFilter=node.style.webkitBackdropFilter='none';
       const M=state.margin||0;if(!drawn)node.prepend(...parts.map(p=>layer(p,id,inner(p,M,exact),`inset(${M-inner(p,M,exact)}px round 999px)`)));
@@ -1791,6 +1865,7 @@
         build(){
           glass.querySelectorAll(`[id^="${id}-"]`).forEach(f=>f.remove());
           glass.insertAdjacentHTML('beforeend',parts.map(p=>glassFilter(`${id}-${p}`,state,p,exact,members.length)).join('')+rimFilter(`${id}-rim`,rim.s,members.length));
+          if(!glass.isConnected)document.body.append(glass);applyGlassScheme();
           // Each shared piece and the piece of its shape's own filter it copies, placed by the face (or the hairline).
           pairs=[...glass.querySelectorAll(`[id^="${id}-"] feImage`)].map(to=>{const i=+to.dataset.member,part=to.closest('filter').id.slice(id.length+1),rim=part==='rim',src=rim?members[i].rim.dataset.filter:members[i].id+'-'+part;
             return [to,glass.querySelector(`#${src} feImage[data-map="${to.dataset.map}"][data-part="${to.dataset.part}"]`),i,rim?parts.length:parts.indexOf(part)];});
@@ -2114,6 +2189,10 @@
     style.setProperty('--am-tint-top',`hsl(${hue} ${sat}% 38%)`);
     style.setProperty('--am-tint-bg',`hsl(${hue} ${Math.round(sat*.8)}% 14%)`);
     style.setProperty('--am-tint-text',`hsl(${hue} ${Math.min(100,sat+10)}% 78%)`);
+    // Light mode (artistLight 'light', user.css): the same hue as a pale page with deep text.
+    style.setProperty('--am-tint-top-light',`hsl(${hue} ${Math.round(sat*.6)}% 84%)`);
+    style.setProperty('--am-tint-bg-light',`hsl(${hue} ${Math.round(sat*.4)}% 96%)`);
+    style.setProperty('--am-tint-text-light',`hsl(${hue} ${Math.min(100,sat+10)}% 30%)`);
     document.body.classList.add('am-tinted');
   }
   // Apple Music takes the page colour from the artwork. Spotify's extracted colour is often off (grey
@@ -2745,6 +2824,18 @@
     accentListeners.push(()=>colors.forEach((item,i)=>item.setState(Object.keys(accents)[i]===settings.accent)));
     const langs=[['auto',T('Otomatik','Automatic')],['en','English'],['tr','Türkçe']].map(([key,label])=>new S.Menu.Item(T('Dil: ','Language: ')+label,settings.lang===key,()=>{if(settings.lang===key)return;settings.lang=key;saveSettings();location.reload();}));
     new S.Menu.SubMenu('mcloud',[toggle(T('Oynatıcıda albüm kapağı','Artwork in player'),'artwork'),toggle(T('Liquid Glass oynatıcı','Liquid Glass player'),'liquid'),...glass,numbers,...recents,...colors,...langs]).register();
+  }
+  // Appearance settings: in the settings window when it is there (issue #76's defineSetting), otherwise their own submenu.
+  {const labels=appearanceLabels(),keys={appearance:appearanceModes,artistLight:artistLightModes,lightGlass:lightGlassModes,lightMenu:lightMenuModes};
+    const lightOnly=()=>settings.appearance!=='dark';
+    if(typeof defineSetting==='function'){
+      for(const [key,modes] of Object.entries(keys))defineSetting({key,group:'appearance',label:labels[key][0],type:'choice',default:settings[key],style:key==='appearance'?'segmented':'menu',
+        section:key==='appearance'?undefined:T('Açık mod','Light mode'),options:modes.map(m=>[m,labels[key][1][m]]),apply:v=>{if(settings[key]!==v){settings[key]=v;}applyAppearance();},when:key==='appearance'?undefined:lightOnly});
+    }else if(S.Menu?.SubMenu&&S.Menu?.Item){
+      const items=[];
+      for(const [key,modes] of Object.entries(keys))for(const m of modes){const item=new S.Menu.Item(labels[key][0]+': '+labels[key][1][m],settings[key]===m,()=>{setAppearance(key,m);items.forEach(i=>i.item.setState(settings[i.key]===i.m));});items.push({item,key,m});}
+      new S.Menu.SubMenu(T('mcloud görünüm','mcloud appearance'),items.map(i=>i.item)).register();
+    }
   }
   document.body.classList.add('am-ready');bindToolbar();go('/');
 })();
