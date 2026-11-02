@@ -652,6 +652,11 @@ body.am-solid #global-nav-bar :is(button,input) {--am-toolbar-fill:#2c2c2e;backd
 .am-tglass-group .am-tglass-light::before {content:"";position:absolute;inset:3px;border-radius:50%;background:rgb(255 255 255/var(--am-tg-light,0))}
 .am-tglass-rim {position:absolute;inset:-1px;z-index:1;pointer-events:none}
 body.am-tglass-on #global-nav-bar :is(.am-toolbar-leading button,.am-toolbar-center button:not([role="search"] button)) {width:36px!important;height:36px!important;min-height:36px!important;min-width:36px!important;padding:9px!important;border:0!important;border-radius:999px!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transform:scale(var(--am-tg-scale,1))!important}
+/* Library views live at /?am-library=…, where Spotify's Home takes itself for the current page: white and filled (issue
+   #59). There it shows as any other button: subdued, with Spotify's own outline house (24-unit icon). */
+body.am-library-open #global-nav-bar .am-toolbar-center button:not([role="search"] button):not(:hover) {color:var(--text-subdued,#b3b3b3)!important}
+body.am-library-open #global-nav-bar .am-toolbar-center button:not([role="search"] button) svg {background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732z'/%3E%3C/svg%3E") center/100% 100% no-repeat}
+body.am-library-open #global-nav-bar .am-toolbar-center button:not([role="search"] button) svg > * {opacity:0}
 body.am-tglass-on #global-nav-bar :is(.am-tg-pair,.main-globalNav-historyButtonsWrapper,.custom-navlinks-scrollable_container,.custom-navlinks-scrollable_container > *) {gap:0!important}
 /* The search field: the magnifier's lens on the round end's centre line and 2px right of its centre (Spotify's lens is
    centred at 10.53,10.56 of its 24-unit box, 1.1px up and left of the box's centre at 18px; concentric, it read as

@@ -20,7 +20,7 @@ concurrency:
 jobs:
   purge:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
       # Merges land in bursts. A newer push cancels this run while it waits, so a burst costs one purge.
@@ -28,9 +28,13 @@ jobs:
         if: github.event_name == 'push'
         run: sleep 120
       # jsDelivr throttles repeated purges of a path, and the throttle grows with every request (it reached ~50
-      # minutes on 2026-10-31 when each attempt purged again). Purge once; if throttled, wait out the reset it reports.
-      - name: Purge
+      # minutes on 2026-10-31 when each attempt purged again). It also answers an unthrottled purge with "finished" and
+      # still serves the old file when the push follows another by less than ~1.5 hours: its branch lookup lags (#66 and
+      # #67 on 2026-11-01, theme.js still at the commit before #66 two hours later). So: purge, verify for 5 minutes, and
+      # while a file is stale purge once more after a long wait (20, 40, 80 minutes), never in a quick loop.
+      - name: Purge and verify
         run: |
+          cdn="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main"
           purge() {
             longest=0
             for f in theme.js user.css; do
@@ -41,27 +45,26 @@ jobs:
             done
             echo "$longest"
           }
-          for attempt in 1 2 3; do
-            wait=$(purge)
-            [ "$wait" = 0 ] && exit 0
-            echo "Throttled for ${wait}s; waiting it out before retrying."
-            sleep $((wait + 15))
-          done
-          echo "::error::jsDelivr kept throttling the purge"
-          exit 1
-      # Polls without purging again.
-      - name: Verify
-        run: |
-          cdn="https://cdn.jsdelivr.net/gh/${GITHUB_REPOSITORY}@main"
-          for attempt in $(seq 1 10); do
-            stale=0
-            for f in theme.js user.css; do
-              want=$(sha256sum "$f" | cut -d' ' -f1)
-              got=$(curl -fsS "$cdn/$f?ci=$GITHUB_RUN_ID-$attempt" | sha256sum | cut -d' ' -f1)
-              if [ "$want" = "$got" ]; then echo "$f: fresh"; else echo "$f: stale"; stale=1; fi
+          fresh() {
+            for attempt in $(seq 1 10); do
+              stale=0
+              for f in theme.js user.css; do
+                want=$(sha256sum "$f" | cut -d' ' -f1)
+                got=$(curl -fsS "$cdn/$f?ci=$GITHUB_RUN_ID-$round-$attempt" | sha256sum | cut -d' ' -f1)
+                if [ "$want" = "$got" ]; then echo "$f: fresh"; else echo "$f: stale"; stale=1; fi
+              done
+              [ "$stale" = 0 ] && return 0
+              sleep 30
             done
-            [ "$stale" = 0 ] && exit 0
-            sleep 30
+            return 1
+          }
+          round=0
+          for pause in 0 1200 2400 4800; do
+            round=$((round + 1))
+            if [ "$pause" -gt 0 ]; then echo "Still stale; purging again in $((pause / 60)) minutes."; sleep "$pause"; fi
+            wait=$(purge)
+            if [ "$wait" != 0 ]; then echo "Throttled for ${wait}s; waiting it out."; sleep $((wait + 15)); purge >/dev/null; fi
+            fresh && exit 0
           done
           echo "::error::jsDelivr still serves an old theme.js or user.css"
           exit 1

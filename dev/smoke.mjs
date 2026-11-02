@@ -1151,8 +1151,12 @@ try {
     await page.waitForSelector('body.am-library-open');
     // A stand-in for Spotify's Home in the toolbar's centre group, for this check only (the toolbar glass counts shapes).
     await page.evaluate(() => { const b = document.createElement('button'); b.className = 'mock-home'; b.textContent = 'H'; b.onclick = () => { if (Spicetify.Platform.History.location.pathname !== '/') Spicetify.Platform.History.push('/'); }; document.querySelector('#global-nav-bar .am-toolbar-center').prepend(b); });
+    // It does not look selected there: subdued, its filled house drawn as Spotify's outline one.
+    await page.evaluate(() => { const b = document.querySelector('#global-nav-bar .mock-home'); b.style.color = 'rgb(255, 255, 255)'; b.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16"><path d="M0 0h24v24H0z"/></svg>'; });
+    assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#global-nav-bar .mock-home'), svg = getComputedStyle(b.querySelector('svg')); return [getComputedStyle(b).color !== 'rgb(255, 255, 255)', svg.webkitMaskImage.includes('svg'), getComputedStyle(b.querySelector('path')).opacity]; }), [true, true, '0']);
     await page.click('#global-nav-bar .mock-home');
     await page.waitForFunction(() => !document.body.classList.contains('am-library-open'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#global-nav-bar .mock-home svg')).webkitMaskImage), 'none', 'Home stays outlined at home');
     assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.search), '');
     await page.evaluate(() => document.querySelector('#global-nav-bar .mock-home').remove());
     await page.click('text=Albümler');
