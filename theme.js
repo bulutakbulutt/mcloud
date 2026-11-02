@@ -110,6 +110,9 @@
     const b = el('button', cls); b.type = 'button'; b.setAttribute('aria-label', label); b.title = label;
     b.innerHTML = svg(icon); b.addEventListener('click', fn); return b;
   }
+  // Player buttons people can hide (settings.playerHidden, Settings → Player): data-am-button names one, data-am-label is
+  // its name there (else its aria-label). Any feature tags its own button the same way; data-am-locked ones always stay.
+  function playerButton(node,id,label){node.dataset.amButton=id;if(label)node.dataset.amLabel=label;return node;}
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
   const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
   let savedSettings={};try{savedSettings=JSON.parse(localStorage.getItem('mcloud:settings')||'{}')||{};}catch{}
@@ -149,6 +152,8 @@
   // definitions, so a feature adds its setting here (or next to its code) and nothing else:
   //   defineSetting({key, group, label, type:'toggle'|'choice', default, options:[[value,label(,colour)],…],
   //     section?, note?, style?:'menu'|'segmented'|'swatches', apply?(value), change?(value), reload?, when?(), value?()})
+  // type:'custom' draws its own control: render(def) → {node, sync}, valid(value), menu() → [{name, checked(), toggle()}]
+  // for the fallback submenu, wide: the control under the label.
   // The value lives in settings[key] (saved in localStorage['mcloud:settings']); a saved value is kept when its type
   // matches the default and, for a choice, it is one of the options. apply runs now and after every change, change only
   // after the user's; every change also runs applySettings, which fires 'am-settings'. reload: Spotify reloads after it
@@ -159,7 +164,7 @@
   settingGroup('general',T('Genel','General'),'gear');settingGroup('appearance',T('Görünüm','Appearance'),'paint');settingGroup('player',T('Oynatıcı','Player'),'play');
   settingGroup('sidebar',T('Kenar Çubuğu','Sidebar'),'sidebar');settingGroup('pages',T('Albümler ve Listeler','Albums & Playlists'),'disc');settingGroup('browse',T('Göz At','Browse'),'grid');
   function defineSetting(def) {
-    const {key}=def,ok=v=>typeof v===typeof def.default&&(def.type!=='choice'||def.options.some(o=>o[0]===v));
+    const {key}=def,ok=v=>def.valid?def.valid(v):typeof v===typeof def.default&&(def.type!=='choice'||def.options.some(o=>o[0]===v));
     if(!ok(settings[key]))settings[key]=ok(savedSettings[key])?savedSettings[key]:def.default;
     if(!settingGroups.some(g=>g.id===def.group))settingGroup(def.group,def.group,'gear');
     const i=settingDefs.findIndex(d=>d.key===key);if(i<0)settingDefs.push(def);else settingDefs[i]=def;
@@ -843,11 +848,12 @@
   const play=button(T('Çal','Play'),'play',safe(()=>S.Player.togglePlay()),'am-play');
   const next=button(T('Sonraki parça','Next'),'next',safe(()=>S.Player.next()));
   const repeat=button(T('Yinele','Repeat'),'repeat',safe(()=>S.Player.toggleRepeat()),'am-dim');controls.append(shuffle,back,play,next,repeat);
+  playerButton(shuffle,'shuffle');playerButton(back,'previous',T('Önceki','Previous'));playerButton(next,'next',T('Sonraki','Next'));playerButton(repeat,'repeat');play.dataset.amLocked='play';
   // The centre "LCD" follows Apple Music: artwork, title, a marquee subtitle
   // and a hairline scrubber that is always clickable and thickens on hover.
   const track=el('div','am-player-track');player.append(track);
   const logo=el('span','am-apple','');track.append(logo);
-  const lcd=el('div','am-lcd');track.append(lcd);
+  const lcd=el('div','am-lcd');track.append(lcd);lcd.dataset.amLocked='lcd';
   const fullscreenButton=el('button','am-track-art');fullscreenButton.type='button';fullscreenButton.id='am-fullscreen-toggle';
   fullscreenButton.setAttribute('aria-label',T('Tam ekran','Full Screen'));fullscreenButton.title=T('Tam ekran','Full Screen');
   const cover=el('img','');cover.alt='';cover.decoding='async';cover.hidden=true;
@@ -880,7 +886,7 @@
   subtitle.root.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePopover(subtitle.root,subtitleMenu);}});
   titleRow.append(title.root,star);text.append(titleRow,subtitle.root);
   const more=button(T('Diğer seçenekler','More'),'more',()=>openTrackMenu(more),'am-more');
-  lcd.append(fullscreenButton,text,more);
+  lcd.append(fullscreenButton,text,more);playerButton(star,'love',T('Beğen','Like'));playerButton(more,'more',T('Diğer','More'));
   const scrub=el('div','am-scrub');
   const elapsed=el('span','am-time am-time-elapsed'),remaining=el('span','am-time am-time-remaining');
   const bar=el('span','am-bar'),barFill=el('span','am-bar-fill');bar.append(barFill);
@@ -939,11 +945,12 @@
     const native=nativeConnect();
     if(native)native.click();else notify(T('Cihaz seçimi bu Spotify sürümünde kullanılamıyor.','Device selection is not available in this version of Spotify.'));
   });
-  extras.append(popupLyricsButton,lyricsButton,connectButton,button(T('Çalma sırası','Playing Next'),'queue',()=>{
+  playerButton(lyricsButton,'lyrics',T('Sözler','Lyrics'));playerButton(popupLyricsButton,'popup-lyrics',T('Sözler penceresi','Lyrics popup'));playerButton(connectButton,'connect',T('Cihazlar','Devices'));
+  extras.append(popupLyricsButton,lyricsButton,connectButton,playerButton(button(T('Çalma sırası','Playing Next'),'queue',()=>{
     const native=root.querySelector('[data-testid="control-button-queue"]');
     if(native)native.click();
     else notify(T('Çalma sırası bu Spotify sürümünde kullanılamıyor.','The queue is not available in this version of Spotify.'));
-  }));
+  }),'queue'));
   // Volume follows Apple Music: resting on the speaker opens a capsule with a thick level bar over the
   // lyrics and queue buttons; the speaker mutes and brings back the previous level.
   const volumeWrap=el('div','am-volume-wrap'),volumeCapsule=el('div','am-volume-capsule');
@@ -966,7 +973,39 @@
   volumeWrap.addEventListener('pointerleave',()=>openVolume(false,400));
   volumeWrap.addEventListener('focusin',()=>{if(!volumeWrap.matches(':hover'))openVolume(true,0);});
   volumeWrap.addEventListener('focusout',event=>{if(!volumeWrap.contains(event.relatedTarget)&&!volumeWrap.matches(':hover'))openVolume(false,0);});
-  volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);
+  volumeCapsule.append(volume);volumeWrap.append(volumeCapsule,volumeButton);extras.append(volumeWrap);playerButton(volumeWrap,'volume',T('Ses','Volume'));
+  // Which player buttons show: settings.playerHidden lists the ids to hide, by a rule on the tagged node wherever it is
+  // (Now Playing's sidebar pane moves some of them out of the player), so nothing re-renders. The Player tab draws a small
+  // bar from the buttons tagged at that moment (placeholders for the track, no real text) that follows each pick.
+  const hiddenButtons=el('style','');hiddenButtons.id='am-player-hidden';document.head.append(hiddenButtons);
+  function playerButtons() {
+    const zone=n=>n.closest('.am-transport')?0:n.closest('.am-player-track')?1:2,seen=new Set();
+    return [...document.querySelectorAll('[data-am-button],[data-am-locked]')].filter(n=>!n.closest('#am-settings')&&!n.hidden).map(n=>({
+      id:n.dataset.amButton||n.dataset.amLocked,locked:!n.dataset.amButton,zone:zone(n),icon:n.querySelector('svg')?.outerHTML||'',
+      label:n.dataset.amLabel||n.getAttribute('aria-label')||n.dataset.amButton||'',
+    })).filter(b=>!seen.has(b.id)&&seen.add(b.id));
+  }
+  const toggleButton=id=>setSetting('playerHidden',settings.playerHidden.includes(id)?settings.playerHidden.filter(x=>x!==id):[...settings.playerHidden,id]);
+  defineSetting({key:'playerHidden',group:'player',label:T('Oynatıcı düğmeleri','Player buttons'),type:'custom',default:[],wide:true,
+    note:T('Göstermek ya da gizlemek için bir düğmeye dokun. Çal/duraklat, şarkı adı ve ilerleme çubuğu hep kalır.','Tap a button to show or hide it. Play/pause, the title and the scrubber always stay.'),
+    valid:v=>Array.isArray(v)&&v.every(id=>typeof id==='string'),
+    apply:v=>{hiddenButtons.textContent=v.length?v.map(id=>'[data-am-button="'+CSS.escape(id)+'"]').join(',')+'{display:none!important}':'';},
+    menu:()=>playerButtons().filter(b=>!b.locked).map(b=>({name:T('Düğme: ','Button: ')+b.label,checked:()=>!settings.playerHidden.includes(b.id),toggle:()=>toggleButton(b.id)})),
+    render() {
+      const node=el('div','am-pb'),bar=el('div','am-pb-bar'),chips=el('div','am-pb-chips'),buttons=playerButtons(),marks=[];
+      node.setAttribute('role','group');bar.setAttribute('aria-hidden','true');node.append(bar,chips);
+      const zones=[el('div','am-pb-zone'),el('div','am-pb-lcd'),el('div','am-pb-zone')];bar.append(...zones);
+      zones[1].append(el('span','am-pb-art'),el('span','am-pb-lines'));
+      for(const b of buttons){
+        if(b.id==='lcd')continue;
+        const icon=el('span','am-pb-icon'+(b.locked?' am-pb-locked':''));icon.innerHTML=b.icon;zones[b.zone].append(icon);
+        if(b.locked)continue;
+        const chip=el('button','am-pb-chip');chip.type='button';chip.setAttribute('role','switch');chip.dataset.id=b.id;
+        chip.innerHTML=b.icon;chip.append(el('span','',b.label));chip.onclick=()=>toggleButton(b.id);chips.append(chip);marks.push([b.id,icon,chip]);
+      }
+      return {node,sync:()=>marks.forEach(([id,icon,chip])=>{const shown=!settings.playerHidden.includes(id);icon.classList.toggle('am-pb-off',!shown);chip.setAttribute('aria-checked',String(shown));})};
+    }});
+
   try{renderVolume(S.Player.getVolume());volume.value=String(S.Player.getVolume());}catch{}
   // Scrolling over the volume control opens it and nudges the level along an audio-taper (perceptual) curve.
   volumeWrap.addEventListener('wheel',event=>{
@@ -2840,11 +2879,12 @@
     if(focusKey){const c=body.querySelector('.am-settings-row[data-key="'+focusKey+'"] .am-settings-control');(c?.querySelector('[aria-checked="true"]')||c)?.focus({preventScroll:true});}
   }
   function settingRow(def) {
-    const row=el('div','am-settings-row am-settings-'+def.type),text=el('div','am-settings-text'),id='am-setting-'+def.key;
+    const row=el('div','am-settings-row am-settings-'+def.type+(def.wide?' am-settings-wide':'')),text=el('div','am-settings-text'),id='am-setting-'+def.key;
     const label=el('div','am-settings-label',def.label);label.id=id+'-label';text.append(label);row.dataset.key=def.key;
     if(def.note)text.append(el('div','am-settings-note',def.note));
     const now=()=>def.value?def.value():settings[def.key];let control;
-    if(def.type==='toggle'){
+    if(def.type==='custom'){const r=def.render(def);control=r.node;settingsSyncs.push(r.sync);}
+    else if(def.type==='toggle'){
       control=el('button','am-settings-switch');control.type='button';control.setAttribute('role','switch');control.append(el('span','am-settings-knob'));
       control.onclick=()=>setSetting(def.key,!settings[def.key]);settingsSyncs.push(()=>control.setAttribute('aria-checked',String(!!now())));
     } else if(def.style==='segmented'||def.style==='swatches'){
@@ -2897,6 +2937,7 @@
     const order=d=>settingGroups.findIndex(g=>g.id===d.group),items=[],sync=[];
     for(const def of settingDefs.filter(d=>d.menu!==false&&!d.hidden).sort((a,b)=>order(a)-order(b))){
       const now=()=>def.value?def.value():settings[def.key];
+      if(def.type==='custom'){for(const m of def.menu?.()||[]){const item=new S.Menu.Item(m.name,m.checked(),()=>m.toggle());sync.push(()=>item.setState(m.checked()));items.push(item);}continue;}
       if(def.type==='toggle'){const item=new S.Menu.Item(def.label,!!now(),()=>setSetting(def.key,!settings[def.key]));sync.push(()=>item.setState(!!now()));items.push(item);}
       else for(const [value,name] of def.options){const item=new S.Menu.Item(def.label+': '+name,now()===value,()=>setSetting(def.key,value));sync.push(()=>item.setState(now()===value));items.push(item);}
     }

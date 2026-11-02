@@ -1225,7 +1225,7 @@ try {
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
     // Tabs (Apple Music's Settings): a form, toggles as checkboxes. Real clicks from here on.
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
-    assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı']);
+    assert.deepEqual(await page.locator('#am-settings .am-settings-label').allTextContents(), ['Oynatıcıda albüm kapağı', 'Liquid Glass oynatıcı', 'Oynatıcı düğmeleri']);
     await page.click('#am-settings [data-key="artwork"] .am-settings-switch');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-no-artwork')));
     assert.equal(await page.getAttribute('#am-settings [data-key="artwork"] .am-settings-switch', 'aria-checked'), 'false');
@@ -1281,6 +1281,31 @@ try {
     assert.equal(await page.locator('#am-settings').count(), 0);
     const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings')));
     assert.deepEqual([saved.accent, saved.artwork, saved.sort, saved.settingsLayout, saved.settingsPresent], ['blue', false, 'name', 'tabs', 'window']);
+  });
+
+  await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud').onClick());
+    await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+    const chips = () => page.locator('#am-settings .am-pb-chip').allTextContents();
+    // Every tagged button, in the player's order, by its short name; locked ones (play, the LCD) have no chip.
+    assert.deepEqual(await chips(), ['Karıştır', 'Önceki', 'Sonraki', 'Yinele', 'Beğen', 'Diğer', 'Sözler', 'Cihazlar', 'Çalma sırası', 'Ses']);
+    const preview = () => page.evaluate(() => [...document.querySelectorAll('#am-settings .am-pb-icon')].map(i => i.classList.contains('am-pb-off') ? 0 : 1).join(''));
+    assert.equal(await preview(), '11111111111');
+    const shown = sel => page.evaluate(s => getComputedStyle(document.querySelector(s)).display !== 'none', sel);
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    await page.click('#am-settings .am-pb-chip:has-text("Cihazlar")');
+    assert.equal(await preview(), '01111111011');
+    assert.deepEqual([await shown('#am-player [data-am-button="shuffle"]'), await shown('#am-player [data-am-button="connect"]'), await shown('#am-player .am-play')], [false, false, true]);
+    assert.equal(await page.getAttribute('#am-settings .am-pb-chip[data-id="shuffle"]', 'aria-checked'), 'false');
+    // The rule is on the node, not the player: a button moved elsewhere (Now Playing's pane) stays hidden there.
+    assert.equal(await page.evaluate(() => { const b = document.querySelector('#am-player [data-am-button="shuffle"]').cloneNode(true); document.body.append(b); const d = getComputedStyle(b).display; b.remove(); return d; }), 'none');
+    assert.deepEqual(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).playerHidden, ['shuffle', 'connect']);
+    await shot('settings-player-buttons');
+    await page.click('#am-settings .am-pb-chip:has-text("Karıştır")');
+    await page.click('#am-settings .am-pb-chip:has-text("Cihazlar")');
+    assert.equal(await preview(), '11111111111');
+    assert.ok(await shown('#am-player [data-am-button="shuffle"]'));
+    await page.click('#am-settings .am-settings-close');
   });
 
   await check('glass modes: balanced runs the lite glass on the Spicy page only, full keeps the layers, eco is solid', async () => {
@@ -1495,7 +1520,7 @@ try {
       const list = await names();
       // Every definition but the window's own, in tab order (General first); a choice gives a row per option.
       assert.equal(list[0], 'Dil: Otomatik');
-      assert.ok(['Dil: Türkçe', 'Renk: Spotify Yeşili', 'Oynatıcıda albüm kapağı', 'Son listeler: 20', 'Çalma listelerinde parça numaraları'].every(n => list.includes(n)));
+      assert.ok(['Dil: Türkçe', 'Renk: Spotify Yeşili', 'Oynatıcıda albüm kapağı', 'Düğme: Karıştır', 'Son listeler: 20', 'Çalma listelerinde parça numaraları'].every(n => list.includes(n)));
       assert.ok(list.includes('Renk: Mavi') && list.includes('Cam efekti: Eko') && list.includes('Son listeler: Yok') && !list.some(n => n.startsWith('Düzen')));
       await other.evaluate(() => window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').onClick());
       assert.ok(await other.evaluate(() => !document.body.classList.contains('am-liquid') && window.__menus[0].items.find(i => i.name === 'Liquid Glass oynatıcı').checked === false));

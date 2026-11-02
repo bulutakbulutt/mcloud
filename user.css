@@ -1142,6 +1142,30 @@ body.am-solid.am-ready .am-native-panel-open {background:#262626!important;backd
 .am-settings-layout-page {--am-settings-w:620px}
 .am-settings-layout-page .am-settings-body {padding-top:6px}
 
+/* Wide rows (the player buttons): the control under the label, in every layout. */
+.am-settings-row.am-settings-wide,.am-settings-layout-tabs .am-settings-row.am-settings-wide {display:block}
+.am-settings-layout-tabs .am-settings-wide .am-settings-text {display:block}
+.am-settings-layout-tabs .am-settings-wide .am-settings-label {text-align:left}
+.am-settings-layout-tabs .am-settings-wide .am-settings-label::after {content:none}
+.am-settings-layout-tabs .am-settings-row.am-settings-wide:not(:first-child) {margin-top:10px;padding-top:12px;border-top:1px solid var(--am-settings-line)}
+/* Player buttons: a small bar drawn from the tagged buttons (placeholders for the track), hidden ones folding away,
+   then a chip per button. */
+.am-pb {display:grid;gap:12px;margin-top:10px}
+.am-pb-bar {display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:999px;background:var(--am-settings-control);box-shadow:inset 0 1px rgb(var(--am-ink,255 255 255)/.12);color:var(--am-text)}
+.am-pb-zone {display:flex;align-items:center;flex:none}
+.am-pb-lcd {flex:1;min-width:0;display:flex;align-items:center;gap:6px;height:28px;padding:0 6px 0 3px;border-radius:7px;background:rgb(var(--am-ink,255 255 255)/.06);position:relative}
+.am-pb-lcd::after {content:'';position:absolute;left:30px;right:6px;bottom:2px;height:1.5px;border-radius:1px;background:rgb(var(--am-ink,255 255 255)/.25)}
+.am-pb-art {flex:none;width:22px;height:22px;border-radius:4px;background:linear-gradient(135deg,rgb(var(--am-ink,255 255 255)/.3),rgb(var(--am-ink,255 255 255)/.12))}
+.am-pb-lines {flex:1;min-width:0;height:13px;background:linear-gradient(rgb(var(--am-ink,255 255 255)/.35),rgb(var(--am-ink,255 255 255)/.35)) 0 0/60% 4px no-repeat,linear-gradient(rgb(var(--am-ink,255 255 255)/.18),rgb(var(--am-ink,255 255 255)/.18)) 0 8px/42% 3px no-repeat}
+.am-pb-icon {display:grid;place-items:center;width:22px;height:22px;overflow:hidden;transition:width .2s cubic-bezier(.3,.7,.3,1),opacity .15s}
+.am-pb-icon svg {width:14px;height:14px;flex:none}
+.am-pb-icon.am-pb-locked svg {width:17px;height:17px}
+.am-pb-icon.am-pb-off {width:0;opacity:0}
+.am-pb-chips {display:flex;flex-wrap:wrap;gap:6px}
+.am-pb-chip {display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px 0 8px;border:0;border-radius:999px;background:var(--am-settings-control);color:var(--am-sub);font:12px var(--encore-body-font-stack);cursor:pointer;transition:background-color .15s,color .15s}
+.am-pb-chip svg {width:13px;height:13px;flex:none}
+.am-pb-chip[aria-checked="true"] {background:var(--am-accent);color:#fff}
+
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */
 body.am-windows.am-ready #global-nav-bar {right:150px!important}
 body.am-windows #am-artist .am-artist-actions {right:150px}
