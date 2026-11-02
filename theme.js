@@ -2799,9 +2799,11 @@
         const data=context.getImageData(0,0,w,h),p=data.data,grey=new Uint8Array(p.length/4),hist=new Uint32Array(256);
         for(let i=0,j=0;i<p.length;i+=4,j++){const g=Math.round(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);grey[j]=g;hist[g]++;}
         const at=f=>{let n=0,k=0;for(;k<255&&n+hist[k]<=grey.length*f;k++)n+=hist[k];return k;},[lo,hi]=at(.98)-at(.02)<32?[0,255]:[at(.02),at(.98)];
-        const x=g=>Math.min(1,Math.max(0,(g-lo)/(hi-lo))),tone=(g,gamma)=>.25+.75*x(g)**gamma;
+        // A cover that is mostly black (Charts: white type on black) cannot reach it by gamma; its shadows rise instead.
+        let floor=.25;const x=g=>Math.min(1,Math.max(0,(g-lo)/(hi-lo))),tone=(g,gamma)=>floor+(1-floor)*x(g)**gamma;
         const mean=gamma=>{let s=0;for(let g=0;g<256;g++)s+=hist[g]*tone(g,gamma);return s/grey.length;};
         let gamma=1;if(mean(1)<.85){let a=.1,b=1;for(let i=0;i<16;i++){const m=(a+b)/2;if(mean(m)>.85)a=m;else b=m;}gamma=(a+b)/2;}
+        if(mean(gamma)<.84){floor=0;const m=mean(gamma);floor=Math.min(.7,(.85-m)/(1-m));}
         const c=color.match(/[\d.]+/g).slice(0,3).map(Number),lut=Array.from({length:256},(_,g)=>tone(g,gamma));
         for(let i=0,j=0;i<p.length;i+=4,j++){const f=lut[grey[j]];p[i]=c[0]*f;p[i+1]=c[1]*f;p[i+2]=c[2]*f;p[i+3]=255;}
         context.putImageData(data,0,0);canvas.toBlob(blob=>resolve(blob&&URL.createObjectURL(blob)),'image/png');
