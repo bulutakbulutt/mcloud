@@ -31,7 +31,7 @@
 /* Light, after Apple Music's light appearance. Sources (research/issue74/NOTES.md): window #fff and under-page #f6f6f6
    (NSColor windowBackground and underPageBackground under aqua); text = label (.847 black) and secondary label (.498)
    over white; sidebar #f3f2f2 (Music's own window, launched light for one run, 2x capture); bars = the titlebar
-   material (aqua: 197 + .19 x the page: #f3f3f3 at 81%); panels = the popover material (#ddd at 66%); frosted glass =
+   material (aqua: 197 + .19 x the page: #f3f3f3 at 81%); panels = Music's queue panel (opaque #f3f2f2); frosted glass =
    NSGlassEffectView's tone (aqua: 102 + .525 x the page: #d7d7d7 at 48%); Music's red KeyColor is #fa233b in light. */
 :root.am-light,body.am-light {
  color-scheme:light; --am-ink:0 0 0;
@@ -40,7 +40,7 @@
  --am-field:#fff; --am-field-2:#fff; --am-art-empty:#ececec; --am-tint-floor:#f2f2f2;
  --am-bar-glass:color-mix(in srgb,#f3f3f3 81%,transparent);
  --am-sidebar-fill:color-mix(in srgb,#f3f2f2 88%,transparent); --am-sidebar-lite:color-mix(in srgb,#f3f2f2 80%,transparent); --am-sidebar-solid:#f3f2f2;
- --am-panel-fill:color-mix(in srgb,#ddd 66%,transparent); --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#f6f6f6;
+ --am-panel-fill:#f3f2f2; --am-panel-lite:color-mix(in srgb,#f6f6f6 92%,transparent); --am-panel-solid:#f6f6f6;
  --am-player-fill:color-mix(in srgb,#d7d7d7 48%,transparent); --am-solid-fill:linear-gradient(180deg,#fdfdfd,#ececec); --am-toast-fill:#f6f6f6eb;
  --am-toolbar-glass:color-mix(in srgb,#d7d7d7 48%,transparent); --am-toolbar-hover:color-mix(in srgb,#c8c8c8 62%,transparent);
  --am-toolbar-shade:linear-gradient(180deg,#ffffff40,#ffffff14 60%,#fff0);
