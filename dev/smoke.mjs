@@ -1336,7 +1336,7 @@ try {
     await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.waitForSelector('#am-settings .am-settings-box[role="dialog"]');
     const tabs = () => page.locator('#am-settings .am-settings-tab').allTextContents();
-    assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler', 'Şimdi Çalan']);
+    assert.deepEqual(await tabs(), ['Genel', 'Görünüm', 'Oynatıcı', 'Kenar Çubuğu', 'Albümler ve Listeler', 'Şimdi Çalan', 'Ana Sayfa']);
     // It reopens on the last tab (Albums & Playlists, from the track numbers check), as macOS does; the title names it.
     assert.equal(await page.textContent('#am-settings .am-settings-title'), 'Albümler ve Listeler');
     // A form: labels right-aligned with a colon, toggles as checkboxes. Real clicks from here on.
@@ -2003,7 +2003,7 @@ try {
       assert.deepEqual(await english.evaluate(() => window.__menuItems.map(i => i.name)), ['mcloud Settings']);
       const englishSettings = settingsOf(english);
       assert.equal(await englishSettings.state('lang'), 'Automatic');
-      assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists', 'Now Playing']);
+      assert.deepEqual(await english.locator('#am-settings .am-settings-tab').allTextContents(), ['General', 'Appearance', 'Player', 'Sidebar', 'Albums & Playlists', 'Now Playing', 'Home']);
       await Promise.all([english.waitForEvent('load'), englishSettings.pick('lang', 'Türkçe', true)]);
       await english.waitForSelector('body.am-ready #am-sidebar');
       assert.equal(await english.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
@@ -2139,6 +2139,55 @@ try {
       assert.equal(Array.isArray(await stored()), false);
       assert.deepEqual(otherErrors, []);
     } finally { await other.evaluate(v => localStorage.setItem('mcloud:settings', v), before); await other.close(); }
+  });
+
+  await check('Home: Apple cards with "…", mix covers redrawn from the photo their image names', async () => {
+    // A 1x1 PNG for Spotify's image CDNs, which send CORS headers as these do.
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==', 'base64');
+    for (const host of ['https://pickasso.spotifycdn.com/**', 'https://i.scdn.co/**'])
+      await page.route(host, r => r.fulfill({ contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: png }));
+    await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
+    await page.evaluate(() => {
+      const card = (name, src) => `<div data-encore-id="card" class="main-card-cardContainer" role="listitem" style="position:relative"><div class="card__on-click" style="position:absolute;inset:0" onclick="window.__cardOpened=true"></div><div class="main-card-imageContainer" style="pointer-events:none"><div class="main-cardImage-imageWrapper" style="position:relative;padding-bottom:100%"><div><img class="main-cardImage-image" style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div></div><div class="main-card-PlayButtonContainer" style="pointer-events:auto"><button><span></span></button></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
+      const pick = 'https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/';
+      const s = document.createElement('section');s.id = 'mock-home';s.dataset.testid = 'component-shelf';s.style.width = '600px';
+      s.innerHTML = '<div style="display:flex">' + card('Daily Mix 2', pick + 'daily/2/ab6761610000e5eb97f323784adb2a66291c0cd4/en') + card('Chill Mix', pick + 'topic/chill/0ECwFtbIWEVNwjlrfc6xoL/en')
+        + card('Ginkgo Radio', pick + 'radio/track/1Czqh6tbb9gqCQpSkXsqDT/en') + card('Rebel', 'https://i.scdn.co/image/ab67616d00001e02cff4bd68d5d0dd9a0a748045') + '</div>';
+      document.querySelector('.am-native-main main').prepend(s);
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
+    const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .main-cardImage-imageWrapper')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
+    assert.deepEqual(await covers(), [['Daily Mix 2', 'band', true], ['Chill Mix', 'band', true], ['Ginkgo Radio', 'station', true], ['', '', false]]);
+    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track.
+    assert.match(await page.evaluate(() => document.querySelector('#mock-home .am-mix').style.getPropertyValue('--am-mix-photo')), /i\.scdn\.co\/image\/ab6761610000e5eb97f3/);
+    assert.deepEqual(await page.evaluate(() => window.__mixRequests), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:mix-covers')).length), 3);
+    // The hidden title shows under a redrawn cover, the image under it is hidden, and the band is drawn.
+    assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), t = b.closest('[data-encore-id="card"]').querySelector('[data-encore-id="cardTitle"]');
+      return [t.offsetHeight > 0, getComputedStyle(b.querySelector('img')).opacity, getComputedStyle(b, '::after').content]; }), [true, '0', '"Daily Mix 2"']);
+    await settingsWindow.pick('mixCovers', 'Renk geçişi (kişisel mix)');
+    assert.deepEqual((await covers()).map(c => c[1]), ['gradient', 'gradient', 'gradient', '']);
+    await settingsWindow.pick('mixCovers', 'Spotify');
+    assert.deepEqual(await page.evaluate(() => document.querySelectorAll('#mock-home .am-mix').length), 0);
+    await settingsWindow.pick('mixCovers', 'Apple Music gibi');
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
+    // "…" comes on the first hover and opens Spotify's card menu (a contextmenu on the card).
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-apple')));
+    // The pointer lands on the card's click layer over the artwork, as in Spotify.
+    const art = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) img').boundingBox();
+    await page.mouse.move(art.x + art.width / 2, art.y + art.height / 2);
+    await page.evaluate(() => document.querySelector('#mock-home [data-encore-id="card"]:nth-child(4)').addEventListener('contextmenu', e => { window.__cardMenu = e.clientX > 0; e.preventDefault(); }));
+    // A real click at the button: Spotify's card layer sits under it and must not get it.
+    const more = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more').boundingBox();
+    await page.mouse.click(more.x + more.width / 2, more.y + more.height / 2);
+    assert.deepEqual(await page.evaluate(() => [window.__cardMenu, !!window.__cardOpened]), [true, false], '"…" opens the card menu, not the item');
+    await settingsWindow.pick('homeShortcuts');
+    assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
+    await settingsWindow.pick('homeShortcuts');
+    await settingsWindow.pick('homeStyle', 'Spotify');
+    assert.ok(await page.evaluate(() => !document.body.classList.contains('am-home-apple')));
+    await settingsWindow.pick('homeStyle', 'Apple Music');
+    await page.evaluate(() => document.getElementById('mock-home').remove());
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));

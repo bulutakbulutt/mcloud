@@ -119,10 +119,13 @@
   if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
   Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs' })[key] ?? key };
   Spicetify.GraphQL = {
-    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, getAlbum: { name: 'getAlbum' } },
-    // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id.
+    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
+    // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id. The mix
+    // covers' photo lookups (an artist's avatar, a track's album art) answer as Spotify's small colour-and-image queries.
     Request: async (def, vars) => def.name === 'getAlbum'
       ? (window.__albumRequests ||= []).push(vars) && { data: { albumUnion: (window.__mockAlbums || {})[vars.uri.split(':').pop()] || { __typename: 'NotFound' } } }
+      : def.name === 'fetchExtractedColorAndImageForArtistEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { artistUnion: { visuals: { avatarImage: cover('Mix', 9) } } } }
+      : def.name === 'fetchExtractedColorAndImageForTrackEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { trackUnion: { albumOfTrack: { coverArt: cover('Radio', 5) } } } }
       : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
   };
   window.__graphqlRequest = Spicetify.GraphQL.Request; // tests that break the API put it back with this
