@@ -12,7 +12,7 @@
    quaternary .098, fills .098/.078/.047; NSColor resolved under NSAppearance aqua and darkAqua), only the ink flips.
    --am-rim stays white: glass rims are bright in both. .am-scheme-dark keeps a region dark in light mode (the About
    sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
-:root,.am-scheme-dark,#am-artist-info,body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
+:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
  color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
  --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:#dedede; --am-sub:#969696; --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
  --am-label:#f2f2f2; --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
