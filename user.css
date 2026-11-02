@@ -12,7 +12,7 @@
    quaternary .098, fills .098/.078/.047; NSColor resolved under NSAppearance aqua and darkAqua), only the ink flips.
    --am-rim stays white: glass rims are bright in both. .am-scheme-dark keeps a region dark in light mode (the About
    sheet always; the artist page with settings.artistLight 'dark'). New code: use these, not literal colours. */
-:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
+:root,.am-scheme-dark,#am-artist-info,body:not(.am-pv-glass) [data-am-preview],body.am-image-header .am-native-main,body.am-artist-stays-dark.am-artist-open :is(#am-artist,#am-sidebar,#am-player) {
  color-scheme:dark; --am-ink:255 255 255; --am-rim:255 255 255;
  --am-bg:#1f1f1f; --am-sidebar:#282727; --am-text:#dedede; --am-sub:#969696; --am-sub-2:#a9a9a9; --am-dim:#8d8d8d;
  --am-label:#f2f2f2; --am-icon:#e8e8e8; --am-icon-2:#e0e0e0; --am-time:#d4d4d4;
@@ -68,6 +68,11 @@ body {--encore-body-font-stack:-apple-system,BlinkMacSystemFont,"mcloud Inter","
 /* Light: Spotify's dark Encore sets (its root and surfaces such as the app frame and muted cards) take light values,
    after Spotify's own light theme (its base set: #fff, #f5f5f5 highlight, #e2e2e2 press). */
 .am-light :is(.encore-dark-theme,.encore-base-set,.encore-muted-accent-set,.encore-app-frame-set),.am-light:is(.encore-dark-theme,.encore-base-set) {color-scheme:light;--background-base:var(--am-bg);--background-highlight:#f2f2f2;--background-press:#e2e2e2;--background-elevated-base:#f5f5f5;--background-elevated-highlight:#ebebeb;--background-elevated-press:#e2e2e2;--background-tinted-base:rgb(0 0 0/.06);--background-tinted-highlight:rgb(0 0 0/.09);--background-tinted-press:rgb(0 0 0/.14);--text-base:var(--am-text);--text-subdued:var(--am-sub);--essential-base:var(--am-text);--essential-subdued:#8a8a8a;--decorative-base:#000;--decorative-subdued:#dedede}
+/* Pages with a full-width photo header (Today's Top Hits, Daily Mix) take the photo's bottom colour for the whole page
+   (--am-header-base, mostly dark): in light mode they keep Spotify's dark text colours there. */
+body.am-light.am-image-header .am-native-main {color-scheme:dark;--text-base:var(--am-text);--text-subdued:var(--am-sub);--essential-base:var(--am-text);--essential-subdued:#7c7c7c;--background-highlight:#383838;--background-tinted-base:#ffffff1a;--background-tinted-highlight:#ffffff24;--spice-text:#f5f5f7;--spice-subtext:#a6a6aa;--spice-rgb-text:245,245,247;--spice-rgb-subtext:166,166,170}
+/* Home's top layer takes the hovered shortcut's colour (a mid grey by default), which read as a grey band on white. */
+body.am-light .am-native-main main > div > [style^="background-color"]:first-child:has(~ [data-testid="home-page"]) {opacity:.35}
 /* Spotify's green play buttons (card and shortcut hover, playlist header) come from this colour set, with literal
    colours that the theme's --essential-bright-accent above does not reach. */
 .encore-bright-accent-set {color-scheme:dark;--background-base:var(--am-accent);--background-highlight:var(--am-accent-focus);--background-press:var(--am-accent);--background-elevated-base:var(--am-accent-focus);--background-elevated-highlight:var(--am-accent-focus);--background-elevated-press:var(--am-accent);--background-tinted-base:var(--am-accent);--background-tinted-highlight:var(--am-accent-focus);--background-tinted-press:var(--am-accent);--text-base:#fff;--text-subdued:#fff;--text-bright-accent:#fff;--essential-base:#fff;--essential-subdued:#fff;--essential-bright-accent:#fff;--decorative-subdued:var(--am-accent)}
