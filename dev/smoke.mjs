@@ -34,14 +34,14 @@ const settingsOf = p => {
   return {
     pick: (key, option, keep) => p.evaluate(([find, key, option, keep]) => {
       const c = eval(find)(key);
-      if (c.matches('select')) { c.value = String([...c.options].findIndex(o => o.textContent === option)); c.dispatchEvent(new Event('change')); }
+      if (c.matches('[data-am-popup]')) { c.click(); [...document.querySelectorAll('#am-popover .am-popover-item')].find(b => b.textContent === option).click(); }
       else if (c.matches('[role="switch"]')) c.click();
       else [...c.children].find(b => (b.textContent || b.getAttribute('aria-label')) === option).click();
       if (!keep) document.querySelector('#am-settings .am-settings-close')?.click();
     }, [find.toString(), key, option, keep]),
     state: key => p.evaluate(([find, key]) => {
       const c = eval(find)(key), on = c.querySelector('[aria-checked="true"]');
-      return c.matches('select') ? c.selectedOptions[0].textContent : c.matches('[role="switch"]') ? c.getAttribute('aria-checked') === 'true' : on && (on.textContent || on.getAttribute('aria-label'));
+      return c.matches('[data-am-popup]') ? c.textContent : c.matches('[role="switch"]') ? c.getAttribute('aria-checked') === 'true' : on && (on.textContent || on.getAttribute('aria-label'));
     }, [find.toString(), key]),
     close: () => p.evaluate(() => document.querySelector('#am-settings .am-settings-close')?.click()),
   };
@@ -974,7 +974,9 @@ try {
     await page.fill('#global-nav-bar input', '');
     await page.mouse.click(700, 500);
     assert.equal(await page.evaluate(() => [!!document.getElementById('search-dropdown'), getComputedStyle(document.getElementById('main')).zIndex].join()), 'false,0');
-    await page.selectOption('.am-library-sort', 'name');
+    await page.click('.am-library-sort');
+    await page.click('#am-popover [role="menuitemradio"]:has-text("Ada göre (A–Z)")');
+    assert.equal(await page.textContent('.am-library-sort'), 'Ada göre (A–Z)');
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
     // Right-click on library card opens context menu
     await page.click('.am-library-card >> nth=0', { button: 'right' });
@@ -1437,6 +1439,33 @@ try {
     assert.equal(await page.locator('#am-settings').count(), 0);
     const saved = JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings')));
     assert.deepEqual([saved.accent, saved.artwork, saved.sort], ['blue', false, 'name']);
+  });
+
+  await check('settings pop-up buttons: the theme\'s menu, the chosen row over the button, keys as macOS (#102)', async () => {
+    await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
+    await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
+    const button = '#am-settings [data-key="playerMenu"] .am-settings-control';
+    assert.deepEqual(await page.evaluate(b => { const c = document.querySelector(b); return [c.tagName, c.getAttribute('aria-haspopup'), c.textContent]; }, button), ['BUTTON', 'menu', 'Yalnızca şarkının üstünde (Spotify)']);
+    const menu = () => page.evaluate(b => {
+      const pop = document.getElementById('am-popover'), c = document.querySelector(b), on = pop.querySelector('[aria-checked="true"]');
+      if (pop.hidden) return null;
+      const r = c.getBoundingClientRect(), o = on.getBoundingClientRect();
+      return { items: [...pop.querySelectorAll('[role="menuitemradio"]')].map(i => i.textContent), checked: on.textContent, focused: document.activeElement === on, above: +getComputedStyle(pop).zIndex > +getComputedStyle(document.getElementById('am-settings')).zIndex, centred: Math.abs((o.top + o.bottom) / 2 - (r.top + r.bottom) / 2) <= 1, expanded: c.getAttribute('aria-expanded') };
+    }, button);
+    await page.click(button);
+    assert.deepEqual(await menu(), { items: ['Oynatıcının her yerinde (Apple Music)', 'Yalnızca şarkının üstünde (Spotify)'], checked: 'Yalnızca şarkının üstünde (Spotify)', focused: true, above: true, centred: true, expanded: 'true' });
+    // Arrow keys move and Enter picks: the menu closes, focus returns to the button, which shows the choice.
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('Enter');
+    assert.equal(await menu(), null);
+    assert.deepEqual(await page.evaluate(b => [document.activeElement === document.querySelector(b), document.querySelector(b).textContent, JSON.parse(localStorage.getItem('mcloud:settings')).playerMenu], button), [true, 'Oynatıcının her yerinde (Apple Music)', 'apple']);
+    // ArrowDown opens it from the keyboard; Escape closes it back to the button.
+    await page.keyboard.press('ArrowDown');
+    assert.equal((await menu())?.checked, 'Oynatıcının her yerinde (Apple Music)');
+    await page.keyboard.press('Escape');
+    assert.equal(await menu(), null);
+    assert.equal(await page.evaluate(b => document.activeElement === document.querySelector(b), button), true);
+    await settingsWindow.pick('playerMenu', 'Yalnızca şarkının üstünde (Spotify)');
   });
 
   await check('player transport: laid out as Music\'s mini player (centres 23, 51, 83, 115, 143pt; play 36pt)', async () => {

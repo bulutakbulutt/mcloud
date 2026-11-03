@@ -89,6 +89,7 @@
     person:'<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>',
     link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
     check:'<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9"/>',
+    tick:'<path d="m5 12.5 4.5 4.5L19 7"/>',
     profile:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.6 18.4c1.3-1.9 3.2-2.9 5.4-2.9s4.1 1 5.4 2.9"/>',
     trash:'<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
     minus:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8"/>',
@@ -971,9 +972,8 @@
       status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
       const tools=el('div','am-library-tools');
       const filter=el('input','am-library-filter');filter.type='search';filter.placeholder=T('Filtrele','Filter');filter.setAttribute('aria-label',T('Kitaplığı filtrele','Filter library'));
-      const sort=el('select','am-library-sort');sort.setAttribute('aria-label',T('Sıralama','Sort'));
-      for(const [value,label] of [['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]]){const option=el('option','',label);option.value=value;sort.append(option);}
-      sort.value=settings.sort==='name'?'name':'library';
+      const sort=popupButton('am-library-sort',[['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]],
+        ()=>settings.sort==='name'?'name':'library',value=>{settings.sort=value;saveSettings();showItems();},T('Sıralama','Sort')).node;
       tools.append(filter,sort);if(all.length)status.before(tools);
       const grid=el('div','am-library-grid');libraryView.append(grid);
       let rendered=0;
@@ -981,13 +981,12 @@
       function showItems() {
         const query=filter.value.trim().toLocaleLowerCase('tr');
         items=query?all.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):all.slice();
-        if(sort.value==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
+        if(settings.sort==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
         status.textContent=query?(items.length?items.length+' / '+all.length+T(' öğe',' items'):T('Eşleşen öğe yok.','No matches.')):all.length+T(' öğe',' items');
         releaseArtwork();grid.replaceChildren();rendered=0;libraryView.append(more);appendBatch();
       }
       let filterTimer=null;
       filter.addEventListener('input',()=>{clearTimeout(filterTimer);filterTimer=setTimeout(()=>{if(request===libraryRequest)showItems();},120);});
-      sort.addEventListener('change',()=>{settings.sort=sort.value;saveSettings();showItems();});
       function appendBatch() {
         if(request!==libraryRequest) return;
         const fragment=document.createDocumentFragment();
@@ -1012,7 +1011,7 @@
         for(const img of artwork)observeArtwork(img);
         if(rendered>=items.length) more.remove();
       }
-      more.onclick=appendBatch;libraryView.append(more);if(sort.value==='name')showItems();else appendBatch();
+      more.onclick=appendBatch;libraryView.append(more);if(settings.sort==='name')showItems();else appendBatch();
     }catch(e){if(request!==libraryRequest)return;status.textContent=T('Kitaplık yüklenemedi. Yeniden dene.','Couldn\'t load your library. Try again.');const retry=el('button','am-library-retry',T('Yeniden dene','Try Again'));retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label',T('Oynatıcı','Player'));
@@ -1460,7 +1459,7 @@
   }
   let popoverAnchor=null,subAnchor=null,subTimer=null;
   function closeSubPopover(){clearTimeout(subTimer);subTimer=null;if(subPopover.hidden)return;subPopover.hidden=true;subPopover.replaceChildren();subAnchor?.classList.remove('am-active','am-parent');subAnchor=null;}
-  function closePopover(){closeSubPopover();if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popoverAnchor?.setAttribute?.('aria-expanded','false');popoverAnchor=null;}
+  function closePopover(){closeSubPopover();if(popover.hidden)return;popover.hidden=true;popover.replaceChildren();popover.classList.remove('am-popover-popup');popover.style.minWidth='';popoverAnchor?.setAttribute?.('aria-expanded','false');popoverAnchor=null;}
   function openSubPopover(item,buildSub) {
     clearTimeout(subTimer);
     if(subAnchor===item&&!subPopover.hidden)return;
@@ -1507,7 +1506,8 @@
         popover.append(row);continue;
       }
       const item=el('button','am-popover-item'+(entry.submenu?' am-has-submenu':''),entry.label);item.type='button';item.setAttribute('role','menuitem');
-      if(menuIcons[entry.label]){item.classList.add('am-has-icon');item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));}
+      if('checked' in entry){item.classList.add('am-popover-choice');item.setAttribute('role','menuitemradio');item.setAttribute('aria-checked',String(!!entry.checked));if(entry.checked)item.insertAdjacentHTML('afterbegin',svg('tick').replace('<svg ','<svg class="am-popover-tick" '));}
+      else if(menuIcons[entry.label]){item.classList.add('am-has-icon');item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));}
       if(entry.submenu){
         item.addEventListener('pointerenter',()=>{clearTimeout(subTimer);openSubPopover(item,entry.submenu);});
         item.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
@@ -1541,12 +1541,20 @@
     closePopover();
     const entries=typeof build==='function'?build():build;if(!entries?.length)return;
     renderPopoverEntries(entries);
+    const popup=anchor.dataset?.amPopup!==undefined;popover.classList.toggle('am-popover-popup',popup);if(popup)popover.style.minWidth=Math.ceil(anchor.offsetWidth)+18+'px';
     popoverAnchor=anchor;anchor.setAttribute?.('aria-expanded','true');popover.hidden=false;
-    placePopover(anchor);popover.focus({preventScroll:true});menuGlass.featherSoon(popover);
+    placePopover(anchor);menuGlass.featherSoon(popover);
+    (popup&&popover.querySelector('[aria-checked="true"]')||popover).focus({preventScroll:true});
   }
   function placePopover(anchor) {
     const width=popover.offsetWidth,height=popover.offsetHeight;
-    if(typeof anchor.x==='number'){
+    if(anchor.dataset?.amPopup!==undefined){
+      // A pop-up button (NSPopUpButton): the checked row over the button, its text where the button's text is.
+      const rect=anchor.getBoundingClientRect(),row=popover.querySelector('[aria-checked="true"]')||popover.querySelector('.am-popover-item');
+      const text=parseFloat(getComputedStyle(anchor).paddingLeft)-row.offsetLeft-parseFloat(getComputedStyle(row).paddingLeft);
+      popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,rect.left+text)))+'px';
+      popover.style.top=Math.round(Math.min(innerHeight-height-8,Math.max(8,rect.top+rect.height/2-row.offsetTop-row.offsetHeight/2)))+'px';popover.style.bottom='';
+    } else if(typeof anchor.x==='number'){
       popover.style.left=Math.round(Math.min(innerWidth-width-8,Math.max(8,anchor.x)))+'px';
       const below=anchor.y+height+16<innerHeight;
       popover.style.top=below?Math.round(anchor.y+4)+'px':'';
@@ -1559,6 +1567,15 @@
       popover.style.top=below?Math.round(rect.bottom+8)+'px':'';
       popover.style.bottom=below?'':Math.round(innerHeight-rect.top+10)+'px';
     }
+  }
+  // A pop-up button (NSPopUpButton) for a choice, opening the theme's menu: a <select>'s system list is white on Windows
+  // (#102). options are [value,name] pairs; now() reads the value, pick(value) sets it; label names it for screen readers.
+  function popupButton(cls,options,now,pick,label) {
+    const b=el('button',cls);b.type='button';b.dataset.amPopup='';b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
+    const sync=()=>{const name=(options.find(o=>o[0]===now())||options[0])[1];b.textContent=name;if(label)b.setAttribute('aria-label',label+': '+name);};
+    b.onclick=()=>togglePopover(b,()=>options.map(([value,name])=>({label:name,checked:value===now(),action:()=>{b.focus({preventScroll:true});pick(value);sync();}})));
+    b.addEventListener('keydown',event=>{if((event.key==='ArrowDown'||event.key==='ArrowUp')&&popoverAnchor!==b){event.preventDefault();b.click();}});
+    sync();return {node:b,sync};
   }
   document.addEventListener('pointerdown',event=>{
     if(!popover.hidden&&!popover.contains(event.target)&&!subPopover.contains(event.target)&&(!popoverAnchor?.contains||!popoverAnchor.contains(event.target)))closePopover();
@@ -3749,13 +3766,9 @@
         const i=def.options.findIndex(o=>o[0]===now()),next=(i+step+def.options.length)%def.options.length;setSetting(def.key,def.options[next][0]);options[next][1].focus();
       });
     } else {
-      // A pop-up button: Spotify's <select> opens the system's menu, as NSPopUpButton does.
-      control=el('select','am-settings-select');
-      def.options.forEach(([,name],i)=>{const o=el('option','',name);o.value=String(i);control.append(o);});
-      control.onchange=()=>setSetting(def.key,def.options[+control.value][0]);
-      settingsSyncs.push(()=>{control.value=String(Math.max(0,def.options.findIndex(o=>o[0]===now())));});
+      const popup=popupButton('am-settings-select',def.options,now,value=>setSetting(def.key,value));control=popup.node;settingsSyncs.push(popup.sync);
     }
-    control.classList.add('am-settings-control');control.setAttribute('aria-labelledby',label.id);control.id=id;
+    control.classList.add('am-settings-control');control.setAttribute('aria-labelledby',label.id+(control.dataset.amPopup===''?' '+id:''));control.id=id;
     row.append(text,control);settingsSyncs[settingsSyncs.length-1]();return row;
   }
   // Rows with a when() come and go as other settings change: then the window is drawn again, else its controls follow.
