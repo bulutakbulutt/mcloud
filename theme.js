@@ -972,9 +972,8 @@
       status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
       const tools=el('div','am-library-tools');
       const filter=el('input','am-library-filter');filter.type='search';filter.placeholder=T('Filtrele','Filter');filter.setAttribute('aria-label',T('Kitaplığı filtrele','Filter library'));
-      const sort=el('select','am-library-sort');sort.setAttribute('aria-label',T('Sıralama','Sort'));
-      for(const [value,label] of [['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]]){const option=el('option','',label);option.value=value;sort.append(option);}
-      sort.value=settings.sort==='name'?'name':'library';
+      const sort=popupButton('am-library-sort',[['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]],
+        ()=>settings.sort==='name'?'name':'library',value=>{settings.sort=value;saveSettings();showItems();},T('Sıralama','Sort')).node;
       tools.append(filter,sort);if(all.length)status.before(tools);
       const grid=el('div','am-library-grid');libraryView.append(grid);
       let rendered=0;
@@ -982,13 +981,12 @@
       function showItems() {
         const query=filter.value.trim().toLocaleLowerCase('tr');
         items=query?all.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):all.slice();
-        if(sort.value==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
+        if(settings.sort==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
         status.textContent=query?(items.length?items.length+' / '+all.length+T(' öğe',' items'):T('Eşleşen öğe yok.','No matches.')):all.length+T(' öğe',' items');
         releaseArtwork();grid.replaceChildren();rendered=0;libraryView.append(more);appendBatch();
       }
       let filterTimer=null;
       filter.addEventListener('input',()=>{clearTimeout(filterTimer);filterTimer=setTimeout(()=>{if(request===libraryRequest)showItems();},120);});
-      sort.addEventListener('change',()=>{settings.sort=sort.value;saveSettings();showItems();});
       function appendBatch() {
         if(request!==libraryRequest) return;
         const fragment=document.createDocumentFragment();
@@ -1013,7 +1011,7 @@
         for(const img of artwork)observeArtwork(img);
         if(rendered>=items.length) more.remove();
       }
-      more.onclick=appendBatch;libraryView.append(more);if(sort.value==='name')showItems();else appendBatch();
+      more.onclick=appendBatch;libraryView.append(more);if(settings.sort==='name')showItems();else appendBatch();
     }catch(e){if(request!==libraryRequest)return;status.textContent=T('Kitaplık yüklenemedi. Yeniden dene.','Couldn\'t load your library. Try again.');const retry=el('button','am-library-retry',T('Yeniden dene','Try Again'));retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label',T('Oynatıcı','Player'));
@@ -1569,6 +1567,15 @@
       popover.style.top=below?Math.round(rect.bottom+8)+'px':'';
       popover.style.bottom=below?'':Math.round(innerHeight-rect.top+10)+'px';
     }
+  }
+  // A pop-up button (NSPopUpButton) for a choice, opening the theme's menu: a <select>'s system list is white on Windows
+  // (#102). options are [value,name] pairs; now() reads the value, pick(value) sets it; label names it for screen readers.
+  function popupButton(cls,options,now,pick,label) {
+    const b=el('button',cls);b.type='button';b.dataset.amPopup='';b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
+    const sync=()=>{const name=(options.find(o=>o[0]===now())||options[0])[1];b.textContent=name;if(label)b.setAttribute('aria-label',label+': '+name);};
+    b.onclick=()=>togglePopover(b,()=>options.map(([value,name])=>({label:name,checked:value===now(),action:()=>{b.focus({preventScroll:true});pick(value);sync();}})));
+    b.addEventListener('keydown',event=>{if((event.key==='ArrowDown'||event.key==='ArrowUp')&&popoverAnchor!==b){event.preventDefault();b.click();}});
+    sync();return {node:b,sync};
   }
   document.addEventListener('pointerdown',event=>{
     if(!popover.hidden&&!popover.contains(event.target)&&!subPopover.contains(event.target)&&(!popoverAnchor?.contains||!popoverAnchor.contains(event.target)))closePopover();
@@ -3759,12 +3766,7 @@
         const i=def.options.findIndex(o=>o[0]===now()),next=(i+step+def.options.length)%def.options.length;setSetting(def.key,def.options[next][0]);options[next][1].focus();
       });
     } else {
-      // A pop-up button (NSPopUpButton) opening the theme's menu: a <select>'s system list is white on Windows (#102).
-      control=el('button','am-settings-select');control.type='button';control.dataset.amPopup='';control.setAttribute('aria-haspopup','menu');control.setAttribute('aria-expanded','false');
-      const pick=value=>{control.focus({preventScroll:true});setSetting(def.key,value);};
-      control.onclick=()=>togglePopover(control,()=>def.options.map(([value,name])=>({label:name,checked:value===now(),action:()=>pick(value)})));
-      control.addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();if(popoverAnchor!==control)control.click();}});
-      settingsSyncs.push(()=>{control.textContent=(def.options.find(o=>o[0]===now())||def.options[0])[1];});
+      const popup=popupButton('am-settings-select',def.options,now,value=>setSetting(def.key,value));control=popup.node;settingsSyncs.push(popup.sync);
     }
     control.classList.add('am-settings-control');control.setAttribute('aria-labelledby',label.id+(control.dataset.amPopup===''?' '+id:''));control.id=id;
     row.append(text,control);settingsSyncs[settingsSyncs.length-1]();return row;

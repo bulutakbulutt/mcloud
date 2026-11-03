@@ -829,7 +829,7 @@ body.am-library-open .am-native-main {visibility:hidden!important;opacity:0!impo
 .am-library-tools {display:flex;align-items:center;gap:10px;margin:14px 0 10px}
 .am-library-filter,.am-library-sort {box-sizing:border-box;height:30px;border:1px solid rgb(var(--am-ink)/.078);border-radius:8px;background:rgb(var(--am-ink)/.039);color:var(--am-text);font:13px var(--encore-body-font-stack);outline-color:var(--am-accent-focus)}
 .am-library-filter {flex:0 1 260px;min-width:0;padding:0 10px}
-.am-library-sort {padding:0 8px;background:var(--am-field-2)}
+.am-library-sort {padding:0 26px 0 10px;background:var(--am-field-2) var(--am-settings-chevron) no-repeat right 9px center/8px 12px;text-align:left;white-space:nowrap;cursor:pointer}
 .am-library-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 22px}
 .am-library-item {position:relative;min-width:0}
 .am-library-card {width:100%;appearance:none;border:0;padding:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:5px}

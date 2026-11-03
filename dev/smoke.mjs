@@ -974,7 +974,9 @@ try {
     await page.fill('#global-nav-bar input', '');
     await page.mouse.click(700, 500);
     assert.equal(await page.evaluate(() => [!!document.getElementById('search-dropdown'), getComputedStyle(document.getElementById('main')).zIndex].join()), 'false,0');
-    await page.selectOption('.am-library-sort', 'name');
+    await page.click('.am-library-sort');
+    await page.click('#am-popover [role="menuitemradio"]:has-text("Ada göre (A–Z)")');
+    assert.equal(await page.textContent('.am-library-sort'), 'Ada göre (A–Z)');
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
     // Right-click on library card opens context menu
     await page.click('.am-library-card >> nth=0', { button: 'right' });
