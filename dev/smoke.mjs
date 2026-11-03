@@ -2203,8 +2203,9 @@ try {
       const appleItems = await page.evaluate(() => {
         if (!document.getElementById('am-settings')) window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick();
         [...document.querySelectorAll('#am-settings .am-settings-tab')].find(t => t.textContent === 'Şimdi Çalan').click();
-        const n = [...document.querySelectorAll('#am-settings [data-key="npArt"] option')].filter(o => o.textContent.includes('Apple Music')).length;
-        document.querySelector('#am-settings .am-settings-close').click(); return n;
+        const c = document.querySelector('#am-settings [data-key="npArt"] .am-settings-control'); c.click();
+        const n = [...document.querySelectorAll('#am-popover .am-popover-item')].filter(o => o.textContent.includes('Apple Music')).length;
+        c.click(); document.querySelector('#am-settings .am-settings-close').click(); return n;
       });
       assert.equal(appleItems, h264 ? 2 : 0);
       if (h264) {
