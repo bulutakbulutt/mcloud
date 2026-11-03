@@ -764,6 +764,9 @@ body.am-solid {--am-menu-fill:var(--am-menu-solid);--am-menu-filter:none}
 .am-popover-item.am-has-icon.am-has-submenu {justify-content:flex-start}
 .am-popover-item.am-has-icon.am-has-submenu::after {margin-left:auto}
 .am-popover-item .am-menu-icon {display:block;width:12px;height:12px;flex:none;margin:0 1px}
+#am-popover.am-popover-popup {z-index:77}
+.am-popover-item.am-popover-choice {position:relative;padding-left:22px}
+.am-popover-tick {position:absolute;left:7px;top:50%;width:11px;height:11px;translate:0 -50%;stroke-width:2.4}
 /* Edit details (our menus' playlist action): a small sheet over the window. */
 .am-edit-back {position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#00000059;-webkit-app-region:no-drag}
 .am-edit-box {box-sizing:border-box;width:min(420px,calc(100vw - 48px));display:grid;gap:12px;padding:20px;color:var(--am-label);font:13px var(--encore-body-font-stack)}
@@ -1413,6 +1416,7 @@ body.am-solid #am-settings .am-settings-box,body.am-balanced.am-spicy-route:not(
 .am-settings-swatches .am-settings-option[aria-checked="true"] {outline:2px solid var(--am-text);outline-offset:2px}
 /* Pop-up button: Apple's rounded rectangle with the up/down chevrons. */
 .am-settings-select {max-width:220px;height:22px;padding:0 24px 0 9px;border:0;border-radius:5px;background:var(--am-settings-control) var(--am-settings-chevron) no-repeat right 8px center/8px 12px;box-shadow:inset 0 .5px rgb(var(--am-ink,255 255 255)/.1);color:var(--am-text);font:13px var(--encore-body-font-stack);appearance:none;cursor:pointer}
+.am-settings-select {display:block;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-settings-footer {display:flex;justify-content:flex-end;padding:10px 20px 12px;border-top:1px solid var(--am-settings-line)}
 .am-settings-ok {min-width:76px;height:24px;padding:0 14px;border:0;border-radius:6px;background:var(--am-accent);color:#fff;font:13px var(--encore-body-font-stack);cursor:pointer}
 .am-settings-ok:active {filter:brightness(.9)}
