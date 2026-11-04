@@ -2546,9 +2546,9 @@ try {
       const before = s.querySelector('.mock-art2').classList.contains('am-mix-ready');
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const arrows = [...s.querySelectorAll('.mock-chevrons > div')], st = getComputedStyle(arrows[0]);
-      const out = [before, arrows.every(a => a.classList.contains('am-chevron')), st.getPropertyValue('--chevrons-button-color').trim(), st.getPropertyValue('--text-base').trim()];
+      const out = [before, arrows.every(a => a.classList.contains('am-chevron')), st.getPropertyValue('--chevrons-button-color').trim(), st.getPropertyValue('--chevrons-button-backdrop-filter').trim()];
       s.remove();return out;
-    }), [true, true, 'rgb(0 0 0/.42)', '#fff']);
+    }), [true, true, 'transparent', 'blur(21px) url(#am-search-glass)']);
     // Where Spicetify's css-map names the card (macOS), its image box is main-cardImage-imageWrapper, not the image's
     // parent inside it: the box keeps the corners and the hairline that replace Spotify's drop shadow (#109).
     assert.deepEqual(await page.evaluate(() => {

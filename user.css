@@ -145,11 +145,12 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 /* A carousel's edges fade into the page under its arrows; Spotify hard-codes that colour to a dark #121212b3, which in
    light drew grey bands with hard top and bottom edges over the cards. */
 body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
-/* Its arrows (and a chip row's) are a frosted button like the cards' play and "…", dark in both appearances as those are
-   (a light one turned back into a white disc on a playlist's dark header in light mode), not Spotify's white disc;
-   theme.js tags them .am-chevron and Spotify's rule reads these variables. No Liquid Glass: Apple keeps it off the content layer. */
-.am-native-main .am-chevron {--chevrons-button-color:rgb(0 0 0/.42);--chevrons-button-hover-color:var(--am-accent);--chevrons-button-backdrop-filter:blur(12px) saturate(1.4);--text-base:#fff;width:28px;height:28px}
+/* Its arrows (and a chip row's) are frosted with the live search results' material (21pt blur, then #am-search-glass's
+   one level that keeps the page's colour; a plain fill in Eco), not Spotify's white disc; theme.js tags them
+   .am-chevron and Spotify's own rule reads these variables. No Liquid Glass: Apple keeps it off the content layer. */
+.am-native-main .am-chevron {--chevrons-button-color:var(--am-sd-fill);--chevrons-button-hover-color:var(--am-accent);--chevrons-button-backdrop-filter:var(--am-sd-filter);--text-base:var(--am-text,#fff);width:28px;height:28px;box-shadow:inset 0 0 0 .5px var(--am-rim-edge)}
 .am-native-main .am-chevron > * {opacity:.9}
+.am-native-main .am-chevron:hover {--text-base:#fff}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
 /* A card's image box: Spicetify's readable name where its css-map has one (macOS), else the image's parent (#109). */
