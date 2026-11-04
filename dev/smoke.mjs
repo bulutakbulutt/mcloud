@@ -985,7 +985,11 @@ try {
     await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' }));
     await page.waitForSelector(albumCard);
     await page.click(albumCard + ' .am-library-sub');
-    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/artist/frank');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/artist/a0');
+    // Any other subtitle is part of the card's own target.
+    await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=playlists' }));
+    await page.waitForSelector('#am-library span.am-library-sub');
+    assert.equal(await page.evaluate(() => [...document.querySelectorAll('#am-library span.am-library-sub')].every(s => s.closest('.am-library-card-open'))), true);
     await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' }));
     await page.waitForSelector(albumCard);
     // A drag takes the cover as its ghost and fades the card's hover tools meanwhile.
@@ -2560,7 +2564,7 @@ try {
           <div role="gridcell" aria-colindex="3"><div data-encore-id="text">1,000</div></div>
           <div role="gridcell" aria-colindex="4"><button>…</button><div data-encore-id="text">3:12</div></div>
         </div></div></div></div></div>
-        <section class="Shelf" style="display:none"><div role="list"><div role="listitem"><a href="/genre/0"><div></div></a></div></div></section>`;
+        <section class="Shelf" style="display:none"><div role="list"><div role="listitem"><a href="/genre/0"><div></div></a></div></div><div data-encore-id="card"></div></section>`;
       host.append(section);
     });
     await page.waitForFunction(() => document.querySelector('#mock-hashed .main-trackList-trackListRow'));
@@ -2585,7 +2589,34 @@ try {
     }), [true, true, true, true, ['main-trackList-rowSectionIndex', 'main-trackList-rowSectionStart', 'main-trackList-rowSectionVariable', 'main-trackList-rowSectionEnd'], true, true, true, true, true]);
     // An album's clean list hides the Plays column, on the hashed DOM too.
     assert.equal(await page.evaluate(() => { const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'); return getComputedStyle(row.querySelector('.main-trackList-rowSectionVariable')).display; }), 'none');
+    // The names go on the row's real grid, the cells' parent: the separator is placed against it, the rules' ">" reach
+    // the cells; a header is no track row; a card is no shelf.
+    assert.deepEqual(await page.evaluate(() => {
+      const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'), box = row.firstElementChild, header = document.querySelector('#mock-hashed [aria-rowindex="1"]');
+      return [row.classList.contains('main-trackList-trackListRow'), box.classList.contains('main-trackList-trackListRow'), getComputedStyle(box).position, getComputedStyle(box, '::after').left, header.classList.contains('main-trackList-trackListRow'), document.querySelector('#mock-hashed [data-encore-id="card"]').hasAttribute('data-shelf')];
+    }), [false, true, 'relative', '48px', false, false]);
+    // A row's artwork lands after the row and needs no name: with it, the numbers-off rules reach the index cell.
+    assert.equal(await page.evaluate(() => {
+      const img = document.createElement('img'); img.alt = ''; document.querySelector('#mock-hashed [aria-rowindex="2"] .main-trackList-rowSectionStart').prepend(img);
+      const had = document.body.classList.contains('am-no-numbers');document.body.classList.add('am-no-numbers');
+      const position = getComputedStyle(document.querySelector('#mock-hashed [aria-rowindex="2"] .main-trackList-rowSectionIndex')).position;
+      document.body.classList.toggle('am-no-numbers', had);return position;
+    }), 'static');
+    // Selecting a row rewrites its class, as React does; the names come back.
+    await page.evaluate(() => { const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'); row.firstElementChild.className = 'hashed-selected'; row.setAttribute('aria-selected', 'true'); });
+    await page.waitForFunction(() => document.querySelector('#mock-hashed [aria-rowindex="2"] > .main-trackList-trackListRow'));
     await page.evaluate(() => document.querySelector('#mock-hashed').remove());
+    // An older build carries the names on the inner row already: nothing changes there, role="row" least of all.
+    assert.deepEqual(await page.evaluate(async () => {
+      const section = document.createElement('section');section.id = 'mock-older';
+      section.innerHTML = `<div class="main-trackList-trackList main-trackList-indexable" role="grid">
+        <div class="main-trackList-trackListHeader" role="presentation"><div class="main-trackList-trackListHeaderRow main-trackList-trackListRowGrid" role="row"><div class="main-trackList-rowSectionIndex" role="columnheader">#</div><div class="main-trackList-rowSectionStart" role="columnheader">Title</div></div></div>
+        <div role="presentation"><div role="row" id="mock-older-row"><div class="main-trackList-trackListRow main-trackList-trackListRowGrid" role="presentation"><div class="main-trackList-rowSectionIndex" role="gridcell">1</div><div class="main-trackList-rowSectionStart" role="gridcell"><div class="main-trackList-rowMainContent">Song</div></div></div></div></div></div>`;
+      document.querySelector('.am-native-main').append(section);
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const out = [document.getElementById('mock-older-row').className, section.querySelector('.main-trackList-trackListHeaderRow').classList.contains('main-trackList-trackListRow')];
+      section.remove();return out;
+    }), ['', false]);
   });
 
   await check('Now Playing slides in and out, the page column easing with it (#110)', async () => {

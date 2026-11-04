@@ -287,13 +287,15 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-no-tracklist-header .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeader {display:none!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow {border-bottom:1px solid rgb(var(--am-ink)/.09)!important;color:rgb(var(--am-ink)/.502)}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListHeaderRow :is(span,button,div) {font-size:12px!important;font-weight:500!important;color:rgb(var(--am-ink)/.502)}
+/* What the separator and a row's marker are placed against; the hashed build leaves the row static (#109). */
+body.am-ready .am-native-main .main-trackList-trackListRow {position:relative}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow {border-radius:6px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow::after {content:"";position:absolute;left:100px;right:8px;bottom:0;height:1px;background:rgb(var(--am-ink)/.071);pointer-events:none}
 /* An album's rows have no artwork: the line starts under the title, as in Music (#93). */
-body.am-ready .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(.main-trackList-rowImage))::after {left:48px}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:is(:hover,[aria-selected="true"])::after {opacity:0}
+body.am-ready .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img)))::after {left:48px}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) :is(.main-trackList-trackListRow:is(:hover,[aria-selected="true"]),[role="row"][aria-selected="true"] > .main-trackList-trackListRow)::after {opacity:0}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:hover {background:rgb(var(--am-ink)/.059)!important}
-body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowImage {border-radius:5px!important}
+body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) :is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img) {border-radius:5px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-rowSectionIndex {color:rgb(var(--am-ink)/.4)}
 /* Spotify's playing equaliser is a green GIF; #am-accent-fill (theme.js) fills its shape with the accent. */
 :is(#am-accent-fill,#am-accent-swap) feFlood {flood-color:var(--am-accent)}
@@ -306,13 +308,13 @@ button div[style*="pointer-events: none"] > div:empty {filter:url(#am-accent-swa
    in Apple Music; rows without it (albums, compact lists) show the playing track by its accent title alone. */
 body.am-no-numbers .am-native-main .main-trackList-indexable {--index-column-width:0px}
 body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRowGrid > .main-trackList-rowSectionStart {margin-inline-start:-16px}
-body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRowGrid:not(:has(.main-trackList-rowImage)) > .main-trackList-rowSectionIndex {visibility:hidden}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRowGrid:not(:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img))) > .main-trackList-rowSectionIndex {visibility:hidden}
 body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-rowMarker > span {visibility:hidden}
-body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage) > .main-trackList-rowSectionIndex {position:static}
-body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage) .main-trackList-rowMarker {position:absolute;left:16px;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:5px;display:grid;place-items:center;color:#fff}
-body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(.main-trackList-rowImage):is(:hover,:focus-within) .main-trackList-rowMarker,body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-rowMarker:has(> img) {background:#00000080}
-body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:has(.main-trackList-rowImage)::after {left:68px}
-body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:not(:has(.main-trackList-rowImage))::after {left:16px}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img)) > .main-trackList-rowSectionIndex {position:static}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img)) .main-trackList-rowMarker {position:absolute;left:16px;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:5px;display:grid;place-items:center;color:#fff}
+body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-trackListRow:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img)):is(:hover,:focus-within) .main-trackList-rowMarker,body.am-no-numbers .am-native-main .main-trackList-indexable .main-trackList-rowMarker:has(> img) {background:#00000080}
+body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img))::after {left:68px}
+body.am-no-numbers .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]) .main-trackList-trackListRow:not(:has(:is(.main-trackList-rowImage,.main-trackList-rowSectionStart > img)))::after {left:16px}
 /* Clean album track list (#72, settings.albumClean): a row is the title, its explicit mark, the duration and the
    row's buttons, as in Apple Music. The artist line stays only for a guest or another artist (theme.js writes that
    rule per album into #am-album-style); the play count column and the music video label go. */

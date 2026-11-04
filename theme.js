@@ -420,7 +420,7 @@
     bindPanes();
     nativeNav = document.getElementById('global-nav-bar');
     nativeNav?.classList.add('am-native-global');
-    legacyObserver.disconnect();legacyObserver.observe(main,{childList:true,subtree:true});
+    legacyObserver.disconnect();legacyObserver.observe(main,legacyWatch);
     tagLegacyDom();
     return true;
   }
@@ -429,9 +429,14 @@
   // written against (#109). The new nodes get those names back; older builds carry them already, so each pass does
   // nothing there. React rewrites a class it owns, so rows and cards are tagged again as they are added.
   let legacyFrame=0,duoReady=false;
-  const legacyRoots=new Set();
+  const legacyRoots=new Set(),legacyRows=new WeakSet();
+  // Selecting a row rewrites its class too, so a row whose aria-selected changed is tagged again.
+  const legacyWatch={childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected']};
   const legacyObserver=new MutationObserver(records=>{
-    for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)legacyRoots.add(node);
+    for(const record of records){
+      if(record.type==='attributes')legacyRoots.add(record.target);
+      else for(const node of record.addedNodes)if(node.nodeType===1)legacyRoots.add(node);
+    }
     if(legacyFrame||!legacyRoots.size)return;
     legacyFrame=requestAnimationFrame(()=>{legacyFrame=0;const roots=[...legacyRoots];legacyRoots.clear();tagLegacyDom(roots);});
   });
@@ -440,15 +445,17 @@
     for(const root of scope){
       if(!(root instanceof Element)||!root.isConnected||!main.contains(root)&&root!==main)continue;
       const nodes=root.matches('[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"]')?[root]:[];
-      nodes.push(...root.querySelectorAll('[role="grid"],[role="row"],[role="list"],[data-encore-id="card"],section.Shelf,[data-testid="component-shelf"]'));
+      nodes.push(...root.querySelectorAll('[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"]'));
       for(const node of nodes){
         if(node.matches('[role="grid"]'))tagTrackList(node);
         else if(node.matches('[role="row"]'))tagTrackRow(node);
         else if(node.matches('[role="list"]'))tagGenreList(node);
         else if(!node.hasAttribute('data-shelf'))node.setAttribute('data-shelf','');
       }
-      // Browse all's tiles arrive one by one after the empty list, and a row can land before its grid.
+      // Browse all's tiles arrive one by one after the empty list; a list's header and a row's cells can land after theirs.
       const list=root.closest('[role="list"]');if(list)tagGenreList(list);
+      const grid=root.closest('[role="grid"]');if(grid)tagTrackList(grid);
+      const row=root.closest('[role="row"]');if(row)tagTrackRow(row);
       root.closest('section.Shelf,[data-testid="component-shelf"]')?.setAttribute('data-shelf','');
     }
   }
@@ -464,17 +471,20 @@
     for(const row of grid.querySelectorAll('[role="row"]'))tagTrackRow(row);
   }
   function tagTrackRow(row) {
-    if(row.classList.contains('main-trackList-trackListRow')||!row.closest('[role="grid"]')?.querySelector('[role="columnheader"]'))return;
+    if(!row.closest('[role="grid"]')?.querySelector('[role="columnheader"]'))return;
     const cells=[...row.querySelectorAll('[role="gridcell"],[role="columnheader"]')];
     if(!cells.length)return;
-    row.classList.add('main-trackList-trackListRow','main-trackList-trackListRowGrid');
+    // The names go on the cells' own parent, the row's real grid (role="row" wraps it, except on a header). One that has
+    // them without our having put them there is an older build's.
+    const box=cells[0].parentElement,header=cells[0].matches('[role="columnheader"]');
+    if(box.classList.contains('main-trackList-trackListRowGrid')&&!legacyRows.has(box))return;
+    legacyRows.add(box);
+    box.classList.add('main-trackList-trackListRowGrid',header?'main-trackList-trackListHeaderRow':'main-trackList-trackListRow');
     cells.forEach((cell,i)=>cell.classList.add(i===0?'main-trackList-rowSectionIndex':i===1?'main-trackList-rowSectionStart':i===cells.length-1&&cells.length>2?'main-trackList-rowSectionEnd':'main-trackList-rowSectionVariable'));
     const index=cells[0],start=cells[1],end=cells[cells.length-1];
     index?.firstElementChild?.classList.add('main-trackList-rowMarker');
-    if(start){
-      start.querySelector(':scope > img')?.classList.add('main-trackList-rowImage');
-      [...start.children].find(c=>c.tagName==='DIV')?.classList.add('main-trackList-rowMainContent');
-    }
+    // A row's artwork needs no name: user.css finds it as the title cell's img, however late it lands.
+    if(start)[...start.children].find(c=>c.tagName==='DIV')?.classList.add('main-trackList-rowMainContent');
     if(cells.length>2)for(const c of end.children)if(c.matches('[data-encore-id="text"]'))c.classList.add('main-trackList-rowDuration');
   }
   // Browse all's category grid, whose tiles link to /genre/.
@@ -956,8 +966,10 @@
     else if(currentMode==='library')for(const img of libraryView.querySelectorAll('img[data-src]'))observeArtwork(img);
   });
   // One shared listener avoids retaining a render batch through every card closure. The title and artwork open the item;
-  // an album's artist line is its own button and opens the artist (it stops the click).
+  // an album's artist line is its own button and opens the artist.
   libraryView.addEventListener('click',event=>{
+    const artist=event.target.closest?.('button.am-library-sub');
+    if(artist&&libraryView.contains(artist)){go('/'+artist.dataset.uri.split(':').slice(1).join('/'));return;}
     const open=event.target.closest?.('.am-library-card-open'),card=open?.closest('.am-library-card');
     if(!card||!libraryView.contains(card))return;
     const {uri,kind,folder}=card.dataset;
@@ -983,7 +995,7 @@
       ];
     },folder==='true'?null:menuExtras('lib:'+uri,()=>libraryEntries(uri))];
   }
-  // The card is a button, so its hover tools sit beside it in an .am-library-item; this finds the card from either.
+  // The card holds buttons, so its hover tools sit beside it in an .am-library-item; this finds the card from either.
   const libraryCardAt=event=>{const item=event.target.closest?.('.am-library-item');return item&&libraryView.contains(item)?item.querySelector('.am-library-card'):null;};
   libraryView.addEventListener('contextmenu',event=>{
     const card=libraryCardAt(event);
@@ -1010,12 +1022,6 @@
   }
   function libraryImage(item) {
     return spotifyImage(item.images?.[0]?.url || item.images?.items?.[0]?.url || item.image?.sources?.[0]?.url || '');
-  }
-  // An album card's artist line opens the artist: the album's own artists come from the query the album page caches.
-  const albumIdOf=uri=>/^spotify:album:([A-Za-z0-9]+)$/.exec(uri||'')?.[1]||'';
-  async function openAlbumArtist(uri) {
-    const id=albumIdOf(uri);if(!id)return;
-    const artist=(await albumData(id))?.artists?.[0];if(artist)go('/artist/'+artist);
   }
   const libraryTime=v=>typeof v==='number'?v:Date.parse(v||'')||0;
   // All Playlists filters by who made a playlist, as Spotify's own library does (#108: By you, By Spotify, Mixed; it has
@@ -1047,6 +1053,7 @@
         const added=libraryTime(item.addedAt);
         items.push({uri:item.uri,type:item.type,name:item.name,imageUrl:libraryImage(item),added,played:Math.max(added,libraryTime(item.lastPlayedAt)),
           own:!!item.isOwnedBySelf||['liked-songs','your-episodes'].includes(item.type),spotify:item.owner?.uri==='spotify:user:spotify',mixed:!!item.isMixed,
+          artistUri:item.type==='album'?item.artists?.find(a=>a?.uri)?.uri||'':'',
           // Spotify's library items carry album artists in artists[], playlist owners in owner.
           subtitle:item.owner?.displayName||item.owner?.name||item.artists?.map(a=>a.name).filter(Boolean).join(', ')||({artist:T('Sanatçı','Artist'),album:T('Albüm','Album'),playlist:T('Çalma listesi','Playlist'),folder:T('Klasör','Folder')}[item.type]||'')});
       }
@@ -1062,7 +1069,7 @@
   // from the sidebar's rows, or the card it was opened from, remembered for back and forward.
   const folderNames=new Map();
   function folderName(uri) {
-    const name=listItems.find(item=>item.uri===uri)?.name||libraryView.querySelector(`.am-library-card[data-uri="${CSS.escape(uri)}"]`)?.getAttribute('aria-label');
+    const name=listItems.find(item=>item.uri===uri)?.name||libraryView.querySelector(`.am-library-card[data-uri="${CSS.escape(uri)}"] .am-library-card-open`)?.getAttribute('aria-label');
     if(name)folderNames.set(uri,name);return folderNames.get(uri)||libraryLabels.playlists;
   }
   async function renderLibrary(kind,folder='',refresh=true) {
@@ -1143,16 +1150,13 @@
         if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else art.innerHTML=svg(item.type==='artist'?'artist':item.type==='album'?'album':'music');
         if(item.type==='artist')art.classList.add('am-artist-art');
         open.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')));
-        // An album's artist line opens the artist; the id comes from the album query the page already caches (theme.js
-        // albumData), so hovering the line warms it and the click opens at once.
-        let sub;
-        if(item.type==='album'&&item.subtitle){
-          sub=el('button','am-library-sub',item.subtitle);sub.type='button';
+        b.append(open);
+        // An album's artist line is its own target; any other subtitle is part of the card's.
+        if(item.artistUri){
+          const sub=el('button','am-library-sub',item.subtitle);sub.type='button';sub.dataset.uri=item.artistUri;
           sub.setAttribute('aria-label',T('Sanatçıya git: ','Go to artist: ')+item.subtitle);
-          sub.addEventListener('click',event=>{event.stopPropagation();openAlbumArtist(item.uri);});
-          sub.addEventListener('pointerenter',()=>{const id=albumIdOf(item.uri);if(id&&!albumInfo.has(id))albumData(id);},{passive:true});
-        } else sub=el('span','am-library-sub',item.subtitle);
-        b.append(open,sub);
+          b.append(sub);
+        } else open.append(el('span','am-library-sub',item.subtitle));
         const cell=el('div','am-library-item');cell.append(b);
         // Round artist cards get no tools, as on the artist page; a folder cannot be played.
         if(item.type!=='artist')cell.append(cardTools(item.uri,null,{noPlay:item.type==='folder',menu:more=>openMenu(more,...libraryMenu(item.uri,kind,String(item.type==='folder')))}));
@@ -3745,7 +3749,7 @@
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
     if(document.hidden){observer.disconnect();legacyObserver.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();else{legacyObserver.observe(main,{childList:true,subtree:true});tagLegacyDom();}bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
+    else {if(!main.isConnected)bindLayout();else{legacyObserver.observe(main,legacyWatch);tagLegacyDom();}bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
