@@ -1761,6 +1761,16 @@ try {
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
     const tint = option => flip('albumTint', 'Albüm ve çalma listesi rengi: ' + option, option);
+    // Spicetify 2.46.2 can skip its webpack bindings on a cold start: GraphQL keeps only Definitions, and Request (a getter
+    // for Platform.GraphQLLoader) never comes. An album opened before the loader is there waits for it, then uses it.
+    await page.evaluate(() => { Spicetify.GraphQL = { Definitions: Spicetify.GraphQL.Definitions }; window.__graphqlLoader = Spicetify.Platform.GraphQLLoader; delete Spicetify.Platform.GraphQLLoader; });
+    await albumPage(1);
+    await page.waitForTimeout(700);
+    assert.equal(await page.$eval('#am-album-style', e => e.textContent), '', 'no rule without a GraphQL client');
+    await page.evaluate(() => { Spicetify.Platform.GraphQLLoader = window.__graphqlLoader; });
+    await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('kanye'), null, { timeout: 3000 });
+    assert.deepEqual(await shown(), [true, true, false]);
+    await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.

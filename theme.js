@@ -64,6 +64,9 @@
   const H = S.Platform.History;
   // Links inside Spotify's pages carry a locale prefix (/intl-tr/artist/…); routes are matched without it.
   const routePath = () => (H.location.pathname || '/').replace(/^\/intl-[a-z]{2}(?:-[a-z0-9]+)?(?=\/|$)/i, '') || '/';
+  // Spotify's GraphQL client. Spicetify's GraphQL.Request is a getter for Platform.GraphQLLoader that its wrapper adds
+  // with the webpack bindings; Spicetify 2.46.2 sometimes skips those on a cold start, leaving GraphQL with Definitions only.
+  const gql = () => { const request = S.GraphQL?.Request || S.Platform?.GraphQLLoader; return typeof request === 'function' ? request : null; };
   const icons = {
     search:'<circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/>',
     home:'<path d="m3 10 9-8 9 8v11h-7v-7h-4v7H3z"/>',
@@ -1664,7 +1667,7 @@
   // Spotify's queue takes tracks only (an album or playlist URI adds nothing), so those are expanded first.
   async function queueUris(uri) {
     if(/^spotify:playlist:/.test(uri))return (await S.Platform.PlaylistAPI.getContents(uri,{limit:500})).items.map(i=>i.uri);
-    if(/^spotify:album:/.test(uri))return ((await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri,locale:'',offset:0,limit:300}))?.data?.albumUnion?.tracksV2?.items||[]).map(i=>i.track?.uri);
+    if(/^spotify:album:/.test(uri))return ((await gql()(S.GraphQL.Definitions.getAlbum,{uri,locale:'',offset:0,limit:300}))?.data?.albumUnion?.tracksV2?.items||[]).map(i=>i.track?.uri);
     return [uri];
   }
   const canQueue=uri=>/^spotify:(track|episode|album|playlist):/.test(uri||'');
@@ -3097,7 +3100,7 @@
   function artistOverview(id) {
     const hit=artistCache.get(id),age=hit?Date.now()-hit.time:Infinity;
     if(hit&&age<120e3)return hit.promise;
-    const promise=S.GraphQL.Request(S.GraphQL.Definitions.queryArtistOverview,{uri:'spotify:artist:'+id,locale:S.Locale?.getLocale?.()||'',includePrerelease:true}).then(response=>{
+    const promise=gql()(S.GraphQL.Definitions.queryArtistOverview,{uri:'spotify:artist:'+id,locale:S.Locale?.getLocale?.()||'',includePrerelease:true}).then(response=>{
       const artist=response?.data?.artistUnion;
       if(!artist?.profile?.name)throw new Error(response?.errors?.[0]?.message||'No artist data');
       artistCache.set(id,{promise:Promise.resolve(artist),time:Date.now()});
@@ -3113,7 +3116,7 @@
     const link=event.target.closest?.('a[href*="/artist/"],[data-uri^="spotify:artist:"]');
     if(!link){clearTimeout(prefetchTimer);return;}
     const id=/artist[:/]([A-Za-z0-9]{22})/.exec(link.getAttribute('href')||link.dataset.uri||'')?.[1];
-    if(!id||artistCache.has(id)||nativeArtists.has(id)||typeof S.GraphQL?.Request!=='function')return;
+    if(!id||artistCache.has(id)||nativeArtists.has(id)||!gql()||!S.GraphQL?.Definitions?.queryArtistOverview)return;
     clearTimeout(prefetchTimer);prefetchTimer=setTimeout(()=>artistOverview(id).then(artist=>{
       // and the header photo, so the click finds both (Spotify's image CDN).
       const header=artist.headerImage?.data||artist.visuals?.headerImage,img=new Image();img.decoding='async';
@@ -3387,7 +3390,7 @@
     const kind=query.get('am-library');
     if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
-    if(artistId&&!nativeArtists.has(artistId)&&S.GraphQL?.Request&&S.GraphQL.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
+    if(artistId&&!nativeArtists.has(artistId)&&gql()&&S.GraphQL?.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
     const closeLibrary=()=>{++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');},body=document.body.classList;
     if(artistId){closeArtist();closeLibrary();}
     else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
@@ -3435,10 +3438,10 @@
   function mixCover(url) {
     if(mixJobs.has(url))return mixJobs.get(url);
     const job=(async()=>{
-      const source=mixSource(url),G=S.GraphQL,D=G?.Definitions;let photo=source.photo||'';
+      const source=mixSource(url),request=gql(),D=request&&S.GraphQL?.Definitions;let photo=source.photo||'';
       try{
-        if(source.artist&&D?.fetchExtractedColorAndImageForArtistEntity)photo=spotifyImage(bySize((await G.Request(D.fetchExtractedColorAndImageForArtistEntity,{uri:'spotify:artist:'+source.artist}))?.data?.artistUnion?.visuals?.avatarImage).at(-1)?.url||'');
-        if(source.track&&D?.fetchExtractedColorAndImageForTrackEntity)photo=spotifyImage(bySize((await G.Request(D.fetchExtractedColorAndImageForTrackEntity,{uri:'spotify:track:'+source.track}))?.data?.trackUnion?.albumOfTrack?.coverArt).at(-1)?.url||'');
+        if(source.artist&&D?.fetchExtractedColorAndImageForArtistEntity)photo=spotifyImage(bySize((await request(D.fetchExtractedColorAndImageForArtistEntity,{uri:'spotify:artist:'+source.artist}))?.data?.artistUnion?.visuals?.avatarImage).at(-1)?.url||'');
+        if(source.track&&D?.fetchExtractedColorAndImageForTrackEntity)photo=spotifyImage(bySize((await request(D.fetchExtractedColorAndImageForTrackEntity,{uri:'spotify:track:'+source.track}))?.data?.trackUnion?.albumOfTrack?.coverArt).at(-1)?.url||'');
       }catch{}
       const color=await artworkColor(photo||url);
       mixJobs.delete(url);if(!color)return null;
@@ -3649,7 +3652,7 @@
   // The artist rule is a stylesheet keyed on the artists' ids, so React re-rendering rows needs no work here.
   const albumInfo=new Map(),albumStyle=el('style','');albumStyle.id='am-album-style';document.head.append(albumStyle);
   const playlistColors=new Map();
-  let albumRequest=0;
+  let albumRequest=0,albumWait={};
   // Under the track list, as in Apple Music: "18 songs, 1 hour, 8 minutes" (a playlist counts items). user.css draws it
   // from --am-list-info and hides Spotify's count in the header while it is set (#97).
   function listInfo(count,ms,items) {
@@ -3667,7 +3670,7 @@
     if(albumInfo.has(id))return albumInfo.get(id);
     let info=null;
     try{
-      const album=(await S.GraphQL.Request(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:300}))?.data?.albumUnion;
+      const album=(await gql()(S.GraphQL.Definitions.getAlbum,{uri:'spotify:album:'+id,locale:'',offset:0,limit:300}))?.data?.albumUnion;
       if(album?.name){
         const tracks=album.tracksV2?.items||[],count=album.tracksV2?.totalCount??tracks.length;
         // The length only when every track came back (albums of more than 300 show their count alone).
@@ -3695,7 +3698,13 @@
   async function syncAlbum() {
     const id=albumId(),playlist=playlistId(),request=++albumRequest,tint=tintLevel()!=='off',body=document.body.classList;
     if(playlist)return syncPlaylist(playlist,request,tint);
-    if(!id||!S.GraphQL?.Request||!S.GraphQL.Definitions?.getAlbum){albumStyle.textContent='';body.remove('am-album-tinted');setListInfo('');return;}
+    if(!id||!gql()||!S.GraphQL?.Definitions?.getAlbum){
+      albumStyle.textContent='';body.remove('am-album-tinted');setListInfo('');
+      // An album opened before the client is there asks again (every 0.5s for 15s) while the page stays open.
+      if(albumWait.id!==id)albumWait={id,tries:0};
+      if(id&&albumWait.tries++<30)setTimeout(()=>{if(request===albumRequest)syncAlbum();},500);
+      return;
+    }
     const cached=albumInfo.get(id);if(!tint||!cached?.color)body.remove('am-album-tinted');
     setListInfo(cached?.list);
     const info=cached||await albumData(id);

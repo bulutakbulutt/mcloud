@@ -139,6 +139,7 @@
       : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
   };
   window.__graphqlRequest = Spicetify.GraphQL.Request; // tests that break the API put it back with this
+  Spicetify.Platform.GraphQLLoader = Spicetify.GraphQL.Request; // what Spicetify's GraphQL.Request getter returns
   Object.assign(Spicetify.Platform.LibraryAPI, {
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
