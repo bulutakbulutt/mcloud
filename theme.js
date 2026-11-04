@@ -194,6 +194,9 @@
   // Playlist and album pages label Spotify's play button in CSS (user.css), which reads these.
   document.documentElement.style.setProperty('--am-t-play',JSON.stringify(T('Çal','Play')));
   document.documentElement.style.setProperty('--am-t-pause',JSON.stringify(T('Duraklat','Pause')));
+  // Spicetify's Player.isPlaying throws while its player state is being built (seen at boot with the Now Playing pane
+  // shown: its tick ran before Spotify's player had a state, which aborted the rest of the theme's start).
+  const isPlaying=()=>{try{return !!S.Player.isPlaying?.();}catch{return false;}};
   const accents={red:[T('Kırmızı','Red'),'#fa2d48','#fa4662'],pink:[T('Pembe','Pink'),'#ff375f','#ff5c7c'],orange:[T('Turuncu','Orange'),'#ff9f0a','#ffb340'],yellow:[T('Sarı','Yellow'),'#ffd60a','#ffe04d'],green:[T('Yeşil','Green'),'#30d158','#5ade7a'],teal:[T('Turkuaz','Teal'),'#40c8e0','#6dd6ea'],blue:[T('Mavi','Blue'),'#0a84ff','#409cff'],purple:[T('Mor','Purple'),'#bf5af2','#cf7ff5'],spotify:[T('Spotify Yeşili','Spotify Green'),'#1ed760','#3be477']};
   if(!accents[settings.accent])settings.accent='red';
   // Saved values of settings this build does not define (a newer or older build's) are kept, read again at each save so
@@ -735,7 +738,7 @@
   }
   // Apple Music marks the playing playlist with a speaker.
   function syncListPlaying() {
-    const uri = S.Player.origin?._state && S.Player.isPlaying?.() ? S.Player.data?.context?.uri || '' : '';
+    const uri = S.Player.origin?._state && isPlaying() ? S.Player.data?.context?.uri || '' : '';
     for (const { b } of listNav) b.classList.toggle('am-playing', b.dataset.uri === uri);
   }
   if (S.Platform.LibraryAPI?.getContents) {
@@ -2477,7 +2480,7 @@
   // Playlist and album pages label Spotify's play button Play/Pause in CSS; this says whether that page is the one playing.
   function syncEntityPlaying() {
     const [,kind,id]=/^\/(playlist|album)\/([A-Za-z0-9]+)/.exec(routePath())||[];
-    const playing=!!kind&&S.Player.data?.context?.uri===`spotify:${kind}:${id}`&&!!S.Player.isPlaying?.();
+    const playing=!!kind&&S.Player.data?.context?.uri===`spotify:${kind}:${id}`&&!!isPlaying();
     document.body.classList.toggle('am-entity-playing',playing);
   }
   let previousTrack='',previousPlaying=null;
@@ -2485,7 +2488,7 @@
   function syncPlayer() {
     if(document.hidden||!S.Player.origin?._state) return;
     syncEntityPlaying();
-    const playing=S.Player.isPlaying();if(playWant===null||playing===playWant){playWant=null;showPlaying(playing);}
+    const playing=isPlaying();if(playWant===null||playing===playWant){playWant=null;showPlaying(playing);}
     shuffle.classList.toggle('am-active',!!S.Player.getShuffle());repeat.classList.toggle('am-active',!!S.Player.getRepeat());
     setAttributeIfChanged(shuffle,'aria-pressed',String(!!S.Player.getShuffle()));setAttributeIfChanged(repeat,'aria-pressed',String(!!S.Player.getRepeat()));
     const level=S.Player.getVolume();if(volume.value!==String(level)){volume.value=String(level);renderVolume(level);if(level>0)unmutedVolume=level;}
@@ -2696,7 +2699,7 @@
     const item=S.Player.data?.item;
     if((item?.uri||'')!==npTrackKey)npTrack(item);
     // Plain lyrics light the line being sung only while playing (paused, every line is grey, as in Music).
-    const playing=!!S.Player.isPlaying?.();if(np.classList.contains('am-np-playing')!==playing)np.classList.toggle('am-np-playing',playing);
+    const playing=!!isPlaying();if(np.classList.contains('am-np-playing')!==playing)np.classList.toggle('am-np-playing',playing);
     const liked=star.classList.contains('am-active');npStar.classList.toggle('am-active',liked);setAttributeIfChanged(npStar,'aria-pressed',String(liked));setAttributeIfChanged(npStar,'title',star.title);
     npSyncCanvas();npPlayVideo();npSyncLyric();npSyncFull();
   }
@@ -2733,7 +2736,7 @@
   function npPlayVideo() {
     const v=hasMedia(npBleed)?npBleed:hasMedia(npMotion)?npMotion:null;if(!v)return;
     // Paused with the music, and while the window or pane is hidden.
-    if(npVisible()&&S.Player.isPlaying?.()){if(v.paused)v.play().catch(()=>{});}else if(!v.paused)v.pause();
+    if(npVisible()&&isPlaying()){if(v.paused)v.play().catch(()=>{});}else if(!v.paused)v.pause();
   }
   async function npLoadMotion(item) {
     const token=++npMotionToken,kind=settings.npArt;npStopVideo();
@@ -2838,7 +2841,7 @@
       }
     }
     const next=lines[index+1];
-    if(next&&S.Player.isPlaying?.())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
+    if(next&&isPlaying())npLyricTimer=setTimeout(npSyncLyric,Math.max(60,next.t-at-100));
   }
   // Back in view, a clip that was found while the window was hidden gets its turn.
   document.addEventListener('visibilitychange',()=>{if(document.hidden){clearTimeout(npLyricTimer);npPlayVideo();}else if(!hasMedia(npMotion)&&!hasMedia(npBleed))npTrackKey='';});
