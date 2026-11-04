@@ -2535,6 +2535,20 @@ try {
     const more = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more').boundingBox();
     await page.mouse.click(more.x + more.width / 2, more.y + more.height / 2);
     assert.deepEqual(await page.evaluate(() => [window.__cardMenu, !!window.__cardOpened]), [true, false], '"…" opens the card menu, not the item');
+    // A mix seen before is drawn as its image is added, before it loads; a carousel's arrows become frosted buttons.
+    assert.deepEqual(await page.evaluate(async () => {
+      const src = document.querySelector('#mock-home .am-mix-ready img').getAttribute('src');
+      const s = document.createElement('section');s.id = 'mock-home-again';
+      s.innerHTML = `<div data-encore-id="card"><div class="mock-art2"><div><img alt="" src="${src}"></div></div><div data-encore-id="cardTitle">Daily Mix 2</div></div>`
+        + '<div class="mock-chevrons"><div aria-hidden="true"><svg data-encore-id="icon"></svg></div><div aria-hidden="true"><svg data-encore-id="icon"></svg></div></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      await Promise.resolve();
+      const before = s.querySelector('.mock-art2').classList.contains('am-mix-ready');
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const arrows = [...s.querySelectorAll('.mock-chevrons > div')], st = getComputedStyle(arrows[0]);
+      const out = [before, arrows.every(a => a.classList.contains('am-chevron')), st.getPropertyValue('--chevrons-button-color').trim(), st.getPropertyValue('--text-base').trim()];
+      s.remove();return out;
+    }), [true, true, 'rgb(0 0 0/.42)', '#fff']);
     // Where Spicetify's css-map names the card (macOS), its image box is main-cardImage-imageWrapper, not the image's
     // parent inside it: the box keeps the corners and the hairline that replace Spotify's drop shadow (#109).
     assert.deepEqual(await page.evaluate(() => {
