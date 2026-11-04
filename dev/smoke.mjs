@@ -1688,8 +1688,11 @@ try {
     await pick('glass', 'Tam');
     assert.deepEqual(await state(), { mode: 'full', ...glass });
     await pick('glass', 'Eko');
-    await page.waitForFunction(() => !document.getElementById('am-toolbar-glass'));
+    // Eco keeps the toolbar's circles and capsules, as solid faces: no lens, no filter anywhere in them.
+    await page.waitForFunction(() => document.querySelectorAll('#am-toolbar-glass > .am-tglass-solid').length >= 2);
     assert.deepEqual(await state(), { mode: 'am-solid', player: null, toolbar: null, rims: 0, sidebar: false, glow: false });
+    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-tglass-on'), [...document.querySelectorAll('#am-toolbar-glass *')].filter(e => getComputedStyle(e).backdropFilter !== 'none' || getComputedStyle(e).filter !== 'none').length,
+      getComputedStyle(document.querySelector('#global-nav-bar .am-toolbar-leading button')).width]), [true, 0, '36px']);
     assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).glass, 'eco');
     await pick('glass', 'Dengeli');
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
