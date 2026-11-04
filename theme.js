@@ -442,15 +442,23 @@
   // the readable main-trackList-…, main-card-… and main-gridContainer-… ones used to be, which the theme's rules are
   // written against (#109). The new nodes get those names back; older builds carry them already, so each pass does
   // nothing there. React rewrites a class it owns, so rows and cards are tagged again as they are added.
-  let legacyFrame=0,duoReady=false;
+  let legacyFrame=0,duoReady=false,mixReady=false;
   const legacyRoots=new Set(),legacyRows=new WeakSet();
   // Selecting a row rewrites its class too, so a row whose aria-selected changed is tagged again.
   const legacyWatch={childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected']};
   const legacyObserver=new MutationObserver(records=>{
+    const early=[];
     for(const record of records){
       if(record.type==='attributes')legacyRoots.add(record.target);
-      else for(const node of record.addedNodes)if(node.nodeType===1)legacyRoots.add(node);
+      else for(const node of record.addedNodes)if(node.nodeType===1){
+        legacyRoots.add(node);
+        if(mixReady&&settings.mixCovers!=='spotify')for(const img of node.matches(mixImages)?[node]:node.querySelectorAll(mixImages))if(mixCovers.has(img.getAttribute('src')))early.push(img);
+      }
     }
+    // A mix seen before is drawn as its image is added, before the first paint: waiting for the image's load showed
+    // Spotify's cover for ~140ms each time Home came back (measured in the client). The corners are all read before any
+    // box is written, so the new page's style is worked out once, not once per cover.
+    if(early.length){const radii=early.map(img=>getComputedStyle(img).borderRadius);early.forEach((img,i)=>markMix(img,radii[i]));}
     if(legacyFrame||!legacyRoots.size)return;
     legacyFrame=requestAnimationFrame(()=>{legacyFrame=0;const roots=[...legacyRoots];legacyRoots.clear();tagLegacyDom(roots);});
   });
@@ -471,6 +479,16 @@
       const grid=root.closest('[role="grid"]');if(grid)tagTrackList(grid);
       const row=root.closest('[role="row"]');if(row)tagTrackRow(row);
       root.closest('section.Shelf,[data-testid="component-shelf"]')?.setAttribute('data-shelf','');
+      tagChevrons(root);
+    }
+  }
+  // Spotify's carousel arrows (shelves, chip rows) are a pair of icon-only aria-hidden divs in an overlay, with hashed
+  // class names; user.css draws them as the cards' frosted buttons through the variables Spotify's own rule reads.
+  function tagChevrons(root) {
+    for(const icon of root.querySelectorAll('div[aria-hidden="true"]:not(.am-chevron) > svg[data-encore-id="icon"]:only-child')){
+      const pair=icon.parentElement.parentElement;
+      if(pair?.children.length===2&&[...pair.children].every(c=>c.matches('div[aria-hidden="true"]')&&c.childElementCount===1&&c.firstElementChild.matches('svg[data-encore-id="icon"]')))
+        for(const c of pair.children)c.classList.add('am-chevron');
     }
   }
   // A track list's grid, header and rows: the same names Spotify gave them before it hashed its classes.
@@ -3564,7 +3582,8 @@
   // cover is drawn again as Apple's (settings.mixCovers): a colour band with the name over the photo (Essentials), a
   // gradient with the name (personal mixes), the photo in a circle (stations) or the photo alone. Mood mixes and
   // Discover Weekly have no photo and get the gradient. The image keeps its src; its parent gets .am-mix and the
-  // custom properties user.css draws from. Images are caught as they load (a capture listener, no DOM observer).
+  // custom properties user.css draws from. Images are caught as they load (a capture listener), and a mix seen before as
+  // soon as its image is added (the main view's observer, tagLegacyDom's).
   const mixImages='img[src^="https://pickasso.spotifycdn.com/"],img[src^="https://seed-mix-image.spotifycdn.com/"],img[src^="https://daylist.spotifycdn.com/"]';
   const mixUrl=/^https:\/\/(?:pickasso\.spotifycdn\.com\/image\/[^/]+\/dt\/v1\/img\/([^?#]+)|seed-mix-image\.spotifycdn\.com\/|daylist\.spotifycdn\.com\/)/;
   function mixSource(url) {
@@ -3606,7 +3625,7 @@
   }
   // Apple's own pairing: radios as its stations (the photo in a circle), the other mixes as Essentials (the band).
   const mixStyle=url=>settings.mixCovers!=='apple'?settings.mixCovers:/\/img\/radio\//.test(url)?'station':'band';
-  function markMix(img) {
+  function markMix(img,radius) {
     // A card's image sits absolute in its square box (main-card-imageContainer, or the card's own image area); a page
     // header's directly in its parent.
     const box=img.closest('[data-encore-id="card"]')?img.parentElement?.parentElement:img.parentElement,url=img.getAttribute('src')||'';if(!box||!img.closest('.am-native-main'))return;
@@ -3615,13 +3634,14 @@
     if(box.dataset.amMixSrc===url&&box.classList.contains('am-mix-ready'))return;
     const card=img.closest('[data-encore-id="card"]');
     box.dataset.amMix=(card?card.querySelector('[data-encore-id="cardTitle"]')?.textContent:img.closest('[data-testid="playlist-page"]')?.querySelector('h1')?.textContent)?.trim()||'';
-    box.dataset.amMixSrc=url;box.classList.add('am-mix');box.style.setProperty('--am-mix-radius',getComputedStyle(img).borderRadius);
+    box.dataset.amMixSrc=url;box.classList.add('am-mix');box.style.setProperty('--am-mix-radius',radius??getComputedStyle(img).borderRadius);
     const known=mixCovers.get(url);
     if(known){drawMix(box,known);return;}
     box.classList.remove('am-mix-ready');
     mixCover(url).then(cover=>{if(cover&&box.dataset.amMixSrc===url&&img.getAttribute('src')===url)drawMix(box,cover);});
   }
   document.addEventListener('load',event=>{if(event.target.tagName==='IMG'&&(settings.mixCovers!=='spotify'||event.target.closest('.am-mix')))markMix(event.target);},true);
+  mixReady=true;
   defineSetting({key:'mixCovers',group:'home',label:T('Mix kapakları','Mix covers'),type:'choice',default:'apple',
     options:[['apple',T('Apple Music gibi','As Apple Music')],['band',T('Şerit (Essentials)','Band (Essentials)')],['gradient',T('Renk geçişi (kişisel mix)','Gradient (personal mix)')],['station',T('Yuvarlak fotoğraf (istasyon)','Round photo (station)')],['photo',T('Yalnız fotoğraf','Photo only')],['spotify','Spotify']],
     note:T('Daily Mix, "… Mix", radyo ve This Is kapakları. Fotoğraf Spotify\'ın kendi görselinden gelir.','Daily Mix, "… Mix", radio and This Is covers. The photo comes from Spotify\'s own image.'),
