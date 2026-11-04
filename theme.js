@@ -64,9 +64,20 @@
   const H = S.Platform.History;
   // Links inside Spotify's pages carry a locale prefix (/intl-tr/artist/…); routes are matched without it.
   const routePath = () => (H.location.pathname || '/').replace(/^\/intl-[a-z]{2}(?:-[a-z0-9]+)?(?=\/|$)/i, '') || '/';
-  // Spotify's GraphQL client. Spicetify's GraphQL.Request is a getter for Platform.GraphQLLoader that its wrapper adds
-  // with the webpack bindings; Spicetify 2.46.2 sometimes skips those on a cold start, leaving GraphQL with Definitions only.
+  // Spicetify 2.46.2 sometimes skips its webpack bindings on a cold start (fixed in 2.46.4). Without them Player.origin
+  // and GraphQL.Request never come, and Spicetify's own loops for Player.data, the player events, addToQueue and
+  // CosmosAsync wait on Player.origin for good. The two getters are the bindings' own (Platform.PlayerAPI and
+  // Platform.GraphQLLoader); given them, Spicetify finishes the rest. Locale and the other bindings stay missing.
+  const repairs = [];
+  if (S.Platform.PlayerAPI && S.Player && !Object.getOwnPropertyDescriptor(S.Player, 'origin'))
+    try { Object.defineProperty(S.Player, 'origin', { get: () => S.Platform?.PlayerAPI, configurable: true, enumerable: true }); repairs.push('Player.origin'); } catch {}
+  if (S.Platform.GraphQLLoader && S.GraphQL && !S.GraphQL.Request)
+    try { Object.defineProperty(S.GraphQL, 'Request', { get: () => S.Platform?.GraphQLLoader, configurable: true, enumerable: true }); repairs.push('GraphQL.Request'); } catch {}
+  window.__amSpicetifyRepairs = repairs;
   const gql = () => { const request = S.GraphQL?.Request || S.Platform?.GraphQLLoader; return typeof request === 'function' ? request : null; };
+  // Spicetify.Locale wraps Spotify's i18n: its dictionary is Platform.Translations and its locale Platform.Session's.
+  const spotifyLocale = () => S.Locale?.getLocale?.() || S.Platform?.Session?.locale || '';
+  const spotifyText = key => S.Locale?.get ? S.Locale.get(key) : S.Platform?.Translations?.[key];
   const icons = {
     search:'<circle cx="10.5" cy="10.5" r="7.5"/><path d="m16 16 5 5"/>',
     home:'<path d="m3 10 9-8 9 8v11h-7v-7h-4v7H3z"/>',
@@ -192,7 +203,7 @@
   for(const key in settings)if(typeof savedSettings[key]===typeof settings[key])settings[key]=savedSettings[key];
   // The theme's own strings are Turkish or English. 'auto' follows Spotify's display language; the strings are
   // built once, so changing the language reloads Spotify.
-  const lang=['tr','en'].includes(settings.lang)?settings.lang:/^tr\b/i.test(S.Locale?.getLocale?.()||navigator.language||'')?'tr':'en';
+  const lang=['tr','en'].includes(settings.lang)?settings.lang:/^tr\b/i.test(spotifyLocale()||navigator.language||'')?'tr':'en';
   const T=(tr,en)=>lang==='tr'?tr:en;
   // Playlist and album pages label Spotify's play button in CSS (user.css), which reads these.
   document.documentElement.style.setProperty('--am-t-play',JSON.stringify(T('Çal','Play')));
@@ -1476,7 +1487,7 @@
           // says Add until the song's state arrives, so the row is watched while it lives.
           const likedArt=item.querySelector('img[src*="/liked-songs/"]');
           if(likedArt&&likedArt.parentElement!==item){
-            const slot=likedArt.parentElement,mark=()=>{slot.dataset.amLiked=item.textContent.trim()===S.Locale?.get?.('web-player.aligned-curation.tooltips.remove-from-liked-songs')?'on':'off';};
+            const slot=likedArt.parentElement,mark=()=>{slot.dataset.amLiked=item.textContent.trim()===spotifyText('web-player.aligned-curation.tooltips.remove-from-liked-songs')?'on':'off';};
             mark();new MutationObserver(mark).observe(item,{childList:true,characterData:true,subtree:true});
           }
           // Rich rows (Your Updates: a picture, two lines, a dot) are Encore list rows: their picture is content.
@@ -3100,7 +3111,7 @@
   function artistOverview(id) {
     const hit=artistCache.get(id),age=hit?Date.now()-hit.time:Infinity;
     if(hit&&age<120e3)return hit.promise;
-    const promise=gql()(S.GraphQL.Definitions.queryArtistOverview,{uri:'spotify:artist:'+id,locale:S.Locale?.getLocale?.()||'',includePrerelease:true}).then(response=>{
+    const promise=gql()(S.GraphQL.Definitions.queryArtistOverview,{uri:'spotify:artist:'+id,locale:spotifyLocale(),includePrerelease:true}).then(response=>{
       const artist=response?.data?.artistUnion;
       if(!artist?.profile?.name)throw new Error(response?.errors?.[0]?.message||'No artist data');
       artistCache.set(id,{promise:Promise.resolve(artist),time:Date.now()});
@@ -3735,7 +3746,7 @@
   // Spotify's save buttons are Apple's star (#97): outlined, filled once saved. A row's has the row's only aria-checked
   // (user.css); the page's shares aria-checked with Download, so it is matched by Spotify's own labels for it.
   const starStyle=el('style','');starStyle.id='am-star-style';document.head.append(starStyle);
-  const saveLabels=['save_to_your_library','remove_from_your_library'].map(key=>S.Locale?.get?.(key)).filter(label=>label&&!/^[a-z_.-]+$/.test(label));
+  const saveLabels=['save_to_your_library','remove_from_your_library'].map(spotifyText).filter(label=>label&&!/^[a-z_.-]+$/.test(label));
   if(!saveLabels.length)saveLabels.push('Save to Your Library','Remove from Your Library');
   const saveButton=`.am-native-main [data-testid="action-bar-row"] button:is(${saveLabels.map(label=>`[aria-label=${JSON.stringify(label)}]`).join(',')}):not(#am-none)`;
   starStyle.textContent=`${saveButton}{color:var(--am-star-color,var(--am-accent))!important}${saveButton} svg{background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}${saveButton} svg path{display:none}${saveButton}[aria-checked="true"] svg{-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}`;

@@ -2347,6 +2347,24 @@ try {
     } finally { await english.close(); }
   });
 
+  await check('Spicetify without its webpack bindings (2.46.2 cold start): the player, CosmosAsync and Spotify labels still work', async () => {
+    const bare = await browser.newPage({ viewport: { width: 1440, height: 900 } }), bareErrors = [];
+    bare.on('pageerror', e => bareErrors.push(e.message));
+    try {
+      await bare.goto(pathToFileURL(path.join(here, 'preview.html')).href + '?spicetify=nobindings');
+      await bare.waitForSelector('body.am-ready #am-sidebar');
+      // The theme gives Spicetify the two getters its bindings add; Spicetify's own loops then set Player.data and CosmosAsync.
+      assert.deepEqual(await bare.evaluate(() => window.__amSpicetifyRepairs), ['Player.origin', 'GraphQL.Request']);
+      assert.equal(await bare.evaluate(() => Spicetify.Player.origin === Spicetify.Platform.PlayerAPI && Spicetify.GraphQL.Request === Spicetify.Platform.GraphQLLoader), true);
+      await bare.waitForFunction(() => Spicetify.Player.data?.item && Spicetify.CosmosAsync?.get);
+      await bare.waitForFunction(() => document.querySelector('#am-player')?.textContent.includes('Nights'));
+      // Language from Platform.Session, Spotify's labels from Platform.Translations (Spicetify.Locale's own dictionary).
+      assert.equal(await bare.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
+      assert.match(await bare.$eval('#am-star-style', e => e.textContent), /Kitaplığına Kaydet/);
+      assert.deepEqual(bareErrors, []);
+    } finally { await bare.close(); }
+  });
+
   await check('Marketplace installs move to GitHub Pages, and a stamped theme.js loads its own commit\'s CSS', async () => {
     // A local copy (the preview) has no Marketplace and no stamp: nothing is written or fetched.
     assert.deepEqual(await page.evaluate(async () => [await __amPages.migration, await __amPages.css]), ['not-active', 'unstamped']);
