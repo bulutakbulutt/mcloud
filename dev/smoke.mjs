@@ -1785,6 +1785,16 @@ try {
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
     const tint = option => flip('albumTint', 'Albüm ve çalma listesi rengi: ' + option, option);
+    // Spicetify 2.46.2 can skip its webpack bindings on a cold start: GraphQL keeps only Definitions, and Request (a getter
+    // for Platform.GraphQLLoader) never comes. An album opened before the loader is there waits for it, then uses it.
+    await page.evaluate(() => { Spicetify.GraphQL = { Definitions: Spicetify.GraphQL.Definitions }; window.__graphqlLoader = Spicetify.Platform.GraphQLLoader; delete Spicetify.Platform.GraphQLLoader; });
+    await albumPage(1);
+    await page.waitForTimeout(700);
+    assert.equal(await page.$eval('#am-album-style', e => e.textContent), '', 'no rule without a GraphQL client');
+    await page.evaluate(() => { Spicetify.Platform.GraphQLLoader = window.__graphqlLoader; });
+    await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('kanye'), null, { timeout: 3000 });
+    assert.deepEqual(await shown(), [true, true, false]);
+    await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
@@ -2364,6 +2374,24 @@ try {
       assert.equal(JSON.parse(await english.evaluate(() => localStorage.getItem('mcloud:settings'))).lang, 'tr');
       assert.deepEqual(englishErrors, []);
     } finally { await english.close(); }
+  });
+
+  await check('Spicetify without its webpack bindings (2.46.2 cold start): the player, CosmosAsync and Spotify labels still work', async () => {
+    const bare = await browser.newPage({ viewport: { width: 1440, height: 900 } }), bareErrors = [];
+    bare.on('pageerror', e => bareErrors.push(e.message));
+    try {
+      await bare.goto(pathToFileURL(path.join(here, 'preview.html')).href + '?spicetify=nobindings');
+      await bare.waitForSelector('body.am-ready #am-sidebar');
+      // The theme gives Spicetify the two getters its bindings add; Spicetify's own loops then set Player.data and CosmosAsync.
+      assert.deepEqual(await bare.evaluate(() => window.__amSpicetifyRepairs), ['Player.origin', 'GraphQL.Request']);
+      assert.equal(await bare.evaluate(() => Spicetify.Player.origin === Spicetify.Platform.PlayerAPI && Spicetify.GraphQL.Request === Spicetify.Platform.GraphQLLoader), true);
+      await bare.waitForFunction(() => Spicetify.Player.data?.item && Spicetify.CosmosAsync?.get);
+      await bare.waitForFunction(() => document.querySelector('#am-player')?.textContent.includes('Nights'));
+      // Language from Platform.Session, Spotify's labels from Platform.Translations (Spicetify.Locale's own dictionary).
+      assert.equal(await bare.textContent('#am-sidebar .am-nav-row >> nth=1'), 'Ana Sayfa');
+      assert.match(await bare.$eval('#am-star-style', e => e.textContent), /Kitaplığına Kaydet/);
+      assert.deepEqual(bareErrors, []);
+    } finally { await bare.close(); }
   });
 
   await check('Marketplace installs move to GitHub Pages, and a stamped theme.js loads its own commit\'s CSS', async () => {
