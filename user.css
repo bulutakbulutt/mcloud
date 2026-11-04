@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.8 — reference-proportioned layout for Spotify 1.3.x. */
+/* AppleMusicMac 2.9 — reference-proportioned layout for Spotify 1.3.x. */
 :root {
  --am-side:clamp(220px,15.5vw,300px); --am-header:76px; --am-page-top:56px; --am-pad:clamp(28px,2.6vw,48px); --am-font:clamp(13px,.98vw,20px);
  --am-accent:#fa2d48; --am-accent-focus:var(--am-accent-focus);
@@ -147,7 +147,7 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
-body.am-light :is(.main-cardImage-imageWrapper,.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
+body.am-light :is([data-encore-id="card"] div:has(> img),.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
 /* Playlist and album pages, laid out like Apple Music's: a flat page, the artwork on the left, title and owner beside
    it and the play controls along the artwork's bottom edge. Spotify's action bar is a sibling below the header, so
    its scroll host is pulled up into the header's text column (the text column keeps that strip free); everything
@@ -845,8 +845,14 @@ body.am-library-open .am-native-main {visibility:hidden!important;opacity:0!impo
 .am-library-pill[aria-pressed="true"] {background:var(--am-text);color:var(--am-bg)}
 .am-library-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 22px}
 .am-library-item {position:relative;min-width:0}
-.am-library-card {width:100%;appearance:none;border:0;padding:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;min-width:0;display:flex;flex-direction:column;gap:5px}
-.am-library-card:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:6px;border-radius:8px}
+.am-library-card {width:100%;min-width:0;display:flex;flex-direction:column;gap:5px}
+/* The card is two targets: artwork and title open the item, an album's artist line opens the artist. */
+.am-library-card-open {width:100%;min-width:0;appearance:none;border:0;padding:0;background:transparent;text-align:left;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:5px}
+.am-library-sub:is(button) {appearance:none;align-self:flex-start;max-width:100%;border:0;padding:0;background:none;text-align:left;cursor:pointer}
+.am-library-sub:is(button):hover {text-decoration:underline}
+:is(.am-library-card-open,.am-library-sub):focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:6px;border-radius:8px}
+/* While a card is dragged its hover tools fade, so the ghost and the page show the cover alone (#111). */
+#am-library.am-dragging .am-card-tools button {opacity:0!important;transition:none}
 .am-library-art {display:grid;place-items:center;aspect-ratio:1;width:100%;background:var(--am-art-empty);border-radius:8px;overflow:hidden;margin-bottom:4px}
 .am-library-art img {width:100%;height:100%;object-fit:cover}
 .am-library-art svg {width:40%;height:40%;color:var(--am-sub)}
@@ -1463,9 +1469,12 @@ body.am-solid #am-settings .am-settings-box,body.am-balanced.am-spicy-route:not(
    --am-right: Spotify's grid gets a right column of that width (its page, toolbar row and Spicy Lyrics narrow by
    themselves) and the theme's fixed views stop short of it. Colours are the --am-np-* variables, for a light
    appearance to override. body.am-np-artbg: the cover's colours, blurred, as on iOS; otherwise the sheet's glass. */
+/* A registered length, so the grid track it feeds can transition as the pane opens and closes. */
+@property --am-right {syntax:"<length>";inherits:true;initial-value:0px}
 :root {--am-np-w:clamp(300px,24vw,380px);--am-right:0px}
 body.am-np-open.am-np-docked {--am-right:var(--am-np-w)}
 body.am-ready.am-np-open .am-layout {grid-template-columns:var(--am-side) minmax(0,1fr) var(--am-right)!important}
+body.am-np-anim .am-layout {transition:grid-template-columns .24s cubic-bezier(.32,.72,0,1)}
 #am-nowplaying {
  --am-np-text:var(--am-text);--am-np-sub:var(--am-sub);--am-np-track:rgb(var(--am-ink,255 255 255) / .2);--am-np-chip:rgb(var(--am-ink,255 255 255) / .12);
  --am-np-fill:var(--am-panel-fill,color-mix(in srgb,#262626 74%,transparent));--am-np-base:var(--am-bg);--am-np-scrim:#0000008c;
@@ -1674,23 +1683,23 @@ body.am-windows #am-artist .am-artist-actions {right:150px}
    bold shelf titles without "Show all". Spotify's cards are 12px apart inside their 12px padding; 8px keeps Apple's
    16px gap and the row moves 4px so the artwork lines up with the title. */
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:-4px}
-body.am-home-apple .am-native-main .main-card-cardContainer {padding:0 8px!important;gap:6px!important;background:none!important;box-shadow:none!important}
-body.am-home-apple .am-native-main .main-card-cardContainer::after {display:none!important}
-body.am-home-apple .am-native-main .main-card-cardContainer :is(img.main-cardImage-image,.main-cardImage-imageWrapper) {border-radius:8px!important}
-body.am-home-apple .am-native-main .main-card-cardContainer .main-cardImage-imageWrapper {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
-body.am-home-apple .am-native-main .main-card-cardContainer:hover img.main-cardImage-image {filter:brightness(.92)}
-body.am-home-apple .am-native-main .main-card-cardContainer [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
-body.am-home-apple .am-native-main .main-card-cardContainer [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}
-body.am-home-apple .am-native-main .main-card-cardContainer [data-encore-id="cardSubtitle"] a {color:inherit!important}
-body.am-home-apple .am-native-main .main-card-PlayButtonContainer {left:8px!important;right:auto!important;bottom:8px!important;transform:none!important;transition:opacity .15s!important}
-body.am-home-apple .am-native-main .main-card-PlayButtonContainer button > span,body.am-home-apple .am-card-more {box-sizing:border-box;inline-size:28px!important;block-size:28px!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(0 0 0/.42)!important;-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff!important;box-shadow:none!important;transform:none!important}
-body.am-home-apple .am-native-main .main-card-PlayButtonContainer button:hover > span,body.am-home-apple .am-card-more:hover {background:var(--am-accent)!important}
-body.am-home-apple .am-native-main .main-card-PlayButtonContainer svg {width:12px!important;height:12px!important;fill:#fff!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] {padding:0 8px!important;gap:6px!important;background:none!important;box-shadow:none!important}
+body.am-home-apple .am-native-main [data-encore-id="card"]::after {display:none!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,div:has(> img)) {border-radius:8px!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] div:has(> img) {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
+body.am-home-apple .am-native-main [data-encore-id="card"]:hover img {filter:brightness(.92)}
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] a {color:inherit!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] div:has(> div > button[data-encore-id="buttonPrimary"]) {left:8px!important;right:auto!important;top:auto!important;bottom:8px!important;transform:none!important;transition:opacity .15s!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"] > span,body.am-home-apple .am-card-more {box-sizing:border-box;inline-size:28px!important;block-size:28px!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(0 0 0/.42)!important;-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff!important;box-shadow:none!important;transform:none!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"]:hover > span,body.am-home-apple .am-card-more:hover {background:var(--am-accent)!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"] svg {width:12px!important;height:12px!important;fill:#fff!important}
 .am-card-more {display:none}
 /* Spotify's image container takes no pointer events (its click layer opens the item), and "…" inherited that. */
 body.am-home-apple .am-card-more {position:absolute;right:8px;bottom:8px;z-index:2;pointer-events:auto;display:grid;place-items:center;border:0;cursor:pointer;opacity:0;transition:opacity .15s}
 body.am-home-apple .am-card-more svg {width:14px;height:14px;stroke:none}
-body.am-home-apple .main-card-cardContainer:is(:hover,:focus-within) .am-card-more {opacity:1}
+body.am-home-apple [data-encore-id="card"]:is(:hover,:focus-within) .am-card-more {opacity:1}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] {font-size:17px!important;font-weight:700!important;letter-spacing:-.01em}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRow"] a[href]:not([data-encore-id="listRowTitle"] a) {display:none!important}
 body.am-home-no-shortcuts .am-native-main .view-homeShortcutsGrid-shortcuts {display:none!important}
@@ -1702,8 +1711,8 @@ body.am-home-no-shortcuts .am-native-main .view-homeShortcutsGrid-shortcuts {dis
 .am-mix-ready[data-am-mix-style] img {opacity:0!important}
 /* Spotify hides a mix card's title (height 0, transparent text) since its image carries the name; Apple names every
    card under its artwork, whatever the cover says. */
-.main-card-cardContainer:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] {height:auto!important}
-.main-card-cardContainer:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] span {opacity:1!important}
+[data-encore-id="card"]:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] {height:auto!important}
+[data-encore-id="card"]:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] span {opacity:1!important}
 .am-mix-ready[data-am-mix-style]::before {content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:var(--am-mix-photo) center 22%/cover no-repeat,var(--am-mix-band)}
 .am-mix-ready[data-am-mix-style]::after {position:absolute;z-index:1;pointer-events:none;box-sizing:border-box;font-family:var(--encore-title-font-stack,inherit);overflow:hidden}
 /* Band: the name in a band of the photo's colour over the top of the photo, as Apple's Essentials covers. The box is not

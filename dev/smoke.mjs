@@ -978,6 +978,26 @@ try {
     await page.click('#am-popover [role="menuitemradio"]:has-text("Ada göre (A–Z)")');
     assert.equal(await page.textContent('.am-library-sort'), 'Ada göre (A–Z)');
     await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'After Hours');
+    // Album cards are two targets (#111): the cover and title open the album, the artist line opens the artist.
+    const albumCard = '.am-library-card[data-uri="spotify:album:0"]';
+    await page.click(albumCard + ' .am-library-card-open');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/album/0');
+    await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' }));
+    await page.waitForSelector(albumCard);
+    await page.click(albumCard + ' .am-library-sub');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/artist/frank');
+    await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=albums' }));
+    await page.waitForSelector(albumCard);
+    // A drag takes the cover as its ghost and fades the card's hover tools meanwhile.
+    assert.deepEqual(await page.evaluate(sel => {
+      const card = document.querySelector(sel), art = card.querySelector('.am-library-art'), dt = new DataTransfer();
+      let ghost = null; dt.setDragImage = (el, x, y) => { ghost = [el.className, x > 0 && y > 0]; };
+      art.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      const out = [ghost, document.getElementById('am-library').classList.contains('am-dragging'), getComputedStyle(card.parentElement.querySelector('.am-card-tools button')).opacity];
+      card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+      out.push(document.getElementById('am-library').classList.contains('am-dragging'));
+      return out;
+    }, albumCard), [['am-library-art', true], true, '0', false]);
     // Right-click on library card opens context menu
     await page.click('.am-library-card >> nth=0', { button: 'right' });
     assert.ok(await page.locator('#am-popover').isVisible());
@@ -1086,7 +1106,7 @@ try {
     assert.equal(await list.locator('.am-tool-more').evaluate(toolLook), artistToolLook);
     const look = await list.evaluate(e => {
       const art = e.querySelector('.am-library-art').getBoundingClientRect(), p = e.querySelector('.am-tool-play').getBoundingClientRect(), m = e.querySelector('.am-tool-more').getBoundingClientRect();
-      return { filter: getComputedStyle(e.querySelector('.am-library-art')).filter, left: p.left - art.left, right: art.right - m.right, bottom: art.bottom - p.bottom, nested: !!e.querySelector('.am-library-card button') };
+      return { filter: getComputedStyle(e.querySelector('.am-library-art')).filter, left: p.left - art.left, right: art.right - m.right, bottom: art.bottom - p.bottom, nested: !!e.querySelector('.am-library-card .am-card-tools') };
     });
     assert.equal(look.filter, 'brightness(0.92)');
     assert.deepEqual([look.left, look.right, look.bottom, look.nested], [8, 8, 8, false]);
@@ -1113,7 +1133,7 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await item('spotify:collection:tracks').locator('.am-tool-play').count(), 1);
     // Keyboard focus shows them too.
-    await item('spotify:playlist:3').locator('.am-library-card').focus();
+    await item('spotify:playlist:3').locator('.am-library-card-open').focus();
     await page.waitForFunction(() => getComputedStyle(document.querySelector('.am-library-item:focus-within .am-tool-play')).opacity === '1');
     // Round artist cards get none, as on the artist page.
     await open('artists');
@@ -2085,6 +2105,8 @@ try {
       // Shown at once; saved after the frame that shows it.
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));
+      // It slides in; the geometry below is where it comes to rest.
+      await page.waitForFunction(() => !document.querySelector('#am-nowplaying').getAnimations().length);
       await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying === 'beside');
       // Out of the box: Spicy Lyrics' colours and lyrics (the cover's colours and Spotify's lyrics while Spicy's card is missing).
       assert.deepEqual(await page.evaluate(() => ['am-np-spicybg', 'am-np-artbg', 'am-np-spicy'].map(c => document.body.classList.contains(c))), [true, true, false]);
@@ -2106,7 +2128,8 @@ try {
       // The button turns it off again; the lyrics button is untouched.
       assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#am-player .am-np-toggle'); return [b.getAttribute('aria-pressed'), b.title]; }), ['true', 'Şimdi Çalan\'ı gizle']);
       await page.click('#am-player .am-np-toggle');
-      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      // It slides out, then goes.
+      await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open'));
       assert.equal(await page.getAttribute('#am-player .am-np-toggle', 'aria-pressed'), 'false');
       await page.waitForFunction(() => JSON.parse(localStorage.getItem('mcloud:settings')).nowPlaying === 'off');
       assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat');
@@ -2163,10 +2186,11 @@ try {
         const before = await rect('#am-nowplaying');
         await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Spicy Lyrics\'te aç');
         await page.click('#am-nowplaying .am-np-fullscreen');
+        await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden);
         assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', false, false], layout);
         await page.click('#am-lyrics-toggle');
         assert.equal(await route(), '/');
-        await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden);
+        await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden && !document.querySelector('#am-nowplaying').getAnimations().length);
         assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane comes back as it was: ' + layout);
       }
       assert.equal(await page.evaluate(() => window.__spicyClicks), 4);
@@ -2239,11 +2263,11 @@ try {
       await page.evaluate(() => document.getElementById('SpicyLyrics_PageButton').remove());
       // The × turns the pane off, and so does the player's "…" menu.
       await page.click('#am-nowplaying .am-np-close');
-      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open')));
+      await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-open'));
       await page.click('#am-player .am-np-toggle');
       await page.click('#am-player .am-more');
       await page.click('#am-popover .am-popover-item:has-text("Şimdi Çalan\'ı Gizle")');
-      assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden));
+      await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden);
       await page.click('#am-player .am-np-toggle');
       assert.ok(await page.isVisible('#am-nowplaying'));
 
@@ -2312,6 +2336,7 @@ try {
     assert.ok(await page.isVisible('#am-player .am-transport'));
     assert.equal(await page.locator('#am-player .am-player-track > .am-scrub .am-seek').count(), 1);
     assert.equal(await page.locator('#am-player .am-player-extras > .am-volume-wrap:last-child').count(), 1);
+    await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-only'), null, { timeout: 3000 }).catch(() => {});
     assert.ok(await page.evaluate(() => document.getElementById('am-nowplaying').hidden && !document.body.classList.contains('am-np-only')));
     assert.equal(await page.getAttribute('#am-lyrics-toggle', 'aria-label'), 'Spicy Lyrics sözlerini aç / kapat', 'off again: the lyrics button drives Spicy Lyrics');
   });
@@ -2473,7 +2498,7 @@ try {
       await page.route(host, r => r.fulfill({ contentType: 'image/png', headers: { 'access-control-allow-origin': '*' }, body: png }));
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     await page.evaluate(() => {
-      const card = (name, src) => `<div data-encore-id="card" class="main-card-cardContainer" role="listitem" style="position:relative"><div class="card__on-click" style="position:absolute;inset:0" onclick="window.__cardOpened=true"></div><div class="main-card-imageContainer" style="pointer-events:none"><div class="main-cardImage-imageWrapper" style="position:relative;padding-bottom:100%"><div><img class="main-cardImage-image" style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div></div><div class="main-card-PlayButtonContainer" style="pointer-events:auto"><button><span></span></button></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
+      const card = (name, src) => `<div data-encore-id="card" role="listitem" style="position:relative"><div class="card__on-click" style="position:absolute;inset:0" onclick="window.__cardOpened=true"></div><div style="pointer-events:none"><div class="mock-art" style="position:relative;padding-bottom:100%"><div><img style="position:absolute;inset:0;width:100%;height:100%" src="${src}"></div><div style="position:absolute;left:8px;bottom:8px;pointer-events:auto"><div><button data-encore-id="buttonPrimary"><span></span></button></div></div></div></div><a><p data-encore-id="cardTitle" style="height:0"><span><span>${name}</span></span></p></a></div>`;
       const pick = 'https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/';
       const s = document.createElement('section');s.id = 'mock-home';s.dataset.testid = 'component-shelf';s.style.width = '600px';
       s.innerHTML = '<div style="display:flex">' + card('Daily Mix 2', pick + 'daily/2/ab6761610000e5eb97f323784adb2a66291c0cd4/en') + card('Chill Mix', pick + 'topic/chill/0ECwFtbIWEVNwjlrfc6xoL/en')
@@ -2481,7 +2506,7 @@ try {
       document.querySelector('.am-native-main main').prepend(s);
     });
     await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
-    const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .main-cardImage-imageWrapper')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
+    const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .mock-art')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
     assert.deepEqual(await covers(), [['Daily Mix 2', 'band', true], ['Chill Mix', 'band', true], ['Ginkgo Radio', 'station', true], ['', '', false]]);
     // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track.
     assert.match(await page.evaluate(() => document.querySelector('#mock-home .am-mix').style.getPropertyValue('--am-mix-photo')), /i\.scdn\.co\/image\/ab6761610000e5eb97f3/);
@@ -2513,6 +2538,83 @@ try {
     assert.ok(await page.evaluate(() => !document.body.classList.contains('am-home-apple')));
     await settingsWindow.pick('homeStyle', 'Apple Music');
     await page.evaluate(() => document.getElementById('mock-home').remove());
+  });
+
+  // Spotify 1.3.6.19xx (Windows) renders track lists, cards and Browse all with hashed CSS-module class names; the
+  // theme tags them by role so its rules still match (#109).
+  await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
+    await page.evaluate(() => {
+      const host = document.querySelector('.am-native-main');
+      const section = document.createElement('section');
+      section.dataset.testid = 'album-page';
+      section.id = 'mock-hashed';
+      section.innerHTML = `<div role="grid" style="--grid-template-columns:[index] 16px [first] 1fr [var1] 1fr [last] 1fr">
+        <div role="presentation" style="top:64px"><div role="row" aria-rowindex="1">
+          <div role="columnheader" aria-colindex="1"><div>#</div></div>
+          <div role="columnheader" aria-colindex="2"><div>Title</div></div>
+          <div role="columnheader" aria-colindex="3"><div>Plays</div></div>
+          <div role="columnheader" aria-colindex="4"><div>Duration</div></div></div></div>
+        <div role="presentation"><div role="presentation" style="transform:translateY(0)"><div role="row" aria-rowindex="2"><div role="presentation">
+          <div role="gridcell" aria-colindex="1"><div><span>1</span></div></div>
+          <div role="gridcell" aria-colindex="2"><div><div data-encore-id="text">Song</div><span><span data-encore-id="tagIcon">E</span></span><span><a href="/artist/0">Artist</a></span></div></div>
+          <div role="gridcell" aria-colindex="3"><div data-encore-id="text">1,000</div></div>
+          <div role="gridcell" aria-colindex="4"><button>…</button><div data-encore-id="text">3:12</div></div>
+        </div></div></div></div></div>
+        <section class="Shelf" style="display:none"><div role="list"><div role="listitem"><a href="/genre/0"><div></div></a></div></div></section>`;
+      host.append(section);
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-hashed .main-trackList-trackListRow'));
+    await page.waitForFunction(() => document.querySelector('#mock-hashed .main-gridContainer-gridContainer'));
+    assert.deepEqual(await page.evaluate(() => {
+      const section = document.querySelector('#mock-hashed');
+      const row = section.querySelector('[aria-rowindex="2"]');
+      const header = section.querySelector('[aria-rowindex="1"]');
+      const cells = (r) => [...r.querySelectorAll('[role="gridcell"],[role="columnheader"]')].map(c => ['main-trackList-rowSectionIndex', 'main-trackList-rowSectionStart', 'main-trackList-rowSectionVariable', 'main-trackList-rowSectionEnd'].find(n => c.classList.contains(n)));
+      return [
+        section.querySelector('[role="grid"]').classList.contains('main-trackList-trackList'),
+        section.querySelector('[role="grid"]').classList.contains('main-trackList-indexable'),
+        header.classList.contains('main-trackList-trackListHeaderRow'),
+        header.parentElement.classList.contains('main-trackList-trackListHeader'),
+        cells(row),
+        row.querySelector('[role="gridcell"] > div').classList.contains('main-trackList-rowMarker'),
+        row.querySelector('.main-trackList-rowMainContent') !== null,
+        row.querySelector('[data-encore-id="text"]').classList.contains('main-trackList-rowDuration') || row.querySelector('.main-trackList-rowDuration') !== null,
+        section.querySelector('[role="list"]').classList.contains('main-gridContainer-gridContainer'),
+        section.querySelector('.Shelf').hasAttribute('data-shelf'),
+      ];
+    }), [true, true, true, true, ['main-trackList-rowSectionIndex', 'main-trackList-rowSectionStart', 'main-trackList-rowSectionVariable', 'main-trackList-rowSectionEnd'], true, true, true, true, true]);
+    // An album's clean list hides the Plays column, on the hashed DOM too.
+    assert.equal(await page.evaluate(() => { const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'); return getComputedStyle(row.querySelector('.main-trackList-rowSectionVariable')).display; }), 'none');
+    await page.evaluate(() => document.querySelector('#mock-hashed').remove());
+  });
+
+  await check('Now Playing slides in and out, the page column easing with it (#110)', async () => {
+    const toggle = () => page.evaluate(() => {
+      document.querySelector('#am-player [data-am-button="nowplaying"]').click();
+      const pane = document.querySelector('#am-nowplaying');
+      return { hidden: pane.hidden, anims: pane.getAnimations().map(a => Math.round(a.effect.getTiming().duration)), easing: pane.getAnimations()[0]?.effect.getTiming().easing, cls: document.body.classList.contains('am-np-anim') };
+    });
+    const column = () => page.evaluate(() => getComputedStyle(document.querySelector('.am-layout')).gridTemplateColumns.split(' ').pop());
+    assert.equal(await page.evaluate(() => document.querySelector('#am-nowplaying').hidden), true);
+    // Opening: the pane slides in, the page's right column eases open.
+    const opening = await toggle();
+    assert.deepEqual([opening.hidden, opening.anims, opening.cls], [false, [240], true], 'the pane animates in');
+    assert.equal(opening.easing, 'cubic-bezier(0.32, 0.72, 0, 1)');
+    await page.waitForFunction(() => !document.body.classList.contains('am-np-anim'));
+    await settingsWindow.pick('npLayout', 'Kenara yapışık');
+    assert.notEqual(await column(), '0px', 'the page keeps a right column while the pane is open');
+    // Closing: the pane stays mounted while it slides out, then goes; the column eases back to nothing.
+    const closing = await toggle();
+    assert.deepEqual([closing.hidden, closing.anims], [false, [240]], 'the pane animates out');
+    await page.waitForFunction(() => document.querySelector('#am-nowplaying').hidden && getComputedStyle(document.querySelector('.am-layout')).gridTemplateColumns.split(' ').pop() === '0px');
+    // Reduced motion switches at once, with no animation.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const still = await toggle();
+    assert.deepEqual([still.hidden, still.anims, still.cls], [false, [], false], 'no animation with reduced motion');
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await settingsWindow.pick('npLayout', 'Cam kart');
+    await page.evaluate(() => document.querySelector('#am-player [data-am-button="nowplaying"]').click());
+    await page.waitForFunction(() => document.querySelector('#am-nowplaying').hidden);
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));

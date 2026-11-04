@@ -1,4 +1,4 @@
-/* AppleMusicMac 2.8. Local theme UI; no remote scripts or credentials. */
+/* AppleMusicMac 2.9. Local theme UI; no remote scripts or credentials. */
 (async () => {
   if (window.__appleMusicMac) return;
   window.__appleMusicMac = true;
@@ -417,7 +417,69 @@
     bindPanes();
     nativeNav = document.getElementById('global-nav-bar');
     nativeNav?.classList.add('am-native-global');
+    legacyObserver.disconnect();legacyObserver.observe(main,{childList:true,subtree:true});
+    tagLegacyDom();
     return true;
+  }
+  // Spotify 1.3.6.19xx renders the track lists, Home's cards and Browse all with hashed CSS-module class names where
+  // the readable main-trackList-…, main-card-… and main-gridContainer-… ones used to be, which the theme's rules are
+  // written against (#109). The new nodes get those names back; older builds carry them already, so each pass does
+  // nothing there. React rewrites a class it owns, so rows and cards are tagged again as they are added.
+  let legacyFrame=0,duoReady=false;
+  const legacyRoots=new Set();
+  const legacyObserver=new MutationObserver(records=>{
+    for(const record of records)for(const node of record.addedNodes)if(node.nodeType===1)legacyRoots.add(node);
+    if(legacyFrame||!legacyRoots.size)return;
+    legacyFrame=requestAnimationFrame(()=>{legacyFrame=0;const roots=[...legacyRoots];legacyRoots.clear();tagLegacyDom(roots);});
+  });
+  function tagLegacyDom(roots) {
+    const scope=roots?.length?roots:[main];if(!main)return;
+    for(const root of scope){
+      if(!(root instanceof Element)||!root.isConnected||!main.contains(root)&&root!==main)continue;
+      const nodes=root.matches('[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"]')?[root]:[];
+      nodes.push(...root.querySelectorAll('[role="grid"],[role="row"],[role="list"],[data-encore-id="card"],section.Shelf,[data-testid="component-shelf"]'));
+      for(const node of nodes){
+        if(node.matches('[role="grid"]'))tagTrackList(node);
+        else if(node.matches('[role="row"]'))tagTrackRow(node);
+        else if(node.matches('[role="list"]'))tagGenreList(node);
+        else if(!node.hasAttribute('data-shelf'))node.setAttribute('data-shelf','');
+      }
+      // Browse all's tiles arrive one by one after the empty list, and a row can land before its grid.
+      const list=root.closest('[role="list"]');if(list)tagGenreList(list);
+      root.closest('section.Shelf,[data-testid="component-shelf"]')?.setAttribute('data-shelf','');
+    }
+  }
+  // A track list's grid, header and rows: the same names Spotify gave them before it hashed its classes.
+  function tagTrackList(grid) {
+    if(grid.classList.contains('main-trackList-trackList')||!grid.querySelector('[role="columnheader"]'))return;
+    const header=grid.querySelector('[role="row"]:has([role="columnheader"])');
+    grid.classList.add('main-trackList-trackList','main-trackList-indexable');
+    grid.parentElement?.classList.add('main-trackList-trackListContainer');
+    let box=header?.parentElement;while(box&&box.parentElement!==grid)box=box.parentElement;
+    box?.classList.add('main-trackList-trackListHeader');
+    header?.classList.add('main-trackList-trackListHeaderRow');
+    for(const row of grid.querySelectorAll('[role="row"]'))tagTrackRow(row);
+  }
+  function tagTrackRow(row) {
+    if(row.classList.contains('main-trackList-trackListRow')||!row.closest('[role="grid"]')?.querySelector('[role="columnheader"]'))return;
+    const cells=[...row.querySelectorAll('[role="gridcell"],[role="columnheader"]')];
+    if(!cells.length)return;
+    row.classList.add('main-trackList-trackListRow','main-trackList-trackListRowGrid');
+    cells.forEach((cell,i)=>cell.classList.add(i===0?'main-trackList-rowSectionIndex':i===1?'main-trackList-rowSectionStart':i===cells.length-1&&cells.length>2?'main-trackList-rowSectionEnd':'main-trackList-rowSectionVariable'));
+    const index=cells[0],start=cells[1],end=cells[cells.length-1];
+    index?.firstElementChild?.classList.add('main-trackList-rowMarker');
+    if(start){
+      start.querySelector(':scope > img')?.classList.add('main-trackList-rowImage');
+      [...start.children].find(c=>c.tagName==='DIV')?.classList.add('main-trackList-rowMainContent');
+    }
+    if(cells.length>2)for(const c of end.children)if(c.matches('[data-encore-id="text"]'))c.classList.add('main-trackList-rowDuration');
+  }
+  // Browse all's category grid, whose tiles link to /genre/.
+  function tagGenreList(list) {
+    if(!list.classList.contains('main-gridContainer-gridContainer')&&list.querySelector(':scope > [role="listitem"] > a[href*="/genre/"]')){
+      list.classList.add('main-gridContainer-gridContainer');
+      if(duoReady)syncBrowse(20);
+    }
   }
   for (let i = 0; i < 120 && !bindLayout(); i++) await wait(250);
   if (!main) return;
@@ -890,9 +952,10 @@
     if(document.hidden)releaseArtwork();
     else if(currentMode==='library')for(const img of libraryView.querySelectorAll('img[data-src]'))observeArtwork(img);
   });
-  // One shared listener avoids retaining a render batch through every card closure.
+  // One shared listener avoids retaining a render batch through every card closure. The title and artwork open the item;
+  // an album's artist line is its own button and opens the artist (it stops the click).
   libraryView.addEventListener('click',event=>{
-    const card=event.target.closest?.('.am-library-card');
+    const open=event.target.closest?.('.am-library-card-open'),card=open?.closest('.am-library-card');
     if(!card||!libraryView.contains(card))return;
     const {uri,kind,folder}=card.dataset;
     if(folder==='true')openLibrary(kind,uri);
@@ -944,6 +1007,12 @@
   }
   function libraryImage(item) {
     return spotifyImage(item.images?.[0]?.url || item.images?.items?.[0]?.url || item.image?.sources?.[0]?.url || '');
+  }
+  // An album card's artist line opens the artist: the album's own artists come from the query the album page caches.
+  const albumIdOf=uri=>/^spotify:album:([A-Za-z0-9]+)$/.exec(uri||'')?.[1]||'';
+  async function openAlbumArtist(uri) {
+    const id=albumIdOf(uri);if(!id)return;
+    const artist=(await albumData(id))?.artists?.[0];if(artist)go('/artist/'+artist);
   }
   const libraryTime=v=>typeof v==='number'?v:Date.parse(v||'')||0;
   // All Playlists filters by who made a playlist, as Spotify's own library does (#108: By you, By Spotify, Mixed; it has
@@ -1062,14 +1131,25 @@
         const artwork=[];
         for(;rendered<end;rendered++){
         const item=items[rendered];
-        const b=el('button','am-library-card');b.type='button';b.setAttribute('aria-label',item.name||T('Adsız','Untitled'));
-        b.dataset.uri=item.uri;b.dataset.kind=kind;b.dataset.folder=String(item.type==='folder');b.draggable=true;
+        const b=el('div','am-library-card');
+        b.dataset.uri=item.uri;b.dataset.kind=kind;b.dataset.folder=String(item.type==='folder');
+        const open=el('button','am-library-card-open');open.type='button';open.setAttribute('aria-label',item.name||T('Adsız','Untitled'));open.draggable=true;
         const art=el('span','am-library-art');
         art.dataset.icon=item.type==='artist'?'artist':item.type==='album'?'album':'music';
         const src=item.imageUrl;
         if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else art.innerHTML=svg(item.type==='artist'?'artist':item.type==='album'?'album':'music');
         if(item.type==='artist')art.classList.add('am-artist-art');
-        b.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')),el('span','am-library-sub',item.subtitle));
+        open.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')));
+        // An album's artist line opens the artist; the id comes from the album query the page already caches (theme.js
+        // albumData), so hovering the line warms it and the click opens at once.
+        let sub;
+        if(item.type==='album'&&item.subtitle){
+          sub=el('button','am-library-sub',item.subtitle);sub.type='button';
+          sub.setAttribute('aria-label',T('Sanatçıya git: ','Go to artist: ')+item.subtitle);
+          sub.addEventListener('click',event=>{event.stopPropagation();openAlbumArtist(item.uri);});
+          sub.addEventListener('pointerenter',()=>{const id=albumIdOf(item.uri);if(id&&!albumInfo.has(id))albumData(id);},{passive:true});
+        } else sub=el('span','am-library-sub',item.subtitle);
+        b.append(open,sub);
         const cell=el('div','am-library-item');cell.append(b);
         // Round artist cards get no tools, as on the artist page; a folder cannot be played.
         if(item.type!=='artist')cell.append(cardTools(item.uri,null,{noPlay:item.type==='folder',menu:more=>openMenu(more,...libraryMenu(item.uri,kind,String(item.type==='folder')))}));
@@ -1695,11 +1775,13 @@
   // artist dropped at the top or bottom edge of a pinned row (anywhere on it, if it takes no songs) is pinned there.
   const uriType=uri=>/:folder:/.test(uri)?'folder':uri.split(':')[1];
   const linkOf=uri=>'https://open.spotify.com/'+uri.split(':').slice(1).join('/');
-  function setDrag(event,uris) {
+  function setDrag(event,uris,image) {
     const dt=event.dataTransfer,groups={};if(!dt||!uris.length)return;
     for(const uri of uris)(groups[uriType(uri)]||=[]).push(uri);
     dt.effectAllowed='copyMove';dt.setData('text/uri-list',uris.filter(u=>uriType(u)!=='folder').map(linkOf).join('\n'));dt.setData('text/plain',uris.map(linkOf).join('\n'));
     for(const [type,list] of Object.entries(groups))dt.setData(`text/x-spotify-${type}s`,list.join(','));
+    // The ghost is the artwork alone, as in Apple Music; Spotify's default would copy the whole card, hover tools and all.
+    if(image&&image.offsetWidth)try{dt.setDragImage(image,Math.round(image.offsetWidth/2),Math.round(image.offsetHeight/2));}catch{}
   }
   // dragover can read only the types; the URIs come with the drop.
   const dragKinds=dt=>new Set([...dt?.types||[]].map(t=>t.match(/^text\/x-spotify-(track|album|artist|playlist|episode|show|folder)s$/)?.[1]).filter(Boolean));
@@ -1761,7 +1843,15 @@
   document.addEventListener('dragend',clearDrop,true);
   // Drag sources: the sidebar's playlists and folders, the library's cards, the playing song (artwork and title).
   nav.addEventListener('dragstart',event=>{const row=event.target.closest?.('.am-list-row[data-uri]');if(row)setDrag(event,[row.dataset.uri]);});
-  libraryView.addEventListener('dragstart',event=>{const card=event.target.closest?.('.am-library-card');if(card?.dataset.uri)setDrag(event,[card.dataset.uri]);});
+  // A card drags its cover: the hover tools fade for the drag and the ghost is the artwork, not the card with its buttons.
+  libraryView.addEventListener('dragstart',event=>{
+    const card=event.target.closest?.('.am-library-card');
+    if(!card?.dataset.uri)return;
+    setDrag(event,[card.dataset.uri],card.querySelector('.am-library-art'));
+    libraryView.classList.add('am-dragging');
+  });
+  libraryView.addEventListener('dragend',()=>libraryView.classList.remove('am-dragging'));
+  document.addEventListener('drop',()=>libraryView.classList.remove('am-dragging'),true);
   for(const node of [fullscreenButton,title.root]){node.draggable=true;node.addEventListener('dragstart',event=>{const uri=S.Player.data?.item?.uri;if(uri)setDrag(event,[uri]);else event.preventDefault();});}
   // What Spotify's own menu offers on library items (issue #59): remove an album, artist or followed playlist from the
   // library; your own playlist can be deleted (confirmed in a submenu) and shown on or hidden from your profile. The
@@ -2500,8 +2590,24 @@
   let npWant=null;
   function npOpen(on) {
     npFullscreen(false);const value=on?'beside':'off';if((npWant??settings.nowPlaying)===value)return;
-    npWant=value;npApply();
+    npWant=value;npAnimateArm();npApply();
     requestAnimationFrame(()=>setTimeout(()=>{if(npWant!==value)return;npWant=null;npSet('nowPlaying',value);}));
+  }
+  // Opening and closing ease: the pane slides in from the right while the page's right column widens (Apple Music opens
+  // its sidebar player the same way). The column moves through the registered --am-right, so its grid track can
+  // transition; reduced motion, or a build without the animation API, keeps the plain switch.
+  let npAnimTimer=0,npLeaveTimer=0,npAnim=null;
+  function npAnimateArm() {
+    if(reducedMotion.matches)return;
+    document.body.classList.add('am-np-anim');void document.body.offsetWidth;
+    clearTimeout(npAnimTimer);npAnimTimer=setTimeout(()=>document.body.classList.remove('am-np-anim'),320);
+  }
+  function npAnimate(show) {
+    if(reducedMotion.matches||typeof np.animate!=='function')return;
+    const shift=Math.round(np.offsetWidth*.16),from=show?`translateX(${shift}px)`:'none',to=show?'none':`translateX(${shift}px)`;
+    npAnim?.cancel();
+    npAnim=np.animate([{transform:from,opacity:show?0:1},{transform:to,opacity:show?1:0}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)',fill:'both'});
+    npAnim.finished.then(()=>{if(!npLeaveTimer)npAnim?.cancel();}).catch(()=>{});
   }
   // Pointing at the button gets the pane ready (text, artwork, lyrics) while it is still hidden, so opening only shows it.
   function npPrepare() {
@@ -2513,7 +2619,7 @@
   function npFullscreen(on) {
     if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
     if(npFullOn===on)return;
-    npFullOn=on;document.body.classList.toggle('am-np-full',on);npSyncFull();
+    npFullOn=on;npAnim?.cancel();npAnim=null;document.body.classList.toggle('am-np-full',on);npSyncFull();
     // The lines move to a new layout: back to the one being sung (or loaded, when the pane showed none).
     if(!npLyricsShown()){clearTimeout(npLyricTimer);npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
     else if(npLyrics&&npLyricUri===(S.Player.data?.item?.uri||''))npJumpLyrics();else{npLyricUri=null;npLoadLyrics(S.Player.data?.item);}
@@ -2539,7 +2645,8 @@
     if(only&&scrub.parentElement!==npControls){npControls.append(scrub,controls,volumeWrap);npActions.append(connectButton,queueButton);}
     else if(!only&&scrub.parentElement===npControls){track.append(scrub);player.insertBefore(controls,track);extras.append(connectButton,queueButton,volumeWrap);}
   }
-  const npVisible=()=>!np.hidden&&!document.hidden;
+  // A pane sliding out counts as hidden: nothing new is loaded while it goes.
+  const npVisible=()=>!np.hidden&&!document.hidden&&!npLeaveTimer;
   let npReady=false,npTrackKey='',npContent='';
   function npApply() {
     if(!npReady)return;
@@ -2556,13 +2663,28 @@
     // (with Spotify's lyrics, or when Spicy's "Animated Background" is off).
     const artbg=settings.npBg==='artwork'||settings.npBg==='spicy';b.toggle('am-np-spicybg',settings.npBg==='spicy');
     b.toggle('am-np-artbg',artbg);np.classList.toggle('am-scheme-dark',artbg||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
-    const on=mode!=='off',shown=open&&(!spicy||split),opening=shown&&np.hidden;np.hidden=!shown;npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
+    const on=mode!=='off',shown=open&&(!spicy||split),leaving=!!npLeaveTimer;
+    const opening=shown&&(np.hidden||leaving),closing=!shown&&!np.hidden&&!leaving;
+    if(shown){
+      np.hidden=false;
+      if(npLeaveTimer){clearTimeout(npLeaveTimer);npLeaveTimer=0;npAnim?.cancel();npAnim=null;}
+      if(opening)npAnimate(true);
+    }
+    npToggle.classList.toggle('am-active',on);setAttributeIfChanged(npToggle,'aria-pressed',String(on));
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
     // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
     const content=[settings.npBg,settings.npLyricsPlace,settings.npArt].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
-    if(!shown){npStopVideo();clearTimeout(npLyricTimer);if(spicy)npTick();return;}
+    if(!shown){
+      npStopVideo();clearTimeout(npLyricTimer);
+      if(closing){
+        // Spicy's own column takes the pane's place at the same moment: no slide there.
+        if(spicy||reducedMotion.matches||typeof np.animate!=='function')np.hidden=true;
+        else{npAnimate(false);npLeaveTimer=setTimeout(()=>{npLeaveTimer=0;npAnim?.cancel();npAnim=null;np.hidden=true;},240);}
+      }
+      if(spicy)npTick();return;
+    }
     if(opening){npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;if(npTrackKey===(S.Player.data?.item?.uri||''))npLoadMotion(S.Player.data?.item);}
     npTick();
   }
@@ -2595,7 +2717,7 @@
   // supported streams"), and Apple's motion artwork is H.264 or HEVC only, so its options are offered only where it plays.
   const h264=!!document.createElement('video').canPlayType('video/mp4; codecs="avc1.64001f"');
   const hasMedia=v=>!!(v.srcObject||v.getAttribute('src'));
-  const motionTag='mcloud-spicetify/2.8'; // keep in step with the version comment at the top
+  const motionTag='mcloud-spicetify/2.9'; // keep in step with the version comment at the top
   let npMotionToken=0,npMotionStore={};
   try{npMotionStore=JSON.parse(localStorage.getItem('mcloud:motion')||'{}')||{};}catch{}
   const npMotionLookups=new Map();
@@ -3406,7 +3528,8 @@
   // One "…" per card, added the first time the card is hovered.
   document.addEventListener('mouseover',event=>{
     // The pointer is over the card's click layer, which covers the card beside its artwork.
-    const box=settings.homeStyle==='apple'&&event.target.closest?.('.am-native-main [data-encore-id="card"]')?.querySelector('.main-card-imageContainer');
+    const card=settings.homeStyle==='apple'?event.target.closest?.('.am-native-main [data-encore-id="card"]'):null;
+    const box=card?.querySelector('img')?.parentElement?.parentElement;
     if(!box||box.querySelector(':scope > .am-card-more'))return;
     const more=button(T('Diğer','More'),'more',e=>{
       e.preventDefault();e.stopPropagation();
@@ -3463,8 +3586,9 @@
   // Apple's own pairing: radios as its stations (the photo in a circle), the other mixes as Essentials (the band).
   const mixStyle=url=>settings.mixCovers!=='apple'?settings.mixCovers:/\/img\/radio\//.test(url)?'station':'band';
   function markMix(img) {
-    // A card's image sits absolute in a square wrapper (its own parent has no height); a page header's in its parent.
-    const box=img.closest('.main-cardImage-imageWrapper')||img.parentElement,url=img.getAttribute('src')||'';if(!box||!img.closest('.am-native-main'))return;
+    // A card's image sits absolute in its square box (main-card-imageContainer, or the card's own image area); a page
+    // header's directly in its parent.
+    const box=img.closest('[data-encore-id="card"]')?img.parentElement?.parentElement:img.parentElement,url=img.getAttribute('src')||'';if(!box||!img.closest('.am-native-main'))return;
     if(!mixUrl.test(url)||settings.mixCovers==='spotify'){if(box.classList.contains('am-mix'))box.classList.remove('am-mix','am-mix-ready','am-mix-plain');delete box.dataset.amMixSrc;return;}
     box.dataset.amMixStyle=mixStyle(url);
     if(box.dataset.amMixSrc===url&&box.classList.contains('am-mix-ready'))return;
@@ -3501,6 +3625,7 @@
   const duoCache=new Map(),duoTiles=new Map();let duoGrid=null,duoTimer=0;
   const duoAdded=new MutationObserver(()=>syncBrowse());
   const duoObserver=typeof IntersectionObserver==='function'?new IntersectionObserver(entries=>{for(const e of entries)e.isIntersecting&&!document.hidden?duoShow(e.target):duoHide(e.target);},{rootMargin:'300px 0px'}):null;
+  duoReady=true;
   function duoKey(tile){const img=tile.querySelector(':scope > img[src]');return img&&{src:img.currentSrc||img.src,color:getComputedStyle(tile).backgroundColor};}
   // Apple's tile colours are brighter and more vivid than Spotify's (OKLCH lightness 0.53-0.79, chroma 0.10-0.22 against
   // Spotify's 0.33-0.60 and 0.05-0.24). The colour keeps its hue and is pushed to chroma 0.26 inside sRGB (by eye, a
@@ -3611,13 +3736,13 @@
       return false;
     });
     if(!relevant)return;
-    reconciliation=setTimeout(()=>{reconciliation=null;if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();},150);
+    reconciliation=setTimeout(()=>{reconciliation=null;if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();tagLegacyDom();},150);
   }
   const observer=new MutationObserver(scheduleReconcile);
   if(!document.hidden)observer.observe(root,{childList:true,subtree:true});
   document.addEventListener('visibilitychange',()=>{
-    if(document.hidden){observer.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
-    else {if(!main.isConnected)bindLayout();bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
+    if(document.hidden){observer.disconnect();legacyObserver.disconnect();headerObserver.disconnect();headerHost=headerFrame=null;clearTimeout(reconciliation);reconciliation=null;}
+    else {if(!main.isConnected)bindLayout();else{legacyObserver.observe(main,{childList:true,subtree:true});tagLegacyDom();}bindToolbar();syncNativePanels();syncSpicyControls();watchHeader();syncPreview();syncBrowse();observer.observe(root,{childList:true,subtree:true});}
   });
   document.addEventListener('keydown',event=>{
     if(currentMode!=='library'||!(event.metaKey||event.ctrlKey)||event.key?.toLowerCase()!=='f')return;
