@@ -139,6 +139,7 @@
       : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
   };
   window.__graphqlRequest = Spicetify.GraphQL.Request; // tests that break the API put it back with this
+  Spicetify.Platform.GraphQLLoader = Spicetify.GraphQL.Request; // what Spicetify's GraphQL.Request getter returns
   Object.assign(Spicetify.Platform.LibraryAPI, {
     add: async ({ uris }) => { (window.__libraryAdds ||= []).push(...uris); },
     remove: async ({ uris }) => { (window.__libraryRemoves ||= []).push(...uris); },
@@ -177,4 +178,20 @@
       return { lyrics: { syncType: 'LINE_SYNCED', providerDisplayName: 'Musixmatch', lines: lyricLines.map((words, i) => ({ startTimeMs: String(60000 + i * 10000), words })) }, colors: {} }; }
     return { mediaItems: [{ uri: 'spotify:playlist:radio' }] }; } };
   Spicetify.Platform.History.goBack = function () { this.push('/'); };
+  // ?spicetify=nobindings: Spicetify 2.46.2 after skipping its webpack bindings on a cold start. Player.origin, Player.data,
+  // GraphQL.Request, Locale, CosmosAsync and addToQueue are missing; Platform still has PlayerAPI, GraphQLLoader,
+  // Translations and Session. As in Spicetify, Player.data, addToQueue and CosmosAsync come once Player.origin exists.
+  if (new URLSearchParams(location.search).get('spicetify') === 'nobindings') {
+    const P = Spicetify.Platform, player = Spicetify.Player, data = player.data, cosmos = Spicetify.CosmosAsync, addToQueue = Spicetify.addToQueue;
+    P.PlayerAPI._state = player.origin._state; delete player.origin; delete player.data;
+    P.GraphQLLoader = Spicetify.GraphQL.Request; Spicetify.GraphQL = { Definitions: Spicetify.GraphQL.Definitions };
+    P.Session = { locale: new URLSearchParams(location.search).get('locale') || 'tr' };
+    P.Translations = { save_to_your_library: 'Kitaplığına Kaydet', remove_from_your_library: 'Kitaplığından Kaldır', 'web-player.aligned-curation.tooltips.remove-from-liked-songs': "Beğenilen Şarkılar'dan Kaldır" };
+    delete Spicetify.Locale; delete Spicetify.CosmosAsync; delete Spicetify.addToQueue;
+    (function bindings() {
+      if (!Spicetify.Player.origin?._state) { setTimeout(bindings, 10); return; }
+      Spicetify.Player.data = data; Spicetify.addToQueue = addToQueue;
+      Object.defineProperty(Spicetify, 'CosmosAsync', { get: () => cosmos, configurable: true });
+    })();
+  }
 })();
