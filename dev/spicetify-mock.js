@@ -6,12 +6,15 @@
   const library = [];
   names.forEach((n, i) => library.push({ uri: 'spotify:album:' + i, type: 'album', name: n, images: [{ url: art(i * 37, n.slice(0, 2)) }], artists: [{ type: 'artist', name: 'Sanatçı ' + i, uri: 'spotify:artist:a' + i }] }));
   ['Frank Ocean','Tame Impala','Radiohead','Daft Punk','Lorde','Phoebe Bridgers'].forEach((n, i) => library.push({ uri: 'spotify:artist:' + i, type: 'artist', name: n, images: [{ url: art(200 + i * 20, n[0]) }] }));
+  // Owners as Spotify's library items carry them: yours (isOwnedBySelf), Spotify's (spotify:user:spotify) or someone else's.
+  const owners = Object.fromEntries([['emir', true], ['spotify', false], ['ece', false]].map(([id, own]) => [id, { isOwnedBySelf: own, owner: { displayName: id === 'spotify' ? 'Spotify' : id, uri: 'spotify:user:' + id } }]));
   // Playlists in the order Spotify's Recents sort returns them: pinned first, then by last played.
   library.push({ uri: 'spotify:folder:ruh', type: 'folder', name: 'Ruh Hali', pinned: true, images: [] });
   ['Sabah Kahvesi','Koşu','Odak','Yol Şarkıları','Gece Sürüşü','Ders Çalışma','Akustik Akşamlar','Yağmurlu Günler','90\'lar Türkçe Pop','Haftalık Keşif'].forEach((n, i) => library.push({ uri: 'spotify:playlist:' + i, type: 'playlist', name: n, pinned: i === 0,
-    images: i === 6 ? [] : [{ url: art(i * 90, '♪'), width: 640 }, { url: art(i * 90 + 20, '♪'), width: 60 }], owner: { displayName: 'emir' }, lastPlayedAt: 1e12 - i }));
-  library.push({ uri: 'spotify:collection:tracks', type: 'liked-songs', name: 'Beğenilen Şarkılar', pinned: true, images: [] });
-  const folders = { 'spotify:folder:ruh': ['Neşeli', 'Hüzünlü'].map((n, i) => ({ uri: 'spotify:playlist:f' + i, type: 'playlist', name: n, images: [{ url: art(300 + i * 30, '♪') }], owner: { displayName: 'emir' } })) };
+    images: i === 6 ? [] : [{ url: art(i * 90, '♪'), width: 640 }, { url: art(i * 90 + 20, '♪'), width: 60 }], ...owners[i === 9 ? 'spotify' : i === 8 ? 'ece' : 'emir'], isMixed: i === 3,
+    lastPlayedAt: 1e12 - i, addedAt: new Date(Date.UTC(2026, 0, 1 + (i * 7) % 10)).toISOString() }));
+  library.push({ uri: 'spotify:collection:tracks', type: 'liked-songs', name: 'Beğenilen Şarkılar', pinned: true, images: [], isOwnedBySelf: true });
+  const folders = { 'spotify:folder:ruh': ['Neşeli', 'Hüzünlü'].map((n, i) => ({ uri: 'spotify:playlist:f' + i, type: 'playlist', name: n, images: [{ url: art(300 + i * 30, '♪') }], ...owners[i ? 'spotify' : 'emir'], lastPlayedAt: 5e11 - i })) };
   window.__mockLibrary = library;
   // Spotify's library and rootlist emit 'update' (and the library 'update_pin') through an emitter behind getEvents().
   const emitter = { listeners: {}, addListener(name, fn) { (this.listeners[name] ||= []).push(fn); }, removeListener() {}, emit(name = 'update') { (this.listeners[name] || []).forEach(fn => fn({})); } };
@@ -19,7 +22,7 @@
   const createItem = type => async (name, location) => {
     const uri = `spotify:${type}:new${++created}`;
     (window.__created ||= []).push([type, name, location]);
-    library.splice(library.findIndex(i => !i.pinned && ['playlist', 'folder'].includes(i.type)), 0, { uri, type, name, images: [], owner: { displayName: 'emir' }, lastPlayedAt: 2e12 });
+    library.splice(library.findIndex(i => !i.pinned && ['playlist', 'folder'].includes(i.type)), 0, { uri, type, name, images: [], ...owners.emir, lastPlayedAt: 2e12 });
     emitter.emit(); return uri;
   };
   const state = { liked: false, playing: true, shuffle: false, repeat: 0, volume: .6, progress: 83000, duration: 245000 };
@@ -68,6 +71,11 @@
         getContents: async ({ offset, filters = [], folderUri }) => {
           let items = folderUri ? folders[folderUri] || [] : library;
           if (filters.includes('2')) items = items.filter(i => ['playlist', 'folder', 'liked-songs'].includes(i.type));
+          // By you (102), By Spotify (103) and Mixed (107) keep a folder only if a playlist in it passes, as Spotify's do
+          // (measured with a test folder in the client, 2026-11-04); its playlists stay inside it.
+          const own = i => i.isOwnedBySelf, spotify = i => i.owner?.uri === 'spotify:user:spotify', mixed = i => i.isMixed;
+          for (const [id, test] of [['102', own], ['103', spotify], ['107', mixed]]) if (filters.includes(id)) items = items.filter(i => i.type === 'folder' ? (folders[i.uri] || []).some(test) : test(i));
+          (window.__libraryFilters ||= []).push(filters.join());
           return { items: offset ? [] : items, totalLength: items.length };
         },
         getEvents: () => ({ _emitter: emitter }),

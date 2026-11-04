@@ -127,6 +127,7 @@
     // Settings tabs: SF Symbols' gearshape, paintpalette and sidebar.left, redrawn.
     gear:'<circle cx="12" cy="12" r="3"/><path d="M9.83 5.13l.42-2.57h3.5l.42 2.57a7.2 7.2 0 0 1 1.15.48l2.12-1.52 2.47 2.47-1.52 2.12a7.2 7.2 0 0 1 .48 1.15l2.57.42v3.5l-2.57.42a7.2 7.2 0 0 1-.48 1.15l1.52 2.12-2.47 2.47-2.12-1.52a7.2 7.2 0 0 1-1.15.48l-.42 2.57h-3.5l-.42-2.57a7.2 7.2 0 0 1-1.15-.48l-2.12 1.52-2.47-2.47 1.52-2.12a7.2 7.2 0 0 1-.48-1.15l-2.57-.42v-3.5l2.57-.42a7.2 7.2 0 0 1 .48-1.15L4.09 6.56l2.47-2.47 2.12 1.52a7.2 7.2 0 0 1 1.15-.48z"/>',
     paint:'<path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-.9 2-1.8 0-1.3-1-1.7-1-2.8 0-1 .8-1.6 1.8-1.6H17a4 4 0 0 0 4-4C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor" stroke="none"/><circle cx="10" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1.2" fill="currentColor" stroke="none"/><circle cx="17.3" cy="10.5" r="1.2" fill="currentColor" stroke="none"/>',
+    filter:'<path d="M4 7h16M7 12h10M10 17h4"/>',
     sidebar:'<rect x="3" y="4.5" width="18" height="15" rx="3"/><path d="M9.5 4.5v15M5.5 8.5h1.5M5.5 11.5h1.5"/>',
     popup:'<rect x="3" y="4" width="18" height="16" rx="2.5"/><rect x="11.5" y="11" width="7" height="6" rx="1.2" fill="currentColor" stroke="none"/>'
   };
@@ -172,7 +173,7 @@
   // its name there (else its aria-label). Any feature tags its own button the same way; data-am-locked ones always stay.
   function playerButton(node,id,label){node.dataset.amButton=id;if(label)node.dataset.amLabel=label;return node;}
   // Preferences are per Spotify profile on this computer; nothing leaves the client.
-  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true};
+  const settings={accent:'red',artwork:true,liquid:true,sort:'library',sidebar:0,lang:'auto',glass:'balanced',lists:false,recent:5,numbers:true,listFilter:'all',listSort:'played',listDesc:false};
   // A value stored twice encoded (a JSON string of the JSON) is read through, and keys of digits only, left by spreading
   // such a string into an object, are dropped; anything but a plain object reads as nothing saved.
   function readSettings() {
@@ -525,6 +526,18 @@
   // which stays put however fast the list scrolls; a mask on the rows, moved from script, lagged and let rows run over
   // the heading. It has no background, so it sits on whatever colour the sidebar has.
   const headingSpacer = el('div', 'am-nav-heading am-heading-spacer', T('Listeler','Playlists')); headingSpacer.setAttribute('aria-hidden', 'true');
+  // Which playlists the sidebar lists (#108): all, yours or Spotify's, through Spotify's own library filters (By you,
+  // By Spotify), so the recent ones are the most recent of that kind. A folder stays while a playlist in it passes. Picked under mcloud or by right-clicking the
+  // heading; the heading names the filter ("Playlists · Yours") so a shorter list doesn't look like lost playlists.
+  const sideListOptions = [['all', T('Tümü','All'), ''], ['own', T('Senin Listelerin','By You'), T('Senin','Yours')], ['spotify', T('Spotify’ın Listeleri','By Spotify'), 'Spotify']];
+  const sideListFilter = { own: '102', spotify: '103' };
+  function syncListsHeading() {
+    const suffix = (sideListOptions.find(o => o[0] === settings.sideLists) || sideListOptions[0])[2], text = T('Listeler','Playlists') + (suffix ? ' · ' + suffix : '');
+    listsHeading.firstChild.nodeValue = text; headingSpacer.firstChild.nodeValue = text;
+  }
+  defineSetting({key:'sideLists',group:'sidebar',label:T('Gösterilen listeler','Playlists shown'),type:'choice',default:'all',options:sideListOptions.map(([value,label])=>[value,label]),
+    note:T('Kenar çubuğunda kimin listeleri görünsün. “Listeler” başlığına sağ tıklayarak da seçilir.','Whose playlists the sidebar lists. Also in the menu of the Playlists heading.'),
+    apply:syncListsHeading,change:()=>refreshLists(true)});
   function syncStuck() {
     stuckFrame = 0;
     const floating = listsHeading.classList.contains('am-floating'), open = listsHeading.classList.contains('am-lists-open');
@@ -560,7 +573,7 @@
     // Collapsed, one short page is enough: pinned items come first and at most 20 more are shown.
     const items = [], limit = settings.lists ? 200 : 50; let total = Infinity, offset = 0;
     for (; offset < total && offset < (settings.lists ? 10000 : 50); offset += limit) {
-      const result = await S.Platform.LibraryAPI.getContents({ filters: ['2'], sortOrder: '6', offset, limit });
+      const result = await S.Platform.LibraryAPI.getContents({ filters: ['2', ...(sideListFilter[settings.sideLists] ? [sideListFilter[settings.sideLists]] : [])], sortOrder: '6', offset, limit });
       total = result?.totalLength ?? 0;
       for (const item of result?.items || []) {
         if (!item?.uri || item.canView === false || !['playlist','folder'].includes(item.type)) continue;
@@ -758,13 +771,21 @@
       ...(extra.length ? ['-', ...extra] : []),
     ], menuExtras('lib:' + uri, () => libraryEntries(uri)));
   });
+  const createEntries = () => Rootlist?.createPlaylist ? [
+    { label: T('Yeni Çalma Listesi','New Playlist'), action: () => nameNewItem('playlist') },
+    ...(Rootlist.createFolder ? [{ label: T('Yeni Klasör','New Folder'), action: () => nameNewItem('folder') }] : []),
+  ] : [];
   if (Rootlist?.createPlaylist) {
-    const add = button(T('Yeni çalma listesi veya klasör','New playlist or folder'), 'plus', () => togglePopover(add, () => [
-      { label: T('Yeni Çalma Listesi','New Playlist'), action: () => nameNewItem('playlist') },
-      ...(Rootlist.createFolder ? [{ label: T('Yeni Klasör','New Folder'), action: () => nameNewItem('folder') }] : []),
-    ]), 'am-nav-add');
+    const add = button(T('Yeni çalma listesi veya klasör','New playlist or folder'), 'plus', () => togglePopover(add, createEntries), 'am-nav-add');
     add.setAttribute('aria-haspopup', 'menu'); listsHeading.append(add);
   }
+  // Music's Playlists heading opens its New Playlist / Smart Playlist / Folder menu on a right-click; ours adds the filter.
+  listsHeading.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    const create = createEntries();
+    togglePopover({ x: event.clientX, y: event.clientY }, [...create, ...(create.length ? ['-'] : []),
+      ...sideListOptions.map(([value, label]) => ({ label, checked: settings.sideLists === value, action: () => setSetting('sideLists', value) }))]);
+  });
   // Apple Music's sidebar glass picks up the colours of the artwork beside it. A blurred backdrop that reaches past
   // the sidebar's edge carries those colours in; user.css shows it only inside the sidebar, fading from the edge.
   const sidebarGlow=el('div','');sidebarGlow.id='am-sidebar-glow';sidebarGlow.setAttribute('aria-hidden','true');
@@ -924,6 +945,22 @@
   function libraryImage(item) {
     return spotifyImage(item.images?.[0]?.url || item.images?.items?.[0]?.url || item.image?.sources?.[0]?.url || '');
   }
+  const libraryTime=v=>typeof v==='number'?v:Date.parse(v||'')||0;
+  // All Playlists filters by who made a playlist, as Spotify's own library does (#108: By you, By Spotify, Mixed; it has
+  // no "by others"); the same tests give Spotify's counts. Apple Music puts its filter (All Playlists, Only Favorites)
+  // and its sort in one menu by the search field; settings.listFilters swaps the filter for Spotify's pills.
+  const listFilters=[['all',T('Tüm Listeler','All Playlists'),()=>true],['own',T('Senin Listelerin','By You'),i=>i.own],
+    ['spotify',T('Spotify’ın Listeleri','By Spotify'),i=>i.spotify],['mixed',T('Mix’li Listeler','Mixed'),i=>i.mixed],
+    ['others',T('Başkalarının Listeleri','By Others'),i=>i.type==='playlist'&&!i.own&&!i.spotify]];
+  // Music's sort options; ascending is each one's natural order (A–Z, newest first, folders then yours, Spotify's, others').
+  const listRank=i=>i.type==='folder'?0:i.own?1:i.spotify?2:3;
+  const listSorts=[['name',T('Başlık','Title'),(a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'})],
+    ['added',T('Son Eklenenler','Recently Added'),(a,b)=>b.added-a.added],['played',T('Son Çalınanlar','Recently Played'),(a,b)=>b.played-a.played],
+    ['type',T('Çalma Listesi Türü','Playlist Type'),(a,b)=>listRank(a)-listRank(b)]];
+  defineSetting({key:'listFilters',group:'pages',label:T('Liste filtreleri','Playlist filters'),type:'choice',default:'menu',
+    options:[['menu',T('Menüde (Apple Music)','In a menu (Apple Music)')],['pills',T('Düğme olarak (Spotify)','As buttons (Spotify)')]],
+    note:T('Tüm Listeler’i listeyi kimin yaptığına göre süzer.','Filters All Playlists by who made each playlist.'),
+    change:()=>{if(libraryKind==='playlists'&&document.body.classList.contains('am-library-open'))renderLibrary(libraryKind,libraryFolder,false);}});
   // Keep only the fields rendered by this theme; release them when the page closes.
   async function loadLibrary(folder, request, kind) {
     const items=[];
@@ -935,7 +972,9 @@
         if(!item?.uri||item.canView===false) continue;
         if(kind==='artists'&&item.type!=='artist'||kind==='albums'&&item.type!=='album')continue;
         if(kind==='playlists'&&!['playlist','folder','liked-songs','your-episodes'].includes(item.type)&&item.uri!=='spotify:collection:tracks')continue;
-        items.push({uri:item.uri,type:item.type,name:item.name,imageUrl:libraryImage(item),
+        const added=libraryTime(item.addedAt);
+        items.push({uri:item.uri,type:item.type,name:item.name,imageUrl:libraryImage(item),added,played:Math.max(added,libraryTime(item.lastPlayedAt)),
+          own:!!item.isOwnedBySelf||['liked-songs','your-episodes'].includes(item.type),spotify:item.owner?.uri==='spotify:user:spotify',mixed:!!item.isMixed,
           // Spotify's library items carry album artists in artists[], playlist owners in owner.
           subtitle:item.owner?.displayName||item.owner?.name||item.artists?.map(a=>a.name).filter(Boolean).join(', ')||({artist:T('Sanatçı','Artist'),album:T('Albüm','Album'),playlist:T('Çalma listesi','Playlist'),folder:T('Klasör','Folder')}[item.type]||'')});
       }
@@ -965,24 +1004,53 @@
       const all=cached||await loadLibrary(folder,request,kind);if(request!==libraryRequest)return;
       libraryCache.set(key,all);
       if(cached&&refresh)loadLibrary(folder,request,kind).then(fresh=>{
-        if(request!==libraryRequest)return;libraryCache.set(key,fresh);
+        if(request!==libraryRequest)return;libraryCache.set(key,fresh);libraryCache.delete(key+'\nflat');
         if(librarySet(fresh)!==librarySet(all))renderLibrary(kind,folder,false);
       }).catch(()=>{});
       let items=all;
       status.textContent=all.length?all.length+T(' öğe',' items'):T('Bu bölümde kayıtlı öğe yok.','Nothing saved here yet.');
-      const tools=el('div','am-library-tools');
-      const filter=el('input','am-library-filter');filter.type='search';filter.placeholder=T('Filtrele','Filter');filter.setAttribute('aria-label',T('Kitaplığı filtrele','Filter library'));
-      const sort=popupButton('am-library-sort',[['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]],
+      const tools=el('div','am-library-tools'),lists=kind==='playlists';
+      const filter=el('input','am-library-filter');filter.type='search';filter.placeholder=lists?T('Listelerde Bul','Find in Playlists'):T('Filtrele','Filter');filter.setAttribute('aria-label',lists?T('Listelerde bul','Find in playlists'):T('Kitaplığı filtrele','Filter library'));
+      // Playlists: one menu with the filter and a Sort submenu, as Music's All Playlists, or Spotify's pills under the
+      // search field with the sort alone in the menu. A filter lists the playlists inside folders too, folders hidden.
+      let flat=null,pills=null;
+      const listFilter=()=>listFilters.find(f=>f[0]===settings.listFilter)||listFilters[0],listSort=()=>listSorts.find(s=>s[0]===settings.listSort)||listSorts[2];
+      const pickFilter=value=>{settings.listFilter=value;saveSettings();showItems();};
+      const sortMenu=()=>[...listSorts.map(([value,label])=>({label,checked:listSort()[0]===value,action:()=>{settings.listSort=value;saveSettings();showItems();}})),'-',
+        ...[[false,T('Artan','Ascending')],[true,T('Azalan','Descending')]].map(([desc,label])=>({label,checked:settings.listDesc===desc,action:()=>{settings.listDesc=desc;saveSettings();showItems();}}))];
+      const offered=()=>listFilters.filter(([value,,test])=>value==='all'||value===listFilter()[0]||(flat||all).some(test));
+      let sort;
+      if(lists){
+        const menu=settings.listFilters!=='pills';
+        sort=button(menu?T('Filtre ve sıralama','Filter and sort'):T('Sıralama','Sort'),'filter',()=>togglePopover(sort,()=>menu?[
+          ...offered().map(([value,label])=>({label,checked:listFilter()[0]===value,action:()=>pickFilter(value)})),'-',{label:T('Sıralama','Sort Options'),submenu:sortMenu}]:sortMenu()),'am-library-menu');
+        sort.setAttribute('aria-haspopup','menu');
+        if(!menu){pills=el('div','am-library-pills');pills.setAttribute('role','group');pills.setAttribute('aria-label',T('Listeleri süz','Filter playlists'));}
+      } else sort=popupButton('am-library-sort',[['library',T('Kitaplık sırası','Library order')],['name',T('Ada göre (A–Z)','By name (A–Z)')]],
         ()=>settings.sort==='name'?'name':'library',value=>{settings.sort=value;saveSettings();showItems();},T('Sıralama','Sort')).node;
-      tools.append(filter,sort);if(all.length)status.before(tools);
+      tools.append(filter,sort);if(all.length){status.before(tools);if(pills)status.before(pills);}
+      const syncPills=()=>pills?.replaceChildren(...offered().map(([value,label])=>{
+        const b=el('button','am-library-pill',value==='all'?T('Tümü','All'):label);b.type='button';b.setAttribute('aria-pressed',String(listFilter()[0]===value));b.onclick=()=>pickFilter(value);return b;}));
+      // The playlists inside folders, read once per visit and only while a filter needs them (or to offer one).
+      const loadFlat=async()=>{
+        if(flat)return flat;const cachedFlat=libraryCache.get(key+'\nflat');if(cachedFlat)return flat=cachedFlat;
+        const out=[],seen=new Set(),walk=async items=>{for(const i of items){if(request!==libraryRequest)return;if(i.type==='folder')await walk(await loadLibrary(i.uri,request,kind));else if(!seen.has(i.uri)){seen.add(i.uri);out.push(i);}}};
+        await walk(all);if(request!==libraryRequest)return null;libraryCache.set(key+'\nflat',out);return flat=out;
+      };
       const grid=el('div','am-library-grid');libraryView.append(grid);
       let rendered=0;
       const more=el('button','am-library-retry',T('Daha fazla göster','Show more'));
       function showItems() {
-        const query=filter.value.trim().toLocaleLowerCase('tr');
-        items=query?all.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):all.slice();
-        if(settings.sort==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
-        status.textContent=query?(items.length?items.length+' / '+all.length+T(' öğe',' items'):T('Eşleşen öğe yok.','No matches.')):all.length+T(' öğe',' items');
+        const query=filter.value.trim().toLocaleLowerCase('tr'),[filterKey,,test]=lists?listFilter():listFilters[0];
+        if(filterKey!=='all'&&!flat){loadFlat().then(done=>{if(done&&request===libraryRequest)showItems();});return;}
+        const base=filterKey==='all'?all:flat.filter(test);
+        items=query?base.filter(item=>(item.name||'').toLocaleLowerCase('tr').includes(query)):base.slice();
+        if(lists){const [,,compare]=listSort();items.sort(settings.listDesc?(a,b)=>compare(b,a):compare);}
+        else if(settings.sort==='name')items.sort((a,b)=>(a.name||'').localeCompare(b.name||'','tr',{sensitivity:'base'}));
+        const total=base.length+(filterKey==='all'?'':' / '+flat.length);
+        status.textContent=query?(items.length?items.length+' / '+base.length+T(' öğe',' items'):T('Eşleşen öğe yok.','No matches.')):base.length?total+T(' öğe',' items'):T('Bu filtreye uyan liste yok.','No playlists match this filter.');
+        if(lists)sort.setAttribute('aria-label',(settings.listFilters!=='pills'?T('Filtre ve sıralama: ','Filter and sort: ')+listFilter()[1]+', ':T('Sıralama: ','Sort: '))+listSort()[1]);
+        sort.classList.toggle('am-filtered',filterKey!=='all'&&!pills);syncPills();
         releaseArtwork();grid.replaceChildren();rendered=0;libraryView.append(more);appendBatch();
       }
       let filterTimer=null;
@@ -1011,7 +1079,9 @@
         for(const img of artwork)observeArtwork(img);
         if(rendered>=items.length) more.remove();
       }
-      more.onclick=appendBatch;libraryView.append(more);if(settings.sort==='name')showItems();else appendBatch();
+      more.onclick=appendBatch;libraryView.append(more);if(lists||settings.sort==='name')showItems();else appendBatch();
+      // Filters that would list nothing are not offered; the playlists inside folders count too.
+      if(lists&&all.some(i=>i.type==='folder'))setTimeout(()=>{if(request===libraryRequest)loadFlat().then(done=>{if(done&&request===libraryRequest)syncPills();});},300);
     }catch(e){if(request!==libraryRequest)return;status.textContent=T('Kitaplık yüklenemedi. Yeniden dene.','Couldn\'t load your library. Try again.');const retry=el('button','am-library-retry',T('Yeniden dene','Try Again'));retry.onclick=()=>renderLibrary(kind,folder);libraryView.append(retry);console.warn('[AppleMusicMac] Library view',e);}
   }
   const player=el('section','','');player.id='am-player';player.setAttribute('aria-label',T('Oynatıcı','Player'));
@@ -1469,7 +1539,7 @@
     const entries=typeof buildSub==='function'?buildSub():buildSub;
     for(const entry of entries){
       if(entry==='-'){subPopover.append(el('div','am-popover-separator'));continue;}
-      const btn=el('button','am-popover-item',entry.label);btn.type='button';btn.setAttribute('role','menuitem');
+      const btn=el('button','am-popover-item',entry.label);btn.type='button';btn.setAttribute('role','menuitem');menuChoice(btn,entry);
       btn.onclick=()=>{closePopover();Promise.resolve(entry.action?.()).finally(()=>menuExtras.cache?.clear());};
       subPopover.append(btn);
     }
@@ -1491,6 +1561,10 @@
     ['Profilden Kaldır','Remove from Profile','profile'],['Profile Ekle','Add to Profile','profile'],['Sil','Delete','trash'],['Bu Listeden Çıkar','Remove from this Playlist','minus'],
     ['Ayrıntıları Düzenle','Edit Details','edit'],['Gizli Yap','Make Private','lock'],['Herkese Açık Yap','Make Public','lock'],['Bu Sanatçıyı Çalma','Don\'t Play This Artist','ban'],['Bu Sanatçıya İzin Ver','Allow This Artist','ban'],
     ['Katkıda Bulunanları Görüntüle','View Credits','credits'],['Sanatçı Radyosuna Git','Go to Artist Radio','radio']].flatMap(([tr,en,icon])=>[[tr,icon],[en,icon]]));
+  // A choice row (menuitemradio) shows macOS's tick when it is the current one; menus and their submenus alike.
+  function menuChoice(item,entry) {
+    if('checked' in entry){item.classList.add('am-popover-choice');item.setAttribute('role','menuitemradio');item.setAttribute('aria-checked',String(!!entry.checked));if(entry.checked)item.insertAdjacentHTML('afterbegin',svg('tick').replace('<svg ','<svg class="am-popover-tick" '));}
+  }
   function renderPopoverEntries(entries) {
     popover.replaceChildren();
     for(const entry of entries){
@@ -1506,8 +1580,8 @@
         popover.append(row);continue;
       }
       const item=el('button','am-popover-item'+(entry.submenu?' am-has-submenu':''),entry.label);item.type='button';item.setAttribute('role','menuitem');
-      if('checked' in entry){item.classList.add('am-popover-choice');item.setAttribute('role','menuitemradio');item.setAttribute('aria-checked',String(!!entry.checked));if(entry.checked)item.insertAdjacentHTML('afterbegin',svg('tick').replace('<svg ','<svg class="am-popover-tick" '));}
-      else if(menuIcons[entry.label]){item.classList.add('am-has-icon');item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));}
+      menuChoice(item,entry);
+      if(!('checked' in entry)&&menuIcons[entry.label]){item.classList.add('am-has-icon');item.insertAdjacentHTML('afterbegin',svg(menuIcons[entry.label]).replace('<svg ','<svg class="am-menu-icon" '));}
       if(entry.submenu){
         item.addEventListener('pointerenter',()=>{clearTimeout(subTimer);openSubPopover(item,entry.submenu);});
         item.addEventListener('pointerleave',()=>{subTimer=setTimeout(closeSubPopover,140);});
