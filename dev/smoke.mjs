@@ -989,6 +989,88 @@ try {
     assert.ok(await page.locator('#am-popover').isHidden());
   });
 
+  await check('sidebar lists yours or Spotify\'s playlists, picked on the heading (#108)', async () => {
+    const heading = '#am-sidebar .am-nav-heading:has(.am-nav-add)', rowCount = await page.locator('#am-sidebar .am-list-row').count();
+    await page.click(heading, { button: 'right', position: { x: 10, y: 5 } });
+    assert.deepEqual(await page.locator('#am-popover .am-popover-item').allTextContents(), ['Yeni Çalma Listesi', 'Yeni Klasör', 'Tümü', 'Senin Listelerin', 'Spotify’ın Listeleri']);
+    assert.equal(await page.textContent('#am-popover [aria-checked="true"]'), 'Tümü');
+    await page.click('#am-popover .am-popover-item:has-text("Spotify’ın Listeleri")');
+    // Spotify's own By Spotify filter, so the recent ones are the most recent of that kind; the heading names it. The
+    // pinned folder stays: Hüzünlü in it is Spotify's.
+    await page.waitForFunction(() => [...document.querySelectorAll('#am-sidebar .am-list-row .am-list-name')].map(n => n.textContent).join() === 'Ruh Hali,Haftalık Keşif');
+    assert.equal(await page.evaluate(h => document.querySelector(h).firstChild.nodeValue, heading), 'Listeler · Spotify');
+    assert.ok(await page.evaluate(() => window.__libraryFilters.includes('2,103')));
+    assert.equal(await settingsWindow.state('sideLists'), 'Spotify’ın Listeleri');
+    await shot('sidebar-lists-spotify');
+    await settingsWindow.pick('sideLists', 'Tümü');
+    await page.waitForFunction(n => document.querySelectorAll('#am-sidebar .am-list-row').length === n, rowCount);
+    assert.equal(await page.evaluate(h => document.querySelector(h).firstChild.nodeValue, heading), 'Listeler');
+  });
+
+  await check('All Playlists filters by who made a playlist, in Music\'s menu or as pills (#108)', async () => {
+    await page.evaluate(() => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=playlists' }));
+    await page.waitForSelector('.am-library-menu');
+    const all = await page.locator('.am-library-card').count();
+    const names = () => page.locator('.am-library-card .am-library-name').allTextContents();
+    const showing = list => page.waitForFunction(list => JSON.stringify([...document.querySelectorAll('.am-library-card .am-library-name')].map(n => n.textContent).sort()) === JSON.stringify(list.slice().sort()), list);
+    const menu = () => page.locator('#am-popover .am-popover-item').allTextContents();
+    // Music's All Playlists menu: the filter, then Sort Options; nobody here made a Mixed playlist inside a folder.
+    await page.click('.am-library-menu');
+    assert.deepEqual(await menu(), ['Tüm Listeler', 'Senin Listelerin', 'Spotify’ın Listeleri', 'Mix’li Listeler', 'Başkalarının Listeleri', 'Sıralama']);
+    assert.equal(await page.getAttribute('#am-popover [aria-checked="true"]', 'role'), 'menuitemradio');
+    // A filter lists the playlists inside folders (Hüzünlü is Spotify's, in Ruh Hali) and hides the folders.
+    await page.click('#am-popover .am-popover-item:has-text("Spotify’ın Listeleri")');
+    await showing(['Haftalık Keşif', 'Hüzünlü']);
+    assert.match(await page.textContent('.am-library-status'), /^2 \/ \d+ öğe$/);
+    assert.ok(await page.$eval('.am-library-menu', b => b.classList.contains('am-filtered')));
+    await page.click('.am-library-menu');
+    await page.click('#am-popover .am-popover-item:has-text("Mix’li Listeler")');
+    await showing(['Yol Şarkıları']);
+    await page.click('.am-library-menu');
+    await page.click('#am-popover .am-popover-item:has-text("Başkalarının Listeleri")');
+    await showing(['90\'lar Türkçe Pop']);
+    await page.click('.am-library-menu');
+    await page.click('#am-popover .am-popover-item:has-text("Senin Listelerin")');
+    await page.waitForFunction(() => document.querySelector('.am-library-name') && ![...document.querySelectorAll('.am-library-name')].some(n => n.textContent === 'Haftalık Keşif'));
+    const own = await names();
+    assert.ok(own.includes('Neşeli') && own.includes('Beğenilen Şarkılar') && own.includes('Sabah Kahvesi') && !own.includes('Ruh Hali') && !own.includes('90\'lar Türkçe Pop'), own.join());
+    assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('mcloud:settings'))).listFilter, 'own');
+    // Sort Options is a submenu with Music's four orders and the direction, each ticked when current.
+    await page.click('.am-library-menu');
+    await page.hover('#am-popover .am-popover-item:has-text("Sıralama")');
+    await page.waitForSelector('#am-popover-sub:not([hidden])');
+    assert.deepEqual(await page.locator('#am-popover-sub .am-popover-item').allTextContents(), ['Başlık', 'Son Eklenenler', 'Son Çalınanlar', 'Çalma Listesi Türü', 'Artan', 'Azalan']);
+    assert.deepEqual(await page.locator('#am-popover-sub [aria-checked="true"]').allTextContents(), ['Son Çalınanlar', 'Artan']);
+    await page.click('#am-popover-sub .am-popover-item:has-text("Başlık")');
+    await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'Akustik Akşamlar');
+    await page.click('.am-library-menu');
+    await page.hover('#am-popover .am-popover-item:has-text("Sıralama")');
+    await page.click('#am-popover-sub .am-popover-item:has-text("Azalan")');
+    await page.waitForFunction(() => document.querySelector('.am-library-name')?.textContent === 'Yol Şarkıları');
+    await shot('playlists-filter-menu');
+    // Spotify's pills instead: the filter under the search field, the sort alone in the menu.
+    await settingsWindow.pick('listFilters', 'Düğme olarak (Spotify)');
+    await page.waitForSelector('.am-library-pills');
+    assert.deepEqual(await page.locator('.am-library-pill').allTextContents(), ['Tümü', 'Senin Listelerin', 'Spotify’ın Listeleri', 'Mix’li Listeler', 'Başkalarının Listeleri']);
+    assert.equal(await page.textContent('.am-library-pill[aria-pressed="true"]'), 'Senin Listelerin');
+    await page.click('.am-library-pill:has-text("Başkalarının Listeleri")');
+    await showing(['90\'lar Türkçe Pop']);
+    await page.click('.am-library-menu');
+    assert.deepEqual(await menu(), ['Başlık', 'Son Eklenenler', 'Son Çalınanlar', 'Çalma Listesi Türü', 'Artan', 'Azalan']);
+    await page.keyboard.press('Escape');
+    await shot('playlists-filter-pills');
+    await page.click('.am-library-pill:has-text("Tümü")');
+    await page.waitForFunction(n => document.querySelectorAll('.am-library-card').length === n, all);
+    assert.ok((await names()).includes('Ruh Hali'), 'all playlists keep the folders');
+    await settingsWindow.pick('listFilters', 'Menüde (Apple Music)');
+    for (const option of ['Son Çalınanlar', 'Artan']) {
+      await page.click('.am-library-menu');
+      await page.hover('#am-popover .am-popover-item:has-text("Sıralama")');
+      await page.click(`#am-popover-sub .am-popover-item:has-text("${option}")`);
+    }
+    assert.deepEqual(await page.evaluate(() => ['listFilter', 'listSort', 'listDesc'].map(k => JSON.parse(localStorage.getItem('mcloud:settings') || '{}')[k])), ['all', 'played', false]);
+  });
+
   await check('library cards get the artist page\'s hover tools (#86)', async () => {
     const open = async kind => { await page.evaluate(k => Spicetify.Platform.History.push({ pathname: '/', search: '?am-library=' + k }), kind); await page.waitForSelector('.am-library-item'); };
     await open('playlists');
