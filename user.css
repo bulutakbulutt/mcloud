@@ -147,7 +147,8 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 body.am-light [data-shelf] {--carousel-start-chevron-gradient:rgba(var(--spice-rgb-main),.7);--carousel-end-chevron-gradient:rgba(var(--spice-rgb-main),.7)}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
-body.am-light :is([data-encore-id="card"] div:has(> img),.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
+/* A card's image box: Spicetify's readable name where its css-map has one (macOS), else the image's parent (#109). */
+body.am-light :is(.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *),.view-homeShortcutsGrid-imageWrapper) {box-shadow:0 0 0 .5px rgb(0 0 0/.1),0 2px 8px rgb(0 0 0/.1)!important}
 /* Playlist and album pages, laid out like Apple Music's: a flat page, the artwork on the left, title and owner beside
    it and the play controls along the artwork's bottom edge. Spotify's action bar is a sibling below the header, so
    its scroll host is pulled up into the header's text column (the text column keeps that strip free); everything
@@ -1687,8 +1688,8 @@ body.am-windows #am-artist .am-artist-actions {right:150px}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:-4px}
 body.am-home-apple .am-native-main [data-encore-id="card"] {padding:0 8px!important;gap:6px!important;background:none!important;box-shadow:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"]::after {display:none!important}
-body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,div:has(> img)) {border-radius:8px!important}
-body.am-home-apple .am-native-main [data-encore-id="card"] div:has(> img) {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
+body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:8px!important}
+body.am-home-apple .am-native-main [data-encore-id="card"] :is(.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
 body.am-home-apple .am-native-main [data-encore-id="card"]:hover img {filter:brightness(.92)}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}

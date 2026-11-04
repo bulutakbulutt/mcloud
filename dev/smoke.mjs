@@ -2535,6 +2535,15 @@ try {
     const more = await page.locator('#mock-home [data-encore-id="card"]:nth-child(4) .am-card-more').boundingBox();
     await page.mouse.click(more.x + more.width / 2, more.y + more.height / 2);
     assert.deepEqual(await page.evaluate(() => [window.__cardMenu, !!window.__cardOpened]), [true, false], '"…" opens the card menu, not the item');
+    // Where Spicetify's css-map names the card (macOS), its image box is main-cardImage-imageWrapper, not the image's
+    // parent inside it: the box keeps the corners and the hairline that replace Spotify's drop shadow (#109).
+    assert.deepEqual(await page.evaluate(() => {
+      const s = document.createElement('section');s.id = 'mock-home-named';
+      s.innerHTML = '<div class="main-card-cardContainer" data-encore-id="card"><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper"><div><img alt="" class="main-cardImage-image"></div></div></div></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      const box = s.querySelector('.main-cardImage-imageWrapper'), inner = box.firstElementChild, out = [getComputedStyle(box).borderRadius, /inset/.test(getComputedStyle(box).boxShadow), getComputedStyle(inner).borderRadius, getComputedStyle(inner).boxShadow];
+      s.remove();return out;
+    }), ['8px', true, '0px', 'none']);
     await settingsWindow.pick('homeShortcuts');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
     await settingsWindow.pick('homeShortcuts');
@@ -2638,7 +2647,8 @@ try {
     const closing = await toggle();
     assert.deepEqual([closing.hidden, closing.anims], [false, [240]], 'the pane animates out');
     await page.waitForFunction(() => document.querySelector('#am-nowplaying').hidden && getComputedStyle(document.querySelector('.am-layout')).gridTemplateColumns.split(' ').pop() === '0px');
-    // Reduced motion switches at once, with no animation.
+    // Reduced motion switches at once, with no animation (after the closing slide's class has gone, 320ms).
+    await page.waitForFunction(() => !document.body.classList.contains('am-np-anim'));
     await page.emulateMedia({ reducedMotion: 'reduce' });
     const still = await toggle();
     assert.deepEqual([still.hidden, still.anims, still.cls], [false, [], false], 'no animation with reduced motion');
