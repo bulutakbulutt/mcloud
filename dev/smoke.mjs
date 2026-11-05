@@ -923,9 +923,12 @@ try {
     // The columns line up with the header's.
     assert.ok(await page.evaluate(() => { const h = [...document.querySelectorAll('#am-search .am-table-head > span')], c = [...document.querySelector('#am-search .am-table-row').children];
       return h.every((s, i) => Math.abs(s.getBoundingClientRect().left - c[i].getBoundingClientRect().left) < 1); }));
-    assert.equal(await page.locator('#am-search .am-table-row').count(), 30);
+    // The second page may already be on its way (it loads 800px before the end), so only the end state is checked:
+    // both pages, each song once, the second asked from offset 30.
     await page.evaluate(() => { const v = document.getElementById('am-search'); v.scrollTop = v.scrollHeight; });
     await page.waitForFunction(() => document.querySelectorAll('#am-search .am-table-row').length === 45);
+    assert.equal(await page.evaluate(() => new Set([...document.querySelectorAll('#am-search .am-table-row')].map(r => r.dataset.uri)).size), 45);
+    assert.ok(await page.evaluate(() => window.__searchRequests.some(v => v.kind === 'searchTracks' && v.offset === 30)));
     await page.click('#am-search .am-table-row >> nth=1 >> .am-table-song');
     assert.equal(await page.evaluate(() => window.__playedUri), 'spotify:track:q21');
     await page.click('#am-search .am-table-row >> nth=1', { button: 'right' });
@@ -936,7 +939,7 @@ try {
     await page.waitForSelector('body.am-search-results #am-search .am-top-result');
     await page.click('#am-search .am-shelf-artists .am-shelf-title');
     await page.waitForSelector('#am-search .am-search-grid.am-search-round .am-card-round');
-    assert.equal(await page.locator('#am-search .am-search-grid .am-card').count(), 30);
+    assert.ok(await page.locator('#am-search .am-search-grid .am-card').count() >= 30);
     assert.equal(await page.evaluate(() => new Set([...document.querySelectorAll('#am-search .am-search-grid .am-card')].slice(0, 12).map(c => Math.round(c.getBoundingClientRect().top))).size), 2);
     // Shows and episodes have no Apple page: their heading keeps Spotify's tab.
     await page.evaluate(() => Spicetify.Platform.History.push('/search/sena/podcastAndEpisodes'));
