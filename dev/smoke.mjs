@@ -1783,7 +1783,7 @@ try {
         <style>#mock-album72 .main-trackList-trackListHeader{height:36px;margin:0 calc(var(--content-spacing) * -1) calc(var(--content-spacing) - 8px)}</style>
         <div class="main-trackList-trackListContainer"><div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] 16px [first] 4fr [var1] 2fr [last] 1fr">
           <div class="main-trackList-trackListHeader"><div class="main-trackList-trackListHeaderRow" role="row">Title</div></div>
-          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></div><div><div><p class="mock-date">August 20, 2016</p><div><p>© 2016 Boys Don't Cry</p></div></div></div></section>`);
+          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></div><div><div><p class="mock-date">August 20, 2016</p><div><p>© 2016 Boys Don't Cry</p></div></div><button class="mock-releases" type="button"><span class="encore-text-body-small" data-encore-id="text">1 more release</span><svg data-encore-id="icon" viewBox="0 0 16 16"><path d="m14 6-6 6-6-6z"></path></svg></button></div><style>.mock-releases{display:grid;grid-auto-flow:column;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:4px;background-color:#1e1e1e}</style></section>`);
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
@@ -1811,6 +1811,9 @@ try {
     assert.deepEqual(await page.evaluate(() => { const p = document.getElementById('mock-album72'), d = e => getComputedStyle(p.querySelector(e)).display;
       return [getComputedStyle(document.documentElement).getPropertyValue('--am-list-info'), d('.mock-count'), d('.mock-dot'), d('.mock-year'), getComputedStyle(p.querySelector('.mock-date'), '::after').content]; }),
       ['"3 şarkı, 1 saat, 2 dakika"', 'none', 'none', 'block', '"3 şarkı, 1 saat, 2 dakika"']);
+    // #121: Spotify's "N more releases" (a hashed 40px card box with a triangle) is the library sort's pop-up button.
+    assert.deepEqual(await page.$eval('#mock-album72 .mock-releases', b => { const c = getComputedStyle(b); return [c.height, c.borderRadius, /^url\("data:image\/svg/.test(c.backgroundImage), getComputedStyle(b.querySelector('svg')).display, getComputedStyle(b.firstElementChild).fontSize]; }),
+      ['30px', '8px', true, 'none', '13px']);
     // #97: a song's like button is Music's favourite star, outlined until it is liked, then filled.
     assert.deepEqual(await page.$$eval('#mock-album72 .mock-like', l => l.map(b => [/fill='none'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage), /fill='%23000'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage)])), [[false, true], [true, false], [true, false]]);
     // Spotify spaces the column header from the first row by the page padding minus 8px; the first row follows it directly, as in Apple Music.
