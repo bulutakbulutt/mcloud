@@ -154,6 +154,21 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 /* The chevron follows the material, as the search results' text does, not the page under it: a playlist's dark header
    in light mode would give it white on the light fill. */
 body.am-light .am-native-main .am-chevron:not(:hover) {--text-base:#272727}
+/* A shelf's arrows are Apple Music's (the user's screenshots, macOS 26, dark and light): a 22×40 capsule of glass on the
+   covers' middle (theme.js sets --am-chev-y), astride the content's edge, with a tall thin chevron. Liquid Glass gives
+   it the toast's lens at its size (#am-glass-chevron, one map for all); otherwise the frosted fill above, Eco a solid one. */
+.am-native-main [data-shelf] .am-chevron {display:grid;place-items:center;width:22px;height:40px;border-radius:11px;top:var(--am-chev-y,50%);margin-top:-20px}
+/* Spotify sets each arrow 8px in from the content's edge; Apple's stand 8px past it, half over the gutter. */
+.am-native-main [data-shelf] .am-chevron:first-child {margin-left:-16px}
+.am-native-main [data-shelf] .am-chevron:last-child {margin-right:-16px}
+.am-native-main [data-shelf] .am-chevron > svg {display:none}
+.am-native-main [data-shelf] .am-chevron::before {content:'';width:7px;height:20px;background:var(--text-base);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.am-native-main [data-shelf] .am-chevron:last-child::before {transform:scaleX(-1)}
+/* Apple's capsule is frosted through (the covers' edges do not show in it) and mostly a neutral grey: sampled from the
+   screenshots, (54,50,49) over a black cover and (77,74,73) over a lighter one in dark; 150 to 182 in light. */
+body.am-liquid:not(.am-solid) .am-native-main [data-shelf] .am-chevron {--chevrons-button-color:rgb(58 58 58/.72);--chevrons-button-backdrop-filter:blur(10px) url(#am-glass-chevron);box-shadow:none}
+body.am-liquid.am-light:not(.am-solid) .am-native-main [data-shelf] .am-chevron:not(:hover) {--chevrons-button-color:rgb(185 185 185/.6)}
+.am-chevron-probe {position:fixed;left:-100px;top:0;width:22px;height:40px;visibility:hidden;pointer-events:none}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
 /* A card's image box: Spicetify's readable name where its css-map has one (macOS), else the image's parent (#109). */

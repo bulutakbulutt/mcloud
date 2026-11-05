@@ -2611,6 +2611,20 @@ try {
       const out = [before, arrows.every(a => a.classList.contains('am-chevron')), st.getPropertyValue('--chevrons-button-color').trim(), st.getPropertyValue('--chevrons-button-backdrop-filter').trim()];
       s.remove();return out;
     }), [true, true, 'transparent', 'blur(21px) url(#am-search-glass)']);
+    // A shelf's arrows are Apple Music's 22×40 glass capsules, on the covers' middle once the pointer comes over the shelf.
+    assert.deepEqual(await page.evaluate(async () => {
+      const s = document.createElement('section');s.id = 'mock-shelf-arrows';s.setAttribute('data-shelf', '');s.style.position = 'relative';
+      s.innerHTML = '<div style="display:flex"><div data-encore-id="card" style="padding:0 8px;width:180px"><div><div style="width:164px;height:164px"><img alt="" style="display:block;width:164px;height:164px"></div></div><div data-encore-id="cardTitle" style="height:40px">Mix</div></div></div>'
+        + '<div class="mock-chevrons" style="position:absolute;inset:0 8px;display:flex;justify-content:space-between"><div aria-hidden="true" style="position:relative"><svg data-encore-id="icon"></svg></div><div aria-hidden="true" style="position:relative"><svg data-encore-id="icon"></svg></div></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      s.querySelector('img').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      const arrow = s.querySelector('.mock-chevrons > div'), cs = getComputedStyle(arrow), img = s.querySelector('img').getBoundingClientRect(), box = arrow.getBoundingClientRect();
+      const liquid = document.body.classList.contains('am-liquid'), map = document.querySelector('#am-glass-chevron feImage')?.getAttribute('href') || '';
+      document.body.classList.add('am-solid');const eco = getComputedStyle(arrow).getPropertyValue('--chevrons-button-backdrop-filter').trim();document.body.classList.remove('am-solid');
+      const out = [arrow.classList.contains('am-chevron'), box.width, box.height, cs.borderRadius, Math.round(box.top + box.height / 2 - (img.top + img.height / 2)), liquid && cs.getPropertyValue('--chevrons-button-backdrop-filter').trim(), map.startsWith('data:image/png'), eco];
+      s.remove();return out;
+    }), [true, 22, 40, '11px', 0, 'blur(10px) url(#am-glass-chevron)', true, 'none']);
     // Where Spicetify's css-map names the card (macOS), its image box is main-cardImage-imageWrapper, not the image's
     // parent inside it: the box keeps the corners and the hairline that replace Spotify's drop shadow (#109).
     assert.deepEqual(await page.evaluate(() => {
