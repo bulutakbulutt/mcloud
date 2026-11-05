@@ -2686,6 +2686,13 @@ try {
       const shown = [...cards[0].querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.getAttribute('aria-label')).join();
       return [new Set(cards.map(c => Math.round(c.getBoundingClientRect().top))).size < cards.length, img.getBoundingClientRect().width, getComputedStyle(img).borderRadius, shown, getComputedStyle(cards[0]).borderRadius];
     }), [true, 96, '10px', 'Save to Your Library,Play', '22px']);
+    // The save button is the theme's star: outlined, then filled in the accent once saved.
+    assert.deepEqual(await page.evaluate(() => {
+      const save = document.querySelector('#mock-feed [data-encore-id="listRow"] button[aria-checked]'), icon = () => getComputedStyle(save.querySelector('svg')).webkitMaskImage;
+      const line = icon(), plain = getComputedStyle(save).color;
+      save.setAttribute('aria-checked', 'true');
+      return [line === getComputedStyle(document.documentElement).getPropertyValue('--am-star-line').trim(), icon() !== line, getComputedStyle(save).color !== plain];
+    }), [true, true, true]);
     await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
   });
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
