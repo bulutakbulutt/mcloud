@@ -2664,6 +2664,18 @@ try {
       out.push([getComputedStyle(ph).borderRadius, getComputedStyle(ph.querySelector('svg')).display, ...mic(ph), ...mic(lib), ownArt.getBoundingClientRect().width, ...mic(ownArt)]);
       s.remove();return out;
     }), [['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['8px', '8px', 'flex-start', 'start', 'block'], ['50%', 'none', '""', true, '""', true, 144, '""', true]]);
+    // An artist whose picture is Spotify's placeholder (theme.js marks data-am-no-photo after reading it) gets the same
+    // circle and microphone, on Spotify's cards and on ours; the picture itself is hidden.
+    assert.deepEqual(await page.evaluate(() => {
+      const s = document.createElement('section');
+      s.innerHTML = '<div class="main-card-cardContainer" data-encore-id="card" aria-labelledby="card-title-spotify:artist:7-0" data-am-no-photo><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper" style="position:relative"><div><img alt="" class="main-cardImage-image"></div></div></div></div>'
+        + '<div class="am-card am-card-round" data-uri="spotify:artist:8"><button class="am-card-open"><span class="am-card-art" data-am-no-photo><img alt=""></span></button></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      const box = s.querySelector('.main-cardImage-imageWrapper'), own = s.querySelector('.am-card-art'), mic = el => /^url\("data:image\/svg\+xml/.test(getComputedStyle(el, '::after').webkitMaskImage);
+      const probe = document.createElement('i');probe.style.background = 'var(--am-art-empty)';s.append(probe);
+      const out = [getComputedStyle(box).backgroundColor === getComputedStyle(probe).backgroundColor, getComputedStyle(box.querySelector('img')).opacity, mic(box), getComputedStyle(own.querySelector('img')).opacity, mic(own)];
+      s.remove();return out;
+    }), [true, '0', true, '0', true]);
     await settingsWindow.pick('homeShortcuts');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
     await settingsWindow.pick('homeShortcuts');
@@ -2721,6 +2733,14 @@ try {
     assert.ok(Math.abs(more.right - sc.right) < 1, '"…" ends the row');
     await page.mouse.click(more.left + more.width / 2, more.height / 2 + (await page.evaluate(() => document.querySelector('#mock-home125 .am-shortcut-more').getBoundingClientRect().top)));
     assert.equal(await page.evaluate(() => window.__shortcutMenu), true, '"…" opens the shortcut\'s menu');
+    // A long name stays on one line, inside its own row, and ends in an ellipsis.
+    assert.deepEqual(await page.evaluate(() => {
+      const c = document.querySelector('#mock-home125 [data-am-shortcut]'), p = c.querySelector('p');p.textContent = 'A shortcut whose name is far too long for one row of this grid, and longer still, so it has to end early';
+      const r = p.getBoundingClientRect(), row = c.getBoundingClientRect();
+      const full = document.createElement('span');full.style.cssText = 'position:absolute;white-space:nowrap;font:' + getComputedStyle(p).font;full.textContent = p.textContent;document.body.append(full);
+      const natural = full.getBoundingClientRect().width;full.remove();
+      return [r.height < 20, r.right <= row.right, natural > r.width, getComputedStyle(p).textOverflow];
+    }), [true, true, true, 'ellipsis']);
     await page.evaluate(() => { document.getElementById('mock-home125').remove(); document.getElementById('mock-home125-css').remove(); });
   });
 

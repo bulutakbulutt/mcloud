@@ -3734,6 +3734,31 @@
     mixCover(url).then(cover=>{if(cover&&box.dataset.amMixSrc===url&&img.getAttribute('src')===url)drawMix(box,cover);});
   }
   document.addEventListener('load',event=>{if(event.target.tagName==='IMG'&&(settings.mixCovers!=='spotify'||event.target.closest('.am-mix')))markMix(event.target);},true);
+  // An artist whose picture is Spotify's own placeholder (a flat grey square with a thin person-and-note glyph; Viktor
+  // Tsoi's on Home) has no photo either, so it gets Apple's microphone too (#127). Each picture is read once, at 16x16,
+  // from Spotify's CDN; measured: the placeholder's ground is 26 with no colour and its glyph lifts only ~4% of the
+  // pixels, while no real cover or portrait on Home came close. The artwork's box is marked data-am-no-photo.
+  const placeholderArt=new Map();
+  function isPlaceholderArt(src) {
+    if(!placeholderArt.has(src))placeholderArt.set(src,new Promise(resolve=>{
+      const img=new Image();img.crossOrigin='anonymous';img.decoding='async';img.onerror=()=>resolve(false);
+      img.onload=()=>{try{
+        const canvas=document.createElement('canvas');canvas.width=canvas.height=16;const context=canvas.getContext('2d',{willReadFrequently:true});
+        context.drawImage(img,0,0,16,16);const p=context.getImageData(0,0,16,16).data,grey=[];let chroma=0;
+        for(let i=0;i<p.length;i+=4){grey.push(.2126*p[i]+.7152*p[i+1]+.0722*p[i+2]);chroma=Math.max(chroma,Math.max(p[i],p[i+1],p[i+2])-Math.min(p[i],p[i+1],p[i+2]));}
+        const sorted=grey.slice().sort((a,b)=>a-b),ground=sorted[128],off=grey.filter(g=>Math.abs(g-ground)>14).length/grey.length;
+        resolve(ground<60&&chroma<=8&&sorted[0]>=ground-6&&sorted[255]<=ground+80&&off>.01&&off<.15);
+      }catch{resolve(false);}};
+      img.src=src;
+    }));
+    return placeholderArt.get(src);
+  }
+  document.addEventListener('load',event=>{
+    const img=event.target;if(img.tagName!=='IMG')return;
+    const box=img.closest('.am-native-main [data-encore-id="card"][aria-labelledby*=":artist:"],.am-card-round[data-uri^="spotify:artist:"] .am-card-art,.am-artist-art');
+    const src=img.currentSrc||img.src;if(!box||!/^https:\/\/(i\.scdn\.co|[a-z0-9-]+\.spotifycdn\.com)\//.test(src))return;
+    isPlaceholderArt(src).then(flat=>{if(img.isConnected&&(img.currentSrc||img.src)===src)box.toggleAttribute('data-am-no-photo',flat);});
+  },true);
   mixReady=true;
   defineSetting({key:'mixCovers',group:'home',label:T('Mix kapakları','Mix covers'),type:'choice',default:'apple',
     options:[['apple',T('Apple Music gibi','As Apple Music')],['band',T('Şerit (Essentials)','Band (Essentials)')],['gradient',T('Renk geçişi (kişisel mix)','Gradient (personal mix)')],['station',T('Yuvarlak fotoğraf (istasyon)','Round photo (station)')],['photo',T('Yalnız fotoğraf','Photo only')],['spotify','Spotify']],
