@@ -2717,6 +2717,30 @@ try {
     await page.waitForFunction(() => document.querySelector('#am-nowplaying').hidden);
   });
 
+  await check('a result\'s menu that opens a cached page closes the live results', async () => {
+    // Spotify ignores presses and focus outside its results while a result's menu is open. On a page it has cached the
+    // route changes before that menu goes, and the menu hands focus back to the results, which stayed open.
+    const back = await page.evaluate(() => Spicetify.Platform.History.location.pathname + Spicetify.Platform.History.location.search);
+    const leaveFromMenu = focusMenu => page.evaluate(focusMenu => {
+      const root = document.createElement('div'); root.setAttribute('data-tippy-root', ''); root.className = 'mock-result-menu';
+      root.innerHTML = '<ul role="menu"><li role="presentation"><a role="menuitem" tabindex="-1" href="#">Go to album</a></li></ul>'; document.body.append(root);
+      if (focusMenu) root.querySelector('a').focus();
+      Spicetify.Platform.History.push('/collection/tracks');
+      setTimeout(() => { const list = document.querySelector('#search-dropdown [data-overlayscrollbars-viewport]'); if (focusMenu && list) { list.tabIndex = -1; list.focus(); } root.remove(); }, 150);
+    }, focusMenu);
+    await page.fill('#global-nav-bar input', 'sena');
+    await leaveFromMenu(true);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'), null, { timeout: 2000 });
+    // Focus in the field keeps them, as without the theme.
+    await page.fill('#global-nav-bar input', 'sena');
+    await leaveFromMenu(false);
+    await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(() => !!document.getElementById('search-dropdown') && document.activeElement.matches('#global-nav-bar input')), true);
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+    await page.evaluate(back => Spicetify.Platform.History.push(back), back);
+  });
+
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
 } finally {
   await browser.close();

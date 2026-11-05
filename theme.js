@@ -3560,6 +3560,20 @@
     currentMode='native';
     document.body.classList.toggle('am-search-open',routePath().startsWith('/search'));updateNav();watchHeader();syncBrowse();
   });
+  // Spotify's live search results close on a press or a focus outside the search, but ignore both while a result's menu
+  // is open. "Go to album" to a page Spotify has cached focuses the page before that menu has gone (~210 vs ~300ms,
+  // measured), and the closing menu then hands focus back to the results, so they stayed open over the album. A route
+  // change from a menu over the results closes them, with a press outside, once the menu has gone; focus in the field
+  // keeps them.
+  H.listen(()=>{
+    const search=document.querySelector('#global-nav-bar [role="search"]'),menu='[data-tippy-root] [role="menu"]';
+    if(!search?.querySelector('#search-dropdown')||!document.querySelector(menu)||search.contains(document.activeElement))return;
+    const start=performance.now(),again=()=>{
+      if(document.querySelector(menu)&&performance.now()-start<1500){requestAnimationFrame(again);return;}
+      if(search.isConnected&&search.querySelector('#search-dropdown')&&!search.querySelector('input')?.matches(':focus'))document.body.dispatchEvent(new MouseEvent('mousedown',{bubbles:true}));
+    };
+    requestAnimationFrame(again);
+  });
   // Home as Apple Music's (issue #84): square cards without a plate, play and "…" on the artwork, bold shelf titles
   // without "Show all" (homeStyle, body.am-home-apple). The cards stay Spotify's; "…" opens Spotify's own card menu.
   settingGroup('home',T('Ana Sayfa','Home'),'home');
