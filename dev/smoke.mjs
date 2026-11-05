@@ -2631,6 +2631,43 @@ try {
 
   // Spotify 1.3.6.19xx (Windows) renders track lists, cards and Browse all with hashed CSS-module class names; the
   // theme tags them by role so its rules still match (#109).
+  await check('What\'s New: the reporter\'s frosted cards in a grid, the chips as a pop-up button (#128)', async () => {
+    // Spotify's feed: a header with the Music / Podcasts chips (checkboxes in a listbox), then an infinite list whose items
+    // are a wrapper > li[role=row] > (h2?) hr listRow, and a sentinel that loads more.
+    await page.evaluate(() => {
+      const row = (n, h) => `<div><li role="row">${h ? `<h2>${h}</h2>` : ''}<hr aria-hidden="true"><div data-encore-id="listRow" role="group" draggable="true"><div role="button"></div><div><div><div><div style="width:112px;height:112px"><img data-testid="entity-image" alt=""></div></div></div></div><div><div><h3 data-encore-id="listRowTitle"><span><a href="/album/${n}">Album ${n}</a></span></h3><p data-encore-id="listRowSubtitle"><span><a href="/artist/${n}">Artist</a></span></p></div></div><div><span data-encore-id="text">Album<span><span data-encore-id="text">15 hours ago</span></span></span></div><div><div><div><button data-testid="add-button" aria-checked="false"><span><svg></svg></span></button><button aria-label="Download"><span><svg></svg></span></button><button data-testid="more-button"><span><svg></svg></span></button></div><div><div role="div"><button data-testid="play-button"><span><svg></svg></span></button></div></div></div></div></div></li></div>`;
+      const chip = t => `<div role="presentation"><div role="option"><button data-encore-id="chip" role="checkbox" aria-checked="false">${t}</button></div></div>`;
+      const s = document.createElement('section');s.id = 'mock-feed';s.style.maxWidth = '800px';
+      s.innerHTML = `<div><h1>What's New</h1></div><div><div role="presentation"><div role="presentation"><div role="listbox">${chip('Music')}${chip('Podcasts')}</div></div></div></div>`
+        + `<ul role="treegrid"><div data-testid="infinite-scroll-list">${row(1, 'New')}${row(2)}${row(3)}${row(4, 'Earlier')}<div class="mock-sentinel" style="height:1px"></div></div></ul>`;
+      for (const c of s.querySelectorAll('[role="checkbox"]')) c.addEventListener('click', () => { const on = c.getAttribute('aria-checked') !== 'true'; for (const o of s.querySelectorAll('[role="checkbox"]')) o.setAttribute('aria-checked', 'false'); c.setAttribute('aria-checked', String(on)); });
+      document.querySelector('.am-native-main main').prepend(s);
+      Spicetify.Platform.History.push('/content-feed');
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-feed .am-feed-filter'));
+    const state = () => page.evaluate(() => {
+      const s = document.getElementById('mock-feed'), list = s.querySelector('[data-testid="infinite-scroll-list"]'), cards = [...list.querySelectorAll('[data-encore-id="listRow"]')];
+      const button = s.querySelector('.am-feed-filter');
+      return [document.body.classList.contains('am-feed'), button?.textContent, button?.nextElementSibling && getComputedStyle(button.nextElementSibling).display,
+        new Set(cards.map(c => Math.round(c.getBoundingClientRect().top))).size < cards.length, getComputedStyle(list.querySelector('li > hr')).display,
+        getComputedStyle(list.querySelector('h2')).gridColumn, list.querySelector('.mock-sentinel').getBoundingClientRect().height > 0,
+        cards[0].querySelector('img').getBoundingClientRect().width, [...cards[0].querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.dataset.testid).join()];
+    });
+    assert.deepEqual(await state(), [true, 'Tümü', 'none', true, 'none', '1 / -1', true, 96, 'add-button,play-button']);
+    // The button clicks Spotify's chips: Music, then Podcasts (Spotify's chip goes off first), then All.
+    const choose = async label => { await page.click('#mock-feed .am-feed-filter'); await page.locator('#am-popover .am-popover-item', { hasText: label }).first().click(); await page.waitForTimeout(500); };
+    const checked = () => page.evaluate(() => [...document.querySelectorAll('#mock-feed [role="checkbox"]')].map(c => c.getAttribute('aria-checked')).join());
+    await choose('Music');assert.equal(await checked(), 'true,false');
+    await choose('Podcasts');assert.equal(await checked(), 'false,true');
+    assert.equal(await page.textContent('#mock-feed .am-feed-filter'), 'Podcasts');
+    await choose('Tümü');assert.equal(await checked(), 'false,false');
+    // Spotify's own layout stays a setting away.
+    await settingsWindow.pick('feedStyle', 'Spotify');
+    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-feed'), !!document.querySelector('#mock-feed .am-feed-filter')]), [false, false]);
+    await settingsWindow.pick('feedStyle', 'Apple Music');
+    await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('am-feed')), false);
+  });
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
     await page.evaluate(() => {
       const host = document.querySelector('.am-native-main');
