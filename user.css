@@ -186,6 +186,11 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 .main-trackList-trackListRow button[aria-checked] svg path {display:none}
 .main-trackList-trackListRow button[aria-checked="true"] {color:var(--am-star-color,var(--am-accent))!important}
 .main-trackList-trackListRow button[aria-checked="true"] svg {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+/* While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size (pointer-events:none);
+   the box draws the star instead and the animation inside it is hidden. */
+.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] > div {opacity:0;filter:none}
+.main-trackList-trackListRow button[aria-checked="true"] div[style*="pointer-events: none"] {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
 /* The count and length move under the track list, as in Music: "18 songs, 1 hour, 8 minutes" (theme.js, --am-list-info).
    Albums put it between Spotify's release date and ℗ line, playlists after the last row. */
 body.am-list-info .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :is(div:not(.main-entityHeader-creatorWrapper),span:has(+ div:not(.main-entityHeader-creatorWrapper)),div:not(.main-entityHeader-creatorWrapper) + span) {display:none!important}

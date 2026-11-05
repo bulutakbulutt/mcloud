@@ -3876,12 +3876,13 @@
   }
   H.listen(syncAlbum);
   // Spotify's save buttons are Apple's star (#97): outlined, filled once saved. A row's has the row's only aria-checked
-  // (user.css); the page's shares aria-checked with Download, so it is matched by Spotify's own labels for it.
+  // (user.css); the page's shares aria-checked with Download, so it is matched by Spotify's own labels for it. While a
+  // save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size: the box draws the star then.
   const starStyle=el('style','');starStyle.id='am-star-style';document.head.append(starStyle);
   const saveLabels=['save_to_your_library','remove_from_your_library'].map(spotifyText).filter(label=>label&&!/^[a-z_.-]+$/.test(label));
   if(!saveLabels.length)saveLabels.push('Save to Your Library','Remove from Your Library');
   const saveButton=`.am-native-main [data-testid="action-bar-row"] button:is(${saveLabels.map(label=>`[aria-label=${JSON.stringify(label)}]`).join(',')}):not(#am-none)`;
-  starStyle.textContent=`${saveButton}{color:var(--am-star-color,var(--am-accent))!important}${saveButton} svg{background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}${saveButton} svg path{display:none}${saveButton}[aria-checked="true"] svg{-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}`;
+  starStyle.textContent=`${saveButton}{color:var(--am-star-color,var(--am-accent))!important}${saveButton} :is(svg,div[style*="pointer-events: none"]){background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}${saveButton} svg path{display:none}${saveButton} div[style*="pointer-events: none"] > div{opacity:0;filter:none}${saveButton}[aria-checked="true"] :is(svg,div[style*="pointer-events: none"]){-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}`;
   pageSetting({key:'numbersAlbum',group:'pages',section:T('Albümler','Albums'),label:T('Albümlerde parça numaraları','Track numbers on albums'),type:'toggle',default:true,apply:syncNumbers});
   // Albums list the artist on a track only when it is not the album's own (a guest, a compilation), as Apple Music does.
   pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
