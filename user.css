@@ -1730,8 +1730,8 @@ body.am-windows #am-artist .am-artist-actions {right:150px}
 /* Home as Apple Music's (issue #84, settings.homeStyle): cards without a plate or hover fill, 8px artwork, 13px text,
    round glass play (bottom left) and "…" (bottom right, .am-card-more, added by theme.js) over the artwork on hover,
    bold shelf titles without "Show all". Spotify's cards are 12px apart inside their 12px padding; 8px keeps Apple's
-   16px gap and the row moves 4px so the artwork lines up with the title. */
-body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:-4px}
+   16px gap and the row moves 4px in so the artwork lines up with the shelf title, as Apple's does (#125). */
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:4px}
 body.am-home-apple .am-native-main [data-encore-id="card"] {padding:0 8px!important;gap:6px!important;background:none!important;box-shadow:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"]::after {display:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:8px!important}
@@ -1739,7 +1739,13 @@ body.am-home-apple .am-native-main [data-encore-id="card"] :is(.main-cardImage-i
 body.am-home-apple .am-native-main [data-encore-id="card"]:hover img {filter:brightness(.92)}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}
+/* The artist names are in a nested 14px text box of Spotify's: the same size as the title, as Apple's (#125). */
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] * {font-size:inherit!important;line-height:inherit!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] a {color:inherit!important}
+/* Titles are not underlined, the card's and the shelf's, as Apple's; the subtitle's links (an artist) still are. */
+body.am-home-apple .am-native-main [data-encore-id="card"] a:not([data-encore-id="cardSubtitle"] *),
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"],
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] a {text-decoration:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] div:has(> div > button[data-encore-id="buttonPrimary"]) {left:8px!important;right:auto!important;top:auto!important;bottom:8px!important;transform:none!important;transition:opacity .15s!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"] > span,body.am-home-apple .am-card-more {box-sizing:border-box;inline-size:28px!important;block-size:28px!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(0 0 0/.42)!important;-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff!important;box-shadow:none!important;transform:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"]:hover > span,body.am-home-apple .am-card-more:hover {background:var(--am-accent)!important}
@@ -1793,8 +1799,34 @@ body.am-feed .am-feed-filter {margin:2px 0 0}
 body.am-feed .am-feed-filter + * {display:none!important}
 body:not(.am-feed) .am-feed-filter {display:none}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] {font-size:17px!important;font-weight:700!important;letter-spacing:-.01em}
+/* A shelf title that opens the whole section ends in Apple's chevron (#125), drawn as the artist page's shelf titles. */
+:root {--am-shelf-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 4 8 8-8 8'/%3E%3C/svg%3E")}
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] a[href]::after {content:"";display:inline-block;width:14px;height:14px;margin-inline-start:3px;vertical-align:-2px;background:rgb(var(--am-ink,255 255 255)/.627);-webkit-mask:var(--am-shelf-chevron) center/contain no-repeat;mask:var(--am-shelf-chevron) center/contain no-repeat}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRow"] a[href]:not([data-encore-id="listRowTitle"] a) {display:none!important}
 body.am-home-no-shortcuts .am-native-main .view-homeShortcutsGrid-shortcuts {display:none!important}
+/* The shortcuts at the top as a list of Apple's (its "Best New Songs", #125), drawn as the song rows of the artist page
+   and search: 56px rows, 48px artwork with 5px corners, the rule under a row starting at its text (none under a
+   column's last row), 13px names, play over the artwork and "…" at the end on hover. theme.js tags each shortcut
+   [data-am-shortcut] and their grid [data-am-shortcuts]; Spotify keeps its columns (two rows). */
+body.am-home-apple .am-native-main [data-am-shortcuts] {--item-height:56px!important;gap:0 24px!important}
+body.am-home-apple .am-native-main [data-am-shortcut] {border-radius:0!important;background:none!important;overflow:visible!important}
+/* The rule hangs 1px under its row and the grid clips the last row's, whatever the column count. */
+body.am-home-apple .am-native-main [data-am-shortcuts] {overflow:clip}
+body.am-home-apple .am-native-main [data-am-shortcuts] > [data-am-shortcut]::after {content:"";position:absolute;left:60px;right:0;bottom:-1px;height:1px;background:rgb(var(--am-ink,255 255 255)/.11);pointer-events:none;z-index:1}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] {height:100%;align-items:center}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child > div {min-width:48px!important;min-height:48px!important;width:48px;height:48px}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child > div > div {border-radius:5px;overflow:hidden;box-shadow:none!important;background:rgb(var(--am-ink,255 255 255)/.078)!important}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child img {border-radius:5px}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]) > div:first-child {margin-inline:12px 32px!important}
+body.am-home-apple .am-native-main [data-am-shortcut] p[data-encore-id="text"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
+body.am-home-apple .am-native-main [data-am-shortcut] a {text-decoration:none!important}
+/* Play: Spotify's button, moved over the artwork as Apple's dimmed artwork with its glyph. */
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]) > div:has(> div > div > button[data-encore-id="buttonPrimary"]) {inset-inline:0 auto!important;top:4px;width:48px!important;height:48px}
+body.am-home-apple .am-native-main [data-am-shortcut] button[data-encore-id="buttonPrimary"] > span {box-sizing:border-box;display:flex;align-items:center;justify-content:center;inline-size:48px!important;block-size:48px!important;min-block-size:0!important;padding:0!important;border-radius:5px!important;background:rgb(0 0 0/.4)!important;color:#fff!important;box-shadow:none!important;transform:none!important}
+body.am-home-apple .am-native-main [data-am-shortcut] button[data-encore-id="buttonPrimary"] svg {width:16px!important;height:16px!important;fill:#fff!important}
+body.am-home-apple .am-native-main [data-am-shortcut] .am-shortcut-more {top:50%;right:0;bottom:auto;translate:0 -50%;background:none!important;-webkit-backdrop-filter:none;backdrop-filter:none;color:rgb(var(--am-ink,255 255 255)/.753)!important}
+body.am-home-apple .am-native-main [data-am-shortcut] .am-shortcut-more:hover {background:none!important;color:var(--am-accent)!important}
+body.am-home-apple .am-native-main [data-am-shortcut]:is(:hover,:focus-within) .am-shortcut-more {opacity:1}
 /* Mix covers (settings.mixCovers). theme.js puts .am-mix on the image's box with the photo (--am-mix-photo), the band
    colour, two gradient stops, the name (data-am-mix) and the look (data-am-mix-style); .am-mix-ready once they are
    known, so Spotify's image shows until then. .am-mix-plain: no photo (mood mixes, Discover Weekly), drawn as the gradient. Sizes are in
