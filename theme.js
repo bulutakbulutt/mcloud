@@ -996,7 +996,7 @@
   // an Image each: released sources otherwise drop out of the memory cache and load asynchronously again.
   const seenArtwork=new Map();
   document.addEventListener('load',event=>{
-    const img=event.target,src=img.tagName==='IMG'&&img.closest?.('#am-library,#am-artist')&&img.getAttribute('src');if(!src||seenArtwork.has(src))return;
+    const img=event.target,src=img.tagName==='IMG'&&img.closest?.('#am-library,#am-artist,#am-search')&&img.getAttribute('src');if(!src||seenArtwork.has(src))return;
     const hold=new Image();hold.src=src;seenArtwork.set(src,hold);if(seenArtwork.size>200)seenArtwork.delete(seenArtwork.keys().next().value);
   },true);
   function observeLazy(observer,img) {
@@ -3278,14 +3278,7 @@
     open.append(art,el('span','am-card-name',release.name||release.profile?.name||''));
     if(subtitle)open.append(el('span','am-card-sub',subtitle));
     open.addEventListener('click',()=>openUri(release.uri));
-    const shareLink='https://open.spotify.com/'+release.uri.split(':').slice(1).join('/');
-    const items=()=>[
-      {label:T('Çal','Play'),action:()=>playArtist(release.uri)},
-      ...(canQueue(release.uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(release.uri)}]:[]),
-      ...(/^spotify:artist:/.test(release.uri)?artistRadio(release.uri):[]),
-      '-',
-      {label:T('Bağlantıyı Kopyala','Copy Link'),action:async()=>{try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(shareLink);else await navigator.clipboard.writeText(shareLink);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}},
-    ];
+    const items=()=>entityItems(release.uri);
     card.append(open);if(!round)card.append(cardTools(release.uri,items));
     card.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
     return card;
@@ -3297,6 +3290,46 @@
     if(!noPlay)tools.append(button(T('Çal','Play'),'play',event=>{event.stopPropagation();playArtist(uri);},'am-tool-play'));
     tools.append(more);
     return tools;
+  }
+  async function copyLink(uri) {
+    const link='https://open.spotify.com/'+uri.split(':').slice(1).join('/');
+    try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}
+  }
+  // An album, playlist, artist, show or profile card's menu.
+  function entityItems(uri) {
+    return [
+      ...(/^spotify:user:/.test(uri)?[]:[{label:T('Çal','Play'),action:()=>playArtist(uri)}]),
+      ...(canQueue(uri)?[{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(uri)}]:[]),
+      ...(/^spotify:artist:/.test(uri)?artistRadio(uri):[]),
+      '-',
+      {label:T('Bağlantıyı Kopyala','Copy Link'),action:()=>copyLink(uri)},
+    ];
+  }
+  // A song's menu and row (the artist page's Top Songs, search's Songs): artwork with play on hover, title over a grey line, "…".
+  function songItems(song,play,{artist}={}) {
+    const by=song.artists?.items?.[0]?.uri;
+    return ()=>menuGroups(
+      [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)}],
+      [{label:T('Çal','Play'),action:play},{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)}],
+      creditsEntry(song.uri),
+      [...(artist&&by?[{label:T('Sanatçıya Git','Go to Artist'),action:()=>openUri(by)}]:[]),...(song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[])],
+      [{label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:()=>copyLink(song.uri)}],
+    );
+  }
+  const explicitMark=item=>{if(item?.contentRating?.label!=='EXPLICIT')return null;const mark=el('span','am-explicit','E');mark.title=T('Müstehcen','Explicit');mark.setAttribute('aria-label',mark.title);return mark;};
+  function songRow(song,play,sub,options) {
+    const row=el('div','am-song');row.dataset.uri=song.uri;row.draggable=true;
+    const playSong=el('button','am-song-main');playSong.type='button';playSong.title=song.name||'';
+    playSong.addEventListener('click',play);
+    const text=el('span','am-song-text'),name=el('span','am-song-name'),mark=explicitMark(song);
+    name.append(el('span','am-song-title',song.name||''));if(mark)name.append(mark);
+    text.append(name,el('span','am-song-sub',sub||''));
+    const thumb=el('span','am-song-thumb');thumb.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'));thumb.insertAdjacentHTML('beforeend',svg('play'));
+    playSong.append(thumb,text);
+    const items=songItems(song,play,options),more=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(more,items),'am-song-more');
+    row.append(playSong,more);
+    row.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
+    return row;
   }
   async function toggleSaved(uri,saved) {
     const api=S.Platform.LibraryAPI;
@@ -3476,29 +3509,8 @@
         block.append(el('h2','am-shelf-title',T('Popüler Şarkılar','Top Songs')));
         const grid=el('div','am-song-grid');
         for(const song of topTracks){
-          const row=el('div','am-song');row.dataset.uri=song.uri;row.draggable=true;
-          const playSong=el('button','am-song-main');playSong.type='button';playSong.title=song.name||'';
-          playSong.addEventListener('click',()=>playArtist(uri,song.uri));
-          const text=el('span','am-song-text');
           const albumName=song.albumOfTrack?.name;
-          const sub=albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ');
-          text.append(el('span','am-song-name',song.name||''),el('span','am-song-sub',sub||''));
-          const thumb=el('span','am-song-thumb');thumb.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'));thumb.insertAdjacentHTML('beforeend',svg('play'));
-          playSong.append(thumb,text);
-          const songItems=()=>menuGroups(
-            [{label:T('Çalma Listesine Ekle','Add to Playlist'),submenu:playlistSubmenu(song.uri)}],
-            [{label:T('Çal','Play'),action:()=>playArtist(uri,song.uri)},{label:T('Sıraya Ekle','Add to Queue'),action:()=>enqueueTrack(song.uri)}],
-            creditsEntry(song.uri),
-            song.albumOfTrack?.uri?[{label:T('Albüme Git','Go to Album'),action:()=>openUri(song.albumOfTrack.uri)}]:[],
-            [{label:T('Şarkı Bağlantısını Kopyala','Copy Song Link'),action:async()=>{const link='https://open.spotify.com/track/'+song.uri.split(':').pop();try{if(S.Platform.ClipboardAPI?.copy)await S.Platform.ClipboardAPI.copy(link);else await navigator.clipboard.writeText(link);notify(T('Bağlantı kopyalandı.','Link copied.'));}catch{notify(T('Bağlantı kopyalanamadı.','Couldn\'t copy the link.'));}}}],
-          );
-          const songMore=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(songMore,songItems),'am-song-more');
-          row.append(playSong,songMore);
-          row.addEventListener('contextmenu',event=>{
-            event.preventDefault();event.stopPropagation();
-            togglePopover({x:event.clientX,y:event.clientY},songItems);
-          });
-          grid.append(row);
+          grid.append(songRow(song,()=>playArtist(uri,song.uri),albumName||(song.artists?.items||[]).map(a=>a.profile?.name).filter(Boolean).join(', ')));
         }
         block.append(grid);track.append(block);
       }
@@ -3596,6 +3608,158 @@
       if(stuck!==listHeader.hasAttribute('data-am-stuck'))listHeader.toggleAttribute('data-am-stuck',stuck);
     });
   },{capture:true,passive:true});
+  // Search results as Apple Music's (issue #126). Spotify's "All" tab is one list in relevance order, so the page is
+  // drawn from Spotify's own query (searchDesktop) in Apple's sections, measured in macOS 27 Music (AX frames, 2x
+  // captures): Top Results as two rows of cards, then Artists, Albums, Songs (three rows) and Playlists as shelves, then
+  // the kinds Apple has no match for (shows, episodes, profiles, genres). A heading opens Spotify's own tab of that kind.
+  // settings.searchStyle 'spotify', a missing API or a failed request shows Spotify's page.
+  const searchView=el('section','');searchView.id='am-search';searchView.setAttribute('aria-label',T('Arama sonuçları','Search results'));document.body.append(searchView);
+  searchView.addEventListener('dragstart',event=>{const node=event.target.closest?.('[draggable="true"][data-uri]');if(node)setDrag(event,[node.dataset.uri]);});
+  overlayScrollbar(searchView,'am-scroll-search');
+  const searchCache=new Map(),nativeSearches=new Set();
+  let searchRequest=0,searchShown='';
+  // The query's path segment as Spotify wrote it (links to its tabs reuse it) and the query itself.
+  const searchRoute=()=>{const segment=/^\/search\/([^/]+)\/?$/.exec(routePath())?.[1];if(!segment)return null;let term=segment;try{term=decodeURIComponent(segment);}catch{}term=term.trim();return term?{segment,term}:null;};
+  const canSearch=term=>settings.searchStyle!=='spotify'&&!nativeSearches.has(term)&&!!gql()&&!!S.GraphQL?.Definitions;
+  // Spotify adds the query's definition when its search page first loads (~100ms after the first visit's route
+  // change, measured), so it is waited for, under the loading line, for up to two seconds.
+  async function searchDefinition() {
+    for(let i=0;i<40&&!S.GraphQL?.Definitions?.searchDesktop;i++)await new Promise(resolve=>setTimeout(resolve,50));
+    const definition=S.GraphQL?.Definitions?.searchDesktop;
+    if(!definition)throw Object.assign(new Error('searchDesktop is missing'),{retry:true});
+    return definition;
+  }
+  // Results for this session: a query seen before (back, forward, the same query again) opens at once and is asked
+  // again after five minutes.
+  function searchResults(term) {
+    const hit=searchCache.get(term);
+    if(hit&&Date.now()-hit.time<5*60e3)return hit.promise;
+    const promise=searchDefinition().then(definition=>gql()(definition,{searchTerm:term,offset:0,limit:10,numberOfTopResults:8,includeAudiobooks:true,includeArtistHasConcertsField:false,includePreReleases:true,includeLocalConcertsField:false,includeAuthors:false})).then(response=>{
+      const results=response?.data?.searchV2;
+      if(!results)throw new Error(response?.errors?.[0]?.message||'No search results');
+      return results;
+    });
+    searchCache.delete(term);searchCache.set(term,{promise,time:Date.now()});
+    while(searchCache.size>30)searchCache.delete(searchCache.keys().next().value);
+    promise.catch(()=>{if(searchCache.get(term)?.promise===promise)searchCache.delete(term);});
+    return promise;
+  }
+  // Asked for before Enter: ~0.97s of a new search is Spotify's server (measured; drawing it takes ~70ms), so the query
+  // starts once the field rests 300ms after typing, and when a suggested query in the live results is hovered or
+  // picked with the arrows; the first covers load with it. Enter then mostly finds the results and covers ready.
+  function warmCovers(results) {
+    const first=(list,n)=>(list?.items||list?.itemsV2||[]).slice(0,n).map(item=>searchEntity(item?.item?.data||item?.data)?.art);
+    for(const art of [...first(results.topResultsV2,8),...first(results.artists,6),...first(results.albumsV2,6)]){
+      const src=artistImage(art);if(!src||seenArtwork.has(src))continue;
+      const img=new Image();img.decoding='async';
+      img.onload=()=>{seenArtwork.set(src,img);if(seenArtwork.size>200)seenArtwork.delete(seenArtwork.keys().next().value);};
+      img.src=src;
+    }
+  }
+  function prefetchSearch(term) {
+    term=(term||'').trim();if(term.length<2||document.hidden||!canSearch(term))return;
+    const hit=searchCache.get(term);if(hit&&Date.now()-hit.time<5*60e3)return;
+    searchResults(term).then(warmCovers,()=>{});
+  }
+  let typedTimer=0,suggestedTimer=0;
+  const inSearchField=target=>target?.tagName==='INPUT'&&!!target.closest('#global-nav-bar [role="search"]');
+  const suggestedTerm=row=>{const href=row?.querySelector('a[href^="/search/"]')?.getAttribute('href')||'';try{return decodeURIComponent(href.slice(8).split('/')[0]);}catch{return '';}};
+  const suggest=(term,wait)=>{clearTimeout(suggestedTimer);if(term)suggestedTimer=setTimeout(()=>prefetchSearch(term),wait);};
+  document.addEventListener('input',event=>{if(!inSearchField(event.target))return;clearTimeout(typedTimer);typedTimer=setTimeout(()=>prefetchSearch(event.target.value),300);},true);
+  document.addEventListener('pointerover',event=>{const row=event.target.closest?.('#search-dropdown [role="row"]');if(row)suggest(suggestedTerm(row),80);},{passive:true});
+  document.addEventListener('keydown',event=>{
+    if((event.key==='ArrowDown'||event.key==='ArrowUp')&&inSearchField(event.target))setTimeout(()=>suggest(suggestedTerm(document.querySelector('#search-dropdown [role="row"][aria-selected="true"]')),150));
+  },true);
+  const artistNames=list=>(list?.items||[]).map(a=>a?.profile?.name).filter(Boolean).join(', ');
+  const releaseKinds={SINGLE:'Single',EP:'EP',COMPILATION:T('Derleme','Compilation')};
+  // What a result is, for its card: artwork, the kind and whom it is by, round for people.
+  function searchEntity(data) {
+    if(!data?.uri)return null;
+    switch(data.__typename){
+      case 'Track':return {art:data.albumOfTrack?.coverArt,kind:T('Şarkı','Song'),by:artistNames(data.artists),track:true};
+      case 'Artist':return {art:data.visuals?.avatarImage,kind:T('Sanatçı','Artist'),round:true};
+      case 'Album':return {art:data.coverArt,kind:releaseKinds[data.type]||T('Albüm','Album'),by:artistNames(data.artists)};
+      case 'Playlist':return {art:data.images?.items?.[0],kind:T('Çalma Listesi','Playlist'),by:data.ownerV2?.data?.name};
+      case 'Podcast':return {art:data.coverArt,kind:T('Podcast','Podcast'),by:data.publisher?.name};
+      case 'Episode':return {art:data.coverArt||data.podcastV2?.data?.coverArt,kind:T('Bölüm','Episode'),by:data.podcastV2?.data?.name};
+      case 'Audiobook':return {art:data.coverArt,kind:T('Sesli Kitap','Audiobook'),by:artistNames(data.authors)};
+      case 'User':return {art:data.avatar,kind:T('Profil','Profile'),round:true};
+      case 'Genre':return {art:data.image,kind:T('Kategori','Category')};
+      default:return null;
+    }
+  }
+  const searchName=data=>data.name||data.profile?.name||data.displayName||data.username||'';
+  // Apple's top result: a 12pt-round plate, the artwork, title (with E) over "Kind · by", then "…" for a song or a
+  // chevron for what opens a page. A song plays, anything else opens.
+  function topResult(data) {
+    const entity=searchEntity(data);if(!entity)return null;
+    const play=()=>playArtist(data.uri);
+    const items=entity.track?songItems(data,play,{artist:true}):()=>entityItems(data.uri);
+    const card=el('div','am-top-result');card.dataset.uri=data.uri;card.draggable=true;
+    const open=el('button','am-top-open');open.type='button';open.title=searchName(data);
+    const art=el('span','am-top-art'+(entity.round?' am-round':''));art.append(lazyImage(artistImage(entity.art)));
+    if(entity.track)art.insertAdjacentHTML('beforeend',svg('play'));
+    const text=el('span','am-top-text'),name=el('span','am-top-name'),mark=explicitMark(data);
+    name.append(el('span','am-top-title',searchName(data)));if(mark)name.append(mark);
+    text.append(name,el('span','am-top-sub',[entity.kind,entity.by].filter(Boolean).join(' · ')));
+    open.append(art,text);open.addEventListener('click',entity.track?play:()=>openUri(data.uri));
+    card.append(open);
+    if(entity.track){const more=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(more,items),'am-top-more');card.append(more);}
+    else open.insertAdjacentHTML('beforeend',svg('chevron'));
+    card.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
+    return card;
+  }
+  // Shelf cards reuse the artist page's (releaseCard): squares, round for people.
+  function searchCard(data,subtitle) {
+    const entity=searchEntity(data);if(!entity)return null;
+    return releaseCard({uri:data.uri,name:searchName(data),coverArt:entity.art},{subtitle:subtitle??entity.by,round:entity.round});
+  }
+  function closeSearch() {
+    if(!document.body.classList.contains('am-search-results')&&!searchView.hasChildNodes())return;
+    ++searchRequest;searchShown='';document.body.classList.remove('am-search-results');
+    searchView.replaceChildren();searchView.scrollTop=0;
+  }
+  async function renderSearch({segment,term}) {
+    const request=++searchRequest;
+    currentMode='search';++libraryRequest;clearLibrary();closeArtist();
+    document.body.classList.remove('am-library-open','am-tinted');document.body.classList.add('am-search-open','am-search-results');updateNav();
+    // A new query keeps the results on screen until its own arrive, as Apple's does; the first one says it is loading.
+    if(!searchView.hasChildNodes())searchView.append(el('p','am-search-status',T('Aranıyor…','Searching…')));
+    let results;
+    try{results=await searchResults(term);}catch(e){
+      if(request!==searchRequest)return;
+      console.warn('[AppleMusicMac] Search view, using Spotify page',e);
+      if(!e?.retry)nativeSearches.add(term);closeSearch();currentMode='native';return;
+    }
+    if(request!==searchRequest)return;
+    const datas=list=>(list?.items||[]).map(item=>item?.item?.data||item?.data).filter(data=>data?.uri);
+    const tab=kind=>'/search/'+segment+'/'+kind,page=document.createDocumentFragment();
+    const top=(results.topResultsV2?.itemsV2||[]).map(item=>item?.item?.data).map(topResult).filter(Boolean);
+    if(top.length){
+      const section=el('section','am-shelf am-search-top'),grid=el('div','am-top-grid');
+      section.append(el('h2','am-shelf-title',T('En İyi Sonuçlar','Top Results')));grid.append(...top);section.append(grid);page.append(section);
+    }
+    const tracks=datas(results.tracksV2);
+    const shelves=[
+      artistShelf(T('Sanatçılar','Artists'),datas(results.artists),data=>searchCard(data),{link:tab('artists'),cls:'am-shelf-artists'}),
+      artistShelf(T('Albümler','Albums'),datas(results.albumsV2),data=>searchCard(data),{link:tab('albums')}),
+      tracks.length?artistShelf(T('Şarkılar','Songs'),[tracks],list=>{
+        const grid=el('div','am-song-grid');
+        for(const song of list)grid.append(songRow(song,()=>playArtist(song.uri),artistNames(song.artists),{artist:true}));
+        return grid;
+      },{link:tab('tracks'),cls:'am-shelf-songs'}):null,
+      artistShelf(T('Çalma Listeleri','Playlists'),datas(results.playlists),data=>searchCard(data),{link:tab('playlists')}),
+      artistShelf(T('Podcast\'ler ve Programlar','Podcasts & Shows'),datas(results.podcasts),data=>searchCard(data),{link:tab('podcastAndEpisodes')}),
+      artistShelf(T('Bölümler','Episodes'),datas(results.episodes),data=>searchCard(data),{link:tab('podcastAndEpisodes')}),
+      artistShelf(T('Sesli Kitaplar','Audiobooks'),datas(results.audiobooks),data=>searchCard(data)),
+      artistShelf(T('Profiller','Profiles'),datas(results.users),data=>searchCard(data,''),{link:tab('users'),cls:'am-shelf-artists'}),
+      artistShelf(T('Türler ve Ruh Halleri','Genres & Moods'),datas(results.genres),data=>searchCard(data,''),{link:tab('genres')}),
+    ];
+    for(const shelf of shelves)if(shelf)page.append(shelf);
+    if(!page.childNodes.length)page.append(el('p','am-search-status',T('"'+term+'" için sonuç yok.','No results for "'+term+'".')));
+    const same=searchShown===term;
+    searchView.replaceChildren(page);if(!same)searchView.scrollTop=0;searchShown=term;
+  }
   H.listen(() => {
     syncSpicyControls();syncEntityPlaying();
     // A new page renders after the route change; mark its top before the title bar can show.
@@ -3604,11 +3768,14 @@
     document.body.classList.remove('am-account-open');
     const query=new URLSearchParams(H.location.search);
     const kind=query.get('am-library');
-    if(libraryLabels[kind]){closeArtist();renderLibrary(kind,query.get('am-folder')||'');return;}
+    if(libraryLabels[kind]){closeArtist();closeSearch();renderLibrary(kind,query.get('am-folder')||'');return;}
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
-    if(artistId&&!nativeArtists.has(artistId)&&gql()&&S.GraphQL?.Definitions?.queryArtistOverview){renderArtist(artistId);return;}
+    if(artistId&&!nativeArtists.has(artistId)&&gql()&&S.GraphQL?.Definitions?.queryArtistOverview){closeSearch();renderArtist(artistId);return;}
+    const search=searchRoute();
+    if(search&&canSearch(search.term)){renderSearch(search);return;}
     const closeLibrary=()=>{++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');},body=document.body.classList;
-    if(artistId){closeArtist();closeLibrary();}
+    if(artistId){closeArtist();closeLibrary();closeSearch();}
+    else if(body.contains('am-search-results'))revealNative(closeSearch,()=>searchRequest);
     else if(body.contains('am-artist-open')){closeArtistInfo();revealNative(closeArtist,()=>artistRequest);}
     else if(body.contains('am-library-open'))revealNative(closeLibrary,()=>libraryRequest,routePath()==='/');
     currentMode='native';
@@ -3667,6 +3834,10 @@
     row.before(feedFilter.node);
   }
   H.listen(()=>syncFeed());syncFeed();
+  // Also run once here: it draws search results when Spotify starts on them.
+  defineSetting({key:'searchStyle',group:'home',label:T('Arama sonuçları','Search results'),type:'choice',default:'apple',style:'segmented',
+    options:[['apple','Apple Music'],['spotify','Spotify']],note:T('Apple Music: bölümler halinde; Spotify: Spotify\'ın sekmeli listesi.','Apple Music: in sections; Spotify: Spotify\'s tabbed list.'),
+    apply:()=>{const search=searchRoute();if(!search)return;if(canSearch(search.term))renderSearch(search);else if(document.body.classList.contains('am-search-results')){closeSearch();currentMode='native';}}});
   // One "…" per card, added the first time the card is hovered; a shortcut at the top gets one at its end, as a row of
   // Apple's lists (#125). Spotify's menu opens from the shortcut's click layer.
   document.addEventListener('mouseover',event=>{
