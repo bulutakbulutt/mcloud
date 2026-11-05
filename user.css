@@ -188,18 +188,25 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText:has(.playlist-playlist-playlistDescription) > :has(.main-entityHeader-title),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > :has(.playlist-playlist-playlistDescription) {margin-top:auto!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > :has(.playlist-playlist-playlistDescription) {order:1;margin-bottom:12px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .playlist-playlist-playlistDescription {font-size:13px!important;line-height:16px;-webkit-line-clamp:3;margin-top:0}
-/* Spotify's save buttons are Apple's star (#97): outlined, filled once saved, in the accent. A row's is its only
-   aria-checked button; the page's is matched by its label in theme.js (#am-star-style), as Download has aria-checked too. */
+/* Spotify's save buttons are Apple's star (#97): outlined, filled once saved, in the accent. A row's is its aria-checked
+   button that is not a switch (a mix's or radio's "Hide in this playlist" is role="switch"); the page's is matched by its
+   label in theme.js (#am-star-style), as Download has aria-checked too. */
 :root {--am-star-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E");--am-star-fill:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E")}
-.main-trackList-trackListRow button[aria-checked] svg {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
-.main-trackList-trackListRow button[aria-checked] svg path {display:none}
-.main-trackList-trackListRow button[aria-checked="true"] {color:var(--am-star-color,var(--am-accent))!important}
-.main-trackList-trackListRow button[aria-checked="true"] svg {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) svg {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) svg path {display:none}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) {color:var(--am-star-color,var(--am-accent))!important}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) svg {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
 /* While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size (pointer-events:none);
    the box draws the star instead and the animation inside it is hidden. */
-.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
-.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] > div {opacity:0;filter:none}
-.main-trackList-trackListRow button[aria-checked="true"] div[style*="pointer-events: none"] {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) div[style*="pointer-events: none"] {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) div[style*="pointer-events: none"] > div {opacity:0;filter:none}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) div[style*="pointer-events: none"] {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+/* A row's "Hide in this playlist" / "Hide song" switch is Apple's minus.circle in the star's line; filled once hidden,
+   in Spotify's own red. */
+:root {--am-hide-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.6'/%3E%3Cpath d='M8 12h8'/%3E%3C/svg%3E");--am-hide-fill:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM8 11.1a.9.9 0 0 0 0 1.8h8a.9.9 0 0 0 0-1.8Z'/%3E%3C/svg%3E")}
+.main-trackList-trackListRow button[role="switch"][aria-checked] svg {background:currentColor;-webkit-mask:var(--am-hide-line) center/contain no-repeat;mask:var(--am-hide-line) center/contain no-repeat}
+.main-trackList-trackListRow button[role="switch"][aria-checked] svg path {display:none}
+.main-trackList-trackListRow button[role="switch"][aria-checked="true"] svg {-webkit-mask-image:var(--am-hide-fill);mask-image:var(--am-hide-fill)}
 /* The count and length move under the track list, as in Music: "18 songs, 1 hour, 8 minutes" (theme.js, --am-list-info).
    Albums put it between Spotify's release date and ℗ line, playlists after the last row. */
 body.am-list-info .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] .main-entityHeader-imageContainer) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :is(div:not(.main-entityHeader-creatorWrapper),span:has(+ div:not(.main-entityHeader-creatorWrapper)),div:not(.main-entityHeader-creatorWrapper) + span) {display:none!important}
