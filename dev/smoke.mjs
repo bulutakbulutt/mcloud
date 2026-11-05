@@ -2620,6 +2620,25 @@ try {
       const box = s.querySelector('.main-cardImage-imageWrapper'), inner = box.firstElementChild, out = [getComputedStyle(box).borderRadius, /inset/.test(getComputedStyle(box).boxShadow), getComputedStyle(inner).borderRadius, getComputedStyle(inner).boxShadow];
       s.remove();return out;
     }), ['8px', true, '0px', 'none']);
+    // Artists and profiles stay circles, centred and without hover controls (#127): by uri, or by Spotify's circular class.
+    assert.deepEqual(await page.evaluate(() => {
+      const s = document.createElement('section');s.id = 'mock-home-round';
+      const card = (uri, cls = '') => `<div class="main-card-cardContainer" data-encore-id="card" aria-labelledby="card-title-${uri}-0"><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper ${cls}"><div><img alt="" class="main-cardImage-image"></div></div><div><div><button data-encore-id="buttonPrimary"><span></span></button></div></div></div><div class="mock-col" style="display:flex;flex-direction:column;align-items:flex-start"><a><p data-encore-id="cardTitle">Name</p></a><div data-encore-id="cardSubtitle">Artist</div></div></div>`;
+      s.innerHTML = card('spotify:artist:1') + card('spotify:user:2') + card('spotify:album:3', 'main-cardImage-circular') + card('spotify:album:4');
+      document.querySelector('.am-native-main main').prepend(s);
+      const out = [...s.children].map(c => [getComputedStyle(c.querySelector('.main-cardImage-imageWrapper')).borderRadius, getComputedStyle(c.querySelector('img')).borderRadius, getComputedStyle(c.querySelector('.mock-col')).alignItems, getComputedStyle(c.querySelector('[data-encore-id="cardTitle"]')).textAlign, getComputedStyle(c.querySelector('button').parentElement.parentElement).display]);
+      // Without a photo: Apple's grey circle and microphone instead of Spotify's icon, here and in our library.
+      const bare = document.createElement('div');bare.innerHTML = card('spotify:artist:5').replace('<img alt="" class="main-cardImage-image">', '<div class="main-card-imagePlaceholder" style="position:absolute;inset:0"><svg></svg></div>');
+      s.append(bare.firstElementChild);
+      const lib = document.createElement('span');lib.className = 'am-library-art am-artist-art';s.append(lib);
+      const ph = s.querySelector('.main-card-imagePlaceholder'), mic = el => { const a = getComputedStyle(el, '::after'); return [a.content, /^url\("data:image\/svg\+xml/.test(a.maskImage || a.webkitMaskImage)]; };
+      // Our round cards (artist page, search shelves) centre their column: a photo-less artwork still fills the card.
+      const own = document.createElement('div');own.className = 'am-card am-card-round';own.dataset.uri = 'spotify:artist:9';own.style.width = '144px';
+      own.innerHTML = '<button class="am-card-open" style="display:flex;flex-direction:column;width:100%;padding:0;border:0"><span class="am-card-art"><img alt=""></span><span class="am-card-name">Name</span></button>';s.append(own);
+      const ownArt = own.querySelector('.am-card-art');
+      out.push([getComputedStyle(ph).borderRadius, getComputedStyle(ph.querySelector('svg')).display, ...mic(ph), ...mic(lib), ownArt.getBoundingClientRect().width, ...mic(ownArt)]);
+      s.remove();return out;
+    }), [['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['8px', '8px', 'flex-start', 'start', 'block'], ['50%', 'none', '""', true, '""', true, 144, '""', true]]);
     await settingsWindow.pick('homeShortcuts');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
     await settingsWindow.pick('homeShortcuts');
