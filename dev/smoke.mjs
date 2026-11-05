@@ -1908,6 +1908,17 @@ try {
     assert.match(await mask('.mock-like'), /fill='none'/);
     assert.match(await mask('.mock-liked'), /fill='%23000'/);
     assert.equal(await css('.mock-liked', 'color'), accent);
+    // While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size: the box is the star
+    // (filled once saved) and the animation inside it is hidden.
+    await page.$$eval('#mock-97 :is(.mock-save,.mock-like) span, #mock-97 .mock-like', els => els.forEach(e => { e.innerHTML = '<div style="position: relative; pointer-events: none; width: 32px; height: 32px;"><div></div></div>'; }));
+    const lottie = sel => sel + ' div[style*="pointer-events"]';
+    assert.match(await css(lottie('.mock-save'), 'maskImage'), /fill='%23000'/);
+    assert.match(await css(lottie('.mock-like'), 'maskImage'), /fill='none'/);
+    assert.equal(await css(lottie('.mock-save') + ' > div', 'opacity'), '0');
+    assert.equal(await css(lottie('.mock-like') + ' > div', 'opacity'), '0');
+    assert.equal(await css(lottie('.mock-save'), 'backgroundColor'), accent);
+    // The box is Spotify's icon size (32px); it takes the star's size here, or the star grows while the animation plays.
+    assert.equal(await css(lottie('.mock-save'), 'width'), await css('.mock-download svg', 'width'));
     // A playlist: the description sits under the creator line, just above the play controls; the line counts items.
     await page.evaluate(() => { window.__mockPlaylistMeta = { 'spotify:playlist:p97': { totalLength: 12, duration: { milliseconds: 2712000 }, images: [{ url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="#c8a040"/></svg>'), label: 'standard' }] } }; });
     await mount('playlist', 'p97');
