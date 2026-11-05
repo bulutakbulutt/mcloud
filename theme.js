@@ -3645,7 +3645,7 @@
   defineSetting({key:'mixCovers',group:'home',label:T('Mix kapakları','Mix covers'),type:'choice',default:'apple',
     options:[['apple',T('Apple Music gibi','As Apple Music')],['band',T('Şerit (Essentials)','Band (Essentials)')],['gradient',T('Renk geçişi (kişisel mix)','Gradient (personal mix)')],['station',T('Yuvarlak fotoğraf (istasyon)','Round photo (station)')],['photo',T('Yalnız fotoğraf','Photo only')],['spotify','Spotify']],
     note:T('Daily Mix, "… Mix", radyo ve This Is kapakları. Fotoğraf Spotify\'ın kendi görselinden gelir.','Daily Mix, "… Mix", radio and This Is covers. The photo comes from Spotify\'s own image.'),
-    apply:()=>{for(const img of document.querySelectorAll(mixImages))markMix(img);}});
+    apply:()=>{document.body.classList.toggle('am-mix-titles',settings.mixCovers!=='spotify');for(const img of document.querySelectorAll(mixImages))markMix(img);}});
   // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
   // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
   // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows

@@ -1723,7 +1723,12 @@ body.am-home-no-shortcuts .am-native-main .view-homeShortcutsGrid-shortcuts {dis
 .am-mix-ready[data-am-mix-style] img {opacity:0!important}
 /* Spotify hides a mix card's title (height 0, transparent text) since its image carries the name; Apple names every
    card under its artwork, whatever the cover says. */
+/* A mix card's title shows from its first frame, not once the cover is redrawn: Spotify hides it (height:0 inline) and
+   each card growing 17px as its cover came in made Spotify lay Home out again and hold back the rest of its shelves
+   (Home complete at ~1.4s with the covers, ~0.35s without, measured in the macOS client). */
+body.am-mix-titles [data-encore-id="card"]:has(img:is([src^="https://pickasso.spotifycdn.com/"],[src^="https://seed-mix-image.spotifycdn.com/"],[src^="https://daylist.spotifycdn.com/"])) [data-encore-id="cardTitle"],
 [data-encore-id="card"]:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] {height:auto!important}
+body.am-mix-titles [data-encore-id="card"]:has(img:is([src^="https://pickasso.spotifycdn.com/"],[src^="https://seed-mix-image.spotifycdn.com/"],[src^="https://daylist.spotifycdn.com/"])) [data-encore-id="cardTitle"] span,
 [data-encore-id="card"]:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] span {opacity:1!important}
 .am-mix-ready[data-am-mix-style]::before {content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:var(--am-mix-photo) center 22%/cover no-repeat,var(--am-mix-band)}
 .am-mix-ready[data-am-mix-style]::after {position:absolute;z-index:1;pointer-events:none;box-sizing:border-box;font-family:var(--encore-title-font-stack,inherit);overflow:hidden}
