@@ -3617,31 +3617,52 @@
   searchView.addEventListener('dragstart',event=>{const node=event.target.closest?.('[draggable="true"][data-uri]');if(node)setDrag(event,[node.dataset.uri]);});
   overlayScrollbar(searchView,'am-scroll-search');
   const searchCache=new Map(),nativeSearches=new Set();
-  let searchRequest=0,searchShown='';
-  // The query's path segment as Spotify wrote it (links to its tabs reuse it) and the query itself.
-  const searchRoute=()=>{const segment=/^\/search\/([^/]+)\/?$/.exec(routePath())?.[1];if(!segment)return null;let term=segment;try{term=decodeURIComponent(segment);}catch{}term=term.trim();return term?{segment,term}:null;};
-  const canSearch=term=>settings.searchStyle!=='spotify'&&!nativeSearches.has(term)&&!!gql()&&!!S.GraphQL?.Definitions;
-  // Spotify adds the query's definition when its search page first loads (~100ms after the first visit's route
-  // change, measured), so it is waited for, under the loading line, for up to two seconds.
-  async function searchDefinition() {
-    for(let i=0;i<40&&!S.GraphQL?.Definitions?.searchDesktop;i++)await new Promise(resolve=>setTimeout(resolve,50));
-    const definition=S.GraphQL?.Definitions?.searchDesktop;
-    if(!definition)throw Object.assign(new Error('searchDesktop is missing'),{retry:true});
+  let searchRequest=0,searchShown='',searchShownKind='',searchMore=null;
+  // A heading's own page, as Apple's "see all" (Spotify's tab of that kind, /search/<query>/<kind>): Songs as a table,
+  // the rest as a grid of the shelf's cards, from Spotify's query for that kind, 30 at a time as the page nears its end
+  // (Spotify's tabs ask for the same). Kinds Apple has no page for (shows, episodes, genres) keep Spotify's tab.
+  const searchKinds={
+    tracks:{title:T('Şarkılar','Songs'),definition:'searchTracks',field:'tracksV2'},
+    artists:{title:T('Sanatçılar','Artists'),definition:'searchArtists',field:'artists'},
+    albums:{title:T('Albümler','Albums'),definition:'searchAlbums',field:'albumsV2'},
+    playlists:{title:T('Çalma Listeleri','Playlists'),definition:'searchPlaylists',field:'playlists'},
+    users:{title:T('Profiller','Profiles'),definition:'searchUsers',field:'users'},
+  };
+  // The query's path segment as Spotify wrote it (links to its tabs reuse it), the query itself and the tab's kind.
+  const searchRoute=()=>{
+    const match=/^\/search\/([^/]+)(?:\/([^/]+))?\/?$/.exec(routePath());if(!match||match[2]&&!searchKinds[match[2]])return null;
+    let term=match[1];try{term=decodeURIComponent(term);}catch{}term=term.trim();return term?{segment:match[1],term,kind:match[2]||''}:null;
+  };
+  const searchKey=(term,kind)=>kind?kind+':'+term:term;
+  const canSearch=(term,kind='')=>settings.searchStyle!=='spotify'&&!nativeSearches.has(searchKey(term,kind))&&!!gql()&&!!S.GraphQL?.Definitions;
+  // Spotify adds the search queries' definitions when its search page first loads (~100ms after the first visit's route
+  // change, measured), so they are waited for, under the loading line, for up to two seconds.
+  async function searchDefinition(name='searchDesktop') {
+    for(let i=0;i<40&&!S.GraphQL?.Definitions?.[name];i++)await new Promise(resolve=>setTimeout(resolve,50));
+    const definition=S.GraphQL?.Definitions?.[name];
+    if(!definition)throw Object.assign(new Error(name+' is missing'),{retry:true});
     return definition;
   }
-  // Results for this session: a query seen before (back, forward, the same query again) opens at once and is asked
-  // again after five minutes.
-  function searchResults(term) {
-    const hit=searchCache.get(term);
-    if(hit&&Date.now()-hit.time<5*60e3)return hit.promise;
-    const promise=searchDefinition().then(definition=>gql()(definition,{searchTerm:term,offset:0,limit:10,numberOfTopResults:8,includeAudiobooks:true,includeArtistHasConcertsField:false,includePreReleases:true,includeLocalConcertsField:false,includeAuthors:false})).then(response=>{
-      const results=response?.data?.searchV2;
-      if(!results)throw new Error(response?.errors?.[0]?.message||'No search results');
-      return results;
+  // One request: every section (searchDesktop), or one kind's page from offset, as Spotify's tabs ask for it.
+  function searchPage(term,kind,offset=0) {
+    const spec=searchKinds[kind];
+    return searchDefinition(spec?.definition).then(definition=>gql()(definition,spec
+      ?{searchTerm:term,offset,limit:30,numberOfTopResults:20,includeAudiobooks:true,includePreReleases:false,includeAlbumPreReleases:false,includeAuthors:false,includeEpisodeContentRatingsV2:false}
+      :{searchTerm:term,offset:0,limit:10,numberOfTopResults:8,includeAudiobooks:true,includeArtistHasConcertsField:false,includePreReleases:true,includeLocalConcertsField:false,includeAuthors:false})).then(response=>{
+      const results=response?.data?.searchV2,list=spec?results?.[spec.field]:results;
+      if(!list)throw new Error(response?.errors?.[0]?.message||'No search results');
+      return list;
     });
-    searchCache.delete(term);searchCache.set(term,{promise,time:Date.now()});
+  }
+  // Results for this session: a query seen before (back, forward, the same query again) opens at once and is asked
+  // again after five minutes. A kind's page keeps its first 30.
+  function searchResults(term,kind='') {
+    const key=searchKey(term,kind),hit=searchCache.get(key);
+    if(hit&&Date.now()-hit.time<5*60e3)return hit.promise;
+    const promise=searchPage(term,kind);
+    searchCache.delete(key);searchCache.set(key,{promise,time:Date.now()});
     while(searchCache.size>30)searchCache.delete(searchCache.keys().next().value);
-    promise.catch(()=>{if(searchCache.get(term)?.promise===promise)searchCache.delete(term);});
+    promise.catch(()=>{if(searchCache.get(key)?.promise===promise)searchCache.delete(key);});
     return promise;
   }
   // Asked for before Enter: ~0.97s of a new search is Spotify's server (measured; drawing it takes ~70ms), so the query
@@ -3667,6 +3688,12 @@
   const suggest=(term,wait)=>{clearTimeout(suggestedTimer);if(term)suggestedTimer=setTimeout(()=>prefetchSearch(term),wait);};
   document.addEventListener('input',event=>{if(!inSearchField(event.target))return;clearTimeout(typedTimer);typedTimer=setTimeout(()=>prefetchSearch(event.target.value),300);},true);
   document.addEventListener('pointerover',event=>{const row=event.target.closest?.('#search-dropdown [role="row"]');if(row)suggest(suggestedTerm(row),80);},{passive:true});
+  // A heading's page is asked for while the pointer rests on the heading.
+  let headingTimer=0;
+  searchView.addEventListener('pointerover',event=>{
+    const kind=event.target.closest?.('button.am-shelf-title')?.dataset.kind,search=searchRoute();clearTimeout(headingTimer);
+    if(kind&&search&&canSearch(search.term,kind))headingTimer=setTimeout(()=>searchResults(search.term,kind).catch(()=>{}),80);
+  },{passive:true});
   document.addEventListener('keydown',event=>{
     if((event.key==='ArrowDown'||event.key==='ArrowUp')&&inSearchField(event.target))setTimeout(()=>suggest(suggestedTerm(document.querySelector('#search-dropdown [role="row"][aria-selected="true"]')),150));
   },true);
@@ -3716,24 +3743,84 @@
   }
   function closeSearch() {
     if(!document.body.classList.contains('am-search-results')&&!searchView.hasChildNodes())return;
-    ++searchRequest;searchShown='';document.body.classList.remove('am-search-results');
+    ++searchRequest;searchShown='';searchShownKind='';searchMore=null;document.body.classList.remove('am-search-results');
     searchView.replaceChildren();searchView.scrollTop=0;
   }
-  async function renderSearch({segment,term}) {
-    const request=++searchRequest;
+  const searchItems=list=>(list?.items||[]).map(item=>item?.item?.data||item?.data).filter(data=>data?.uri);
+  const clock=ms=>{const s=Math.round((ms||0)/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');};
+  // A row of Apple's Songs table: the song (artwork, title, E) plays; the artist and album open; then time and "…".
+  function songTableRow(song) {
+    const play=()=>playArtist(song.uri),row=el('div','am-table-row');row.dataset.uri=song.uri;row.draggable=true;
+    const main=el('button','am-table-song');main.type='button';main.title=song.name||'';main.addEventListener('click',play);
+    const thumb=el('span','am-song-thumb');thumb.append(lazyImage(artistImage(song.albumOfTrack?.coverArt),'am-song-art'));thumb.insertAdjacentHTML('beforeend',svg('play'));
+    const name=el('span','am-song-name'),mark=explicitMark(song);name.append(el('span','am-song-title',song.name||''));if(mark)name.append(mark);
+    main.append(thumb,name);
+    const link=(text,uri)=>{const cell=el('span','am-table-cell');if(!text)return cell;const open=el('button','am-table-link',text);open.type='button';open.title=text;open.addEventListener('click',()=>openUri(uri));cell.append(open);return cell;};
+    const artists=link(artistNames(song.artists),song.artists?.items?.[0]?.uri),album=link(song.albumOfTrack?.name,song.albumOfTrack?.uri);
+    const items=songItems(song,play,{artist:true}),more=button(T('Diğer seçenekler','More'),'more',()=>togglePopover(more,items),'am-song-more');
+    row.append(main,artists,album,el('span','am-table-time',song.duration?.totalMilliseconds?clock(song.duration.totalMilliseconds):''),more);
+    row.addEventListener('contextmenu',event=>{event.preventDefault();event.stopPropagation();togglePopover({x:event.clientX,y:event.clientY},items);});
+    return row;
+  }
+  const searchKindItem=(kind,data)=>kind==='tracks'?songTableRow(data):searchCard(data,kind==='users'||kind==='artists'?'':undefined);
+  // A kind's page: its title, then the table or the grid; the next 30 come as the page nears its end.
+  function searchKindPage(list,{term,kind}) {
+    const spec=searchKinds[kind],page=document.createDocumentFragment(),items=searchItems(list);
+    page.append(el('h1','am-search-heading',spec.title));
+    if(!items.length){page.append(el('p','am-search-status',T('"'+term+'" için sonuç yok.','No results for "'+term+'".')));return page;}
+    let box;
+    if(kind==='tracks'){
+      box=el('div','am-song-table');
+      const head=el('div','am-table-head');head.setAttribute('aria-hidden','true');
+      head.append(el('span','',T('Şarkı','Song')),el('span','',T('Sanatçı','Artist')),el('span','',T('Albüm','Album')),el('span','am-table-time',T('Süre','Time')),el('span',''));
+      box.append(head);
+    }else box=el('div','am-search-grid'+(kind==='artists'||kind==='users'?' am-search-round':''));
+    for(const data of items){const node=searchKindItem(kind,data);if(node)box.append(node);}
+    page.append(box);
+    const next=list.pagingInfo?.nextOffset;
+    searchMore=next!=null&&next>0?{term,kind,offset:next,box,loading:false}:null;
+    return page;
+  }
+  async function searchMorePage() {
+    const more=searchMore;if(!more||more.loading||document.hidden)return;
+    more.loading=true;const request=searchRequest;
+    let list;try{list=await searchPage(more.term,more.kind,more.offset);}catch{if(searchMore===more)searchMore=null;return;}
+    if(request!==searchRequest||searchMore!==more)return;
+    const seen=new Set([...more.box.querySelectorAll('[data-uri]')].map(node=>node.dataset.uri));
+    for(const data of searchItems(list))if(!seen.has(data.uri)){const node=searchKindItem(more.kind,data);if(node)more.box.append(node);}
+    const next=list.pagingInfo?.nextOffset;
+    if(next!=null&&next>more.offset){more.offset=next;more.loading=false;nearSearchEnd();}else searchMore=null;
+  }
+  const nearSearchEnd=()=>{if(searchMore&&searchView.scrollTop+searchView.clientHeight>searchView.scrollHeight-800)searchMorePage();};
+  searchView.addEventListener('scroll',nearSearchEnd,{passive:true});
+  async function renderSearch({segment,term,kind=''}) {
+    const request=++searchRequest,key=searchKey(term,kind);
     currentMode='search';++libraryRequest;clearLibrary();closeArtist();
     document.body.classList.remove('am-library-open','am-tinted');document.body.classList.add('am-search-open','am-search-results');updateNav();
     // A new query keeps the results on screen until its own arrive, as Apple's does; the first one says it is loading.
+    // A heading's page shows its title at once.
+    if(kind&&searchShown!==key){searchMore=null;searchView.replaceChildren(el('h1','am-search-heading',searchKinds[kind].title),el('p','am-search-status',T('Aranıyor…','Searching…')));searchView.scrollTop=0;searchShown='';}
+    else if(!kind&&searchShownKind){searchMore=null;searchView.replaceChildren();searchShown='';}
+    searchShownKind=kind;
     if(!searchView.hasChildNodes())searchView.append(el('p','am-search-status',T('Aranıyor…','Searching…')));
     let results;
-    try{results=await searchResults(term);}catch(e){
+    try{results=await searchResults(term,kind);}catch(e){
       if(request!==searchRequest)return;
       console.warn('[AppleMusicMac] Search view, using Spotify page',e);
-      if(!e?.retry)nativeSearches.add(term);closeSearch();currentMode='native';return;
+      if(!e?.retry)nativeSearches.add(key);closeSearch();currentMode='native';return;
     }
     if(request!==searchRequest)return;
-    const datas=list=>(list?.items||[]).map(item=>item?.item?.data||item?.data).filter(data=>data?.uri);
-    const tab=kind=>'/search/'+segment+'/'+kind,page=document.createDocumentFragment();
+    if(kind){
+      if(searchShown===key)return;
+      searchView.replaceChildren(searchKindPage(results,{term,kind}));searchView.scrollTop=0;searchShown=key;
+      requestAnimationFrame(nearSearchEnd);return;
+    }
+    const datas=searchItems,page=document.createDocumentFragment();
+    const shelf=(title,items,render,kind,cls)=>{
+      const node=artistShelf(title,items,render,{link:kind&&'/search/'+segment+'/'+kind,cls});
+      if(node&&searchKinds[kind])node.querySelector('button.am-shelf-title').dataset.kind=kind;
+      return node;
+    };
     const top=(results.topResultsV2?.itemsV2||[]).map(item=>item?.item?.data).map(topResult).filter(Boolean);
     if(top.length){
       const section=el('section','am-shelf am-search-top'),grid=el('div','am-top-grid');
@@ -3741,24 +3828,24 @@
     }
     const tracks=datas(results.tracksV2);
     const shelves=[
-      artistShelf(T('Sanatçılar','Artists'),datas(results.artists),data=>searchCard(data),{link:tab('artists'),cls:'am-shelf-artists'}),
-      artistShelf(T('Albümler','Albums'),datas(results.albumsV2),data=>searchCard(data),{link:tab('albums')}),
-      tracks.length?artistShelf(T('Şarkılar','Songs'),[tracks],list=>{
+      shelf(T('Sanatçılar','Artists'),datas(results.artists),data=>searchCard(data),'artists','am-shelf-artists'),
+      shelf(T('Albümler','Albums'),datas(results.albumsV2),data=>searchCard(data),'albums'),
+      tracks.length?shelf(T('Şarkılar','Songs'),[tracks],list=>{
         const grid=el('div','am-song-grid');
         for(const song of list)grid.append(songRow(song,()=>playArtist(song.uri),artistNames(song.artists),{artist:true}));
         return grid;
-      },{link:tab('tracks'),cls:'am-shelf-songs'}):null,
-      artistShelf(T('Çalma Listeleri','Playlists'),datas(results.playlists),data=>searchCard(data),{link:tab('playlists')}),
-      artistShelf(T('Podcast\'ler ve Programlar','Podcasts & Shows'),datas(results.podcasts),data=>searchCard(data),{link:tab('podcastAndEpisodes')}),
-      artistShelf(T('Bölümler','Episodes'),datas(results.episodes),data=>searchCard(data),{link:tab('podcastAndEpisodes')}),
-      artistShelf(T('Sesli Kitaplar','Audiobooks'),datas(results.audiobooks),data=>searchCard(data)),
-      artistShelf(T('Profiller','Profiles'),datas(results.users),data=>searchCard(data,''),{link:tab('users'),cls:'am-shelf-artists'}),
-      artistShelf(T('Türler ve Ruh Halleri','Genres & Moods'),datas(results.genres),data=>searchCard(data,''),{link:tab('genres')}),
+      },'tracks','am-shelf-songs'):null,
+      shelf(T('Çalma Listeleri','Playlists'),datas(results.playlists),data=>searchCard(data),'playlists'),
+      shelf(T('Podcast\'ler ve Programlar','Podcasts & Shows'),datas(results.podcasts),data=>searchCard(data),'podcastAndEpisodes'),
+      shelf(T('Bölümler','Episodes'),datas(results.episodes),data=>searchCard(data),'podcastAndEpisodes'),
+      shelf(T('Sesli Kitaplar','Audiobooks'),datas(results.audiobooks),data=>searchCard(data)),
+      shelf(T('Profiller','Profiles'),datas(results.users),data=>searchCard(data,''),'users','am-shelf-artists'),
+      shelf(T('Türler ve Ruh Halleri','Genres & Moods'),datas(results.genres),data=>searchCard(data,''),'genres'),
     ];
-    for(const shelf of shelves)if(shelf)page.append(shelf);
+    for(const node of shelves)if(node)page.append(node);
     if(!page.childNodes.length)page.append(el('p','am-search-status',T('"'+term+'" için sonuç yok.','No results for "'+term+'".')));
-    const same=searchShown===term;
-    searchView.replaceChildren(page);if(!same)searchView.scrollTop=0;searchShown=term;
+    const same=searchShown===key;
+    searchView.replaceChildren(page);if(!same)searchView.scrollTop=0;searchShown=key;
   }
   H.listen(() => {
     syncSpicyControls();syncEntityPlaying();
@@ -3772,7 +3859,7 @@
     const artistId=/^\/artist\/([A-Za-z0-9]+)\/?$/.exec(routePath())?.[1];
     if(artistId&&!nativeArtists.has(artistId)&&gql()&&S.GraphQL?.Definitions?.queryArtistOverview){closeSearch();renderArtist(artistId);return;}
     const search=searchRoute();
-    if(search&&canSearch(search.term)){renderSearch(search);return;}
+    if(search&&canSearch(search.term,search.kind)){renderSearch(search);return;}
     const closeLibrary=()=>{++libraryRequest;clearLibrary();document.body.classList.remove('am-library-open');},body=document.body.classList;
     if(artistId){closeArtist();closeLibrary();closeSearch();}
     else if(body.contains('am-search-results'))revealNative(closeSearch,()=>searchRequest);
@@ -3837,7 +3924,7 @@
   // Also run once here: it draws search results when Spotify starts on them.
   defineSetting({key:'searchStyle',group:'home',label:T('Arama sonuçları','Search results'),type:'choice',default:'apple',style:'segmented',
     options:[['apple','Apple Music'],['spotify','Spotify']],note:T('Apple Music: bölümler halinde; Spotify: Spotify\'ın sekmeli listesi.','Apple Music: in sections; Spotify: Spotify\'s tabbed list.'),
-    apply:()=>{const search=searchRoute();if(!search)return;if(canSearch(search.term))renderSearch(search);else if(document.body.classList.contains('am-search-results')){closeSearch();currentMode='native';}}});
+    apply:()=>{const search=searchRoute();if(!search)return;if(canSearch(search.term,search.kind))renderSearch(search);else if(document.body.classList.contains('am-search-results')){closeSearch();currentMode='native';}}});
   // One "…" per card, added the first time the card is hovered; a shortcut at the top gets one at its end, as a row of
   // Apple's lists (#125). Spotify's menu opens from the shortcut's click layer.
   document.addEventListener('mouseover',event=>{

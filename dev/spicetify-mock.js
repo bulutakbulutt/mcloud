@@ -142,15 +142,25 @@
     playlists: { items: ['This Is Sena Şener', 'Türkçe Indie', 'Akustik Akşamlar', 'Yol'].map((n, i) => ({ data: searchList(n, i) })) },
     podcasts: { items: [] }, episodes: { items: [] }, users: { items: [{ data: { __typename: 'User', uri: 'spotify:user:sena', displayName: 'Sena', avatar: cover('Sena', 99) } }] }, genres: { items: [] },
   };
+  // A kind's page (searchTracks, searchAlbums, …: Spotify's tabs) answers 30 at a time from offset, with pagingInfo's
+  // nextOffset, null on the last page; 45 of each.
+  const searchKindMock = { searchTracks: ['tracksV2', i => ({ item: { data: searchTrack('Şarkı ' + (i + 1), 20 + i) } })], searchArtists: ['artists', i => ({ data: person('Sanatçı ' + (i + 1), 20 + i) })],
+    searchAlbums: ['albumsV2', i => ({ data: searchAlbum('Albüm ' + (i + 1), 20 + i) })], searchPlaylists: ['playlists', i => ({ data: searchList('Liste ' + (i + 1), 20 + i) })],
+    searchUsers: ['users', i => ({ data: { __typename: 'User', uri: 'spotify:user:u' + i, displayName: 'Profil ' + (i + 1), avatar: cover('P', 20 + i) } })] };
+  const searchKindPage = (name, { offset, limit }) => {
+    const [field, item] = searchKindMock[name], end = Math.min(45, offset + limit);
+    return { data: { searchV2: { [field]: { totalCount: 45, pagingInfo: { nextOffset: end < 45 ? end : null }, items: Array.from({ length: end - offset }, (_, k) => item(offset + k)) } } } };
+  };
   if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
   Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs', save_to_your_library: 'Save to Your Library', remove_from_your_library: 'Remove from Your Library' })[key] ?? key };
   Spicetify.GraphQL = {
-    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, searchDesktop: { name: 'searchDesktop' }, getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
+    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, searchDesktop: { name: 'searchDesktop' }, ...Object.fromEntries(['searchTracks', 'searchArtists', 'searchAlbums', 'searchPlaylists', 'searchUsers'].map(name => [name, { name }])), getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
     // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id. The mix
     // covers' photo lookups (an artist's avatar, a track's album art) answer as Spotify's small colour-and-image queries.
     Request: async (def, vars) => def.name === 'getAlbum'
       ? (window.__albumRequests ||= []).push(vars) && { data: { albumUnion: (window.__mockAlbums || {})[vars.uri.split(':').pop()] || { __typename: 'NotFound' } } }
       : def.name === 'fetchExtractedColorAndImageForArtistEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { artistUnion: { visuals: { avatarImage: cover('Mix', 9) } } } }
+      : searchKindMock[def.name] ? (window.__searchRequests ||= []).push({ kind: def.name, ...vars }) && searchKindPage(def.name, vars)
       : def.name === 'searchDesktop' ? (window.__searchRequests ||= []).push(vars) && (window.__mockSearchFail ? { errors: [{ message: 'mock' }] } : { data: { searchV2: window.__mockSearch } })
       : def.name === 'fetchExtractedColorAndImageForTrackEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { trackUnion: { albumOfTrack: { coverArt: cover('Radio', 5) } } } }
       : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },

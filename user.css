@@ -1164,6 +1164,10 @@ body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #main
 body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body.am-np-spicy:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
 body.am-panel-open :is(#main,.Root,.am-layout),body.am-np-spicy :is(#main,.Root,.am-layout),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+/* Search results start at the window's top, under the toolbar: #main stays lifted over them while they show. */
+body.am-search-results #main {z-index:30!important;pointer-events:none}
+body.am-search-results #global-nav-bar {pointer-events:auto}
+body.am-search-results :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
@@ -1430,19 +1434,21 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
    1254pt 4/6/7/3. Top Results are two rows of 80pt plates (12pt corners, 42pt artwork 14pt in, text 12pt after it); a
    song column is three 56pt rows with 48pt artwork and the rule under a row starts at its text. The cards and song rows
    are the artist page's. */
+/* The page starts at the window's top, as the artist page and Spotify's own pages do, so results scroll under the
+   toolbar and its shade instead of being cut at a hard edge below it. */
 body:not(.am-search-results) #am-search {display:none!important}
 body.am-search-results .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
-#am-search {--am-sp:34px;--am-sw:calc(100cqw - 2 * var(--am-sp));box-sizing:border-box;position:fixed;inset:var(--am-page-top) 0 0 var(--am-side);z-index:10;container-type:inline-size;overflow:auto;overflow-x:hidden;scrollbar-width:none;padding:14px 0 120px;background:var(--am-bg);color:rgb(var(--am-ink));font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+#am-search {--am-sp:34px;--am-sw:calc(100cqw - 2 * var(--am-sp));box-sizing:border-box;position:fixed;inset:0 0 0 var(--am-side);z-index:10;container-type:inline-size;overflow:auto;overflow-x:hidden;scrollbar-width:none;padding:calc(var(--am-page-top) + 14px) 0 120px;background:var(--am-bg);color:rgb(var(--am-ink));font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
 #am-search::-webkit-scrollbar {display:none}
 .am-search-status {margin:0;padding:24px var(--am-sp);color:rgb(var(--am-ink)/.6);font-size:13px}
 #am-search .am-shelf + .am-shelf {margin-top:25px}
 #am-search .am-shelf-title {margin:0 0 13px;padding:0 var(--am-sp);line-height:19px}
-#am-search .am-shelf {--am-g:16px;--am-n-top:2;--am-n-album:3;--am-n-artist:4;--am-n-song:1;--am-n:var(--am-n-album)}
-#am-search .am-shelf-artists {--am-n:var(--am-n-artist)}
-@container (min-width:640px) {#am-search .am-shelf {--am-n-top:3;--am-n-album:4;--am-n-artist:5;--am-n-song:2}}
-@container (min-width:1060px) {#am-search .am-shelf {--am-g:20px;--am-n-top:4;--am-n-album:5;--am-n-artist:6;--am-n-song:3}}
-@container (min-width:1250px) {#am-search .am-shelf {--am-n-album:6;--am-n-artist:7}}
-@container (min-width:1450px) {#am-search .am-shelf {--am-n-album:7;--am-n-artist:8;--am-n-song:4}}
+#am-search :is(.am-shelf,.am-search-grid) {--am-g:16px;--am-n-top:2;--am-n-album:3;--am-n-artist:4;--am-n-song:1;--am-n:var(--am-n-album)}
+#am-search :is(.am-shelf-artists,.am-search-round) {--am-n:var(--am-n-artist)}
+@container (min-width:640px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-top:3;--am-n-album:4;--am-n-artist:5;--am-n-song:2}}
+@container (min-width:1060px) {#am-search :is(.am-shelf,.am-search-grid) {--am-g:20px;--am-n-top:4;--am-n-album:5;--am-n-artist:6;--am-n-song:3}}
+@container (min-width:1250px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-album:6;--am-n-artist:7}}
+@container (min-width:1450px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-album:7;--am-n-artist:8;--am-n-song:4}}
 #am-search .am-shelf-track {gap:var(--am-g);padding:0 var(--am-sp) 4px;scroll-padding:0 var(--am-sp);grid-auto-columns:calc(var(--am-sw) / var(--am-n) - var(--am-g))}
 #am-search .am-shelf-arrow {top:calc(50% + 16px)}
 /* Top Results: two rows; what a third would hold is left out. */
@@ -1480,6 +1486,25 @@ body.am-search-results .am-native-main {visibility:hidden!important;opacity:0!im
 #am-search :is(.am-song-name,.am-song-sub) {font-size:15px;line-height:19px}
 #am-search .am-song-sub {font-size:13px;line-height:17px;color:rgb(var(--am-ink)/.6)}
 #am-search .am-card-name {font-size:13px}
+/* A heading's own page (Apple's "see all"): a large title, then the shelf's cards in rows of as many as the shelf shows,
+   or Songs as Apple's Song / Artist / Album / Time table: hairline column marks in the header, a rule under each row. */
+.am-search-heading {margin:0 0 14px;padding:0 var(--am-sp);font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em}
+#am-search .am-search-grid {display:grid;grid-template-columns:repeat(var(--am-n),minmax(0,1fr));gap:24px var(--am-g);padding:0 var(--am-sp)}
+.am-song-table {padding:0 var(--am-sp)}
+:is(.am-table-head,.am-table-row) {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) 56px 28px;align-items:center}
+:is(.am-table-head,.am-table-row) > :not(:first-child,:last-child) {padding-left:12px}
+.am-table-head {height:30px;font-size:12px;font-weight:600;color:rgb(var(--am-ink)/.6);box-shadow:inset 0 -1px rgb(var(--am-ink)/.11)}
+.am-table-head > :not(:first-child,:last-child) {background:linear-gradient(rgb(var(--am-ink)/.16),rgb(var(--am-ink)/.16)) left center/1px 14px no-repeat}
+.am-table-row {height:56px;box-shadow:inset 0 -1px rgb(var(--am-ink)/.08);font-size:13px}
+#am-search .am-table-song {display:flex;align-items:center;gap:12px;min-width:0;height:100%}
+#am-search .am-table-song .am-song-name {font-size:13px;line-height:17px;min-width:0}
+#am-search .am-table-song :is(.am-song-thumb,.am-song-art) {flex-basis:40px;width:40px;height:40px;border-radius:4px}
+#am-search .am-table-song:is(:hover,:focus-visible) .am-song-art {filter:brightness(.6)}
+#am-search .am-table-song:is(:hover,:focus-visible) .am-song-thumb svg {opacity:1}
+.am-table-cell {min-width:0;display:flex}
+#am-search .am-table-link {min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgb(var(--am-ink)/.7)}
+#am-search .am-table-link:hover {color:rgb(var(--am-ink));text-decoration:underline}
+.am-table-row > .am-table-time,.am-table-head > .am-table-time {text-align:right;padding-right:6px;font-variant-numeric:tabular-nums;color:rgb(var(--am-ink)/.6)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none}#am-artist .am-hero-haze{display:none}}
 
 /* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
@@ -1751,7 +1776,7 @@ body.am-np-open #am-player {--am-player-w:round(down,min(calc(100vw - var(--am-s
 @media(max-width:900px){body.am-np-open #am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - var(--am-right) - 24px),2px)}}
 body.am-np-open .am-toasts {left:calc(var(--am-side) + (100vw - var(--am-side) - var(--am-right))/2)}
 body.am-np-open .am-toast {max-width:min(420px,calc(100vw - var(--am-side) - var(--am-right) - 48px))}
-body.am-np-open #am-library {right:var(--am-right)}
+body.am-np-open :is(#am-library,#am-search) {right:var(--am-right)}
 body.am-np-open #am-artist {right:var(--am-right);--am-hw:calc(100vw - var(--am-side) - var(--am-right))}
 body.am-np-open #am-artist .am-artist-actions {right:calc(var(--am-right) + 14px)}
 body.am-np-open > .am-scroll-thumb {right:calc(var(--am-right) + 3px)}

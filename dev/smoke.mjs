@@ -892,6 +892,9 @@ try {
     assert.equal(await page.evaluate(() => window.__searchRequests.at(-1).searchTerm), 'sena');
     assert.deepEqual(await page.locator('#am-search .am-shelf-title').allTextContents(), ['En İyi Sonuçlar', 'Sanatçılar', 'Albümler', 'Şarkılar', 'Çalma Listeleri', 'Profiller']);
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-main')).visibility), 'hidden');
+    // The page starts at the window's top, so results scroll under the toolbar; the first title starts below it.
+    assert.deepEqual(await page.evaluate(() => { const v = document.getElementById('am-search'), top = parseFloat(getComputedStyle(document.body).getPropertyValue('--am-page-top'));
+      return [v.getBoundingClientRect().top, v.querySelector('.am-shelf-title').getBoundingClientRect().top >= top]; }), [0, true]);
     // Top Results: an artist opens with a chevron, a song plays and has "…"; two rows at most (four across at 1440px).
     assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-search .am-top-result')].map(c => [c.offsetWidth > 0, !!c.querySelector('.am-top-more'), !!c.querySelector('.am-top-art.am-round')])),
       [[true, false, true], [true, true, false], [true, false, false], [true, true, false], [true, false, false], [true, true, false], [true, true, false], [true, true, false]]);
@@ -906,9 +909,38 @@ try {
     await page.click('#am-search .am-song >> nth=2', { button: 'right' });
     assert.ok((await page.locator('#am-popover .am-popover-item').allTextContents()).includes('Sanatçıya Git'));
     await page.keyboard.press('Escape');
-    // A heading opens Spotify's own tab, and back draws the results again.
+    // A heading opens its own page at Spotify's tab route: Songs as Apple's table, 30 rows, then the next 30 (15 here) as
+    // the page nears its end; the request is made while the pointer rests on the heading.
+    await page.hover('#am-search .am-shelf-songs .am-shelf-title');
+    await page.waitForFunction(() => window.__searchRequests.some(v => v.kind === 'searchTracks' && v.searchTerm === 'sena' && v.offset === 0 && v.limit === 30));
     await page.click('#am-search .am-shelf-songs .am-shelf-title');
-    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/search/sena/tracks' && !document.body.classList.contains('am-search-results'));
+    await page.waitForSelector('body.am-search-results #am-search .am-song-table .am-table-row');
+    assert.equal(await page.evaluate(() => Spicetify.Platform.History.location.pathname), '/search/sena/tracks');
+    assert.equal(await page.textContent('#am-search .am-search-heading'), 'Şarkılar');
+    assert.deepEqual(await page.locator('#am-search .am-table-head > span').allTextContents(), ['Şarkı', 'Sanatçı', 'Albüm', 'Süre', '']);
+    assert.deepEqual(await page.evaluate(() => { const r = document.querySelector('#am-search .am-table-row'); return [r.querySelector('.am-song-title').textContent, r.querySelectorAll('.am-table-link')[0].textContent, r.querySelectorAll('.am-table-link')[1].textContent, r.querySelector('.am-table-time').textContent, !!r.querySelector('.am-explicit')]; }),
+      ['Şarkı 1', 'Sena Şener', 'Şarkı 1', '5:20', false]);
+    // The columns line up with the header's.
+    assert.ok(await page.evaluate(() => { const h = [...document.querySelectorAll('#am-search .am-table-head > span')], c = [...document.querySelector('#am-search .am-table-row').children];
+      return h.every((s, i) => Math.abs(s.getBoundingClientRect().left - c[i].getBoundingClientRect().left) < 1); }));
+    assert.equal(await page.locator('#am-search .am-table-row').count(), 30);
+    await page.evaluate(() => { const v = document.getElementById('am-search'); v.scrollTop = v.scrollHeight; });
+    await page.waitForFunction(() => document.querySelectorAll('#am-search .am-table-row').length === 45);
+    await page.click('#am-search .am-table-row >> nth=1 >> .am-table-song');
+    assert.equal(await page.evaluate(() => window.__playedUri), 'spotify:track:q21');
+    await page.click('#am-search .am-table-row >> nth=1', { button: 'right' });
+    assert.ok((await page.locator('#am-popover .am-popover-item').allTextContents()).includes('Albüme Git'));
+    await page.keyboard.press('Escape');
+    // Back draws the sections again; Artists is a grid of round cards, as many a row as the shelf shows.
+    await page.evaluate(() => Spicetify.Platform.History.push('/search/sena'));
+    await page.waitForSelector('body.am-search-results #am-search .am-top-result');
+    await page.click('#am-search .am-shelf-artists .am-shelf-title');
+    await page.waitForSelector('#am-search .am-search-grid.am-search-round .am-card-round');
+    assert.equal(await page.locator('#am-search .am-search-grid .am-card').count(), 30);
+    assert.equal(await page.evaluate(() => new Set([...document.querySelectorAll('#am-search .am-search-grid .am-card')].slice(0, 12).map(c => Math.round(c.getBoundingClientRect().top))).size), 2);
+    // Shows and episodes have no Apple page: their heading keeps Spotify's tab.
+    await page.evaluate(() => Spicetify.Platform.History.push('/search/sena/podcastAndEpisodes'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-results'));
     await page.evaluate(() => Spicetify.Platform.History.push('/search/sena'));
     await page.waitForSelector('body.am-search-results #am-search .am-top-result');
     // Spotify's page when the request fails, or with the setting on Spotify.
