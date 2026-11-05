@@ -3606,6 +3606,37 @@
     apply:v=>document.body.classList.toggle('am-home-apple',v==='apple')});
   defineSetting({key:'homeShortcuts',group:'home',label:T('Üstteki kısayollar','Shortcuts at the top'),type:'toggle',default:true,
     apply:v=>document.body.classList.toggle('am-home-no-shortcuts',!v)});
+  // What's New (#128): Spotify's feed (/content-feed) is a column of wide rows; the reporter's reference is a grid of frosted
+  // cards (cover, "Album • 2026", title, subtitle, a round "+"). The rows stay Spotify's (user.css lays them out as cards) and
+  // the Music / Podcasts chips give way to a pop-up button like the library's sort, which only clicks the chips.
+  let feedFilter=null,feedLabels=null,feedTimer=0;
+  const feedChips=()=>[...document.querySelectorAll('.am-native-main [data-encore-id="chip"][role="checkbox"]')];
+  defineSetting({key:'feedStyle',group:'home',section:T('Yenilikler','What’s New'),label:T('Görünüm','Layout'),type:'choice',default:'apple',style:'segmented',
+    options:[['apple','Apple Music'],['spotify','Spotify']],apply:()=>syncFeed()});
+  function syncFeed(tries=0) {
+    clearTimeout(feedTimer);
+    const on=settings.feedStyle==='apple'&&routePath()==='/content-feed';
+    document.body.classList.toggle('am-feed',on);
+    if(!on){feedFilter?.node.remove();return;}
+    // The page renders after the route changes; its chips are waited for a few seconds at most.
+    const chips=feedChips(),row=chips[0]?.closest('[role="listbox"]')?.parentElement?.parentElement;
+    if(!row){if(tries<30)feedTimer=setTimeout(()=>syncFeed(tries+1),150);return;}
+    if(feedFilter?.node.isConnected&&feedFilter.node.nextElementSibling===row){feedFilter.sync();return;}
+    // Spotify hides the other chip while one is on, so the labels are read once, from the first time both show.
+    if(!feedLabels&&chips.length>1)feedLabels={music:chips[0].textContent.trim(),podcasts:chips[1].textContent.trim()};
+    if(!feedLabels){if(tries<30)feedTimer=setTimeout(()=>syncFeed(tries+1),150);return;}
+    const now=()=>{const on=feedChips().find(c=>c.getAttribute('aria-checked')==='true')?.textContent.trim();return on===feedLabels.music?'music':on===feedLabels.podcasts?'podcasts':'all';};
+    feedFilter?.node.remove();
+    feedFilter=popupButton('am-library-sort am-feed-filter',[['all',T('Tümü','All')],['music',feedLabels.music],['podcasts',feedLabels.podcasts]],now,value=>{
+      const on=feedChips().find(c=>c.getAttribute('aria-checked')==='true'),want=value==='all'?'':feedLabels[value];
+      if(on&&on.textContent.trim()!==want)on.click();
+      const pick=()=>feedChips().find(c=>c.textContent.trim()===want&&c.getAttribute('aria-checked')!=='true')?.click();
+      if(want)on?setTimeout(pick,80):pick();
+      setTimeout(()=>feedFilter?.sync(),400);
+    },T('Göster','Show'));
+    row.before(feedFilter.node);
+  }
+  H.listen(()=>syncFeed());syncFeed();
   // One "…" per card, added the first time the card is hovered.
   document.addEventListener('mouseover',event=>{
     // The pointer is over the card's click layer, which covers the card beside its artwork.
