@@ -2582,9 +2582,9 @@
   npMeta.append(npThumb,npText,npStar,npMore);
   const npLyricsBox=el('div','am-np-lyrics'),npControls=el('div','am-np-controls'),npActions=el('div','am-np-actions');
   npLyricsBox.setAttribute('aria-live','off');
-  // Full screen: beside the player, Spicy Lyrics' page (its own button, clicked); the pane steps aside while that page is
-  // open, so the lyrics never show twice, and comes back as it was when it closes. Without Spicy Lyrics (or with the
-  // controls in the pane) the pane fills the window itself; Esc or the button again leaves.
+  // Full screen: beside the player, Spicy Lyrics' page (its own button, clicked), and on that page Spicy's own full
+  // screen. Without Spicy Lyrics (or with the controls in the pane) the pane fills the window itself; Esc or the button
+  // again leaves.
   const npFull=button(T('Tam ekran sözler','Full-screen lyrics'),'expand',()=>npFullscreen(!npFullOn),'am-np-fullscreen');
   // Beside the player the pane closes itself; it comes back from the player's Now Playing button or its "…" menu.
   const npClose=button(T('Şimdi Çalan\'ı kapat','Close Now Playing'),'close',()=>npOpen(false),'am-np-close');
@@ -2610,8 +2610,10 @@
     if(!npSpicySplit||np.hidden)return;
     document.body.style.setProperty('--am-np-split',Math.round(npLyricsBox.getBoundingClientRect().top-np.getBoundingClientRect().top)+'px');
   });
-  const npOpenFor=mode=>mode==='only'||mode==='beside'&&!document.body.classList.contains('am-spicy-route');
-  const npSpicyWanted=mode=>mode==='beside'&&npOpenFor(mode)&&!npFullOn&&settings.npLyricsSource==='spicy'&&(settings.npLyricsPlace==='below'||settings.npBg==='plain')
+  // On Spicy Lyrics' page the pane stays (#120) with the artwork and title only: the page has the lyrics.
+  const npOnSpicyPage=()=>document.body.classList.contains('am-spicy-route');
+  const npOpenFor=mode=>mode==='only'||mode==='beside';
+  const npSpicyWanted=mode=>mode==='beside'&&!npOnSpicyPage()&&!npFullOn&&settings.npLyricsSource==='spicy'&&(settings.npLyricsPlace==='below'||settings.npBg==='plain')
     &&!document.body.classList.contains('am-panel-open')&&!!npSpicyCard();
   function npSpicyFill() {
     const card=npSpicyCard(),right=card?.closest('.am-native-right');if(!card)return;
@@ -2660,7 +2662,7 @@
   npToggle.addEventListener('pointerenter',npPrepare);npToggle.addEventListener('focus',npPrepare);
   let npFullOn=false;
   function npFullscreen(on) {
-    if(on&&npHandsToSpicy()){if(routePath()!=='/SpicyLyrics')runSpicyControl('SpicyLyrics_PageButton');return;}
+    if(on&&npHandsToSpicy()){runSpicyControl(routePath()==='/SpicyLyrics'?'SpicyLyrics_FullscreenButton':'SpicyLyrics_PageButton');return;}
     if(npFullOn===on)return;
     npFullOn=on;npAnim?.cancel();npAnim=null;document.body.classList.toggle('am-np-full',on);npSyncFull();
     // The lines move to a new layout: back to the one being sung (or loaded, when the pane showed none).
@@ -2668,7 +2670,7 @@
     else if(npLyrics&&npLyricUri===(S.Player.data?.item?.uri||''))npJumpLyrics();else{npLyricUri=null;npLoadLyrics(S.Player.data?.item);}
   }
   function npSyncFull() {
-    const label=npFullOn?T('Tam ekrandan çık','Exit Full Screen'):npHandsToSpicy()?T('Spicy Lyrics\'te aç','Open in Spicy Lyrics'):T('Tam ekran sözler','Full-screen lyrics');
+    const label=npFullOn?T('Tam ekrandan çık','Exit Full Screen'):!npHandsToSpicy()?T('Tam ekran sözler','Full-screen lyrics'):npOnSpicyPage()?T('Tam ekran','Full Screen'):T('Spicy Lyrics\'te aç','Open in Spicy Lyrics');
     if(npFull.classList.contains('am-active')!==npFullOn)npFull.innerHTML=svg(npFullOn?'collapse':'expand');
     npFull.classList.toggle('am-active',npFullOn);setAttributeIfChanged(npFull,'aria-pressed',String(npFullOn));
     setAttributeIfChanged(npFull,'aria-label',label);setAttributeIfChanged(npFull,'title',label);
@@ -2693,7 +2695,6 @@
   let npReady=false,npTrackKey='',npContent='';
   function npApply() {
     if(!npReady)return;
-    // While Spicy Lyrics' page is open the pane beside the player steps aside, so the lyrics never show twice.
     const mode=npWant??settings.nowPlaying,b=document.body.classList,open=npOpenFor(mode),spicy=npSpicyWanted(mode);
     // The pane's own content is rebuilt when it comes back from Spicy's (its lyrics were not loaded meanwhile).
     if(spicy!==npSpicyOn){npSpicyOn=spicy;b.toggle('am-np-spicy',spicy);npTrackKey='';npLyricUri=null;}
@@ -2717,7 +2718,7 @@
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
     // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
-    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
+    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt,npOnSpicyPage()].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
     if(!shown){
       npStopVideo();clearTimeout(npLyricTimer);
@@ -2834,7 +2835,7 @@
   // highlight moves on a timer set to the next line's start (re-aimed every player tick), never per frame.
   let npLyrics=null,npLyricUri=null,npLyricIndex=-2,npLyricTimer=0,npScrollFrame=0,npUserScroll=-Infinity,npLyricJump=true;const npLyricCache=new Map();
   // Lyrics show in their own view (the lyrics button, as on iOS) or, as a variant, always under the artwork.
-  const npLyricsShown=()=>!npSpicyOn&&(npFullOn||settings.npLyricsPlace==='below'||settings.npBg==='plain');
+  const npLyricsShown=()=>!npSpicyOn&&(npFullOn||!npOnSpicyPage()&&(settings.npLyricsPlace==='below'||settings.npBg==='plain'));
   for(const type of ['wheel','pointerdown','keydown'])npLyricsBox.addEventListener(type,()=>{npUserScroll=performance.now();},{passive:true});
   // Back to the line being sung, at once; flash marks where the lyrics are.
   function npJumpLyrics() { npUserScroll=-Infinity;npLyricJump=true;npLyricIndex=-2;npSyncLyric(); }

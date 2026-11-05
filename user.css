@@ -1571,6 +1571,10 @@ body.am-np-plain #am-nowplaying .am-np-line {opacity:.42}
 body.am-np-plain #am-nowplaying .am-np-line + .am-np-line {margin-top:26px}
 body.am-np-plain #am-nowplaying.am-np-playing .am-np-line.am-current {opacity:1}
 body.am-np-plain #am-nowplaying .am-np-line:hover {opacity:.7}
+/* On Spicy Lyrics' page (#120) the page has the lyrics: the pane keeps the artwork and title, Plain included. */
+body.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-lyrics {display:none}
+body.am-np-plain.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-art {display:grid}
+body.am-np-plain.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-meta {display:flex}
 body.am-np-plain #am-nowplaying :is(.am-np-close,.am-np-fullscreen) {opacity:0;transition:opacity .2s}
 body.am-np-plain #am-nowplaying:is(:hover,:focus-within) :is(.am-np-close,.am-np-fullscreen) {opacity:1}
 /* Sidebar only: the player's own controls, moved in (theme.js npMove), laid out as on iOS. */
