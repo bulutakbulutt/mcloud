@@ -410,6 +410,9 @@ body.am-resizing * {transition:none!important}
 .am-nav-row svg {width:18px;height:18px;color:var(--am-accent);flex-shrink:0}
 #am-sidebar .am-nav-row:hover{background:rgb(var(--am-ink)/.051)}
 #am-sidebar .am-nav-row.am-selected{background:rgb(var(--am-ink)/.122);font-weight:650}
+/* On macOS the rows are SF Regular, as in Music: at 500 they set ~3% wider and ~15% heavier than Music's sidebar
+   (measured on "All Playlists", 13pt, 2x). Segoe and the embedded Inter keep 500 on Windows and Linux. */
+body.am-mac #am-sidebar .am-nav-row:not(.am-selected) {font-weight:400}
 /* Account chip in the bottom-left corner, as in Apple Music. The avatar is centred on the icon column and the name
    starts on the text column; the right padding puts the friends button on the pin column above. */
 #am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;padding:6px 7px 0 0;flex-shrink:0;box-shadow:0 -1px rgb(var(--am-ink)/0);transition:box-shadow .2s}
