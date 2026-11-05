@@ -2668,6 +2668,26 @@ try {
     await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
     assert.equal(await page.evaluate(() => document.body.classList.contains('am-feed')), false);
   });
+  await check('What\'s New: the macOS client\'s feed markup (no test ids) gets the same cards (#128)', async () => {
+    // Spotify 1.3.6 on macOS: the list has no data-testid, the cover no entity-image, and the buttons no test ids: save and
+    // download both carry aria-checked, "…" opens a menu, play is the primary button in its own [role=div].
+    await page.evaluate(() => {
+      const row = n => `<div><li role="row"><hr><div data-encore-id="listRow" role="group"><div role="button"></div><div style="position:absolute;width:1px;height:1px;overflow:hidden"></div><div><div><div><div><img alt="" style="width:99px;height:99px"></div></div></div></div><div><div><h3 data-encore-id="listRowTitle"><span><a href="/album/${n}">Album ${n}</a></span></h3><p data-encore-id="listRowSubtitle"><span><a href="/artist/${n}">Artist</a></span></p></div></div><div><span data-encore-id="text"><span><span data-encore-id="text">17 hours ago</span></span></span></div><div><div><div><button aria-label="Save to Your Library" aria-checked="false" data-encore-id="buttonTertiary"><span><svg></svg></span></button><button aria-label="Download" aria-checked="false" data-encore-id="buttonTertiary"><span><svg></svg></span></button><button aria-label="More" aria-haspopup="menu" data-encore-id="buttonTertiary"><span><svg></svg></span></button></div><div><div role="div"><button aria-label="Play" data-encore-id="buttonPrimary"><span><svg></svg></span></button></div></div></div></div></div></li></div>`;
+      const chip = t => `<div role="presentation"><div role="option"><button data-encore-id="chip" role="checkbox" aria-checked="false">${t}</button></div></div>`;
+      const s = document.createElement('section');s.id = 'mock-feed';s.style.maxWidth = '800px';
+      s.innerHTML = `<div><h1>What's New</h1></div><div><div role="presentation"><div role="presentation"><div role="listbox">${chip('Music')}${chip('Podcasts')}</div></div></div></div>`
+        + `<ul role="treegrid"><div><div><li role="row"><h2>Earlier</h2></li></div>${row(1)}${row(2)}${row(3)}<div style="height:32px"></div></div></ul>`;
+      document.querySelector('.am-native-main main').prepend(s);
+      Spicetify.Platform.History.push('/content-feed');
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-feed .am-feed-filter'));
+    assert.deepEqual(await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#mock-feed [data-encore-id="listRow"]')], img = cards[0].querySelector('img');
+      const shown = [...cards[0].querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.getAttribute('aria-label')).join();
+      return [new Set(cards.map(c => Math.round(c.getBoundingClientRect().top))).size < cards.length, img.getBoundingClientRect().width, getComputedStyle(img).borderRadius, shown, getComputedStyle(cards[0]).borderRadius];
+    }), [true, 96, '10px', 'Save to Your Library,Play', '22px']);
+    await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
+  });
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
     await page.evaluate(() => {
       const host = document.querySelector('.am-native-main');
