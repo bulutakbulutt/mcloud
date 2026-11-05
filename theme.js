@@ -2341,9 +2341,10 @@
       this.controls=controls;this.interactive=interactive;this.group=controls.length>1;this.box=null;
       this.el=el('div','am-tglass'+(this.group?' am-tglass-group':''));this.face=el('div','am-tglass-face');
       this.lights=controls.map(()=>el('div','am-tglass-light'));this.el.append(this.face,...this.lights);root.append(this.el);
-      this.pane=pane;this.margin=toolbarLens.states.button.margin;
+      // Eco (body.am-solid): the same shapes and motion, drawn as a solid face (user.css .am-tglass-solid), no lens.
+      this.solid=!glassLive();this.pane=this.solid?null:pane;this.margin=this.solid?0:toolbarLens.states.button.margin;
       const pressed=()=>Math.abs(this.scale.x-1)>1e-4;
-      if(pane)this.rim=pane.add(this.face,this.el,pressed).rim;else{toolbarLens.lens(this.face,{state:'button',stretch:pressed});this.rim=toolbarLens.rimF(this.el,{...TG.rim,stretch:pressed});}
+      if(this.solid)this.el.classList.add('am-tglass-solid');else if(pane)this.rim=pane.add(this.face,this.el,pressed).rim;else{toolbarLens.lens(this.face,{state:'button',stretch:pressed});this.rim=toolbarLens.rimF(this.el,{...TG.rim,stretch:pressed});}
       this.scale=new Spring(1);this.glow=new Spring(0);this.light=controls.map(()=>new Spring(0));this.push=controls.map(()=>new Spring(0));
       this.down=-1;this.over=-1;this.p=null;this.place();
       if(!interactive)return;
@@ -2393,8 +2394,10 @@
   // Groups from the toolbar as Spotify renders it; rebuilt only when its controls change, re-placed on any resize.
   const toolbarGlassResize=typeof ResizeObserver==='function'?new ResizeObserver(()=>toolbarGlasses.forEach(g=>g.place())):null;
   const glassLive=()=>document.body.classList.contains('am-liquid')&&!document.body.classList.contains('am-solid');
+  // Eco keeps the Liquid Glass shapes (circles and capsules), solid: only the lens is the costly part.
+  const glassShapes=()=>document.body.classList.contains('am-liquid');
   function syncToolbarGlass(toolbar) {
-    const live=glassLive();
+    const live=glassShapes(),lens=glassLive();
     const lead=toolbar.querySelector('.am-toolbar-leading'),center=toolbar.querySelector('.am-toolbar-center'),search=center?.querySelector('form[role="search"],[role="search"]');
     const history=[...(lead?.querySelector('.main-globalNav-historyButtonsWrapper')||lead||toolbar).querySelectorAll('button')].slice(0,2);
     const extensions=[...(lead?.querySelectorAll('button')||[])].filter(b=>!history.includes(b)&&b.offsetWidth);
@@ -2404,7 +2407,7 @@
     // The search field's glass is its input's rect: the form around it is taller.
     const field=search?.querySelector('input')||search;
     const sets=live?[[history,true],[extensions,true],...home.map(b=>[[b],true]),[field?[field]:[],false]].filter(([c])=>c.length):[];
-    const key=sets.map(([c])=>c.map(n=>n.getAttribute('aria-label')||n.tagName).join('+')).join('|');
+    const key=(lens?'':'solid:')+sets.map(([c])=>c.map(n=>n.getAttribute('aria-label')||n.tagName).join('+')).join('|');
     if(key===toolbarGlassKey&&toolbarGlasses.every(g=>g.controls.every(c=>c.isConnected)))return toolbarGlasses.forEach(g=>g.place());
     toolbarGlassKey=key;toolbarGlasses.forEach(g=>g.destroy());toolbarGlasses=[];toolbarPane?.destroy();toolbarPane=null;toolbarGlassResize?.disconnect();
     document.body.classList.toggle('am-tglass-on',sets.length>0);
@@ -2413,23 +2416,24 @@
     // the page and under the toolbar. In <body>, like the sidebar and the player, it covered the toolbar's icons.
     if(!toolbarGlassRoot){toolbarGlassRoot=el('div','');toolbarGlassRoot.id='am-toolbar-glass';}
     const host=document.getElementById('main')||document.body;if(toolbarGlassRoot.parentElement!==host)host.append(toolbarGlassRoot);
-    toolbarPane=toolbarLens.shared(toolbarGlassRoot,{state:'button'},TG.rim);toolbarGlasses=sets.map(([c,i])=>new ToolbarGlass(c,i));toolbarPane?.build();
+    toolbarPane=lens?toolbarLens.shared(toolbarGlassRoot,{state:'button'},TG.rim):null;toolbarGlasses=sets.map(([c,i])=>new ToolbarGlass(c,i));toolbarPane?.build();
     if(toolbarGlassResize){toolbarGlassResize.observe(toolbar);sets.forEach(([c])=>c.forEach(n=>toolbarGlassResize.observe(n)));}
   }
   // The artist page's floating back and share + more get the same glass, in a layer of their own inside #am-artist
   // (its own stacking context, over #main), rebuilt with the page (renderArtist).
-  let artistGlasses=[],artistPane=null;
+  let artistGlasses=[],artistPane=null,artistGlassArgs=null;
   function syncArtistGlass(root,back,actions) {
     // The class first: it sizes the buttons the glass is laid on.
-    artistGlasses.forEach(g=>g.destroy());artistPane?.destroy();artistPane=null;const live=!!root&&glassLive();artistView.classList.toggle('am-tglass-on',live);
-    if(live)artistPane=toolbarLens.shared(root,{state:'button'},TG.rim);
+    artistGlassArgs=root?[root,back,actions]:null;
+    artistGlasses.forEach(g=>g.destroy());artistPane?.destroy();artistPane=null;const live=!!root&&glassShapes();artistView.classList.toggle('am-tglass-on',live);
+    if(live&&glassLive())artistPane=toolbarLens.shared(root,{state:'button'},TG.rim);
     artistGlasses=live?[new ToolbarGlass([back],true,root,artistPane),new ToolbarGlass(actions,true,root,artistPane)]:[];artistPane?.build();
   }
   // A ResizeObserver misses controls that only move (the toolbar follows --am-side), so the shapes are placed again
   // two frames after a settings change (sidebar width) and when a transition in the toolbar or sidebar ends.
   const placeGlasses=()=>[...toolbarGlasses,...artistGlasses].forEach(g=>g.place());
   addEventListener('resize',placeGlasses);
-  document.addEventListener('am-settings',()=>{if(boundToolbar)syncToolbarGlass(boundToolbar);if(!glassLive())syncArtistGlass(null);requestAnimationFrame(()=>requestAnimationFrame(placeGlasses));});
+  document.addEventListener('am-settings',()=>{if(boundToolbar)syncToolbarGlass(boundToolbar);syncArtistGlass(...(artistGlassArgs?.[0].isConnected?artistGlassArgs:[null]));requestAnimationFrame(()=>requestAnimationFrame(placeGlasses));});
   document.addEventListener('transitionend',event=>{if(toolbarGlasses.length&&(boundToolbar?.contains(event.target)||event.target.closest?.('#am-sidebar')))placeGlasses();},true);
   function spicyPage() { return document.getElementById('SpicyLyricsPage'); }
   function runSpicyControl(id) {
