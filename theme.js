@@ -466,10 +466,12 @@
     const scope=roots?.length?roots:[main];if(!main)return;
     for(const root of scope){
       if(!(root instanceof Element)||!root.isConnected||!main.contains(root)&&root!==main)continue;
-      const nodes=root.matches('[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"]')?[root]:[];
-      nodes.push(...root.querySelectorAll('[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"]'));
+      const tagged='[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"],[data-testid="shortcut-background"]';
+      const nodes=root.matches(tagged)?[root]:[];
+      nodes.push(...root.querySelectorAll(tagged));
       for(const node of nodes){
-        if(node.matches('[role="grid"]'))tagTrackList(node);
+        if(node.matches('[data-testid="shortcut-background"]'))tagShortcut(node);
+        else if(node.matches('[role="grid"]'))tagTrackList(node);
         else if(node.matches('[role="row"]'))tagTrackRow(node);
         else if(node.matches('[role="list"]'))tagGenreList(node);
         else if(!node.hasAttribute('data-shelf'))node.setAttribute('data-shelf','');
@@ -481,6 +483,13 @@
       root.closest('section.Shelf,[data-testid="component-shelf"]')?.setAttribute('data-shelf','');
       tagChevrons(root);
     }
+  }
+  // Home's shortcuts at the top (#125): each shortcut (the box around its draggable, which holds the click layer) and
+  // their grid, found by data-testid as their class names are only Spicetify's css-map's. Attributes, not classes:
+  // React rewrites the classes it owns.
+  function tagShortcut(layer) {
+    const shortcut=layer.closest('[draggable="true"]')?.parentElement;if(!shortcut||shortcut.hasAttribute('data-am-shortcut'))return;
+    shortcut.setAttribute('data-am-shortcut','');shortcut.parentElement?.setAttribute('data-am-shortcuts','');
   }
   // Spotify's carousel arrows (shelves, chip rows) are a pair of icon-only aria-hidden divs in an overlay, with hashed
   // class names; user.css draws them as the cards' frosted buttons through the variables Spotify's own rule reads.
@@ -3583,8 +3592,19 @@
     apply:v=>document.body.classList.toggle('am-home-apple',v==='apple')});
   defineSetting({key:'homeShortcuts',group:'home',label:T('Üstteki kısayollar','Shortcuts at the top'),type:'toggle',default:true,
     apply:v=>document.body.classList.toggle('am-home-no-shortcuts',!v)});
-  // One "…" per card, added the first time the card is hovered.
+  // One "…" per card, added the first time the card is hovered; a shortcut at the top gets one at its end, as a row of
+  // Apple's lists (#125). Spotify's menu opens from the shortcut's click layer.
   document.addEventListener('mouseover',event=>{
+    const shortcut=settings.homeStyle==='apple'?event.target.closest?.('.am-native-main [data-am-shortcut]'):null;
+    if(shortcut){
+      if(shortcut.querySelector(':scope > .am-card-more'))return;
+      const more=button(T('Diğer','More'),'more',e=>{
+        e.preventDefault();e.stopPropagation();
+        const r=more.getBoundingClientRect();
+        more.parentElement?.querySelector('[data-testid="shortcut-background"]')?.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,button:2,buttons:2,clientX:r.left+r.width/2,clientY:r.bottom+4}));
+      },'am-card-more am-shortcut-more');
+      shortcut.append(more);return;
+    }
     // The pointer is over the card's click layer, which covers the card beside its artwork.
     const card=settings.homeStyle==='apple'?event.target.closest?.('.am-native-main [data-encore-id="card"]:not([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular))'):null;
     const box=card?.querySelector('img')?.parentElement?.parentElement;

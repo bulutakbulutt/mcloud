@@ -2648,6 +2648,57 @@ try {
     await page.evaluate(() => document.getElementById('mock-home').remove());
   });
 
+  await check('Home (#125): shelf titles line up with the artwork and end in a chevron, one text size, the shortcuts as Apple\'s list', async () => {
+    await page.evaluate(() => {
+      const host = document.querySelector('.am-native-main main');
+      const css = document.createElement('style');css.id = 'mock-home125-css';
+      // Spotify's own rules for these nodes (1.3.6.1921), by the mock's class names.
+      css.textContent = '.m125-wrap{margin-inline:-12px}.m125-row{display:grid;grid-template-columns:repeat(3,1fr)}.m125-card{padding:12px;position:relative}.m125-sub{font-size:14px}.m125-head a:hover,.m125-card a:hover{text-decoration:underline}'
+        + '.m125-sgrid{--item-height:64px;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:var(--item-height);gap:12px}.m125-sc{height:var(--item-height);position:relative;overflow:hidden;border-radius:4px;background:#333}'
+        + '.m125-drag{display:flex}.m125-hold{display:flex}.m125-ic{min-width:var(--item-height);min-height:var(--item-height)}.m125-iw{position:relative;width:100%;height:100%}.m125-iw img{position:absolute;inset:0;width:100%;height:100%}'
+        + '.m125-main{flex:1;display:flex;align-items:center}.m125-content{margin-inline:16px}.m125-name{font-size:14px;font-weight:700}.m125-trail{position:absolute;inset-inline-end:0;width:64px;display:flex}.m125-trail button{padding:0;border:0;background:none}.m125-layer{position:absolute;inset:0;z-index:0}';
+      document.head.append(css);
+      const card = n => `<div role="gridcell" aria-colindex="${n}"><div><div class="m125-card" data-encore-id="card" role="listitem"><div><div><img alt="" style="display:block;width:100%;aspect-ratio:1"></div></div>`
+        + `<a href="/album/${n}"><p data-encore-id="cardTitle">Album ${n}</p></a><div data-encore-id="cardSubtitle"><span><div class="m125-sub" data-encore-id="text"><a href="/artist/${n}">Artist ${n}</a></div></span></div></div></div></div>`;
+      const shortcut = n => `<div class="m125-sc"><div class="m125-drag" draggable="true"><a class="m125-hold" href="/playlist/${n}"><div class="m125-ic"><div class="m125-iw"><img alt=""></div></div></a>`
+        + `<div class="m125-main"><div class="m125-content"><div><a href="/playlist/${n}"><p class="m125-name" data-encore-id="text">Shortcut ${n}</p></a></div></div><div class="m125-trail"><div><div role="div"><button data-encore-id="buttonPrimary"><span><svg></svg></span></button></div></div></div></div>`
+        + `<div class="m125-layer" data-testid="shortcut-background"></div></div></div>`;
+      const s = document.createElement('div');s.id = 'mock-home125';s.style.width = '700px';
+      s.innerHTML = `<section aria-label="Good afternoon"><div class="m125-sgrid">${[1, 2, 3, 4].map(shortcut).join('')}</div></section>`
+        + `<section data-testid="component-shelf"><div data-encore-id="listRow"><div><div><h2 class="m125-head" data-encore-id="listRowTitle"><span><a href="/section/1">New Music</a></span></h2></div></div><div><a href="/section/1">Show all</a></div></div>`
+        + `<div class="m125-wrap"><div role="grid"><div class="m125-row" role="row">${[1, 2, 3].map(card).join('')}</div></div></div></section>`;
+      host.prepend(s);
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home125 [data-am-shortcut]').length === 4);
+    const box = (sel, i = 0) => page.evaluate(([sel, i]) => { const r = document.querySelectorAll('#mock-home125 ' + sel)[i].getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width, height: r.height }; }, [sel, i]);
+    // The first and the last artwork line up with the shelf's edges, as the title does.
+    const head = await box('[data-encore-id="listRowTitle"]'), first = await box('[data-encore-id="card"] img'), last = await box('[data-encore-id="card"] img', 2), shelf = await box('[data-testid="component-shelf"]');
+    assert.equal(first.left, head.left, 'the artwork starts where the shelf title does');
+    assert.ok(Math.abs(last.right - shelf.right) < 1, `the last artwork ends at the shelf's edge (${last.right} vs ${shelf.right})`);
+    assert.deepEqual(await page.evaluate(() => {
+      const q = s => document.querySelector('#mock-home125 ' + s), cs = (s, p) => getComputedStyle(q(s))[p];
+      return [cs('[data-encore-id="cardTitle"]', 'fontSize'), cs('[data-encore-id="cardSubtitle"] a', 'fontSize'), cs('[data-encore-id="listRowTitle"] [href]', 'textDecorationLine'),
+        getComputedStyle(q('[data-encore-id="listRowTitle"] a'), '::after').maskImage.startsWith('url('), cs('[data-encore-id="listRow"] > div:last-child a', 'display')];
+    }), ['13px', '13px', 'none', true, 'none']);
+    await page.hover('#mock-home125 [data-encore-id="card"] a[href^="/album"]');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-home125 [data-encore-id="card"] a[href^="/album"]')).textDecorationLine), 'none', 'a card title is not underlined on hover');
+    // Shortcuts as the song rows: 56px rows, 48px artwork, a rule under the row from its text, 13px names, and "…" at
+    // the end opens Spotify's menu.
+    const sc = await box('[data-am-shortcut]'), art = await box('[data-am-shortcut] img');
+    assert.deepEqual([sc.height, art.width, art.height], [56, 48, 48]);
+    assert.deepEqual(await page.evaluate(() => { const c = document.querySelector('#mock-home125 [data-am-shortcut]'), st = getComputedStyle(c), rule = getComputedStyle(c, '::after');
+      return [st.backgroundColor, rule.left, rule.bottom, getComputedStyle(c.parentElement).overflow, getComputedStyle(c.querySelector('p')).fontSize, c.parentElement.hasAttribute('data-am-shortcuts')]; }), ['rgba(0, 0, 0, 0)', '60px', '-1px', 'clip', '13px', true]);
+    await page.mouse.move(sc.left + sc.width / 2, (await page.evaluate(() => document.querySelector('#mock-home125 [data-am-shortcut]').getBoundingClientRect().top)) + sc.height / 2);
+    const play = await box('[data-am-shortcut] button[data-encore-id="buttonPrimary"] > span');
+    assert.deepEqual([play.left, play.width], [art.left, 48], 'play sits over the artwork');
+    await page.evaluate(() => document.querySelector('#mock-home125 [data-am-shortcut] [data-testid="shortcut-background"]').addEventListener('contextmenu', e => { window.__shortcutMenu = e.clientX > 0; e.preventDefault(); }));
+    const more = await box('[data-am-shortcut] .am-shortcut-more');
+    assert.ok(Math.abs(more.right - sc.right) < 1, '"…" ends the row');
+    await page.mouse.click(more.left + more.width / 2, more.height / 2 + (await page.evaluate(() => document.querySelector('#mock-home125 .am-shortcut-more').getBoundingClientRect().top)));
+    assert.equal(await page.evaluate(() => window.__shortcutMenu), true, '"…" opens the shortcut\'s menu');
+    await page.evaluate(() => { document.getElementById('mock-home125').remove(); document.getElementById('mock-home125-css').remove(); });
+  });
+
   // Spotify 1.3.6.19xx (Windows) renders track lists, cards and Browse all with hashed CSS-module class names; the
   // theme tags them by role so its rules still match (#109).
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
