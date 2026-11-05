@@ -2573,9 +2573,10 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
     const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .mock-art')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
     assert.deepEqual(await covers(), [['Daily Mix 2', 'band', true], ['Chill Mix', 'band', true], ['Ginkgo Radio', 'station', true], ['', '', false]]);
-    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track.
+    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track. Each lookup starts
+    // when its image loads, and the images load in any order, so the order of the lookups is not checked.
     assert.match(await page.evaluate(() => document.querySelector('#mock-home .am-mix').style.getPropertyValue('--am-mix-photo')), /i\.scdn\.co\/image\/ab6761610000e5eb97f3/);
-    assert.deepEqual(await page.evaluate(() => window.__mixRequests), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
+    assert.deepEqual((await page.evaluate(() => window.__mixRequests)).sort(), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:mix-covers')).length), 3);
     // The hidden title shows under a redrawn cover, the image under it is hidden, and the band is drawn.
     assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), t = b.closest('[data-encore-id="card"]').querySelector('[data-encore-id="cardTitle"]');
