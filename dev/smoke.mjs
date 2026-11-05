@@ -2609,6 +2609,35 @@ try {
     await page.evaluate(() => document.getElementById('mock-home').remove());
   });
 
+  await check('photo headers (Daily Mix, Today\'s Top Hits) are laid out as playlists, with the mix cover as artwork', async () => {
+    // Spotify's page for a mix: no artwork container, an empty slot before the text, the photo in .before-scroll-node,
+    // and "About recommendations" as a button under the creator line. The cover comes from the playlist's metadata.
+    await page.evaluate(() => {
+      document.querySelector('.mock-page').hidden = true;
+      window.__mockPlaylistMeta = { 'spotify:playlist:mockmix': { images: [{ url: 'https://pickasso.spotifycdn.com/image/ab67c0de0000deef/dt/v1/img/daily/1/ab6761610000e5eb97f323784adb2a66291c0cd4/en', label: 'standard' }] } };
+      document.querySelector('main').insertAdjacentHTML('beforeend', `<section data-testid="playlist-page" id="mock-mixpage" style="position:relative">
+        <div data-testid="entity-header" style="position:relative"><div class="main-entityHeader-contentWrapper contentSpacing" style="display:flex"><div style="height:200px"></div>
+          <div class="main-entityHeader-headerText" style="display:flex;flex-direction:column"><span class="encore-text-body-small">Public Playlist</span><span><span class="main-entityHeader-title"><h1>Daily Mix 1</h1></span></span>
+            <div><div class="main-entityHeader-creatorWrapper"><span>Made for</span><span><a>someone</a></span></div></div><button class="mock-about"><span>About recommendations</span></button></div></div></div>
+        <div><div><div data-testid="action-bar" class="contentSpacing"><div data-testid="action-bar-row" style="display:flex"><div><button data-encore-id="buttonPrimary" aria-label="Play"><span>▶</span></button></div></div></div></div></div>
+        <div class="contentSpacing"><div class="main-trackList-trackListContainer" style="height:300px"></div></div></section>`);
+      Spicetify.Platform.History.push('/playlist/mockmix');
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-mixpage .am-photo-art.am-mix-ready'));
+    assert.deepEqual(await page.evaluate(() => { const a = document.querySelector('#mock-mixpage .am-photo-art'), photo = document.querySelector('.before-scroll-node > :has(> [data-testid="background-image"])');
+      return [document.body.classList.contains('am-photo-page'), document.body.classList.contains('am-image-header'), getComputedStyle(a).width, a.dataset.amMix, a.dataset.amMixStyle, getComputedStyle(photo).display]; }),
+      [true, false, '270px', 'Daily Mix 1', 'band', 'none']);
+    // "About recommendations" leaves the header for the line under the track list.
+    assert.ok(await page.evaluate(() => document.querySelector('#mock-mixpage .mock-about').getBoundingClientRect().top >= document.querySelector('#mock-mixpage .main-trackList-trackListContainer').getBoundingClientRect().bottom));
+    // Off: Spotify's photo header comes back.
+    await settingsWindow.pick('photoHeaders');
+    await page.waitForFunction(() => !document.body.classList.contains('am-photo-page') && !document.querySelector('.am-photo-art') && document.body.classList.contains('am-image-header'));
+    await settingsWindow.pick('photoHeaders');
+    await page.waitForFunction(() => document.querySelector('#mock-mixpage .am-photo-art.am-mix-ready'));
+    await page.evaluate(() => { document.getElementById('mock-mixpage').remove(); delete window.__mockPlaylistMeta; document.querySelector('.mock-page').hidden = false; Spicetify.Platform.History.push('/'); });
+    await page.waitForFunction(() => !document.body.classList.contains('am-photo-page') && document.body.classList.contains('am-image-header'));
+  });
+
   // Spotify 1.3.6.19xx (Windows) renders track lists, cards and Browse all with hashed CSS-module class names; the
   // theme tags them by role so its rules still match (#109).
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {

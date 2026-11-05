@@ -3062,8 +3062,29 @@
     try{localStorage.setItem('mcloud:header-colors',JSON.stringify([...headerColors]));}catch{}
   }
   let headerImage='',headerHost=null,headerFrame=null;
+  // Playlists with a full-width photo header (Daily Mix, "… Mix", Today's Top Hits) are laid out as the others, as
+  // Music draws its mixes and editorial playlists: the header's empty artwork slot (.am-photo-art) shows the playlist's
+  // cover (a mix's redrawn as on Home, settings.mixCovers) and user.css hides the photo. Covers come from syncPlaylist.
+  let photoReady=false,photoPage=false;const photoCovers=new Map();
+  function syncPhotoArt() {
+    if(!photoReady)return;
+    const id=playlistId(),header=id&&settings.photoHeaders?main?.querySelector('[data-testid="playlist-page"] > [data-testid="entity-header"]'):null;
+    const slot=header&&!header.querySelector('.main-entityHeader-imageContainer')?header.querySelector('.main-entityHeader-contentWrapper > div:first-child:empty'):null;
+    for(const old of main?.querySelectorAll('.am-photo-art')||[])if(old!==slot){old.classList.remove('am-photo-art','am-mix','am-mix-ready','am-mix-plain');delete old.dataset.amMixSrc;}
+    if(photoPage!==!!slot){photoPage=!!slot;document.body.classList.toggle('am-photo-page',photoPage);}
+    if(!slot)return;
+    slot.classList.add('am-photo-art');
+    const url=photoCovers.get(id);if(!url||slot.dataset.amMixSrc===url)return;
+    slot.dataset.amMixSrc=url;
+    if(!mixUrl.test(url)||settings.mixCovers==='spotify'){slot.classList.remove('am-mix','am-mix-ready','am-mix-plain');slot.style.setProperty('--am-photo-art',`url("${spotifyImage(url)}")`);return;}
+    slot.dataset.amMixStyle=mixStyle(url);slot.dataset.amMix=header.querySelector('h1')?.textContent.trim()||'';
+    slot.classList.add('am-mix');slot.style.setProperty('--am-mix-radius','10px');
+    const known=mixCovers.get(url);if(known){drawMix(slot,known);return;}
+    slot.classList.remove('am-mix-ready');
+    mixCover(url).then(cover=>{if(cover&&slot.dataset.amMixSrc===url)drawMix(slot,cover);});
+  }
   function syncHeaderColor() {
-    const image=main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
+    const image=photoPage?null:main?.querySelector('.before-scroll-node [data-testid="background-image"]'),url=spotifyImage(/url\("?([^")]+)"?\)/.exec(image?.style.backgroundImage||'')?.[1]||'');
     if(url===headerImage)return;headerImage=url;
     if(!url){document.body.classList.remove('am-image-header');return;}
     const known=headerColors.get(url);
@@ -3088,7 +3109,7 @@
       if(frame)headerObserver.observe(frame,{childList:true});
       if(host)headerObserver.observe(host,{childList:true,subtree:true,attributes:true,attributeFilter:['style']});
     }
-    syncHeaderColor();
+    syncPhotoArt();syncHeaderColor();
   }
   // Header image sources give maxWidth instead of width.
   const bySize=visual=>[...(visual?.sources||[])].sort((a,b)=>(a.width||a.maxWidth||0)-(b.width||b.maxWidth||0));
@@ -3649,7 +3670,7 @@
   defineSetting({key:'mixCovers',group:'home',label:T('Mix kapakları','Mix covers'),type:'choice',default:'apple',
     options:[['apple',T('Apple Music gibi','As Apple Music')],['band',T('Şerit (Essentials)','Band (Essentials)')],['gradient',T('Renk geçişi (kişisel mix)','Gradient (personal mix)')],['station',T('Yuvarlak fotoğraf (istasyon)','Round photo (station)')],['photo',T('Yalnız fotoğraf','Photo only')],['spotify','Spotify']],
     note:T('Daily Mix, "… Mix", radyo ve This Is kapakları. Fotoğraf Spotify\'ın kendi görselinden gelir.','Daily Mix, "… Mix", radio and This Is covers. The photo comes from Spotify\'s own image.'),
-    apply:()=>{document.body.classList.toggle('am-mix-titles',settings.mixCovers!=='spotify');for(const img of document.querySelectorAll(mixImages))markMix(img);}});
+    apply:()=>{document.body.classList.toggle('am-mix-titles',settings.mixCovers!=='spotify');for(const img of document.querySelectorAll(mixImages))markMix(img);for(const box of document.querySelectorAll('.am-photo-art'))delete box.dataset.amMixSrc;syncPhotoArt();}});
   // Song previews: Spotify's watch feed ("Explore" on album, playlist and artist pages, Home's preview shelf) opens as
   // an overlay in .Root, a card with the song's info, a column of canvas cards and a column of buttons. The theme marks
   // the overlay (data-am-preview) and user.css restyles it as an Apple sheet (it has no Apple counterpart, so it follows
@@ -3894,6 +3915,7 @@
     if(request!==albumRequest)return;
     setListInfo(Number.isFinite(meta?.totalLength)&&meta.totalLength>0?listInfo(meta.totalLength,meta.duration?.milliseconds||0,true):'');
     const images=meta?.images||[],cover=(images.find(image=>image.label==='standard')||images[0])?.url;
+    if(cover&&photoCovers.get(id)!==cover){photoCovers.set(id,cover);watchHeader();}
     if(!tint||!cover){body.remove('am-album-tinted');return;}
     if(!playlistColors.has(cover)){body.remove('am-album-tinted');if(playlistColors.size>50)playlistColors.delete(playlistColors.keys().next().value);playlistColors.set(cover,await artworkColor(spotifyImage(cover)));}
     if(request===albumRequest)pageTint(playlistColors.get(cover));
@@ -3912,6 +3934,7 @@
   pageSetting({key:'albumClean',group:'pages',section:T('Albümler','Albums'),label:T('Sade albüm listesi','Clean album track list'),note:T('Sanatçı yalnızca konuk ya da başka bir sanatçı varsa görünür.','The artist shows only when a guest or another artist is on the track.'),type:'toggle',default:true,apply:value=>{document.body.classList.toggle('am-album-clean',value);syncAlbum();}});
   // Album and playlist pages can take their colour from the artwork, like artist pages: a wash at the top, or the whole page.
   const tintOptions=[['off',T('Kapalı','Off')],['subtle',T('Hafif','Subtle')],['full',T('Tam','Full')]];
+  pageSetting({key:'photoHeaders',group:'pages',section:T('Çalma listeleri','Playlists'),label:T('Fotoğraflı başlıklar kapakla','Photo headers as artwork'),note:T('Daily Mix, "… Mix" ve Today\'s Top Hits gibi listeler de solda kapakla açılır, Apple Music\'teki gibi.','Daily Mix, "… Mix" and lists like Today\'s Top Hits open with their artwork on the left, as in Apple Music.'),type:'toggle',default:true,apply:()=>{photoReady=true;watchHeader();}});
   pageSetting({key:'albumTint',group:'pages',section:T('Albümler','Albums'),label:T('Albüm ve çalma listesi rengi','Album and playlist colour'),type:'choice',style:'segmented',default:'off',options:tintOptions,apply:syncAlbum});
   // Track numbers can be hidden (settings.numbers, numbersAlbum on albums; body.am-no-numbers). Spotify's "Change visible columns" menu is
   // where columns are picked, so it gets a "Track number" row of the theme's own, built from its items' classes and
