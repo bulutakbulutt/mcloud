@@ -126,15 +126,42 @@
       relatedArtists: { items: ['Canozan', 'Dolu Kadehi Ters Tut', 'Sufle', 'Pinhani', 'Cem Adrian'].map((n, i) => ({ uri: 'spotify:artist:s' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 70 + i) } })) },
     },
   };
+  // searchDesktop (searchV2): Top Results wrap each item twice (itemsV2[].item.data), the song list once (items[].item.data),
+  // every other kind once (items[].data).
+  const person = (n, i) => ({ __typename: 'Artist', uri: 'spotify:artist:q' + i, profile: { name: n }, visuals: { avatarImage: cover(n, 90 + i) } });
+  const searchTrack = (n, i) => ({ __typename: 'Track', uri: 'spotify:track:q' + i, name: n, contentRating: { label: i % 3 ? 'NONE' : 'EXPLICIT' }, duration: { totalMilliseconds: 180000 + i * 7000 },
+    albumOfTrack: { uri: 'spotify:album:qa' + i, name: n, coverArt: cover(n, 10 + i) }, artists: { items: [{ uri: 'spotify:artist:q0', profile: { name: 'Sena Şener' } }] } });
+  const searchAlbum = (n, i) => ({ __typename: 'Album', uri: 'spotify:album:qb' + i, name: n, type: i ? 'ALBUM' : 'SINGLE', date: { year: 2026 - i }, coverArt: cover(n, 30 + i), artists: { items: [{ uri: 'spotify:artist:q0', profile: { name: 'Sena Şener' } }] } });
+  const searchList = (n, i) => ({ __typename: 'Playlist', uri: 'spotify:playlist:qp' + i, name: n, images: { items: [cover(n, 60 + i)] }, ownerV2: { data: { __typename: 'User', name: 'Spotify', uri: 'spotify:user:spotify' } } });
+  const songs = ['Sev Diyeydi', 'Sevmemeliyiz', 'Alışılır Mı Aşka', 'Affettim Herkesi', 'Fly Above', 'Affetmem', 'Dönmek', 'Kaybettiklerimi Geri Ver', 'Feel', 'Gurbet'].map(searchTrack);
+  window.__mockSearch = {
+    topResultsV2: { itemsV2: [person('Sena Şener', 0), songs[0], searchAlbum('İnsan Gelir İnsan Geçer', 1), songs[1], searchList('This Is Sena Şener', 0), songs[2], songs[3], songs[4]].map(data => ({ item: { data } })) },
+    artists: { items: ['Sena Şener', 'Sena', 'Senanur', 'Sena Kaya', 'Sena Sener Trio', 'DJ Sena', 'Sena Band'].map((n, i) => ({ data: person(n, i) })) },
+    albumsV2: { items: ['Sev Diyeydi', 'İnsan Gelir İnsan Geçer', 'Deluxe', 'Akustik', 'Canlı', 'Remixler', 'Yeni'].map((n, i) => ({ data: searchAlbum(n, i) })) },
+    tracksV2: { items: songs.map(data => ({ item: { data } })) },
+    playlists: { items: ['This Is Sena Şener', 'Türkçe Indie', 'Akustik Akşamlar', 'Yol'].map((n, i) => ({ data: searchList(n, i) })) },
+    podcasts: { items: [] }, episodes: { items: [] }, users: { items: [{ data: { __typename: 'User', uri: 'spotify:user:sena', displayName: 'Sena', avatar: cover('Sena', 99) } }] }, genres: { items: [] },
+  };
+  // A kind's page (searchTracks, searchAlbums, …: Spotify's tabs) answers 30 at a time from offset, with pagingInfo's
+  // nextOffset, null on the last page; 45 of each.
+  const searchKindMock = { searchTracks: ['tracksV2', i => ({ item: { data: searchTrack('Şarkı ' + (i + 1), 20 + i) } })], searchArtists: ['artists', i => ({ data: person('Sanatçı ' + (i + 1), 20 + i) })],
+    searchAlbums: ['albumsV2', i => ({ data: searchAlbum('Albüm ' + (i + 1), 20 + i) })], searchPlaylists: ['playlists', i => ({ data: searchList('Liste ' + (i + 1), 20 + i) })],
+    searchUsers: ['users', i => ({ data: { __typename: 'User', uri: 'spotify:user:u' + i, displayName: 'Profil ' + (i + 1), avatar: cover('P', 20 + i) } })] };
+  const searchKindPage = (name, { offset, limit }) => {
+    const [field, item] = searchKindMock[name], end = Math.min(45, offset + limit);
+    return { data: { searchV2: { [field]: { totalCount: 45, pagingInfo: { nextOffset: end < 45 ? end : null }, items: Array.from({ length: end - offset }, (_, k) => item(offset + k)) } } } };
+  };
   if (new URLSearchParams(location.search).get('menu') === 'submenu') delete Spicetify.Menu.Item.prototype.register;
   Spicetify.Locale = { getLocale: () => new URLSearchParams(location.search).get('locale') || 'tr', get: key => ({ 'web-player.aligned-curation.tooltips.remove-from-liked-songs': 'Remove from Liked Songs', save_to_your_library: 'Save to Your Library', remove_from_your_library: 'Remove from Your Library' })[key] ?? key };
   Spicetify.GraphQL = {
-    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
+    Definitions: { queryArtistOverview: { name: 'queryArtistOverview' }, searchDesktop: { name: 'searchDesktop' }, ...Object.fromEntries(['searchTracks', 'searchArtists', 'searchAlbums', 'searchPlaylists', 'searchUsers'].map(name => [name, { name }])), getAlbum: { name: 'getAlbum' }, fetchExtractedColorAndImageForArtistEntity: { name: 'fetchExtractedColorAndImageForArtistEntity' }, fetchExtractedColorAndImageForTrackEntity: { name: 'fetchExtractedColorAndImageForTrackEntity' } },
     // getAlbum answers in Spotify's albumUnion shape (the fields the theme reads), from window.__mockAlbums by id. The mix
     // covers' photo lookups (an artist's avatar, a track's album art) answer as Spotify's small colour-and-image queries.
     Request: async (def, vars) => def.name === 'getAlbum'
       ? (window.__albumRequests ||= []).push(vars) && { data: { albumUnion: (window.__mockAlbums || {})[vars.uri.split(':').pop()] || { __typename: 'NotFound' } } }
       : def.name === 'fetchExtractedColorAndImageForArtistEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { artistUnion: { visuals: { avatarImage: cover('Mix', 9) } } } }
+      : searchKindMock[def.name] ? (window.__searchRequests ||= []).push({ kind: def.name, ...vars }) && searchKindPage(def.name, vars)
+      : def.name === 'searchDesktop' ? (window.__searchRequests ||= []).push(vars) && (window.__mockSearchFail ? { errors: [{ message: 'mock' }] } : { data: { searchV2: window.__mockSearch } })
       : def.name === 'fetchExtractedColorAndImageForTrackEntity' ? (window.__mixRequests ||= []).push(vars.uri) && { data: { trackUnion: { albumOfTrack: { coverArt: cover('Radio', 5) } } } }
       : (window.__artistRequests ||= []).push(vars) && { data: { artistUnion: window.__mockArtist } },
   };

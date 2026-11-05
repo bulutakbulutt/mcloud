@@ -1087,9 +1087,9 @@ body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loadi
 #search-dropdown [data-overlayscrollbars-viewport] > p {margin:0!important;padding:0 17px!important;font:600 11px/24px var(--encore-body-font-stack)!important;color:rgb(var(--am-ink)/.549)!important}
 #search-dropdown [data-overlayscrollbars-viewport] > button {display:block!important;width:auto!important;height:24px!important;min-height:0!important;margin:5px 0 0!important;padding:0 17px!important;border:0!important;background:none!important;box-shadow:none!important;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:400 13px/24px var(--encore-body-font-stack)!important;color:var(--am-accent-focus)!important}
 /* Over the library, the loading list is lifted with #main as the results are (below). */
-body.am-library-open #main:has(#search-suggestions-loading-dropdown) {z-index:30!important;pointer-events:none;background:transparent!important;transition:none!important}
-body.am-library-open #main:has(#search-suggestions-loading-dropdown) #global-nav-bar {pointer-events:auto}
-body.am-library-open #main:has(#search-suggestions-loading-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+body:is(.am-library-open,.am-search-results) #main:has(#search-suggestions-loading-dropdown) {z-index:30!important;pointer-events:none;background:transparent!important;transition:none!important}
+body:is(.am-library-open,.am-search-results) #main:has(#search-suggestions-loading-dropdown) #global-nav-bar {pointer-events:auto}
+body:is(.am-library-open,.am-search-results) #main:has(#search-suggestions-loading-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The field while it has focus: Apple's ring, the accent at about half strength, 3pt outside the glass. */
 body.am-tglass-on #global-nav-bar form[role="search"] input:focus {box-shadow:0 0 0 3px color-mix(in srgb,var(--am-accent) 55%,transparent)!important}
 #global-nav-bar .am-toolbar-leading div:empty {display:none!important}
@@ -1158,12 +1158,16 @@ body.am-spicy-fullscreen :is(.am-native-sidebar,.am-native-right).am-native-pane
 /* Native panels share Spotify's stacking context; lift it over the custom views. So do the search field's live
    results (#search-dropdown, inside the toolbar), which the library hid while typing. The :has() is on #main, not
    body: on body, every element added anywhere (a menu's rows) re-checked it and restyled the page (~6ms a menu). */
-body.am-panel-open #main,body.am-np-spicy #main,body.am-library-open #main:has(#search-dropdown) {z-index:30!important}
+body.am-panel-open #main,body.am-np-spicy #main,body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) {z-index:30!important}
 /* Lifted, Spotify's transparent layout covers the library and artist views; let clicks through to them. */
-body.am-panel-open:is(.am-library-open,.am-artist-open) #main,body.am-np-spicy:is(.am-library-open,.am-artist-open) #main,body.am-library-open #main:has(#search-dropdown) {pointer-events:none}
-body.am-panel-open:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-np-spicy:is(.am-library-open,.am-artist-open) #global-nav-bar,body.am-library-open #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
+body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #main,body.am-np-spicy:is(.am-library-open,.am-artist-open,.am-search-results) #main,body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) {pointer-events:none}
+body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body.am-np-spicy:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
-body.am-panel-open :is(#main,.Root,.am-layout),body.am-np-spicy :is(#main,.Root,.am-layout),body.am-library-open #main:has(#search-dropdown),body.am-library-open #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+body.am-panel-open :is(#main,.Root,.am-layout),body.am-np-spicy :is(#main,.Root,.am-layout),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
+/* Search results start at the window's top, under the toolbar: #main stays lifted over them while they show. */
+body.am-search-results #main {z-index:30!important;pointer-events:none}
+body.am-search-results #global-nav-bar {pointer-events:auto}
+body.am-search-results :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
@@ -1219,15 +1223,15 @@ body.am-artist-open #global-nav-bar {visibility:hidden!important;pointer-events:
 body.am-artist-open #am-toolbar-glass {display:none!important}
 /* The artist page fills the window under the glass sidebar; its content starts beside it. */
 #am-artist {box-sizing:border-box;position:fixed;inset:0;z-index:10;overflow:auto;overflow-x:hidden;color:rgb(var(--am-ink));font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em;background:linear-gradient(180deg,var(--am-tint-top,#3a3a3a) 0,var(--am-tint-top,#3a3a3a) 40vh,var(--am-tint-bg,var(--am-bg)) 140vh) var(--am-tint-bg,var(--am-bg));padding-bottom:110px;scrollbar-width:none}
-#am-artist *,#am-artist *::before {box-sizing:border-box}
+#am-artist *,#am-artist *::before,#am-search *,#am-search *::before {box-sizing:border-box}
 /* Overlay scrollbar (theme.js): Windows' classic one took a column and cut the artwork and colour short. */
 #am-library {scrollbar-width:none}
 .am-scroll-thumb {position:fixed;top:0;right:3px;z-index:58;width:7px;border-radius:4px;background:rgb(var(--am-ink)/.349);opacity:0;transition:opacity .3s,width .15s,background-color .15s;-webkit-app-region:no-drag}
 .am-scroll-thumb:hover,.am-scroll-thumb.am-dragging {width:9px;opacity:1;background:rgb(var(--am-ink)/.549)}
-body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scroll-library {display:none}
-#am-artist button {appearance:none;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:0;cursor:pointer;text-align:left}
-#am-artist button:focus-visible {outline:2px solid rgb(var(--am-ink));outline-offset:2px}
-#am-artist svg {width:18px;height:18px;flex-shrink:0}
+body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scroll-library,body:not(.am-search-results) .am-scroll-search {display:none}
+:is(#am-artist,#am-search) button {appearance:none;border:0;background:none;color:inherit;font:inherit;letter-spacing:inherit;padding:0;cursor:pointer;text-align:left}
+:is(#am-artist,#am-search) button:focus-visible {outline:2px solid rgb(var(--am-ink));outline-offset:2px}
+:is(#am-artist,#am-search) svg {width:18px;height:18px;flex-shrink:0}
 .am-artist-loading {margin:0;padding:120px 32px 120px calc(var(--am-side) + 32px);color:rgb(var(--am-ink)/.6);font-size:13px}
 /* These sit in the window's title-bar strip, which Spotify marks draggable; no-drag gives them clicks back. */
 #am-artist .am-artist-back,#am-artist .am-artist-actions {-webkit-app-region:no-drag;position:fixed;top:12px;z-index:3;display:flex;align-items:center;height:36px;border-radius:999px;background:color-mix(in srgb,var(--am-tint-top,#555) 70%,#fff 12%);box-shadow:inset 0 1px 1px rgb(255 255 255/.18),0 2px 8px #0002;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
@@ -1356,37 +1360,37 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 @media(prefers-reduced-motion:reduce){#am-artist-info{animation:none}.am-info-stage{position:static;animation:none}}
 .am-artist-body {display:flex;flex-direction:column;gap:30px;padding:10px 0 0 var(--am-side)}
 .am-shelf {position:relative}
-#am-artist .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}
-#am-artist button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:rgb(var(--am-ink)/.627)}
+:is(#am-artist,#am-search) .am-shelf-title {display:flex;align-items:center;gap:3px;margin:0 0 10px;padding:0 32px;font-size:17px;font-weight:700;letter-spacing:-.01em}
+:is(#am-artist,#am-search) button.am-shelf-title svg {width:14px;height:14px;stroke-width:2.6;color:rgb(var(--am-ink)/.627)}
 .am-shelf-track {display:grid;grid-auto-flow:column;grid-auto-columns:160px;gap:18px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding:0 32px;padding:0 32px 4px;scrollbar-width:none}
 .am-shelf-track::-webkit-scrollbar {display:none}
 /* Rows reach under the sidebar, so cards slide behind the glass as they scroll. */
 #am-artist .am-shelf-track {margin-left:calc(-1 * var(--am-side));padding-left:calc(var(--am-side) + 32px);scroll-padding-left:calc(var(--am-side) + 32px)}
 .am-shelf-track > * {scroll-snap-align:start}
-#am-artist .am-shelf-arrow {position:absolute;top:calc(50% + 4px);transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#00000059;backdrop-filter:blur(10px);opacity:0;transition:opacity .15s;z-index:2}
-#am-artist .am-shelf-arrow svg {width:15px;height:15px;stroke-width:2.4}
-#am-artist .am-shelf-arrow[hidden] {display:none}
-.am-shelf:hover .am-shelf-arrow,#am-artist .am-shelf-arrow:focus-visible {opacity:1}
-#am-artist .am-prev {left:4px}
-#am-artist .am-next {right:4px}
-#am-artist .am-card {position:relative;min-width:0}
-#am-artist .am-card-open {display:flex;flex-direction:column;gap:2px;width:100%;min-width:0}
+:is(#am-artist,#am-search) .am-shelf-arrow {position:absolute;top:calc(50% + 4px);transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#00000059;backdrop-filter:blur(10px);opacity:0;transition:opacity .15s;z-index:2}
+:is(#am-artist,#am-search) .am-shelf-arrow svg {width:15px;height:15px;stroke-width:2.4}
+:is(#am-artist,#am-search) .am-shelf-arrow[hidden] {display:none}
+.am-shelf:hover .am-shelf-arrow,:is(#am-artist,#am-search) .am-shelf-arrow:focus-visible {opacity:1}
+:is(#am-artist,#am-search) .am-prev {left:4px}
+:is(#am-artist,#am-search) .am-next {right:4px}
+:is(#am-artist,#am-search) .am-card {position:relative;min-width:0}
+:is(#am-artist,#am-search) .am-card-open {display:flex;flex-direction:column;gap:2px;width:100%;min-width:0}
 .am-card-art {display:block;aspect-ratio:1;margin-bottom:6px;border-radius:8px;overflow:hidden;background:rgb(var(--am-ink)/.078);box-shadow:0 0 0 1px rgb(var(--am-ink)/.071) inset}
 .am-card-art img {display:block;width:100%;height:100%;object-fit:cover}
 /* Hover as on Apple Music: the artwork dims a little and a round glass play (bottom left) and "…" (bottom right) appear. */
-#am-artist :is(.am-card,.am-latest-cover):is(:hover,:focus-within) img {filter:brightness(.92)}
+:is(#am-artist :is(.am-card,.am-latest-cover),#am-search .am-card):is(:hover,:focus-within) img {filter:brightness(.92)}
 /* The buttons fade, not their box: an ancestor below opacity 1 is the buttons' backdrop root, so their blur saw nothing
    but the box while it faded and snapped onto the artwork at 1 (the flicker). The library's buttons get the artist page's
    button reset here (no UA border or padding). */
-:is(#am-artist,#am-library) .am-card-tools {position:absolute;left:0;top:0;width:100%;aspect-ratio:1;pointer-events:none}
+:is(#am-artist,#am-library,#am-search) .am-card-tools {position:absolute;left:0;top:0;width:100%;aspect-ratio:1;pointer-events:none}
 #am-artist .am-latest-cover .am-card-tools {height:100%}
-:is(#am-artist,#am-library) .am-card-tools button {appearance:none;position:absolute;bottom:8px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgb(0 0 0/.42);-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff;cursor:pointer;pointer-events:auto;opacity:0;transition:opacity .15s,background-color .15s}
-:is(#am-artist :is(.am-card,.am-latest-cover),#am-library .am-library-item):is(:hover,:focus-within) .am-card-tools button {opacity:1}
-:is(#am-artist,#am-library) .am-card-tools button:hover {background:var(--am-accent)}
-:is(#am-artist,#am-library) .am-tool-play {left:8px}
-:is(#am-artist,#am-library) .am-tool-more {right:8px}
-:is(#am-artist,#am-library) .am-tool-play svg {width:13px;height:13px}
-:is(#am-artist,#am-library) .am-tool-more svg {width:15px;height:15px}
+:is(#am-artist,#am-library,#am-search) .am-card-tools button {appearance:none;position:absolute;bottom:8px;display:grid;place-items:center;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgb(0 0 0/.42);-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff;cursor:pointer;pointer-events:auto;opacity:0;transition:opacity .15s,background-color .15s}
+:is(#am-artist :is(.am-card,.am-latest-cover),#am-library .am-library-item,#am-search .am-card):is(:hover,:focus-within) .am-card-tools button {opacity:1}
+:is(#am-artist,#am-library,#am-search) .am-card-tools button:hover {background:var(--am-accent)}
+:is(#am-artist,#am-library,#am-search) .am-tool-play {left:8px}
+:is(#am-artist,#am-library,#am-search) .am-tool-more {right:8px}
+:is(#am-artist,#am-library,#am-search) .am-tool-play svg {width:13px;height:13px}
+:is(#am-artist,#am-library,#am-search) .am-tool-more svg {width:15px;height:15px}
 /* Stretched: the centred column would size an artwork without a photo to its empty image, 0px wide (#127). */
 .am-card-round .am-card-art {border-radius:50%;align-self:stretch}
 .am-card-round .am-card-open {align-items:center;text-align:center}
@@ -1409,16 +1413,16 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-song-grid {display:grid;grid-template-rows:repeat(3,auto);grid-auto-flow:column;grid-auto-columns:310px;column-gap:30px}
 .am-song {display:flex;align-items:center;gap:6px;min-width:0;border-bottom:1px solid rgb(var(--am-ink)/.11)}
 .am-song:nth-child(3n) {border-bottom:0}
-#am-artist .am-song-main {flex:1;display:flex;align-items:center;gap:12px;min-width:0;padding:5px 0}
+:is(#am-artist,#am-search) .am-song-main {flex:1;display:flex;align-items:center;gap:12px;min-width:0;padding:5px 0}
 .am-song-thumb {position:relative;flex:0 0 44px;height:44px;border-radius:5px;background:rgb(var(--am-ink)/.078)}
 .am-song-art {display:block;width:44px;height:44px;border-radius:5px;object-fit:cover;background:rgb(var(--am-ink)/.078)}
-#am-artist .am-song-thumb svg {position:absolute;inset:0;margin:auto;width:16px;height:16px;color:#fff;opacity:0;transition:opacity .15s}
-#am-artist .am-song-main:is(:hover,:focus-visible) .am-song-art {filter:brightness(.6)}
-#am-artist .am-song-main:is(:hover,:focus-visible) .am-song-thumb svg {opacity:1}
+:is(#am-artist,#am-search) .am-song-thumb svg {position:absolute;inset:0;margin:auto;width:16px;height:16px;color:#fff;opacity:0;transition:opacity .15s}
+:is(#am-artist,#am-search) .am-song-main:is(:hover,:focus-visible) .am-song-art {filter:brightness(.6)}
+:is(#am-artist,#am-search) .am-song-main:is(:hover,:focus-visible) .am-song-thumb svg {opacity:1}
 .am-song-text {display:flex;flex-direction:column;min-width:0}
 .am-song-name,.am-song-sub {font-size:13px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-song-sub {color:var(--am-tint-text,rgb(var(--am-ink)/.6))}
-#am-artist .am-song-more {display:grid;place-items:center;width:28px;height:28px;color:rgb(var(--am-ink)/.753);opacity:.85}
+:is(#am-artist,#am-search) .am-song-more {display:grid;place-items:center;width:28px;height:28px;color:rgb(var(--am-ink)/.753);opacity:.85}
 .am-concert-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:4px 30px;padding:0 32px}
 .am-concert {display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid rgb(var(--am-ink)/.11)}
 .am-concert-day {display:grid;place-items:center;width:36px;height:36px;border-radius:7px;background:rgb(var(--am-ink)/.122);font-size:17px;font-weight:600}
@@ -1427,6 +1431,84 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 .am-concert-detail {font-size:11px;color:var(--am-tint-text,rgb(var(--am-ink)/.6));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .am-about-text {max-width:760px;margin:0;padding:0 32px;font-size:13px;line-height:1.5;color:rgb(var(--am-ink)/.816);display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .am-about-stat {margin:10px 0 0;padding:0 32px;font-size:13px;color:var(--am-tint-text,rgb(var(--am-ink)/.6))}
+/* Search results (#126) as macOS 27 Music's, measured over AX with the window 1078–1600pt wide: the page 34pt in,
+   sections 25pt apart with the heading 13pt above its content. A shelf's step is its width over the cards it shows, so
+   the next card starts at the right margin, and the gap is 16pt up to four albums a row, 20pt from five. Cards a row
+   (Top Results, Albums and Playlists, Artists, Song columns): content 732pt 3/4/5/2, 904pt 3/4/5/2, 1074pt 4/5/6/3,
+   1254pt 4/6/7/3. Top Results are two rows of 80pt plates (12pt corners, 42pt artwork 14pt in, text 12pt after it); a
+   song column is three 56pt rows with 48pt artwork and the rule under a row starts at its text. The cards and song rows
+   are the artist page's. */
+/* The page starts at the window's top, as the artist page and Spotify's own pages do, so results scroll under the
+   toolbar and its shade instead of being cut at a hard edge below it. */
+body:not(.am-search-results) #am-search {display:none!important}
+body.am-search-results .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+#am-search {--am-sp:34px;--am-sw:calc(100cqw - 2 * var(--am-sp));box-sizing:border-box;position:fixed;inset:0 0 0 var(--am-side);z-index:10;container-type:inline-size;overflow:auto;overflow-x:hidden;scrollbar-width:none;padding:calc(var(--am-page-top) + 14px) 0 120px;background:var(--am-bg);color:rgb(var(--am-ink));font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+#am-search::-webkit-scrollbar {display:none}
+.am-search-status {margin:0;padding:24px var(--am-sp);color:rgb(var(--am-ink)/.6);font-size:13px}
+#am-search .am-shelf + .am-shelf {margin-top:25px}
+#am-search .am-shelf-title {margin:0 0 13px;padding:0 var(--am-sp);line-height:19px}
+#am-search :is(.am-shelf,.am-search-grid) {--am-g:16px;--am-n-top:2;--am-n-album:3;--am-n-artist:4;--am-n-song:1;--am-n:var(--am-n-album)}
+#am-search :is(.am-shelf-artists,.am-search-round) {--am-n:var(--am-n-artist)}
+@container (min-width:640px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-top:3;--am-n-album:4;--am-n-artist:5;--am-n-song:2}}
+@container (min-width:1060px) {#am-search :is(.am-shelf,.am-search-grid) {--am-g:20px;--am-n-top:4;--am-n-album:5;--am-n-artist:6;--am-n-song:3}}
+@container (min-width:1250px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-album:6;--am-n-artist:7}}
+@container (min-width:1450px) {#am-search :is(.am-shelf,.am-search-grid) {--am-n-album:7;--am-n-artist:8;--am-n-song:4}}
+#am-search .am-shelf-track {gap:var(--am-g);padding:0 var(--am-sp) 4px;scroll-padding:0 var(--am-sp);grid-auto-columns:calc(var(--am-sw) / var(--am-n) - var(--am-g))}
+#am-search .am-shelf-arrow {top:calc(50% + 16px)}
+/* Top Results: two rows; what a third would hold is left out. */
+.am-top-grid {display:grid;grid-template-columns:repeat(var(--am-n-top),minmax(0,1fr));gap:var(--am-g);padding:0 var(--am-sp)}
+.am-top-grid > :nth-child(n+5) {display:none}
+@container (min-width:640px) {.am-top-grid > :nth-child(n+5) {display:flex}.am-top-grid > :nth-child(n+7) {display:none}}
+@container (min-width:1060px) {.am-top-grid > :nth-child(n+7) {display:flex}}
+.am-top-result {position:relative;display:flex;align-items:center;min-width:0;height:80px;border-radius:12px;background:rgb(var(--am-ink)/.071)}
+.am-top-result:hover {background:rgb(var(--am-ink)/.1)}
+#am-search .am-top-open {flex:1;display:flex;align-items:center;min-width:0;height:100%;padding:0 14px;border-radius:inherit}
+#am-search .am-top-open:focus-visible {outline-offset:-2px}
+.am-top-art {position:relative;flex:0 0 42px;height:42px;margin-right:12px;border-radius:5px;overflow:hidden;background:rgb(var(--am-ink)/.078);box-shadow:0 0 0 .5px rgb(var(--am-ink)/.1) inset}
+.am-top-art.am-round {border-radius:50%}
+.am-top-art img {display:block;width:100%;height:100%;object-fit:cover}
+#am-search .am-top-art svg {position:absolute;inset:0;margin:auto;width:16px;height:16px;color:#fff;opacity:0;transition:opacity .15s}
+#am-search .am-top-open:is(:hover,:focus-visible) .am-top-art:has(svg) img {filter:brightness(.6)}
+#am-search .am-top-open:is(:hover,:focus-visible) .am-top-art svg {opacity:1}
+.am-top-text {flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.am-top-name {display:flex;align-items:center;gap:5px;min-width:0;font-size:15px;line-height:19px}
+.am-top-title,.am-song-title {min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.am-top-sub {font-size:13px;line-height:17px;color:rgb(var(--am-ink)/.6);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#am-search .am-top-open > svg {flex:none;width:14px;height:14px;margin-left:8px;stroke-width:2.4;color:rgb(var(--am-ink)/.6)}
+#am-search .am-top-more {flex:none;display:grid;place-items:center;width:28px;height:28px;margin-right:10px;border-radius:50%;color:rgb(var(--am-ink)/.8)}
+#am-search .am-top-more:hover {background:rgb(var(--am-ink)/.1)}
+/* Apple's explicit mark: a small grey square with the page's colour for the letter. */
+.am-explicit {flex:none;display:inline-grid;place-items:center;width:12px;height:12px;border-radius:3px;background:rgb(var(--am-ink)/.45);color:var(--am-bg);font-size:9px;font-weight:700;line-height:1;letter-spacing:0}
+.am-song-name {display:flex;align-items:center;gap:5px}
+/* Songs: columns of three rows. */
+#am-search .am-shelf-songs .am-shelf-track {grid-auto-columns:max-content}
+#am-search .am-song-grid {grid-auto-columns:calc(var(--am-sw) / var(--am-n-song) - var(--am-g));column-gap:var(--am-g)}
+#am-search .am-song {position:relative;height:56px;border-bottom:0}
+#am-search .am-song:not(:nth-child(3n))::after {content:'';position:absolute;left:60px;right:0;bottom:0;height:1px;background:rgb(var(--am-ink)/.11)}
+#am-search .am-song-main {padding:0}
+#am-search .am-song-thumb,#am-search .am-song-art {flex-basis:48px;width:48px;height:48px}
+#am-search :is(.am-song-name,.am-song-sub) {font-size:15px;line-height:19px}
+#am-search .am-song-sub {font-size:13px;line-height:17px;color:rgb(var(--am-ink)/.6)}
+#am-search .am-card-name {font-size:13px}
+/* A heading's own page (Apple's "see all"): a large title, then the shelf's cards in rows of as many as the shelf shows,
+   or Songs as Apple's Song / Artist / Album / Time table: hairline column marks in the header, a rule under each row. */
+.am-search-heading {margin:0 0 14px;padding:0 var(--am-sp);font-size:28px;line-height:34px;font-weight:700;letter-spacing:-.02em}
+#am-search .am-search-grid {display:grid;grid-template-columns:repeat(var(--am-n),minmax(0,1fr));gap:24px var(--am-g);padding:0 var(--am-sp)}
+.am-song-table {padding:0 var(--am-sp)}
+:is(.am-table-head,.am-table-row) {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.15fr) 56px 28px;align-items:center}
+:is(.am-table-head,.am-table-row) > :not(:first-child,:last-child) {padding-left:12px}
+.am-table-head {height:30px;font-size:12px;font-weight:600;color:rgb(var(--am-ink)/.6);box-shadow:inset 0 -1px rgb(var(--am-ink)/.11)}
+.am-table-head > :not(:first-child,:last-child) {background:linear-gradient(rgb(var(--am-ink)/.16),rgb(var(--am-ink)/.16)) left center/1px 14px no-repeat}
+.am-table-row {height:56px;box-shadow:inset 0 -1px rgb(var(--am-ink)/.08);font-size:13px}
+#am-search .am-table-song {display:flex;align-items:center;gap:12px;min-width:0;height:100%}
+#am-search .am-table-song .am-song-name {font-size:13px;line-height:17px;min-width:0}
+#am-search .am-table-song :is(.am-song-thumb,.am-song-art) {flex-basis:40px;width:40px;height:40px;border-radius:4px}
+#am-search .am-table-song:is(:hover,:focus-visible) .am-song-art {filter:brightness(.6)}
+#am-search .am-table-song:is(:hover,:focus-visible) .am-song-thumb svg {opacity:1}
+.am-table-cell {min-width:0;display:flex}
+#am-search .am-table-link {min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgb(var(--am-ink)/.7)}
+#am-search .am-table-link:hover {color:rgb(var(--am-ink));text-decoration:underline}
+.am-table-row > .am-table-time,.am-table-head > .am-table-time {text-align:right;padding-right:6px;font-variant-numeric:tabular-nums;color:rgb(var(--am-ink)/.6)}
 @media(prefers-reduced-motion:reduce){.am-hero-image{transform:none}#am-artist .am-hero-haze{display:none}}
 
 /* Liquid Glass player: toolbarLens in theme.js (state 'player'), fitted to macOS's own glass and to Music's own player
@@ -1698,7 +1780,7 @@ body.am-np-open #am-player {--am-player-w:round(down,min(calc(100vw - var(--am-s
 @media(max-width:900px){body.am-np-open #am-player{--am-player-w:round(down,calc(100vw - var(--am-side) - var(--am-right) - 24px),2px)}}
 body.am-np-open .am-toasts {left:calc(var(--am-side) + (100vw - var(--am-side) - var(--am-right))/2)}
 body.am-np-open .am-toast {max-width:min(420px,calc(100vw - var(--am-side) - var(--am-right) - 48px))}
-body.am-np-open #am-library {right:var(--am-right)}
+body.am-np-open :is(#am-library,#am-search) {right:var(--am-right)}
 body.am-np-open #am-artist {right:var(--am-right);--am-hw:calc(100vw - var(--am-side) - var(--am-right))}
 body.am-np-open #am-artist .am-artist-actions {right:calc(var(--am-right) + 14px)}
 body.am-np-open > .am-scroll-thumb {right:calc(var(--am-right) + 3px)}
