@@ -2203,25 +2203,41 @@ try {
       await pick('npBg', 'Kapak renkleri');
 
       // With Spicy Lyrics, beside the player, the full-screen button opens Spicy's page (its own button, clicked) in either
-      // layout; while that page is open the pane steps aside, so the lyrics never show twice, and it comes back as it was
-      // when the page closes. The player's lyrics button keeps opening that page.
-      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
-        b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); }; document.body.append(b); });
+      // layout. On that page the pane stays where it was (#120) with the artwork and title but no lyrics (the page has
+      // them; Plain too), and its full-screen button clicks Spicy's own. Back from the page the lyrics return.
+      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'), f = document.createElement('button'); b.id = 'SpicyLyrics_PageButton'; f.id = 'SpicyLyrics_FullscreenButton';
+        b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); };
+        f.onclick = () => { window.__spicyFullClicks = (window.__spicyFullClicks || 0) + 1; }; document.body.append(b, f); });
       const route = () => page.evaluate(() => Spicetify.Platform.History.location.pathname);
       const paneShown = () => page.evaluate(() => !document.getElementById('am-nowplaying').hidden && document.body.classList.contains('am-np-open'));
+      const paneParts = () => page.evaluate(() => { const np = document.getElementById('am-nowplaying'), shown = s => !!np.querySelector(s)?.getClientRects().length; return [shown('.am-np-art'), shown('.am-np-meta'), shown('.am-np-lyrics')]; });
       for (const layout of ['Cam kart', 'Kenara yapışık']) {
         await pick('npLayout', layout);
         const before = await rect('#am-nowplaying');
         await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Spicy Lyrics\'te aç');
         await page.click('#am-nowplaying .am-np-fullscreen');
-        await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden);
-        assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', false, false], layout);
+        await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+        assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', true, false], layout);
+        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane stays on Spicy\'s page: ' + layout);
+        assert.deepEqual(await paneParts(), [true, true, false], 'no lyrics in the pane on Spicy\'s page: ' + layout);
+        assert.equal(await page.evaluate(() => document.querySelector('#am-nowplaying .am-np-line')), null, 'no lyrics loaded on Spicy\'s page');
+        await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Tam ekran');
+        await page.click('#am-nowplaying .am-np-fullscreen');
         await page.click('#am-lyrics-toggle');
         assert.equal(await route(), '/');
-        await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden && !document.querySelector('#am-nowplaying').getAnimations().length);
-        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane comes back as it was: ' + layout);
+        await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane stays as it was: ' + layout);
       }
-      assert.equal(await page.evaluate(() => window.__spicyClicks), 4);
+      assert.deepEqual(await page.evaluate(() => [window.__spicyClicks, window.__spicyFullClicks]), [4, 2]);
+      await pick('npBg', 'Sade (Apple)');
+      await page.click('#am-lyrics-toggle');
+      await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+      assert.deepEqual(await paneParts(), [true, true, false], 'Plain on Spicy\'s page: artwork and title, no lyrics');
+      await page.click('#am-lyrics-toggle');
+      await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+      assert.deepEqual(await paneParts(), [false, false, true], 'Plain off the page: lyrics only');
+      await pick('npBg', 'Kapak renkleri');
+      await page.evaluate(() => document.getElementById('SpicyLyrics_FullscreenButton').remove());
       await pick('npLayout', 'Cam kart');
 
       // Spicy Lyrics as the lyrics source: Spicy's card lives in Spotify's own Now Playing view (the right column), so the
