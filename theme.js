@@ -1248,7 +1248,7 @@
     // parts: [{text,uri?}], the names that open their page (lcdLinks 'spotify').
     let shown=null;
     return {root,set(text,parts){const key=parts?JSON.stringify(parts):text;if(shown===key)return;shown=key;
-      for(const node of [first,copy])if(parts)node.replaceChildren(...parts.map(p=>{if(!p.uri)return p.text;const link=el('span','am-lcd-link',p.text);link.dataset.uri=p.uri;return link;}));else node.textContent=text;
+      for(const node of [first,copy])if(parts)node.replaceChildren(...parts.map(p=>{if(!p.uri)return p.text;const link=el('span','am-lcd-link',p.text);link.dataset.uri=p.uri;link.draggable=true;return link;}));else node.textContent=text;
       root.title=text;fit();}};
   }
   const text=el('div','am-lcd-text'),titleRow=el('div','am-title-row');
@@ -1880,7 +1880,7 @@
   nav.addEventListener('dragleave',event=>{if(dropRow&&!dropRow.contains(event.relatedTarget))clearDrop();});
   nav.addEventListener('drop',event=>{const action=dropAction(event.target,event.dataTransfer,event.clientY);clearDrop();if(!action)return;event.preventDefault();dropOn(action,event.dataTransfer);});
   document.addEventListener('dragend',clearDrop,true);
-  // Drag sources: the sidebar's playlists and folders, the library's cards, the playing song (artwork and title).
+  // Drag sources: the sidebar's playlists and folders, the library's cards, the playing song (artwork and title), its album and artists.
   nav.addEventListener('dragstart',event=>{const row=event.target.closest?.('.am-list-row[data-uri]');if(row)setDrag(event,[row.dataset.uri]);});
   // A card drags its cover: the hover tools fade for the drag and the ghost is the artwork, not the card with its buttons.
   libraryView.addEventListener('dragstart',event=>{
@@ -1892,6 +1892,13 @@
   libraryView.addEventListener('dragend',()=>libraryView.classList.remove('am-dragging'));
   document.addEventListener('drop',()=>libraryView.classList.remove('am-dragging'),true);
   for(const node of [fullscreenButton,title.root]){node.draggable=true;node.addEventListener('dragstart',event=>{const uri=S.Player.data?.item?.uri;if(uri)setDrag(event,[uri]);else event.preventDefault();});}
+  // The artist — album line drags what it names (#130): a name drags its artist or album, the rest of the line the album.
+  // A drag's target is the draggable node itself, so the names are draggable too; the ghost is the cover.
+  subtitle.root.draggable=true;
+  subtitle.root.addEventListener('dragstart',event=>{
+    const item=S.Player.data?.item,uri=event.target.closest?.('.am-lcd-link')?.dataset.uri||item?.album?.uri||item?.metadata?.album_uri;
+    if(uri)setDrag(event,[uri],cover.hidden?null:cover);else event.preventDefault();
+  });
   // What Spotify's own menu offers on library items (issue #59): remove an album, artist or followed playlist from the
   // library; your own playlist can be deleted (confirmed in a submenu) and shown on or hidden from your profile. The
   // item's state is read as its menu opens (a few ms), so the labels match it.

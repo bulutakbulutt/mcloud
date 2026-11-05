@@ -1340,6 +1340,12 @@ try {
     assert.equal(await page.locator('#am-sidebar .am-drop-into, #am-sidebar .am-drop-before').count(), 0);
     // The sidebar's rows start drags Spotify's pages understand.
     assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
+    // #130: the player's artist — album line drags the album; an artist's name drags the artist.
+    const lineDrag = sel => page.evaluate(sel => { const node = document.querySelector(sel), dt = new DataTransfer(); node.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      return [node.closest('[draggable="true"]') === node, dt.getData('text/x-spotify-albums'), dt.getData('text/x-spotify-artists'), dt.getData('text/uri-list')]; }, sel);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle'), [true, 'spotify:album:0', '', 'https://open.spotify.com/album/0']);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle .am-lcd-link[data-uri="spotify:artist:0"]'), [true, '', 'spotify:artist:0', 'https://open.spotify.com/artist/0']);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle .am-lcd-link[data-uri="spotify:album:0"]'), [true, 'spotify:album:0', '', 'https://open.spotify.com/album/0']);
   });
   await check('Spotify\'s menus in the theme\'s measure, their icons in Apple Music\'s column (#59)', async () => {
     // Spotify's rows: [icon | label], and a submenu row [icon + label | chevron].
