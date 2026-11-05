@@ -1196,6 +1196,10 @@ body.am-ready [data-am-sheet] [class*="list-row__header-side"] * {box-shadow:non
 body.am-ready [data-am-sheet] [data-encore-id="listRow"]:hover::after {background:transparent!important}
 body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"]) {position:relative}
 body.am-ready [data-am-sheet] :is(li[role="row"] + li[role="row"],[role="treegrid"] > div + div li[role="row"])::before {content:"";position:absolute;top:0;left:68px;right:8px;height:1px;background:rgb(var(--am-ink,255 255 255)/.1);pointer-events:none}
+/* Spotify mounts every row of the queue and Recently played at once (499 in a long queue, ~15k elements), and the panel
+   stays open across pages. Those rows were restyled with the page: one row added to a track list cost a 314ms style
+   recalc (35ms with this, measured on an M5). Off-screen rows now skip style and layout; 64px is Spotify's row. */
+body.am-ready [data-am-sheet] li[role="row"] {content-visibility:auto;contain-intrinsic-size:auto 64px}
 
 /* Artist page, redrawn after Apple Music. The whole window takes the artist's colour. In light mode Music keeps the
    artist page dark (white text over the artist colour) under its light glass sidebar, queue and play bar
