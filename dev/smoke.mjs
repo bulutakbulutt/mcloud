@@ -886,6 +886,59 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-artist-open'));
   });
 
+  await check('search results as Apple Music\'s sections (#126)', async () => {
+    await page.evaluate(() => { window.__searchRequests = []; Spicetify.Platform.History.push('/search/sena'); });
+    await page.waitForSelector('body.am-search-results #am-search .am-top-result');
+    assert.equal(await page.evaluate(() => window.__searchRequests.at(-1).searchTerm), 'sena');
+    assert.deepEqual(await page.locator('#am-search .am-shelf-title').allTextContents(), ['En İyi Sonuçlar', 'Sanatçılar', 'Albümler', 'Şarkılar', 'Çalma Listeleri', 'Profiller']);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.am-native-main')).visibility), 'hidden');
+    // Top Results: an artist opens with a chevron, a song plays and has "…"; two rows at most (four across at 1440px).
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#am-search .am-top-result')].map(c => [c.offsetWidth > 0, !!c.querySelector('.am-top-more'), !!c.querySelector('.am-top-art.am-round')])),
+      [[true, false, true], [true, true, false], [true, false, false], [true, true, false], [true, false, false], [true, true, false], [true, true, false], [true, true, false]]);
+    assert.equal(await page.textContent('#am-search .am-top-result >> nth=1 >> .am-top-sub'), 'Şarkı · Sena Şener');
+    assert.equal(await page.locator('#am-search .am-top-result >> nth=1 >> .am-explicit').count(), 1);
+    await page.click('#am-search .am-top-result >> nth=1 >> .am-top-open');
+    assert.equal(await page.evaluate(() => window.__playedUri), 'spotify:track:q0');
+    // A shelf's step is its width over the cards it shows: the next card starts at the right margin.
+    assert.ok(await page.evaluate(() => { const track = document.querySelector('#am-search .am-shelf-artists .am-shelf-track'), cards = track.querySelectorAll('.am-card'), t = track.getBoundingClientRect();
+      return Math.abs(cards[6].getBoundingClientRect().left - (t.right - 34)) < 1.5; }));
+    assert.equal(await page.locator('#am-search .am-song-grid .am-song').count(), 10);
+    await page.click('#am-search .am-song >> nth=2', { button: 'right' });
+    assert.ok((await page.locator('#am-popover .am-popover-item').allTextContents()).includes('Sanatçıya Git'));
+    await page.keyboard.press('Escape');
+    // A heading opens Spotify's own tab, and back draws the results again.
+    await page.click('#am-search .am-shelf-songs .am-shelf-title');
+    await page.waitForFunction(() => Spicetify.Platform.History.location.pathname === '/search/sena/tracks' && !document.body.classList.contains('am-search-results'));
+    await page.evaluate(() => Spicetify.Platform.History.push('/search/sena'));
+    await page.waitForSelector('body.am-search-results #am-search .am-top-result');
+    // Spotify's page when the request fails, or with the setting on Spotify.
+    await page.evaluate(() => { window.__mockSearchFail = true; Spicetify.Platform.History.push('/search/hata'); });
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-results'));
+    await page.evaluate(() => { window.__mockSearchFail = false; Spicetify.Platform.History.push('/search/sena'); });
+    await page.waitForSelector('body.am-search-results');
+    await settingsWindow.pick('searchStyle', 'Spotify');
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-results'));
+    await settingsWindow.pick('searchStyle', 'Apple Music');
+    await page.waitForSelector('body.am-search-results #am-search .am-top-result');
+    await page.evaluate(() => Spicetify.Platform.History.push('/'));
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-results'));
+    // Asked for before Enter: once the field rests after typing, and for a suggested query that is hovered; the first
+    // covers load with it, and Enter draws from the cache.
+    await page.evaluate(() => { window.__searchRequests = []; const i = document.querySelector('#global-nav-bar input'); i.focus(); i.value = ''; });
+    await page.keyboard.type('yeni');
+    await page.waitForFunction(() => window.__searchRequests.some(v => v.searchTerm === 'yeni'));
+    await page.evaluate(() => { const a = document.querySelector('#search-dropdown [role="row"] a'); a.setAttribute('href', '/search/yeni%20sorgu'); });
+    await page.hover('#search-dropdown [role="row"] >> nth=0');
+    await page.waitForFunction(() => window.__searchRequests.some(v => v.searchTerm === 'yeni sorgu'));
+    const asked = await page.evaluate(() => window.__searchRequests.length);
+    await page.evaluate(() => { document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); document.querySelector('#global-nav-bar input').blur(); Spicetify.Platform.History.push('/search/yeni'); });
+    await page.waitForSelector('body.am-search-results #am-search .am-top-result');
+    assert.equal(await page.evaluate(() => window.__searchRequests.length), asked);
+    assert.equal(await page.evaluate(() => document.querySelector('#am-search .am-top-art img').loading), 'eager');
+    await page.evaluate(() => { document.querySelector('#global-nav-bar input').value = ''; Spicetify.Platform.History.push('/'); });
+    await page.waitForFunction(() => !document.body.classList.contains('am-search-results'));
+  });
+
   await check('locale-prefixed artist links and portrait-only artists', async () => {
     await page.evaluate(() => { window.__savedHeader = window.__mockArtist.headerImage; window.__mockArtist.headerImage = null; Spicetify.Platform.History.push('/intl-tr/artist/plain'); });
     await page.waitForSelector('body.am-artist-open .am-hero-avatar .am-hero-portrait');
