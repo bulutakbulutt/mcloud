@@ -1361,7 +1361,8 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 :is(#am-artist,#am-library) .am-tool-more {right:8px}
 :is(#am-artist,#am-library) .am-tool-play svg {width:13px;height:13px}
 :is(#am-artist,#am-library) .am-tool-more svg {width:15px;height:15px}
-.am-card-round .am-card-art {border-radius:50%}
+/* Stretched: the centred column would size an artwork without a photo to its empty image, 0px wide (#127). */
+.am-card-round .am-card-art {border-radius:50%;align-self:stretch}
 .am-card-round .am-card-open {align-items:center;text-align:center}
 .am-card-name {font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .am-card-sub {font-size:13px;line-height:1.3;color:var(--am-tint-text,rgb(var(--am-ink)/.6));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1737,6 +1738,16 @@ body.am-home-apple .am-native-main [data-encore-id="card"]::after {display:none!
 body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:8px!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] :is(.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
 body.am-home-apple .am-native-main [data-encore-id="card"]:hover img {filter:brightness(.92)}
+/* Artists and profiles stay circles with their names centred and no hover controls, as Apple's (#127). */
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:50%!important}
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) div:has(> [data-encore-id="cardTitle"],> * > [data-encore-id="cardTitle"],> [data-encore-id="cardSubtitle"]) {align-items:center!important;text-align:center}
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) :is(div:has(> div > button[data-encore-id="buttonPrimary"]),.am-card-more) {display:none!important}
+/* An artist without a photo gets Apple's grey circle and microphone (traced over Music's at 468px) on Spotify's cards,
+   our artist page's shelves and the library. A profile without one keeps Spotify's own icon on the same circle. */
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) .main-card-imagePlaceholder {border-radius:50%;background:var(--am-art-empty)}
+body.am-home-apple .am-native-main [data-encore-id="card"][aria-labelledby*=":artist:"] .main-card-imagePlaceholder > * {display:none!important}
+.am-card-round[data-uri^="spotify:artist:"] .am-card-art:not(:has(img[src])),.am-artist-art:not(:has(img)) {position:relative}
+:is(body.am-home-apple .am-native-main [data-encore-id="card"][aria-labelledby*=":artist:"] .main-card-imagePlaceholder,.am-card-round[data-uri^="spotify:artist:"] .am-card-art:not(:has(img[src])),.am-artist-art:not(:has(img)))::after {content:"";position:absolute;inset:0;background:rgb(var(--am-ink)/.16);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='%23fff'/%3E%3Cpath d='M70.0 46.0L51.8 27.9' stroke='%23000' stroke-width='2.4'/%3E%3C/mask%3E%3Cg mask='url%28%23m%29'%3E%3Ccircle cx='62.0' cy='35.9' r='10.0' fill='%23fff'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M57.8 45.0L33.0 68.3L30.0 65.3L52.9 40.2Z' stroke-width='2.2'/%3E%3Cpath d='M31.5 66.8L29.2 69.1' stroke-width='3'/%3E%3Cpath d='M50.0 53.4L50.4 69.4' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E") center/100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='%23fff'/%3E%3Cpath d='M70.0 46.0L51.8 27.9' stroke='%23000' stroke-width='2.4'/%3E%3C/mask%3E%3Cg mask='url%28%23m%29'%3E%3Ccircle cx='62.0' cy='35.9' r='10.0' fill='%23fff'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M57.8 45.0L33.0 68.3L30.0 65.3L52.9 40.2Z' stroke-width='2.2'/%3E%3Cpath d='M31.5 66.8L29.2 69.1' stroke-width='3'/%3E%3Cpath d='M50.0 53.4L50.4 69.4' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E") center/100% no-repeat}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] a {color:inherit!important}

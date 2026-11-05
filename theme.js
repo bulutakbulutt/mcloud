@@ -1189,7 +1189,7 @@
         const art=el('span','am-library-art');
         art.dataset.icon=item.type==='artist'?'artist':item.type==='album'?'album':'music';
         const src=item.imageUrl;
-        if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else art.innerHTML=svg(item.type==='artist'?'artist':item.type==='album'?'album':'music');
+        if(src){const img=el('img','');img.dataset.src=src;img.alt='';img.decoding='async';art.append(img);artwork.push(img);}else if(item.type!=='artist')art.innerHTML=svg(item.type==='album'?'album':'music');
         if(item.type==='artist')art.classList.add('am-artist-art');
         open.append(art,el('span','am-library-name',item.name||T('Adsız','Untitled')));
         b.append(open);
@@ -3640,7 +3640,7 @@
   // One "…" per card, added the first time the card is hovered.
   document.addEventListener('mouseover',event=>{
     // The pointer is over the card's click layer, which covers the card beside its artwork.
-    const card=settings.homeStyle==='apple'?event.target.closest?.('.am-native-main [data-encore-id="card"]'):null;
+    const card=settings.homeStyle==='apple'?event.target.closest?.('.am-native-main [data-encore-id="card"]:not([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular))'):null;
     const box=card?.querySelector('img')?.parentElement?.parentElement;
     if(!box||box.querySelector(':scope > .am-card-more'))return;
     const more=button(T('Diğer','More'),'more',e=>{
