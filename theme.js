@@ -349,7 +349,7 @@
       f.querySelectorAll(':scope > [data-am-tone],:scope > [data-am-scheme]').forEach(n=>n.remove());
       f.insertAdjacentHTML('beforeend',menuToneMarkup(light?lightTones.menu.map((t,i)=>[Math.min(255,i*32),t]):menuTonePoints));
     }
-    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
+    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter#am-glass-chevron,filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
       const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
       if(!table){f.querySelectorAll(':scope > [data-am-scheme]').forEach(n=>n.remove());continue;}
       if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
@@ -493,6 +493,14 @@
         for(const c of pair.children)c.classList.add('am-chevron');
     }
   }
+  // Apple centres a carousel's arrows on its covers, not on the whole card (cover, title and subtitle). The covers' middle
+  // is read when the pointer comes over a shelf, the only time its arrows show, and written only when it changed.
+  document.addEventListener('pointerover',event=>{
+    const shelf=event.target.closest?.('.am-native-main [data-shelf]'),pair=shelf?.querySelector('.am-chevron')?.parentElement;
+    const cover=pair&&shelf.querySelector('[data-encore-id="card"] img');if(!cover)return;
+    const box=cover.getBoundingClientRect(),y=Math.round(box.top-pair.getBoundingClientRect().top+box.height/2)+'px';
+    if(box.height&&pair.style.getPropertyValue('--am-chev-y')!==y)pair.style.setProperty('--am-chev-y',y);
+  },{passive:true});
   // A track list's grid, header and rows: the same names Spotify gave them before it hashed its classes.
   function tagTrackList(grid) {
     if(grid.classList.contains('main-trackList-trackList')||!grid.querySelector('[role="columnheader"]'))return;
@@ -1440,6 +1448,9 @@
       highlight:[.13,.085,.032,.019,.014,.011,.009,.007,.005,.004,.003,.002,.001,.0005,0],highlightTo:2,highlightPow:3.5,
       tone:[32,36,45,56,65,71,78,86,90,96,102,109,116,120,122,125,130,135,141,147,152,156,156,157,161,167,170,170,174,178,179,181,185]},
   };
+  // The carousel arrows are 22pt wide, so the panel's bend (15px at the rim, gone 14px in) would fold the whole arrow;
+  // Apple's keeps the page readable through it. The same curve, at half the shift over two thirds of the depth.
+  glassStates.arrow={...glassStates.focused,lens:glassStates.focused.lens.map(v=>+(v*.5).toFixed(2)),lensAt:glassStates.focused.lensAt.map(v=>+(v*2/3).toFixed(2))};
   // On wide-gamut (P3) Macs Chromium converts the recombined map from sRGB to P3 before displacing, and that
   // mixes channels: red took ~18% of green, so a vertical shift also shifted the page up to ~2.7px sideways. The
   // map therefore arrives as two grey images (greys survive the conversion) recombined as R=G=x shift and B=y
@@ -1461,7 +1472,7 @@
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
   // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
-  glass.innerHTML=glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
+  glass.innerHTML=glassFilter('am-glass-chevron',glassStates.arrow)+glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
     +`<filter id="am-glow-cap-light" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCapLight}/><feFuncG type="table" ${glowCapLight}/><feFuncB type="table" ${glowCapLight}/></feComponentTransfer></filter>`
     +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
@@ -1493,11 +1504,12 @@
       // Drawn at device resolution and redrawn only on resize or a change of screen: the bend and the highlight
       // live in the outermost few pixels. Scrolling frame times were measured unchanged against a CSS-size map.
       const w=node.offsetWidth,h=node.offsetHeight,k=devicePixelRatio||1;if(!w||!h||glassSize===w+'x'+h+'@'+k)return;glassSize=w+'x'+h+'@'+k;
-      const W=Math.round(w*k),H=Math.round(h*k),r=h/2,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+      const W=Math.round(w*k),H=Math.round(h*k),r=Math.min(w,h)/2,canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
       const context=canvas.getContext('2d'),images=[0,1,2].map(()=>context.createImageData(W,H)),[mx,my,mh]=images.map(image=>image.data);
       for(let y=0;y<H;y++)for(let x=0;x<W;x++){
-        // The vector to the pill's centre line is the rim's inward normal; the maps hold its x/y shift.
-        const px=(x+.5)/k,py=(y+.5)/k,dx=Math.min(w-r,Math.max(r,px))-px,dy=r-py,length=Math.hypot(dx,dy)||1,edge=Math.max(0,r-length),t=shiftAt(edge)/peak/length,i=(y*W+x)*4;
+        // The vector to the pill's centre line is the rim's inward normal; the maps hold its x/y shift. A pill stands
+        // upright too (the carousel arrows), so the centre line runs along its longer side.
+        const px=(x+.5)/k,py=(y+.5)/k,dx=Math.min(w-r,Math.max(r,px))-px,dy=Math.min(h-r,Math.max(r,py))-py,length=Math.hypot(dx,dy)||1,edge=Math.max(0,r-length),t=shiftAt(edge)/peak/length,i=(y*W+x)*4;
         const xv=Math.round(128+127*t*dx),yv=(128+127*t*dy)/255;
         mx[i]=mx[i+1]=mx[i+2]=xv;my[i]=my[i+1]=my[i+2]=Math.round(255*(wideGamut?encode(Math.min(1,Math.max(0,(linear(yv)-.0895*linear(xv/255))/.9108))):yv));
         mh[i]=mh[i+1]=mh[i+2]=Math.round(255*highlightAt(edge)*Math.abs(dy/length)**state.highlightPow);mx[i+3]=my[i+3]=mh[i+3]=255;
@@ -1509,6 +1521,8 @@
     const watchResolution=()=>matchMedia(`(resolution: ${devicePixelRatio||1}dppx)`).addEventListener('change',()=>{draw();watchResolution();},{once:true});watchResolution();
   }
   toastSlots.forEach((slot,i)=>glassLens('am-glass-toast'+(i?'-'+i:''),slot.t,glassStates.focused));
+  // Spotify's carousel arrows are all one size, so one lens serves them all: its map is drawn on a hidden probe of that size.
+  const arrowProbe=el('div','am-chevron-probe');document.body.append(arrowProbe);glassLens('am-glass-chevron',arrowProbe,glassStates.arrow);
   // Menus (ours and Spotify's): macOS 27's NSMenu, fitted over 45° stripes (research/menus/REPORT.md §9-11). The page
   // blurs (6.8pt) and bends near the rim: the edge shows the page ~29pt inward at 3pt from it, nothing moves past 18pt,
   // and the bend turns over the last 40pt before each corner (fitted; a bend square to the edge missed twice as much).
