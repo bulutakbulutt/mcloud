@@ -2690,6 +2690,18 @@ try {
     // Selecting a row rewrites its class, as React does; the names come back.
     await page.evaluate(() => { const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'); row.firstElementChild.className = 'hashed-selected'; row.setAttribute('aria-selected', 'true'); });
     await page.waitForFunction(() => document.querySelector('#mock-hashed [aria-rowindex="2"] > .main-trackList-trackListRow'));
+    // #131: selecting another row rewrites this one's class again while its aria-selected stays "true"; the names
+    // (and with them the clean album list's rule) come back all the same, cells included, and no change of our own follows.
+    assert.deepEqual(await page.evaluate(async () => {
+      const row = document.querySelector('#mock-hashed [aria-rowindex="2"]'), box = row.firstElementChild;
+      box.className = 'hashed-selected-again';for (const cell of box.children) cell.className = 'hashed-cell';
+      const frames = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await frames();
+      const back = [box.classList.contains('main-trackList-trackListRow'), box.firstElementChild.classList.contains('main-trackList-rowSectionIndex'), row.getAttribute('aria-selected')];
+      let changes = 0;const mo = new MutationObserver(r => { changes += r.length; });mo.observe(row, { attributes: true, subtree: true });
+      await frames();await frames();mo.disconnect();
+      return [...back, changes];
+    }), [true, true, 'true', 0]);
     await page.evaluate(() => document.querySelector('#mock-hashed').remove());
     // An older build carries the names on the inner row already: nothing changes there, role="row" least of all.
     assert.deepEqual(await page.evaluate(async () => {
