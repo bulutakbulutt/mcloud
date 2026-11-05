@@ -224,6 +224,8 @@ try {
       const out = [getComputedStyle(sheet).backgroundColor, getComputedStyle(sheet).backdropFilter, glass.backgroundColor, glass.backdropFilter, getComputedStyle(rows[0].querySelector('img').parentElement).boxShadow, getComputedStyle(rows[0], '::before').content, line.height, line.backgroundColor, getComputedStyle(queue[0], '::before').content, getComputedStyle(queue[1], '::before').height];
       rows.forEach(r => r.remove()); return out;
     }), ['rgba(0, 0, 0, 0)', 'none', 'color(srgb 0.184314 0.184314 0.184314 / 0.64)', 'blur(20px) saturate(1.6)', 'none', 'none', '1px', 'rgba(255, 255, 255, 0.1)', 'none', '1px']);
+    // Off-screen rows of a long queue skip style and layout.
+    assert.deepEqual(await page.evaluate(() => { const st = getComputedStyle(document.querySelector('#mock-queue li[role="row"]')); return [st.contentVisibility, st.containIntrinsicHeight]; }), ['auto', 'auto 64px']);
     await page.hover('#mock-queue li');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-queue .mock-hover-row'), '::after').backgroundColor), 'rgba(0, 0, 0, 0)', 'grey under the pointer');
     await page.evaluate(() => document.querySelectorAll('#mock-queue,#mock-hover').forEach(e => e.remove()));
