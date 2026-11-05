@@ -154,6 +154,23 @@ body.am-ready .am-native-main [data-shelf] [role="presentation"] {scroll-snap-ty
 /* The chevron follows the material, as the search results' text does, not the page under it: a playlist's dark header
    in light mode would give it white on the light fill. */
 body.am-light .am-native-main .am-chevron:not(:hover) {--text-base:#272727}
+/* A shelf's arrows are Apple Music's (the user's screenshots, macOS 26, dark and light): a 22×40 capsule of glass on the
+   covers' middle (theme.js sets --am-chev-y), astride the content's edge, with a tall thin chevron. Liquid Glass gives
+   it the toast's lens at its size (#am-glass-chevron, one map for all); otherwise the frosted fill above, Eco a solid one. */
+.am-native-main [data-shelf] .am-chevron {display:grid;place-items:center;width:22px;height:40px;border-radius:11px;top:var(--am-chev-y,50%);margin-top:-20px}
+/* Apple's arrows stand 8px past the content's edge, half over the gutter. On hover (the only time they show) Spotify's
+   carousel clips 12px past the edge and sets its arrows 8px inside that, the start one moved 8px further in (translate):
+   so the start arrow moves out 12px and the end one 4px. -16px on both cut the end arrow by 8px in the macOS client. */
+.am-native-main [data-shelf] .am-chevron:first-child {margin-left:-12px}
+.am-native-main [data-shelf] .am-chevron:last-child {margin-right:-4px}
+.am-native-main [data-shelf] .am-chevron > svg {display:none}
+.am-native-main [data-shelf] .am-chevron::before {content:'';width:7px;height:20px;background:var(--text-base);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.am-native-main [data-shelf] .am-chevron:last-child::before {transform:scaleX(-1)}
+/* Apple's capsule is frosted through (the covers' edges do not show in it) and mostly a neutral grey: sampled from the
+   screenshots, (54,50,49) over a black cover and (77,74,73) over a lighter one in dark; 150 to 182 in light. */
+body.am-liquid:not(.am-solid) .am-native-main [data-shelf] .am-chevron {--chevrons-button-color:rgb(58 58 58/.72);--chevrons-button-backdrop-filter:blur(10px) url(#am-glass-chevron);box-shadow:none}
+body.am-liquid.am-light:not(.am-solid) .am-native-main [data-shelf] .am-chevron:not(:hover) {--chevrons-button-color:rgb(185 185 185/.6)}
+.am-chevron-probe {position:fixed;left:-100px;top:0;width:22px;height:40px;visibility:hidden;pointer-events:none}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
 /* A card's image box: Spicetify's readable name where its css-map has one (macOS), else the image's parent (#109). */
@@ -193,18 +210,25 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-entityHeader-headerText:has(.playlist-playlist-playlistDescription) > :has(.main-entityHeader-title),body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-entityHeader-headerText > :has(.playlist-playlist-playlistDescription) {margin-top:auto!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-entityHeader-headerText > :has(.playlist-playlist-playlistDescription) {order:1;margin-bottom:12px!important}
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .playlist-playlist-playlistDescription {font-size:13px!important;line-height:16px;-webkit-line-clamp:3;margin-top:0}
-/* Spotify's save buttons are Apple's star (#97): outlined, filled once saved, in the accent. A row's is its only
-   aria-checked button; the page's is matched by its label in theme.js (#am-star-style), as Download has aria-checked too. */
+/* Spotify's save buttons are Apple's star (#97): outlined, filled once saved, in the accent. A row's is its aria-checked
+   button that is not a switch (a mix's or radio's "Hide in this playlist" is role="switch"); the page's is matched by its
+   label in theme.js (#am-star-style), as Download has aria-checked too. */
 :root {--am-star-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E");--am-star-fill:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000' stroke='%23000' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='m12 3.2 2.7 5.6 6.1.8-4.4 4.3 1 6.1L12 17.1 6.6 20l1-6.1-4.4-4.3 6.1-.8z'/%3E%3C/svg%3E")}
-.main-trackList-trackListRow button[aria-checked] svg {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
-.main-trackList-trackListRow button[aria-checked] svg path {display:none}
-.main-trackList-trackListRow button[aria-checked="true"] {color:var(--am-star-color,var(--am-accent))!important}
-.main-trackList-trackListRow button[aria-checked="true"] svg {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) svg {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) svg path {display:none}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) {color:var(--am-star-color,var(--am-accent))!important}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) svg {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
 /* While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size (pointer-events:none);
    the box draws the star instead and the animation inside it is hidden. */
-.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
-.main-trackList-trackListRow button[aria-checked] div[style*="pointer-events: none"] > div {opacity:0;filter:none}
-.main-trackList-trackListRow button[aria-checked="true"] div[style*="pointer-events: none"] {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) div[style*="pointer-events: none"] {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+.main-trackList-trackListRow button[aria-checked]:not([role="switch"]) div[style*="pointer-events: none"] > div {opacity:0;filter:none}
+.main-trackList-trackListRow button[aria-checked="true"]:not([role="switch"]) div[style*="pointer-events: none"] {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+/* A row's "Hide in this playlist" / "Hide song" switch is Apple's minus.circle in the star's line; filled once hidden,
+   in Spotify's own red. */
+:root {--am-hide-line:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='8.6'/%3E%3Cpath d='M8 12h8'/%3E%3C/svg%3E");--am-hide-fill:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill-rule='evenodd' d='M12 2.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19ZM8 11.1a.9.9 0 0 0 0 1.8h8a.9.9 0 0 0 0-1.8Z'/%3E%3C/svg%3E")}
+.main-trackList-trackListRow button[role="switch"][aria-checked] svg {background:currentColor;-webkit-mask:var(--am-hide-line) center/contain no-repeat;mask:var(--am-hide-line) center/contain no-repeat}
+.main-trackList-trackListRow button[role="switch"][aria-checked] svg path {display:none}
+.main-trackList-trackListRow button[role="switch"][aria-checked="true"] svg {-webkit-mask-image:var(--am-hide-fill);mask-image:var(--am-hide-fill)}
 /* The count and length move under the track list, as in Music: "18 songs, 1 hour, 8 minutes" (theme.js, --am-list-info).
    Albums put it between Spotify's release date and ℗ line, playlists after the last row. */
 body.am-list-info .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :is(div:not(.main-entityHeader-creatorWrapper),span:has(+ div:not(.main-entityHeader-creatorWrapper)),div:not(.main-entityHeader-creatorWrapper) + span) {display:none!important}
@@ -220,6 +244,12 @@ body.am-photo-page .am-native-main [data-testid="playlist-page"] .main-entityHea
 body.am-photo-page .am-native-main [data-testid="playlist-page"] .main-entityHeader-headerText > button:hover {color:rgb(var(--am-ink)/.702)!important}
 body.am-list-info.am-photo-page .am-native-main [data-testid="playlist-page"] .main-trackList-trackListContainer::after {padding-bottom:28px!important}
 body.am-list-info.am-photo-page .am-native-main [data-testid="playlist-page"] .main-entityHeader-headerText > button {top:calc(anchor(bottom) - 24px)}
+/* #121: "N more releases" beside the album's date is a pop-up button, as the library's sort (Spotify: a 40px card box
+   with a triangle). Its class is hashed, so it is found as the text + icon button after the date block. A fill of ink,
+   not a solid one, so a tinted album shows through. */
+body.am-ready .am-native-main [data-testid="album-page"] div:has(> p) + button:has(> span[data-encore-id="text"]:first-child + svg[data-encore-id="icon"]:last-child) {box-sizing:border-box;height:30px;padding:0 26px 0 10px;border:1px solid rgb(var(--am-ink)/.078);border-radius:8px;background:rgb(var(--am-ink)/.078) var(--am-settings-chevron) no-repeat right 9px center/8px 12px;color:var(--am-text);outline-color:var(--am-accent-focus)}
+body.am-ready .am-native-main [data-testid="album-page"] div:has(> p) + button:has(> span[data-encore-id="text"]:first-child + svg[data-encore-id="icon"]:last-child) > span {font:13px var(--encore-body-font-stack);color:inherit}
+body.am-ready .am-native-main [data-testid="album-page"] div:has(> p) + button:has(> span[data-encore-id="text"]:first-child + svg[data-encore-id="icon"]:last-child) > svg {display:none}
 /* The action bar's scroll host moves up beside the artwork; its bottom lines up with the artwork's. Its negative margin
    pulls the playlist content block up with it, so that block must not paint over the artwork. */
 body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .playlist-playlist-playlistContent {background:none!important}
@@ -419,6 +449,9 @@ body.am-resizing * {transition:none!important}
 .am-nav-row svg {width:18px;height:18px;color:var(--am-accent);flex-shrink:0}
 #am-sidebar .am-nav-row:hover{background:rgb(var(--am-ink)/.051)}
 #am-sidebar .am-nav-row.am-selected{background:rgb(var(--am-ink)/.122);font-weight:650}
+/* On macOS the rows are SF Regular, as in Music: at 500 they set ~3% wider and ~15% heavier than Music's sidebar
+   (measured on "All Playlists", 13pt, 2x). Segoe and the embedded Inter keep 500 on Windows and Linux. */
+body.am-mac #am-sidebar .am-nav-row:not(.am-selected) {font-weight:400}
 /* Account chip in the bottom-left corner, as in Apple Music. The avatar is centred on the icon column and the name
    starts on the text column; the right padding puts the friends button on the pin column above. */
 #am-sidebar .am-account {display:flex;align-items:center;gap:2px;margin:0 0 12px;padding:6px 7px 0 0;flex-shrink:0;box-shadow:0 -1px rgb(var(--am-ink)/0);transition:box-shadow .2s}
@@ -1350,7 +1383,8 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 :is(#am-artist,#am-library) .am-tool-more {right:8px}
 :is(#am-artist,#am-library) .am-tool-play svg {width:13px;height:13px}
 :is(#am-artist,#am-library) .am-tool-more svg {width:15px;height:15px}
-.am-card-round .am-card-art {border-radius:50%}
+/* Stretched: the centred column would size an artwork without a photo to its empty image, 0px wide (#127). */
+.am-card-round .am-card-art {border-radius:50%;align-self:stretch}
 .am-card-round .am-card-open {align-items:center;text-align:center}
 .am-card-name {font-size:13px;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .am-card-sub {font-size:13px;line-height:1.3;color:var(--am-tint-text,rgb(var(--am-ink)/.6));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1586,6 +1620,10 @@ body.am-np-plain #am-nowplaying .am-np-line {opacity:.42}
 body.am-np-plain #am-nowplaying .am-np-line + .am-np-line {margin-top:26px}
 body.am-np-plain #am-nowplaying.am-np-playing .am-np-line.am-current {opacity:1}
 body.am-np-plain #am-nowplaying .am-np-line:hover {opacity:.7}
+/* On Spicy Lyrics' page (#120) the page has the lyrics: the pane keeps the artwork and title, Plain included. */
+body.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-lyrics {display:none}
+body.am-np-plain.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-art {display:grid}
+body.am-np-plain.am-spicy-route:not(.am-np-full) #am-nowplaying .am-np-meta {display:flex}
 body.am-np-plain #am-nowplaying :is(.am-np-close,.am-np-fullscreen) {opacity:0;transition:opacity .2s}
 body.am-np-plain #am-nowplaying:is(:hover,:focus-within) :is(.am-np-close,.am-np-fullscreen) {opacity:1}
 /* Sidebar only: the player's own controls, moved in (theme.js npMove), laid out as on iOS. */
@@ -1715,16 +1753,35 @@ body.am-windows #am-artist .am-artist-actions {right:150px}
 /* Home as Apple Music's (issue #84, settings.homeStyle): cards without a plate or hover fill, 8px artwork, 13px text,
    round glass play (bottom left) and "…" (bottom right, .am-card-more, added by theme.js) over the artwork on hover,
    bold shelf titles without "Show all". Spotify's cards are 12px apart inside their 12px padding; 8px keeps Apple's
-   16px gap and the row moves 4px so the artwork lines up with the title. */
-body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:-4px}
+   16px gap and the row moves 4px in so the artwork lines up with the shelf title, as Apple's does (#125). */
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [role="row"] {margin-inline:4px}
 body.am-home-apple .am-native-main [data-encore-id="card"] {padding:0 8px!important;gap:6px!important;background:none!important;box-shadow:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"]::after {display:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:8px!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] :is(.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.06) inset}
 body.am-home-apple .am-native-main [data-encore-id="card"]:hover img {filter:brightness(.92)}
+/* Artists and profiles stay circles with their names centred and no hover controls, as Apple's (#127). */
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) :is(img,.main-cardImage-imageWrapper,[data-encore-id="card"] div:has(> img):not(.main-cardImage-imageWrapper *)) {border-radius:50%!important}
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) div:has(> [data-encore-id="cardTitle"],> * > [data-encore-id="cardTitle"],> [data-encore-id="cardSubtitle"]) {align-items:center!important;text-align:center}
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) :is(div:has(> div > button[data-encore-id="buttonPrimary"]),.am-card-more) {display:none!important}
+/* An artist without a photo gets Apple's grey circle and microphone (traced over Music's at 468px) on Spotify's cards,
+   our artist page's shelves and the library. A profile without one keeps Spotify's own icon on the same circle. */
+body.am-home-apple .am-native-main [data-encore-id="card"]:is([aria-labelledby*=":artist:"],[aria-labelledby*=":user:"],:has(.main-cardImage-circular)) .main-card-imagePlaceholder {border-radius:50%;background:var(--am-art-empty)}
+body.am-home-apple .am-native-main [data-encore-id="card"][aria-labelledby*=":artist:"] .main-card-imagePlaceholder > * {display:none!important}
+.am-card-round[data-uri^="spotify:artist:"] .am-card-art:not(:has(img[src])),.am-artist-art:not(:has(img)),[data-am-no-photo]:is(.am-card-art,.am-artist-art) {position:relative}
+/* An artist whose only picture is Spotify's placeholder (theme.js marks data-am-no-photo) is drawn the same way. */
+body.am-home-apple .am-native-main [data-encore-id="card"][data-am-no-photo] div:has(> div > img) {background:var(--am-art-empty);border-radius:50%}
+:is(body.am-home-apple .am-native-main [data-encore-id="card"][data-am-no-photo],[data-am-no-photo]:is(.am-card-art,.am-artist-art)) img {opacity:0!important}
+:is(body.am-home-apple .am-native-main [data-encore-id="card"][aria-labelledby*=":artist:"] .main-card-imagePlaceholder,body.am-home-apple .am-native-main [data-encore-id="card"][data-am-no-photo] div:has(> div > img),[data-am-no-photo]:is(.am-card-art,.am-artist-art),.am-card-round[data-uri^="spotify:artist:"] .am-card-art:not(:has(img[src])),.am-artist-art:not(:has(img)))::after {content:"";position:absolute;inset:0;background:rgb(var(--am-ink)/.16);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='%23fff'/%3E%3Cpath d='M70.0 46.0L51.8 27.9' stroke='%23000' stroke-width='2.4'/%3E%3C/mask%3E%3Cg mask='url%28%23m%29'%3E%3Ccircle cx='62.0' cy='35.9' r='10.0' fill='%23fff'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M57.8 45.0L33.0 68.3L30.0 65.3L52.9 40.2Z' stroke-width='2.2'/%3E%3Cpath d='M31.5 66.8L29.2 69.1' stroke-width='3'/%3E%3Cpath d='M50.0 53.4L50.4 69.4' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E") center/100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='%23fff'/%3E%3Cpath d='M70.0 46.0L51.8 27.9' stroke='%23000' stroke-width='2.4'/%3E%3C/mask%3E%3Cg mask='url%28%23m%29'%3E%3Ccircle cx='62.0' cy='35.9' r='10.0' fill='%23fff'/%3E%3C/g%3E%3Cg fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M57.8 45.0L33.0 68.3L30.0 65.3L52.9 40.2Z' stroke-width='2.2'/%3E%3Cpath d='M31.5 66.8L29.2 69.1' stroke-width='3'/%3E%3Cpath d='M50.0 53.4L50.4 69.4' stroke-width='3'/%3E%3C/g%3E%3C/svg%3E") center/100% no-repeat}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] {font-size:13px!important;line-height:1.3!important;color:var(--am-sub)!important;margin-top:1px}
+/* The artist names are in a nested 14px text box of Spotify's: the same size as the title, as Apple's (#125). */
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] * {font-size:inherit!important;line-height:inherit!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardSubtitle"] a {color:inherit!important}
+/* Titles are not underlined, the card's and the shelf's, as Apple's; the subtitle's links (an artist) still are. */
+body.am-home-apple .am-native-main [data-encore-id="card"] a:not([data-encore-id="cardSubtitle"] *),
+body.am-home-apple .am-native-main [data-encore-id="card"] [data-encore-id="cardTitle"],
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] a {text-decoration:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] div:has(> div > button[data-encore-id="buttonPrimary"]) {left:8px!important;right:auto!important;top:auto!important;bottom:8px!important;transform:none!important;transition:opacity .15s!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"] > span,body.am-home-apple .am-card-more {box-sizing:border-box;inline-size:28px!important;block-size:28px!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(0 0 0/.42)!important;-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff!important;box-shadow:none!important;transform:none!important}
 body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id="buttonPrimary"]:hover > span,body.am-home-apple .am-card-more:hover {background:var(--am-accent)!important}
@@ -1734,9 +1791,82 @@ body.am-home-apple .am-native-main [data-encore-id="card"] button[data-encore-id
 body.am-home-apple .am-card-more {position:absolute;right:8px;bottom:8px;z-index:2;pointer-events:auto;display:grid;place-items:center;border:0;cursor:pointer;opacity:0;transition:opacity .15s}
 body.am-home-apple .am-card-more svg {width:14px;height:14px;stroke:none}
 body.am-home-apple [data-encore-id="card"]:is(:hover,:focus-within) .am-card-more {opacity:1}
+/* What's New (#128): the reporter's reference (a frosted card: the cover on the left, "Album • 2026", the title in bold and
+   a subtitle, a round "+" on the right), in a grid (theme.js sets body.am-feed on /content-feed, settings.feedStyle). The rows
+   stay Spotify's and only change their layout. Its item wrappers give way (display:contents) so the "New" / "Earlier"
+   headings span the grid; the list's other child is the sentinel that loads more, so it keeps its box. */
+body.am-feed .am-native-main section:has(ul[role="treegrid"]) {max-width:none!important;width:auto!important;margin-inline:0!important;padding-inline:var(--content-spacing,var(--am-pad))!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div {display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+body.am-feed .am-native-main ul[role="treegrid"] > div > div:has(> li[role="row"]),body.am-feed .am-native-main ul[role="treegrid"] > div > div > li[role="row"] {display:contents}
+body.am-feed .am-native-main ul[role="treegrid"] > div > :not(:has(> li[role="row"])) {grid-column:1/-1}
+body.am-feed .am-native-main ul[role="treegrid"] > div h2 {grid-column:1/-1;margin:18px 0 -2px;font-size:17px!important;font-weight:700!important;letter-spacing:-.01em}
+body.am-feed .am-native-main ul[role="treegrid"] > div :is([data-encore-id="horizontalRule"],li[role="row"] > hr) {display:none!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] {display:grid!important;grid-template-columns:96px minmax(0,1fr) auto;grid-template-rows:1fr auto auto 1fr;grid-template-areas:"art . add" "art meta add" "art text add" "art . add";column-gap:16px;align-items:center;position:relative;padding:14px!important;min-block-size:0!important;border-radius:22px;background:rgb(var(--am-ink,255 255 255)/.055)!important;box-shadow:inset 0 0 0 1px rgb(var(--am-ink,255 255 255)/.1)!important;-webkit-backdrop-filter:blur(20px) saturate(1.4);backdrop-filter:blur(20px) saturate(1.4)}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"]:hover {background:rgb(var(--am-ink,255 255 255)/.085)!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(img) {grid-area:art}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(img),body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(img) div {width:96px!important;height:96px!important;margin:0!important;padding:0!important;background:none!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(img) img {width:96px!important;height:96px!important;object-fit:cover;border-radius:10px;box-shadow:0 0 0 1px rgb(var(--am-ink,255 255 255)/.1)}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has([data-encore-id="listRowTitle"]) {grid-area:text;min-width:0}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(> span[data-encore-id="text"]) {grid-area:meta;min-width:0}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(> span[data-encore-id="text"]),body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(> span[data-encore-id="text"]) span {font-size:13px!important;line-height:1.35!important;color:var(--am-sub)!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] [data-encore-id="listRowTitle"] {margin:1px 0 2px!important;font-size:17px!important;font-weight:700!important;line-height:1.25!important;letter-spacing:-.01em}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-encore-id="listRowTitle"],[data-encore-id="listRowTitle"] a) {color:var(--am-text)!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] [data-encore-id="listRowSubtitle"],body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] [data-encore-id="listRowSubtitle"] a {font-size:14px!important;line-height:1.3!important;color:var(--am-sub)!important}
+/* On the right only Spotify's save button, in the reference's round button but as the theme's star (the save is a star
+   everywhere else, #97): outlined, filled in the accent once saved. "…" stays on the right click, download in it. */
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] > div:has(:is([data-testid="add-button"],button[aria-checked]:first-child)) {grid-area:add;margin:0!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] div:has(> :is([data-testid="add-button"],button[aria-checked]:first-child)) > button:not(:is([data-testid="add-button"],button[aria-checked]:first-child)) {display:none!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child) {inline-size:40px!important;block-size:40px!important;min-block-size:0!important;padding:0!important;display:grid!important;place-items:center;border-radius:50%!important;background:rgb(var(--am-ink,255 255 255)/.06)!important;box-shadow:inset 0 0 0 1px rgb(var(--am-ink,255 255 255)/.18)!important;color:var(--am-text)!important;opacity:1!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child):hover {background:rgb(var(--am-ink,255 255 255)/.12)!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child) svg {width:16px!important;height:16px!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child) :is(svg,div[style*="pointer-events: none"]) {background:currentColor;-webkit-mask:var(--am-star-line) center/contain no-repeat;mask:var(--am-star-line) center/contain no-repeat}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child) svg path {display:none}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child) div[style*="pointer-events: none"] > div {opacity:0;filter:none}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child)[aria-checked="true"] {color:var(--am-star-color,var(--am-accent))!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="add-button"],button[aria-checked]:first-child)[aria-checked="true"] :is(svg,div[style*="pointer-events: none"]) {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
+/* Play on the cover's middle, on hover, as Home's cards draw it. */
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] [role="div"]:has(> :is([data-testid="play-button"],button[data-encore-id="buttonPrimary"])) {position:absolute;left:62px;top:50%;transform:translate(-50%,-50%);z-index:2;opacity:0;transition:opacity .15s}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"]:is(:hover,:focus-within) [role="div"]:has(> :is([data-testid="play-button"],button[data-encore-id="buttonPrimary"])) {opacity:1}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="play-button"],button[data-encore-id="buttonPrimary"]) > span {box-sizing:border-box;inline-size:34px!important;block-size:34px!important;min-block-size:0!important;padding:0!important;border-radius:50%!important;background:rgb(0 0 0/.42)!important;-webkit-backdrop-filter:blur(12px) saturate(1.4);backdrop-filter:blur(12px) saturate(1.4);color:#fff!important;box-shadow:none!important;transform:none!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="play-button"],button[data-encore-id="buttonPrimary"]):hover > span {background:var(--am-accent)!important}
+body.am-feed .am-native-main ul[role="treegrid"] > div [data-encore-id="listRow"] :is([data-testid="play-button"],button[data-encore-id="buttonPrimary"]) svg {width:14px!important;height:14px!important;fill:#fff!important}
+/* The Music / Podcasts chips give way to the pop-up button theme.js puts before them. */
+body.am-feed .am-feed-filter {margin:2px 0 0}
+body.am-feed .am-feed-filter + * {display:none!important}
+body:not(.am-feed) .am-feed-filter {display:none}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] {font-size:17px!important;font-weight:700!important;letter-spacing:-.01em}
+/* A shelf title that opens the whole section ends in Apple's chevron (#125), drawn as the artist page's shelf titles. */
+:root {--am-shelf-chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 4 8 8-8 8'/%3E%3C/svg%3E")}
+body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRowTitle"] a[href]::after {content:"";display:inline-block;width:14px;height:14px;margin-inline-start:3px;vertical-align:-2px;background:rgb(var(--am-ink,255 255 255)/.627);-webkit-mask:var(--am-shelf-chevron) center/contain no-repeat;mask:var(--am-shelf-chevron) center/contain no-repeat}
 body.am-home-apple .am-native-main [data-testid="component-shelf"] [data-encore-id="listRow"] a[href]:not([data-encore-id="listRowTitle"] a) {display:none!important}
 body.am-home-no-shortcuts .am-native-main .view-homeShortcutsGrid-shortcuts {display:none!important}
+/* The shortcuts at the top as a list of Apple's (its "Best New Songs", #125), drawn as the song rows of the artist page
+   and search: 56px rows, 48px artwork with 5px corners, the rule under a row starting at its text (none under a
+   column's last row), 13px names, play over the artwork and "…" at the end on hover. theme.js tags each shortcut
+   [data-am-shortcut] and their grid [data-am-shortcuts]; Spotify keeps its columns (two rows). */
+body.am-home-apple .am-native-main [data-am-shortcuts] {--item-height:56px!important;gap:0 24px!important}
+body.am-home-apple .am-native-main [data-am-shortcut] {border-radius:0!important;background:none!important;overflow:visible!important}
+/* The rule hangs 1px under its row and the grid clips the last row's, whatever the column count. */
+body.am-home-apple .am-native-main [data-am-shortcuts] {overflow:clip}
+body.am-home-apple .am-native-main [data-am-shortcuts] > [data-am-shortcut]::after {content:"";position:absolute;left:60px;right:0;bottom:-1px;height:1px;background:rgb(var(--am-ink,255 255 255)/.11);pointer-events:none;z-index:1}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] {height:100%;align-items:center}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child > div {min-width:48px!important;min-height:48px!important;width:48px;height:48px}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child > div > div {border-radius:5px;overflow:hidden;box-shadow:none!important;background:rgb(var(--am-ink,255 255 255)/.078)!important}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > a:first-child img {border-radius:5px}
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]) > div:first-child {margin-inline:12px 32px!important}
+/* One line, as Apple's list: a long name ends in an ellipsis instead of taking a second line. */
+body.am-home-apple .am-native-main [data-am-shortcut] p[data-encore-id="text"] {font-size:13px!important;font-weight:500!important;line-height:1.3!important;letter-spacing:0;display:block!important;-webkit-line-clamp:none!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The shortcut and its name's flex boxes otherwise grow to the text (246px in a 179px column) and the name runs into
+   the next column. */
+body.am-home-apple .am-native-main [data-am-shortcut],body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]),body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]) :is(div,a):has(p[data-encore-id="text"]) {min-width:0!important}
+body.am-home-apple .am-native-main [data-am-shortcut] a {text-decoration:none!important}
+/* Play: Spotify's button, moved over the artwork as Apple's dimmed artwork with its glyph. */
+body.am-home-apple .am-native-main [data-am-shortcut] > [draggable] > div:not([data-testid]) > div:has(> div > div > button[data-encore-id="buttonPrimary"]) {inset-inline:0 auto!important;top:4px;width:48px!important;height:48px}
+body.am-home-apple .am-native-main [data-am-shortcut] button[data-encore-id="buttonPrimary"] > span {box-sizing:border-box;display:flex;align-items:center;justify-content:center;inline-size:48px!important;block-size:48px!important;min-block-size:0!important;padding:0!important;border-radius:5px!important;background:rgb(0 0 0/.4)!important;color:#fff!important;box-shadow:none!important;transform:none!important}
+body.am-home-apple .am-native-main [data-am-shortcut] button[data-encore-id="buttonPrimary"] svg {width:16px!important;height:16px!important;fill:#fff!important}
+body.am-home-apple .am-native-main [data-am-shortcut] .am-shortcut-more {top:50%;right:0;bottom:auto;translate:0 -50%;background:none!important;-webkit-backdrop-filter:none;backdrop-filter:none;color:rgb(var(--am-ink,255 255 255)/.753)!important}
+body.am-home-apple .am-native-main [data-am-shortcut] .am-shortcut-more:hover {background:none!important;color:var(--am-accent)!important}
+body.am-home-apple .am-native-main [data-am-shortcut]:is(:hover,:focus-within) .am-shortcut-more {opacity:1}
 /* Mix covers (settings.mixCovers). theme.js puts .am-mix on the image's box with the photo (--am-mix-photo), the band
    colour, two gradient stops, the name (data-am-mix) and the look (data-am-mix-style); .am-mix-ready once they are
    known, so Spotify's image shows until then. .am-mix-plain: no photo (mood mixes, Discover Weekly), drawn as the gradient. Sizes are in

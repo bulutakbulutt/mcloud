@@ -1340,6 +1340,12 @@ try {
     assert.equal(await page.locator('#am-sidebar .am-drop-into, #am-sidebar .am-drop-before').count(), 0);
     // The sidebar's rows start drags Spotify's pages understand.
     assert.equal(await page.evaluate(() => { const row = document.querySelector('#am-sidebar .am-list-row[title="Odak"]'), dt = new DataTransfer(); row.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt })); return row.draggable && dt.getData('text/x-spotify-playlists'); }), 'spotify:playlist:2');
+    // #130: the player's artist — album line drags the album; an artist's name drags the artist.
+    const lineDrag = sel => page.evaluate(sel => { const node = document.querySelector(sel), dt = new DataTransfer(); node.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
+      return [node.closest('[draggable="true"]') === node, dt.getData('text/x-spotify-albums'), dt.getData('text/x-spotify-artists'), dt.getData('text/uri-list')]; }, sel);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle'), [true, 'spotify:album:0', '', 'https://open.spotify.com/album/0']);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle .am-lcd-link[data-uri="spotify:artist:0"]'), [true, '', 'spotify:artist:0', 'https://open.spotify.com/artist/0']);
+    assert.deepEqual(await lineDrag('#am-player .am-track-subtitle .am-lcd-link[data-uri="spotify:album:0"]'), [true, 'spotify:album:0', '', 'https://open.spotify.com/album/0']);
   });
   await check('Spotify\'s menus in the theme\'s measure, their icons in Apple Music\'s column (#59)', async () => {
     // Spotify's rows: [icon | label], and a submenu row [icon + label | chevron].
@@ -1783,7 +1789,7 @@ try {
         <style>#mock-album72 .main-trackList-trackListHeader{height:36px;margin:0 calc(var(--content-spacing) * -1) calc(var(--content-spacing) - 8px)}</style>
         <div class="main-trackList-trackListContainer"><div class="main-trackList-trackList main-trackList-indexable" style="--grid-template-columns:[index] 16px [first] 4fr [var1] 2fr [last] 1fr">
           <div class="main-trackList-trackListHeader"><div class="main-trackList-trackListHeaderRow" role="row">Title</div></div>
-          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></div><div><div><p class="mock-date">August 20, 2016</p><div><p>© 2016 Boys Don't Cry</p></div></div></div></section>`);
+          ${row(1, 'Solo', [['frank', 'Frank Ocean']])}${row(2, 'Guest', [['frank', 'Frank Ocean'], ['guest', 'André 3000']])}${row(3, 'Pair', [['jay', 'JAY-Z'], ['kanye', 'Kanye West']])}</div></div><div><div><p class="mock-date">August 20, 2016</p><div><p>© 2016 Boys Don't Cry</p></div></div><button class="mock-releases" type="button"><span class="encore-text-body-small" data-encore-id="text">1 more release</span><svg data-encore-id="icon" viewBox="0 0 16 16"><path d="m14 6-6 6-6-6z"></path></svg></button></div><style>.mock-releases{display:grid;grid-auto-flow:column;align-items:center;gap:8px;height:40px;padding:0 16px;border:0;border-radius:4px;background-color:#1e1e1e}</style></section>`);
       Spicetify.Platform.History.push('/album/' + id);
     }, id);
     const shown = () => page.$$eval('#mock-album72 .mock-artists', l => l.map(e => getComputedStyle(e).display !== 'none'));
@@ -1811,6 +1817,9 @@ try {
     assert.deepEqual(await page.evaluate(() => { const p = document.getElementById('mock-album72'), d = e => getComputedStyle(p.querySelector(e)).display;
       return [getComputedStyle(document.documentElement).getPropertyValue('--am-list-info'), d('.mock-count'), d('.mock-dot'), d('.mock-year'), getComputedStyle(p.querySelector('.mock-date'), '::after').content]; }),
       ['"3 şarkı, 1 saat, 2 dakika"', 'none', 'none', 'block', '"3 şarkı, 1 saat, 2 dakika"']);
+    // #121: Spotify's "N more releases" (a hashed 40px card box with a triangle) is the library sort's pop-up button.
+    assert.deepEqual(await page.$eval('#mock-album72 .mock-releases', b => { const c = getComputedStyle(b); return [c.height, c.borderRadius, /^url\("data:image\/svg/.test(c.backgroundImage), getComputedStyle(b.querySelector('svg')).display, getComputedStyle(b.firstElementChild).fontSize]; }),
+      ['30px', '8px', true, 'none', '13px']);
     // #97: a song's like button is Music's favourite star, outlined until it is liked, then filled.
     assert.deepEqual(await page.$$eval('#mock-album72 .mock-like', l => l.map(b => [/fill='none'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage), /fill='%23000'/.test(getComputedStyle(b.querySelector('svg')).webkitMaskImage)])), [[false, true], [true, false], [true, false]]);
     // Spotify spaces the column header from the first row by the page padding minus 8px; the first row follows it directly, as in Apple Music.
@@ -1882,7 +1891,7 @@ try {
         <div><div style="overflow:hidden"><div data-testid="action-bar" class="contentSpacing"><div data-testid="action-bar-row" style="display:flex">
           <div><button data-encore-id="buttonPrimary" aria-label="Play"><span>${svg}</span></button></div>
           <div data-testid="action-bar-row-actions"><button data-encore-id="buttonTertiary" class="e-1-button-tertiary--condensed-all" aria-label="Shuffle"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-save" aria-label="Save to Your Library" aria-checked="false"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-download" aria-label="Download" aria-checked="false"><span>${svg}</span></button></div></div></div></div></div>
-        <div class="contentSpacing"><div class="main-trackList-trackListContainer"><div class="main-trackList-trackList" role="grid"><div role="row"><div class="main-trackList-trackListRow"><button class="mock-like" aria-label="Add to Liked Songs" aria-checked="false">${svg}</button><button class="mock-liked" aria-label="Add to playlist" aria-checked="true">${svg}</button></div></div></div></div>
+        <div class="contentSpacing"><div class="main-trackList-trackListContainer"><div class="main-trackList-trackList" role="grid"><div role="row"><div class="main-trackList-trackListRow"><button class="mock-hide" role="switch" aria-label="Hide in this playlist" aria-checked="false">${svg}</button><button class="mock-like" aria-label="Add to Liked Songs" aria-checked="false">${svg}</button><button class="mock-liked" aria-label="Add to playlist" aria-checked="true">${svg}</button></div></div></div></div>
           ${kind === 'album' ? '<div><div><p class="mock-date">August 20, 2016</p><div><p>℗ 2016 Boys Don\'t Cry</p></div></div></div>' : ''}</div></section>`);
       Spicetify.Platform.History.push(`/${kind}/${id}`);
     }, [kind, id]);
@@ -1908,6 +1917,11 @@ try {
     assert.match(await mask('.mock-like'), /fill='none'/);
     assert.match(await mask('.mock-liked'), /fill='%23000'/);
     assert.equal(await css('.mock-liked', 'color'), accent);
+    // A mix's "Hide in this playlist" is a switch beside it: Music's minus.circle, not a second star, and not the accent once hidden.
+    assert.match(await mask('.mock-hide'), /circle/);
+    await page.$eval('#mock-97 .mock-hide', e => e.setAttribute('aria-checked', 'true'));
+    assert.match(await mask('.mock-hide'), /evenodd/);
+    assert.notEqual(await css('.mock-hide', 'color'), accent);
     // While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size: the box is the star
     // (filled once saved) and the animation inside it is hidden.
     await page.$$eval('#mock-97 :is(.mock-save,.mock-like) span, #mock-97 .mock-like', els => els.forEach(e => { e.innerHTML = '<div style="position: relative; pointer-events: none; width: 32px; height: 32px;"><div></div></div>'; }));
@@ -2203,25 +2217,41 @@ try {
       await pick('npBg', 'Kapak renkleri');
 
       // With Spicy Lyrics, beside the player, the full-screen button opens Spicy's page (its own button, clicked) in either
-      // layout; while that page is open the pane steps aside, so the lyrics never show twice, and it comes back as it was
-      // when the page closes. The player's lyrics button keeps opening that page.
-      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'); b.id = 'SpicyLyrics_PageButton';
-        b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); }; document.body.append(b); });
+      // layout. On that page the pane stays where it was (#120) with the artwork and title but no lyrics (the page has
+      // them; Plain too), and its full-screen button clicks Spicy's own. Back from the page the lyrics return.
+      await page.evaluate(() => { const H = Spicetify.Platform.History, b = document.createElement('button'), f = document.createElement('button'); b.id = 'SpicyLyrics_PageButton'; f.id = 'SpicyLyrics_FullscreenButton';
+        b.onclick = () => { window.__spicyClicks = (window.__spicyClicks || 0) + 1; H.push(H.location.pathname === '/SpicyLyrics' ? '/' : '/SpicyLyrics'); };
+        f.onclick = () => { window.__spicyFullClicks = (window.__spicyFullClicks || 0) + 1; }; document.body.append(b, f); });
       const route = () => page.evaluate(() => Spicetify.Platform.History.location.pathname);
       const paneShown = () => page.evaluate(() => !document.getElementById('am-nowplaying').hidden && document.body.classList.contains('am-np-open'));
+      const paneParts = () => page.evaluate(() => { const np = document.getElementById('am-nowplaying'), shown = s => !!np.querySelector(s)?.getClientRects().length; return [shown('.am-np-art'), shown('.am-np-meta'), shown('.am-np-lyrics')]; });
       for (const layout of ['Cam kart', 'Kenara yapışık']) {
         await pick('npLayout', layout);
         const before = await rect('#am-nowplaying');
         await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Spicy Lyrics\'te aç');
         await page.click('#am-nowplaying .am-np-fullscreen');
-        await page.waitForFunction(() => document.getElementById('am-nowplaying').hidden);
-        assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', false, false], layout);
+        await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+        assert.deepEqual([await route(), await paneShown(), await page.evaluate(() => document.body.classList.contains('am-np-full'))], ['/SpicyLyrics', true, false], layout);
+        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane stays on Spicy\'s page: ' + layout);
+        assert.deepEqual(await paneParts(), [true, true, false], 'no lyrics in the pane on Spicy\'s page: ' + layout);
+        assert.equal(await page.evaluate(() => document.querySelector('#am-nowplaying .am-np-line')), null, 'no lyrics loaded on Spicy\'s page');
+        await page.waitForFunction(() => document.querySelector('#am-nowplaying .am-np-fullscreen').title === 'Tam ekran');
+        await page.click('#am-nowplaying .am-np-fullscreen');
         await page.click('#am-lyrics-toggle');
         assert.equal(await route(), '/');
-        await page.waitForFunction(() => !document.getElementById('am-nowplaying').hidden && !document.querySelector('#am-nowplaying').getAnimations().length);
-        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane comes back as it was: ' + layout);
+        await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+        assert.deepEqual(await rect('#am-nowplaying'), before, 'the pane stays as it was: ' + layout);
       }
-      assert.equal(await page.evaluate(() => window.__spicyClicks), 4);
+      assert.deepEqual(await page.evaluate(() => [window.__spicyClicks, window.__spicyFullClicks]), [4, 2]);
+      await pick('npBg', 'Sade (Apple)');
+      await page.click('#am-lyrics-toggle');
+      await page.waitForFunction(() => document.body.classList.contains('am-spicy-route'));
+      assert.deepEqual(await paneParts(), [true, true, false], 'Plain on Spicy\'s page: artwork and title, no lyrics');
+      await page.click('#am-lyrics-toggle');
+      await page.waitForSelector('#am-nowplaying .am-np-line.am-current');
+      assert.deepEqual(await paneParts(), [false, false, true], 'Plain off the page: lyrics only');
+      await pick('npBg', 'Kapak renkleri');
+      await page.evaluate(() => document.getElementById('SpicyLyrics_FullscreenButton').remove());
       await pick('npLayout', 'Cam kart');
 
       // Spicy Lyrics as the lyrics source: Spicy's card lives in Spotify's own Now Playing view (the right column), so the
@@ -2554,9 +2584,10 @@ try {
     await page.waitForFunction(() => document.querySelectorAll('#mock-home .am-mix-ready').length === 3);
     const covers = () => page.evaluate(() => [...document.querySelectorAll('#mock-home .mock-art')].map(b => [b.dataset.amMix || '', b.dataset.amMixStyle || '', b.classList.contains('am-mix-ready')]));
     assert.deepEqual(await covers(), [['Daily Mix 2', 'band', true], ['Chill Mix', 'band', true], ['Ginkgo Radio', 'station', true], ['', '', false]]);
-    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track.
+    // A Daily Mix names its photo in the URL; the others are looked up once, by artist and by track. Each lookup starts
+    // when its image loads, and the images load in any order, so the order of the lookups is not checked.
     assert.match(await page.evaluate(() => document.querySelector('#mock-home .am-mix').style.getPropertyValue('--am-mix-photo')), /i\.scdn\.co\/image\/ab6761610000e5eb97f3/);
-    assert.deepEqual(await page.evaluate(() => window.__mixRequests), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
+    assert.deepEqual((await page.evaluate(() => window.__mixRequests)).sort(), ['spotify:artist:0ECwFtbIWEVNwjlrfc6xoL', 'spotify:track:1Czqh6tbb9gqCQpSkXsqDT']);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('mcloud:mix-covers')).length), 3);
     // The hidden title shows under a redrawn cover, the image under it is hidden, and the band is drawn.
     assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), t = b.closest('[data-encore-id="card"]').querySelector('[data-encore-id="cardTitle"]');
@@ -2591,6 +2622,20 @@ try {
       const out = [before, arrows.every(a => a.classList.contains('am-chevron')), st.getPropertyValue('--chevrons-button-color').trim(), st.getPropertyValue('--chevrons-button-backdrop-filter').trim()];
       s.remove();return out;
     }), [true, true, 'transparent', 'blur(21px) url(#am-search-glass)']);
+    // A shelf's arrows are Apple Music's 22×40 glass capsules, on the covers' middle once the pointer comes over the shelf.
+    assert.deepEqual(await page.evaluate(async () => {
+      const s = document.createElement('section');s.id = 'mock-shelf-arrows';s.setAttribute('data-shelf', '');s.style.position = 'relative';
+      s.innerHTML = '<div style="display:flex"><div data-encore-id="card" style="padding:0 8px;width:180px"><div><div style="width:164px;height:164px"><img alt="" style="display:block;width:164px;height:164px"></div></div><div data-encore-id="cardTitle" style="height:40px">Mix</div></div></div>'
+        + '<div class="mock-chevrons" style="position:absolute;inset:0 8px;display:flex;justify-content:space-between"><div aria-hidden="true" style="position:relative"><svg data-encore-id="icon"></svg></div><div aria-hidden="true" style="position:relative"><svg data-encore-id="icon"></svg></div></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      s.querySelector('img').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }));
+      const arrow = s.querySelector('.mock-chevrons > div'), cs = getComputedStyle(arrow), img = s.querySelector('img').getBoundingClientRect(), box = arrow.getBoundingClientRect();
+      const liquid = document.body.classList.contains('am-liquid'), map = document.querySelector('#am-glass-chevron feImage')?.getAttribute('href') || '';
+      document.body.classList.add('am-solid');const eco = getComputedStyle(arrow).getPropertyValue('--chevrons-button-backdrop-filter').trim();document.body.classList.remove('am-solid');
+      const out = [arrow.classList.contains('am-chevron'), box.width, box.height, cs.borderRadius, Math.round(box.top + box.height / 2 - (img.top + img.height / 2)), liquid && cs.getPropertyValue('--chevrons-button-backdrop-filter').trim(), map.startsWith('data:image/png'), eco];
+      s.remove();return out;
+    }), [true, 22, 40, '11px', 0, 'blur(10px) url(#am-glass-chevron)', true, 'none']);
     // Where Spicetify's css-map names the card (macOS), its image box is main-cardImage-imageWrapper, not the image's
     // parent inside it: the box keeps the corners and the hairline that replace Spotify's drop shadow (#109).
     assert.deepEqual(await page.evaluate(() => {
@@ -2600,6 +2645,37 @@ try {
       const box = s.querySelector('.main-cardImage-imageWrapper'), inner = box.firstElementChild, out = [getComputedStyle(box).borderRadius, /inset/.test(getComputedStyle(box).boxShadow), getComputedStyle(inner).borderRadius, getComputedStyle(inner).boxShadow];
       s.remove();return out;
     }), ['8px', true, '0px', 'none']);
+    // Artists and profiles stay circles, centred and without hover controls (#127): by uri, or by Spotify's circular class.
+    assert.deepEqual(await page.evaluate(() => {
+      const s = document.createElement('section');s.id = 'mock-home-round';
+      const card = (uri, cls = '') => `<div class="main-card-cardContainer" data-encore-id="card" aria-labelledby="card-title-${uri}-0"><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper ${cls}"><div><img alt="" class="main-cardImage-image"></div></div><div><div><button data-encore-id="buttonPrimary"><span></span></button></div></div></div><div class="mock-col" style="display:flex;flex-direction:column;align-items:flex-start"><a><p data-encore-id="cardTitle">Name</p></a><div data-encore-id="cardSubtitle">Artist</div></div></div>`;
+      s.innerHTML = card('spotify:artist:1') + card('spotify:user:2') + card('spotify:album:3', 'main-cardImage-circular') + card('spotify:album:4');
+      document.querySelector('.am-native-main main').prepend(s);
+      const out = [...s.children].map(c => [getComputedStyle(c.querySelector('.main-cardImage-imageWrapper')).borderRadius, getComputedStyle(c.querySelector('img')).borderRadius, getComputedStyle(c.querySelector('.mock-col')).alignItems, getComputedStyle(c.querySelector('[data-encore-id="cardTitle"]')).textAlign, getComputedStyle(c.querySelector('button').parentElement.parentElement).display]);
+      // Without a photo: Apple's grey circle and microphone instead of Spotify's icon, here and in our library.
+      const bare = document.createElement('div');bare.innerHTML = card('spotify:artist:5').replace('<img alt="" class="main-cardImage-image">', '<div class="main-card-imagePlaceholder" style="position:absolute;inset:0"><svg></svg></div>');
+      s.append(bare.firstElementChild);
+      const lib = document.createElement('span');lib.className = 'am-library-art am-artist-art';s.append(lib);
+      const ph = s.querySelector('.main-card-imagePlaceholder'), mic = el => { const a = getComputedStyle(el, '::after'); return [a.content, /^url\("data:image\/svg\+xml/.test(a.maskImage || a.webkitMaskImage)]; };
+      // Our round cards (artist page, search shelves) centre their column: a photo-less artwork still fills the card.
+      const own = document.createElement('div');own.className = 'am-card am-card-round';own.dataset.uri = 'spotify:artist:9';own.style.width = '144px';
+      own.innerHTML = '<button class="am-card-open" style="display:flex;flex-direction:column;width:100%;padding:0;border:0"><span class="am-card-art"><img alt=""></span><span class="am-card-name">Name</span></button>';s.append(own);
+      const ownArt = own.querySelector('.am-card-art');
+      out.push([getComputedStyle(ph).borderRadius, getComputedStyle(ph.querySelector('svg')).display, ...mic(ph), ...mic(lib), ownArt.getBoundingClientRect().width, ...mic(ownArt)]);
+      s.remove();return out;
+    }), [['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['50%', '50%', 'center', 'center', 'none'], ['8px', '8px', 'flex-start', 'start', 'block'], ['50%', 'none', '""', true, '""', true, 144, '""', true]]);
+    // An artist whose picture is Spotify's placeholder (theme.js marks data-am-no-photo after reading it) gets the same
+    // circle and microphone, on Spotify's cards and on ours; the picture itself is hidden.
+    assert.deepEqual(await page.evaluate(() => {
+      const s = document.createElement('section');
+      s.innerHTML = '<div class="main-card-cardContainer" data-encore-id="card" aria-labelledby="card-title-spotify:artist:7-0" data-am-no-photo><div class="main-card-imageContainer"><div class="main-cardImage-imageWrapper" style="position:relative"><div><img alt="" class="main-cardImage-image"></div></div></div></div>'
+        + '<div class="am-card am-card-round" data-uri="spotify:artist:8"><button class="am-card-open"><span class="am-card-art" data-am-no-photo><img alt=""></span></button></div>';
+      document.querySelector('.am-native-main main').prepend(s);
+      const box = s.querySelector('.main-cardImage-imageWrapper'), own = s.querySelector('.am-card-art'), mic = el => /^url\("data:image\/svg\+xml/.test(getComputedStyle(el, '::after').webkitMaskImage);
+      const probe = document.createElement('i');probe.style.background = 'var(--am-art-empty)';s.append(probe);
+      const out = [getComputedStyle(box).backgroundColor === getComputedStyle(probe).backgroundColor, getComputedStyle(box.querySelector('img')).opacity, mic(box), getComputedStyle(own.querySelector('img')).opacity, mic(own)];
+      s.remove();return out;
+    }), [true, '0', true, '0', true]);
     await settingsWindow.pick('homeShortcuts');
     assert.ok(await page.evaluate(() => document.body.classList.contains('am-home-no-shortcuts')));
     await settingsWindow.pick('homeShortcuts');
@@ -2638,8 +2714,131 @@ try {
     await page.waitForFunction(() => !document.body.classList.contains('am-photo-page') && document.body.classList.contains('am-image-header'));
   });
 
+  await check('Home (#125): shelf titles line up with the artwork and end in a chevron, one text size, the shortcuts as Apple\'s list', async () => {
+    await page.evaluate(() => {
+      const host = document.querySelector('.am-native-main main');
+      const css = document.createElement('style');css.id = 'mock-home125-css';
+      // Spotify's own rules for these nodes (1.3.6.1921), by the mock's class names.
+      css.textContent = '.m125-wrap{margin-inline:-12px}.m125-row{display:grid;grid-template-columns:repeat(3,1fr)}.m125-card{padding:12px;position:relative}.m125-sub{font-size:14px}.m125-head a:hover,.m125-card a:hover{text-decoration:underline}'
+        + '.m125-sgrid{--item-height:64px;display:grid;grid-template-columns:repeat(2,1fr);grid-auto-rows:var(--item-height);gap:12px}.m125-sc{height:var(--item-height);position:relative;overflow:hidden;border-radius:4px;background:#333}'
+        + '.m125-drag{display:flex}.m125-hold{display:flex}.m125-ic{min-width:var(--item-height);min-height:var(--item-height)}.m125-iw{position:relative;width:100%;height:100%}.m125-iw img{position:absolute;inset:0;width:100%;height:100%}'
+        + '.m125-main{flex:1;display:flex;align-items:center}.m125-content{margin-inline:16px}.m125-name{font-size:14px;font-weight:700}.m125-trail{position:absolute;inset-inline-end:0;width:64px;display:flex}.m125-trail button{padding:0;border:0;background:none}.m125-layer{position:absolute;inset:0;z-index:0}';
+      document.head.append(css);
+      const card = n => `<div role="gridcell" aria-colindex="${n}"><div><div class="m125-card" data-encore-id="card" role="listitem"><div><div><img alt="" style="display:block;width:100%;aspect-ratio:1"></div></div>`
+        + `<a href="/album/${n}"><p data-encore-id="cardTitle">Album ${n}</p></a><div data-encore-id="cardSubtitle"><span><div class="m125-sub" data-encore-id="text"><a href="/artist/${n}">Artist ${n}</a></div></span></div></div></div></div>`;
+      const shortcut = n => `<div class="m125-sc"><div class="m125-drag" draggable="true"><a class="m125-hold" href="/playlist/${n}"><div class="m125-ic"><div class="m125-iw"><img alt=""></div></div></a>`
+        + `<div class="m125-main"><div class="m125-content"><div><a href="/playlist/${n}"><p class="m125-name" data-encore-id="text">Shortcut ${n}</p></a></div></div><div class="m125-trail"><div><div role="div"><button data-encore-id="buttonPrimary"><span><svg></svg></span></button></div></div></div></div>`
+        + `<div class="m125-layer" data-testid="shortcut-background"></div></div></div>`;
+      const s = document.createElement('div');s.id = 'mock-home125';s.style.width = '700px';
+      s.innerHTML = `<section aria-label="Good afternoon"><div class="m125-sgrid">${[1, 2, 3, 4].map(shortcut).join('')}</div></section>`
+        + `<section data-testid="component-shelf"><div data-encore-id="listRow"><div><div><h2 class="m125-head" data-encore-id="listRowTitle"><span><a href="/section/1">New Music</a></span></h2></div></div><div><a href="/section/1">Show all</a></div></div>`
+        + `<div class="m125-wrap"><div role="grid"><div class="m125-row" role="row">${[1, 2, 3].map(card).join('')}</div></div></div></section>`;
+      host.prepend(s);
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#mock-home125 [data-am-shortcut]').length === 4);
+    const box = (sel, i = 0) => page.evaluate(([sel, i]) => { const r = document.querySelectorAll('#mock-home125 ' + sel)[i].getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width, height: r.height }; }, [sel, i]);
+    // The first and the last artwork line up with the shelf's edges, as the title does.
+    const head = await box('[data-encore-id="listRowTitle"]'), first = await box('[data-encore-id="card"] img'), last = await box('[data-encore-id="card"] img', 2), shelf = await box('[data-testid="component-shelf"]');
+    assert.equal(first.left, head.left, 'the artwork starts where the shelf title does');
+    assert.ok(Math.abs(last.right - shelf.right) < 1, `the last artwork ends at the shelf's edge (${last.right} vs ${shelf.right})`);
+    assert.deepEqual(await page.evaluate(() => {
+      const q = s => document.querySelector('#mock-home125 ' + s), cs = (s, p) => getComputedStyle(q(s))[p];
+      return [cs('[data-encore-id="cardTitle"]', 'fontSize'), cs('[data-encore-id="cardSubtitle"] a', 'fontSize'), cs('[data-encore-id="listRowTitle"] [href]', 'textDecorationLine'),
+        getComputedStyle(q('[data-encore-id="listRowTitle"] a'), '::after').maskImage.startsWith('url('), cs('[data-encore-id="listRow"] > div:last-child a', 'display')];
+    }), ['13px', '13px', 'none', true, 'none']);
+    await page.hover('#mock-home125 [data-encore-id="card"] a[href^="/album"]');
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-home125 [data-encore-id="card"] a[href^="/album"]')).textDecorationLine), 'none', 'a card title is not underlined on hover');
+    // Shortcuts as the song rows: 56px rows, 48px artwork, a rule under the row from its text, 13px names, and "…" at
+    // the end opens Spotify's menu.
+    const sc = await box('[data-am-shortcut]'), art = await box('[data-am-shortcut] img');
+    assert.deepEqual([sc.height, art.width, art.height], [56, 48, 48]);
+    assert.deepEqual(await page.evaluate(() => { const c = document.querySelector('#mock-home125 [data-am-shortcut]'), st = getComputedStyle(c), rule = getComputedStyle(c, '::after');
+      return [st.backgroundColor, rule.left, rule.bottom, getComputedStyle(c.parentElement).overflow, getComputedStyle(c.querySelector('p')).fontSize, c.parentElement.hasAttribute('data-am-shortcuts')]; }), ['rgba(0, 0, 0, 0)', '60px', '-1px', 'clip', '13px', true]);
+    await page.mouse.move(sc.left + sc.width / 2, (await page.evaluate(() => document.querySelector('#mock-home125 [data-am-shortcut]').getBoundingClientRect().top)) + sc.height / 2);
+    const play = await box('[data-am-shortcut] button[data-encore-id="buttonPrimary"] > span');
+    assert.deepEqual([play.left, play.width], [art.left, 48], 'play sits over the artwork');
+    await page.evaluate(() => document.querySelector('#mock-home125 [data-am-shortcut] [data-testid="shortcut-background"]').addEventListener('contextmenu', e => { window.__shortcutMenu = e.clientX > 0; e.preventDefault(); }));
+    const more = await box('[data-am-shortcut] .am-shortcut-more');
+    assert.ok(Math.abs(more.right - sc.right) < 1, '"…" ends the row');
+    await page.mouse.click(more.left + more.width / 2, more.height / 2 + (await page.evaluate(() => document.querySelector('#mock-home125 .am-shortcut-more').getBoundingClientRect().top)));
+    assert.equal(await page.evaluate(() => window.__shortcutMenu), true, '"…" opens the shortcut\'s menu');
+    // A long name stays on one line, inside its own row, and ends in an ellipsis.
+    assert.deepEqual(await page.evaluate(() => {
+      const c = document.querySelector('#mock-home125 [data-am-shortcut]'), p = c.querySelector('p');p.textContent = 'A shortcut whose name is far too long for one row of this grid, and longer still, so it has to end early';
+      const r = p.getBoundingClientRect(), row = c.getBoundingClientRect();
+      const full = document.createElement('span');full.style.cssText = 'position:absolute;white-space:nowrap;font:' + getComputedStyle(p).font;full.textContent = p.textContent;document.body.append(full);
+      const natural = full.getBoundingClientRect().width;full.remove();
+      return [r.height < 20, r.right <= row.right, natural > r.width, getComputedStyle(p).textOverflow];
+    }), [true, true, true, 'ellipsis']);
+    await page.evaluate(() => { document.getElementById('mock-home125').remove(); document.getElementById('mock-home125-css').remove(); });
+  });
+
   // Spotify 1.3.6.19xx (Windows) renders track lists, cards and Browse all with hashed CSS-module class names; the
   // theme tags them by role so its rules still match (#109).
+  await check('What\'s New: the reporter\'s frosted cards in a grid, the chips as a pop-up button (#128)', async () => {
+    // Spotify's feed: a header with the Music / Podcasts chips (checkboxes in a listbox), then an infinite list whose items
+    // are a wrapper > li[role=row] > (h2?) hr listRow, and a sentinel that loads more.
+    await page.evaluate(() => {
+      const row = (n, h) => `<div><li role="row">${h ? `<h2>${h}</h2>` : ''}<hr aria-hidden="true"><div data-encore-id="listRow" role="group" draggable="true"><div role="button"></div><div><div><div><div style="width:112px;height:112px"><img data-testid="entity-image" alt=""></div></div></div></div><div><div><h3 data-encore-id="listRowTitle"><span><a href="/album/${n}">Album ${n}</a></span></h3><p data-encore-id="listRowSubtitle"><span><a href="/artist/${n}">Artist</a></span></p></div></div><div><span data-encore-id="text">Album<span><span data-encore-id="text">15 hours ago</span></span></span></div><div><div><div><button data-testid="add-button" aria-checked="false"><span><svg></svg></span></button><button aria-label="Download"><span><svg></svg></span></button><button data-testid="more-button"><span><svg></svg></span></button></div><div><div role="div"><button data-testid="play-button"><span><svg></svg></span></button></div></div></div></div></div></li></div>`;
+      const chip = t => `<div role="presentation"><div role="option"><button data-encore-id="chip" role="checkbox" aria-checked="false">${t}</button></div></div>`;
+      const s = document.createElement('section');s.id = 'mock-feed';s.style.maxWidth = '800px';
+      s.innerHTML = `<div><h1>What's New</h1></div><div><div role="presentation"><div role="presentation"><div role="listbox">${chip('Music')}${chip('Podcasts')}</div></div></div></div>`
+        + `<ul role="treegrid"><div data-testid="infinite-scroll-list">${row(1, 'New')}${row(2)}${row(3)}${row(4, 'Earlier')}<div class="mock-sentinel" style="height:1px"></div></div></ul>`;
+      for (const c of s.querySelectorAll('[role="checkbox"]')) c.addEventListener('click', () => { const on = c.getAttribute('aria-checked') !== 'true'; for (const o of s.querySelectorAll('[role="checkbox"]')) o.setAttribute('aria-checked', 'false'); c.setAttribute('aria-checked', String(on)); });
+      document.querySelector('.am-native-main main').prepend(s);
+      Spicetify.Platform.History.push('/content-feed');
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-feed .am-feed-filter'));
+    const state = () => page.evaluate(() => {
+      const s = document.getElementById('mock-feed'), list = s.querySelector('[data-testid="infinite-scroll-list"]'), cards = [...list.querySelectorAll('[data-encore-id="listRow"]')];
+      const button = s.querySelector('.am-feed-filter');
+      return [document.body.classList.contains('am-feed'), button?.textContent, button?.nextElementSibling && getComputedStyle(button.nextElementSibling).display,
+        new Set(cards.map(c => Math.round(c.getBoundingClientRect().top))).size < cards.length, getComputedStyle(list.querySelector('li > hr')).display,
+        getComputedStyle(list.querySelector('h2')).gridColumn, list.querySelector('.mock-sentinel').getBoundingClientRect().height > 0,
+        cards[0].querySelector('img').getBoundingClientRect().width, [...cards[0].querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.dataset.testid).join()];
+    });
+    assert.deepEqual(await state(), [true, 'Tümü', 'none', true, 'none', '1 / -1', true, 96, 'add-button,play-button']);
+    // The button clicks Spotify's chips: Music, then Podcasts (Spotify's chip goes off first), then All.
+    const choose = async label => { await page.click('#mock-feed .am-feed-filter'); await page.locator('#am-popover .am-popover-item', { hasText: label }).first().click(); await page.waitForTimeout(500); };
+    const checked = () => page.evaluate(() => [...document.querySelectorAll('#mock-feed [role="checkbox"]')].map(c => c.getAttribute('aria-checked')).join());
+    await choose('Music');assert.equal(await checked(), 'true,false');
+    await choose('Podcasts');assert.equal(await checked(), 'false,true');
+    assert.equal(await page.textContent('#mock-feed .am-feed-filter'), 'Podcasts');
+    await choose('Tümü');assert.equal(await checked(), 'false,false');
+    // Spotify's own layout stays a setting away.
+    await settingsWindow.pick('feedStyle', 'Spotify');
+    assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-feed'), !!document.querySelector('#mock-feed .am-feed-filter')]), [false, false]);
+    await settingsWindow.pick('feedStyle', 'Apple Music');
+    await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
+    assert.equal(await page.evaluate(() => document.body.classList.contains('am-feed')), false);
+  });
+  await check('What\'s New: the macOS client\'s feed markup (no test ids) gets the same cards (#128)', async () => {
+    // Spotify 1.3.6 on macOS: the list has no data-testid, the cover no entity-image, and the buttons no test ids: save and
+    // download both carry aria-checked, "…" opens a menu, play is the primary button in its own [role=div].
+    await page.evaluate(() => {
+      const row = n => `<div><li role="row"><hr><div data-encore-id="listRow" role="group"><div role="button"></div><div style="position:absolute;width:1px;height:1px;overflow:hidden"></div><div><div><div><div><img alt="" style="width:99px;height:99px"></div></div></div></div><div><div><h3 data-encore-id="listRowTitle"><span><a href="/album/${n}">Album ${n}</a></span></h3><p data-encore-id="listRowSubtitle"><span><a href="/artist/${n}">Artist</a></span></p></div></div><div><span data-encore-id="text"><span><span data-encore-id="text">17 hours ago</span></span></span></div><div><div><div><button aria-label="Save to Your Library" aria-checked="false" data-encore-id="buttonTertiary"><span><svg></svg></span></button><button aria-label="Download" aria-checked="false" data-encore-id="buttonTertiary"><span><svg></svg></span></button><button aria-label="More" aria-haspopup="menu" data-encore-id="buttonTertiary"><span><svg></svg></span></button></div><div><div role="div"><button aria-label="Play" data-encore-id="buttonPrimary"><span><svg></svg></span></button></div></div></div></div></div></li></div>`;
+      const chip = t => `<div role="presentation"><div role="option"><button data-encore-id="chip" role="checkbox" aria-checked="false">${t}</button></div></div>`;
+      const s = document.createElement('section');s.id = 'mock-feed';s.style.maxWidth = '800px';
+      s.innerHTML = `<div><h1>What's New</h1></div><div><div role="presentation"><div role="presentation"><div role="listbox">${chip('Music')}${chip('Podcasts')}</div></div></div></div>`
+        + `<ul role="treegrid"><div><div><li role="row"><h2>Earlier</h2></li></div>${row(1)}${row(2)}${row(3)}<div style="height:32px"></div></div></ul>`;
+      document.querySelector('.am-native-main main').prepend(s);
+      Spicetify.Platform.History.push('/content-feed');
+    });
+    await page.waitForFunction(() => document.querySelector('#mock-feed .am-feed-filter'));
+    assert.deepEqual(await page.evaluate(() => {
+      const cards = [...document.querySelectorAll('#mock-feed [data-encore-id="listRow"]')], img = cards[0].querySelector('img');
+      const shown = [...cards[0].querySelectorAll('button')].filter(b => getComputedStyle(b).display !== 'none').map(b => b.getAttribute('aria-label')).join();
+      return [new Set(cards.map(c => Math.round(c.getBoundingClientRect().top))).size < cards.length, img.getBoundingClientRect().width, getComputedStyle(img).borderRadius, shown, getComputedStyle(cards[0]).borderRadius];
+    }), [true, 96, '10px', 'Save to Your Library,Play', '22px']);
+    // The save button is the theme's star: outlined, then filled in the accent once saved.
+    assert.deepEqual(await page.evaluate(() => {
+      const save = document.querySelector('#mock-feed [data-encore-id="listRow"] button[aria-checked]'), icon = () => getComputedStyle(save.querySelector('svg')).webkitMaskImage;
+      const line = icon(), plain = getComputedStyle(save).color;
+      save.setAttribute('aria-checked', 'true');
+      return [line === getComputedStyle(document.documentElement).getPropertyValue('--am-star-line').trim(), icon() !== line, getComputedStyle(save).color !== plain];
+    }), [true, true, true]);
+    await page.evaluate(() => { document.getElementById('mock-feed').remove(); Spicetify.Platform.History.push('/'); });
+  });
   await check('a track list, a shelf and Browse all without Spotify\'s readable class names get them back (#109)', async () => {
     await page.evaluate(() => {
       const host = document.querySelector('.am-native-main');
@@ -2741,6 +2940,30 @@ try {
     await settingsWindow.pick('npLayout', 'Cam kart');
     await page.evaluate(() => document.querySelector('#am-player [data-am-button="nowplaying"]').click());
     await page.waitForFunction(() => document.querySelector('#am-nowplaying').hidden);
+  });
+
+  await check('a result\'s menu that opens a cached page closes the live results', async () => {
+    // Spotify ignores presses and focus outside its results while a result's menu is open. On a page it has cached the
+    // route changes before that menu goes, and the menu hands focus back to the results, which stayed open.
+    const back = await page.evaluate(() => Spicetify.Platform.History.location.pathname + Spicetify.Platform.History.location.search);
+    const leaveFromMenu = focusMenu => page.evaluate(focusMenu => {
+      const root = document.createElement('div'); root.setAttribute('data-tippy-root', ''); root.className = 'mock-result-menu';
+      root.innerHTML = '<ul role="menu"><li role="presentation"><a role="menuitem" tabindex="-1" href="#">Go to album</a></li></ul>'; document.body.append(root);
+      if (focusMenu) root.querySelector('a').focus();
+      Spicetify.Platform.History.push('/collection/tracks');
+      setTimeout(() => { const list = document.querySelector('#search-dropdown [data-overlayscrollbars-viewport]'); if (focusMenu && list) { list.tabIndex = -1; list.focus(); } root.remove(); }, 150);
+    }, focusMenu);
+    await page.fill('#global-nav-bar input', 'sena');
+    await leaveFromMenu(true);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'), null, { timeout: 2000 });
+    // Focus in the field keeps them, as without the theme.
+    await page.fill('#global-nav-bar input', 'sena');
+    await leaveFromMenu(false);
+    await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(() => !!document.getElementById('search-dropdown') && document.activeElement.matches('#global-nav-bar input')), true);
+    await page.mouse.click(700, 500);
+    await page.waitForFunction(() => !document.getElementById('search-dropdown'));
+    await page.evaluate(back => Spicetify.Platform.History.push(back), back);
   });
 
   await check('no runtime errors', async () => assert.deepEqual(errors, []));
