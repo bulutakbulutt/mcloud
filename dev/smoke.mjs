@@ -1891,7 +1891,7 @@ try {
         <div><div style="overflow:hidden"><div data-testid="action-bar" class="contentSpacing"><div data-testid="action-bar-row" style="display:flex">
           <div><button data-encore-id="buttonPrimary" aria-label="Play"><span>${svg}</span></button></div>
           <div data-testid="action-bar-row-actions"><button data-encore-id="buttonTertiary" class="e-1-button-tertiary--condensed-all" aria-label="Shuffle"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-save" aria-label="Save to Your Library" aria-checked="false"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-download" aria-label="Download" aria-checked="false"><span>${svg}</span></button></div></div></div></div></div>
-        <div class="contentSpacing"><div class="main-trackList-trackListContainer"><div class="main-trackList-trackList" role="grid"><div role="row"><div class="main-trackList-trackListRow"><button class="mock-like" aria-label="Add to Liked Songs" aria-checked="false">${svg}</button><button class="mock-liked" aria-label="Add to playlist" aria-checked="true">${svg}</button></div></div></div></div>
+        <div class="contentSpacing"><div class="main-trackList-trackListContainer"><div class="main-trackList-trackList" role="grid"><div role="row"><div class="main-trackList-trackListRow"><button class="mock-hide" role="switch" aria-label="Hide in this playlist" aria-checked="false">${svg}</button><button class="mock-like" aria-label="Add to Liked Songs" aria-checked="false">${svg}</button><button class="mock-liked" aria-label="Add to playlist" aria-checked="true">${svg}</button></div></div></div></div>
           ${kind === 'album' ? '<div><div><p class="mock-date">August 20, 2016</p><div><p>℗ 2016 Boys Don\'t Cry</p></div></div></div>' : ''}</div></section>`);
       Spicetify.Platform.History.push(`/${kind}/${id}`);
     }, [kind, id]);
@@ -1917,6 +1917,11 @@ try {
     assert.match(await mask('.mock-like'), /fill='none'/);
     assert.match(await mask('.mock-liked'), /fill='%23000'/);
     assert.equal(await css('.mock-liked', 'color'), accent);
+    // A mix's "Hide in this playlist" is a switch beside it: Music's minus.circle, not a second star, and not the accent once hidden.
+    assert.match(await mask('.mock-hide'), /circle/);
+    await page.$eval('#mock-97 .mock-hide', e => e.setAttribute('aria-checked', 'true'));
+    assert.match(await mask('.mock-hide'), /evenodd/);
+    assert.notEqual(await css('.mock-hide', 'color'), accent);
     // While a save plays, Spotify swaps the icon for its + / tick Lottie in a box of the icon's size: the box is the star
     // (filled once saved) and the animation inside it is hidden.
     await page.$$eval('#mock-97 :is(.mock-save,.mock-like) span, #mock-97 .mock-like', els => els.forEach(e => { e.innerHTML = '<div style="position: relative; pointer-events: none; width: 32px; height: 32px;"><div></div></div>'; }));
