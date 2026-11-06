@@ -914,6 +914,7 @@ try {
     // A heading opens its own page at Spotify's tab route: Songs as Apple's table, 30 rows, then the next 30 (15 here) as
     // the page nears its end; the request is made while the pointer rests on the heading.
     await page.hover('#am-search .am-shelf-songs .am-shelf-title');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-search .am-shelf-songs .am-next')).opacity === '1', null, { timeout: 3000 });
     await page.waitForFunction(() => window.__searchRequests.some(v => v.kind === 'searchTracks' && v.searchTerm === 'sena' && v.offset === 0 && v.limit === 30));
     await page.click('#am-search .am-shelf-songs .am-shelf-title');
     await page.waitForSelector('body.am-search-results #am-search .am-song-table .am-table-row');
@@ -1028,6 +1029,8 @@ try {
     const pageTop = () => page.evaluate(() => document.getElementById('am-artist').scrollTop);
     // A plain wheel over a row scrolls the page, as in any browser...
     await row.hover();
+    // #165: the arrows show while the pointer is over the shelf (the rule hiding them has an id, so the one showing them needs it too).
+    await page.waitForFunction(i => getComputedStyle(document.querySelectorAll('#am-artist .am-shelf-track')[i].parentElement.querySelector('.am-next')).opacity === '1', index, { timeout: 3000 });
     const top = await pageTop();
     await page.mouse.wheel(0, 200);
     await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);

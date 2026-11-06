@@ -1393,7 +1393,7 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 :is(#am-artist,#am-search) .am-shelf-arrow {position:absolute;top:calc(50% + 4px);transform:translateY(-50%);display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#00000059;backdrop-filter:blur(10px);opacity:0;transition:opacity .15s;z-index:2}
 :is(#am-artist,#am-search) .am-shelf-arrow svg {width:15px;height:15px;stroke-width:2.4}
 :is(#am-artist,#am-search) .am-shelf-arrow[hidden] {display:none}
-.am-shelf:hover .am-shelf-arrow,:is(#am-artist,#am-search) .am-shelf-arrow:focus-visible {opacity:1}
+:is(#am-artist,#am-search) .am-shelf:hover .am-shelf-arrow,:is(#am-artist,#am-search) .am-shelf-arrow:focus-visible {opacity:1}
 :is(#am-artist,#am-search) .am-prev {left:4px}
 :is(#am-artist,#am-search) .am-next {right:4px}
 :is(#am-artist,#am-search) .am-card {position:relative;min-width:0}
