@@ -1024,6 +1024,10 @@ body.am-tglass-on #global-nav-bar form[role="search"] > :first-child button {wid
 body.am-tglass-on #global-nav-bar form[role="search"] > :first-child svg {translate:3.1px 1.08px}
 body.am-tglass-on #global-nav-bar form[role="search"] :is(input,div:has(> span > kbd)) {padding-inline-start:36px!important}
 body.am-tglass-on #global-nav-bar form[role="search"] span:has(> kbd) {background:none!important}
+/* The shortcut hint (#161): Spotify sets it right after the hidden placeholder, so it ended mid-field, in large outlined
+   keys. It stands at the field's end, before the Browse divider, in small flat keys. */
+#global-nav-bar form[role="search"] span:has(> kbd) {display:flex;align-items:center;gap:3px;margin-inline:auto 0!important;padding:0!important}
+#global-nav-bar form[role="search"] kbd {display:grid;place-items:center;box-sizing:border-box;min-width:20px;height:20px;margin:0!important;padding:0 5px!important;border-radius:5px!important;background:rgb(var(--am-ink)/.1)!important;box-shadow:none!important;color:rgb(var(--am-ink)/.65)!important;font-size:11px!important;font-weight:500!important;line-height:1!important}
 /* The artist page's back and share + more: the same glass behind them (theme.js syncArtistGlass). */
 #am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions) {background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;padding:0;gap:0}
 #am-artist.am-tglass-on :is(.am-artist-back,.am-artist-actions button) {width:36px;height:36px;transform:scale(var(--am-tg-scale,1))}
@@ -1089,6 +1093,10 @@ body.am-ready #global-nav-bar:has(:is(#search-dropdown,#search-suggestions-loadi
 #search-dropdown [role="row"] [class*="list-row__slot"] {visibility:hidden}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] {visibility:visible}
 #search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [class*="list-row__slot"] :is(button,svg) {color:#fff!important;fill:#fff!important}
+/* An artist's Follow: a flat capsule, as the theme's other buttons, not Spotify's outlined box (#161). */
+#search-dropdown [role="row"] [data-encore-id="buttonSecondary"] {box-sizing:border-box;height:26px!important;min-block-size:0!important;padding:0 12px!important;border:0!important;border-radius:999px!important;background:rgb(var(--am-ink)/.12)!important;font-size:12px!important;font-weight:600!important;line-height:1!important}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [data-encore-id="buttonSecondary"] {background:#ffffff38!important}
+#search-dropdown [role="row"]:is(:hover,[aria-selected="true"]) [data-encore-id="buttonSecondary"]:hover {background:#ffffff59!important}
 #search-dropdown [role="row"] [class*="list-row__header"]:not([class*="header-side"]) {height:auto!important}
 #search-dropdown [role="row"] [class*="list-row__column"] {gap:0!important}
 #search-dropdown [role="row"] a {text-decoration:none!important}
