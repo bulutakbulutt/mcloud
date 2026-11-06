@@ -2096,12 +2096,15 @@ try {
   await check('song preview in light mode: the card keeps its own text colour, its menus the page\'s', async () => {
     // Spotify colours links and tertiary buttons with --spice-text, dark in light mode, over a card that stays dark.
     const colours = await page.evaluate(() => { const root = document.documentElement, was = root.classList.contains('am-light'); root.classList.add('am-light'); document.body.classList.add('am-light');
-      document.querySelector('.Root').insertAdjacentHTML('beforeend', '<div id="mock-feed-light" role="presentation" data-am-preview><div data-testid="watch-feed-view"><a href="/track/1">Song</a><div data-tippy-root><a href="/artist/1">Go to artist</a></div></div></div>');
+      document.querySelector('.Root').insertAdjacentHTML('beforeend', '<div id="mock-feed-light" role="presentation" data-am-preview><div data-testid="watch-feed-view"><a href="/track/1">Song</a><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=#equaliser-animated-white"><div data-tippy-root><a href="/artist/1">Go to artist</a></div></div></div>');
       const view = document.querySelector('#mock-feed-light [data-testid="watch-feed-view"]'), read = (e, n) => getComputedStyle(e).getPropertyValue(n).trim();
       const out = [read(view, '--spice-text') === read(view, '--am-pv-text'), read(view.querySelector('[data-tippy-root]'), '--spice-text').replace(/\s/g, '')];
+      // On the light glass card Spotify's white playing equaliser takes the icons' dark tone.
+      const glass = document.body.classList.contains('am-pv-glass'); document.body.classList.add('am-pv-glass');
+      const eq = getComputedStyle(view.querySelector('img')); out.push(eq.filter, eq.opacity); document.body.classList.toggle('am-pv-glass', glass);
       if (!was) { root.classList.remove('am-light'); document.body.classList.remove('am-light'); } document.getElementById('mock-feed-light').remove(); return out; });
     await page.waitForFunction(() => !document.body.classList.contains('am-preview-open'));
-    assert.deepEqual(colours, [true, 'rgb(39,39,39)']);
+    assert.deepEqual(colours, [true, 'rgb(39,39,39)', 'brightness(0)', '0.65']);
   });
 
   await check('song preview: an Apple sheet, its background from settings, the sidebar closes it (#75)', async () => {

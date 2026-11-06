@@ -557,6 +557,8 @@ body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"] {backgrou
 body.am-pv-artwork [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:-80px;z-index:-1;pointer-events:none;background:var(--am-preview-art,none) center/cover no-repeat;filter:blur(60px) saturate(1.5) brightness(.62)}
 body.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-pv-sheet)!important;backdrop-filter:blur(40px) saturate(1.8);-webkit-backdrop-filter:blur(40px) saturate(1.8)}
 body.am-solid.am-pv-glass [data-am-preview] > [data-testid="watch-feed-view"] {background-color:var(--am-menu-solid,#2c2c2e)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
+/* The playing equaliser beside Mute is a white GIF; on the light glass card it takes the icons' tone. */
+body.am-light.am-pv-glass [data-am-preview] img[src*="equaliser-animated-white"] {filter:brightness(0);opacity:.65}
 body.am-pv-color [data-am-preview] > [data-testid="watch-feed-view"]::before {content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(160deg,#ffffff14,#00000059)}
 /* Close, previous and next: round glass buttons (Next loses its label, which stays for screen readers). */
 [data-am-preview] :is([data-testid="watch-feed-close-button"],[data-testid="watch-feed-view"] > div > div:last-child > div:last-child button) {all:unset;box-sizing:border-box;display:grid!important;place-items:center;width:40px!important;height:40px!important;min-block-size:0!important;border-radius:50%!important;cursor:pointer;color:var(--am-pv-text)!important;
