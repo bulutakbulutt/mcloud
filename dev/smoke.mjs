@@ -1872,6 +1872,7 @@ try {
     await page.evaluate(() => { window.__mockState.playing = true; document.querySelector('.main-topBar-container').remove(); document.getElementById('mock-album').remove(); document.querySelector('.mock-page').hidden = false; });
   });
 
+  let albumCss = ''; // #am-album-style's rule, for the :has() shape check (#137)
   await check('album pages: clean track list, artwork colour, heading and text rendering (#72)', async () => {
     // Spotify 1.3's album rows: title, badges (explicit, music video), then the artist links; a Plays column.
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
@@ -1901,6 +1902,7 @@ try {
     await page.evaluate(() => { Spicetify.GraphQL.Request = window.__graphqlRequest; });
     await albumPage(0);
     await page.waitForFunction(() => document.getElementById('am-album-style')?.textContent.includes('frank'));
+    albumCss = await page.$eval('#am-album-style', e => e.textContent);
     // Only Frank Ocean's own track loses its artist line; the play count column goes and the grid closes up.
     assert.deepEqual(await shown(), [false, true, true]);
     // #93: without its artist line a row's number is centred on its title, not lifted as Spotify lifts it for a title
@@ -2068,7 +2070,7 @@ try {
     await page.evaluate(() => document.getElementById('mock-artwork').remove());
   });
 
-  await check('no :has() rule in user.css ends in a compound that names nothing (#137)', async () => {
+  await check('no :has() rule in user.css or #am-album-style ends in a compound that names nothing (#137)', async () => {
     // Each such selector widened the restyle of a scrolled track list, ~2550 elements to ~4000 (measured in the client).
     const css = fs.readFileSync(path.join(here, '..', 'user.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\("?data:[^)]*\)/g, 'url()');
     const split = (text, seps) => { const parts = []; let depth = 0, cur = '', quote = null; for (const ch of text) { if (quote) { cur += ch; if (ch === quote) quote = null; continue; } if (ch === '"' || ch === "'") { quote = ch; cur += ch; continue; } if ('(['.includes(ch)) depth++; if (')]'.includes(ch)) depth--; if (!depth && seps.includes(ch)) { parts.push(cur); cur = ''; } else cur += ch; } parts.push(cur); return parts.map(p => p.trim()).filter(Boolean); };
@@ -2077,8 +2079,9 @@ try {
       const text = out.replace(/::[a-z-]+(\([^)]*\))?/g, ''), is = text.match(/:(?:is|where)\(/);
       if (is) { const open = text.indexOf(is[0]) + is[0].length; let d = 1, j = open; while (j < text.length && d) { if (text[j] === '(') d++; if (text[j] === ')') d--; j++; } if (/[.#[]|^[a-z]/i.test((text.slice(0, open - is[0].length) + text.slice(j)).replace(/:[a-z-]+/g, ''))) return true; return split(text.slice(open, j - 1), [',']).every(alt => named(split(alt, [' ', '>', '+', '~']).at(-1) || '')); }
       return /[.#[]|^[a-z]/i.test(text.replace(/:[a-z-]+/g, '')); };
+    assert.ok(albumCss.includes(':has('), 'the album rule was captured');
     const bad = [];
-    for (const m of css.matchAll(/([^{}@;]+)\{/g)) for (const selector of split(m[1], [','])) { if (!selector.includes(':has(')) continue; const compounds = split(selector, [' ', '>', '+', '~']); if (compounds.length > 1 && compounds.slice(0, -1).some(c => c.includes(':has(')) && !named(compounds.at(-1))) bad.push(selector.slice(-110)); }
+    for (const m of (css + albumCss).matchAll(/([^{}@;]+)\{/g)) for (const selector of split(m[1], [','])) { if (!selector.includes(':has(')) continue; const compounds = split(selector, [' ', '>', '+', '~']); if (compounds.length > 1 && compounds.slice(0, -1).some(c => c.includes(':has(')) && !named(compounds.at(-1))) bad.push(selector.slice(-110)); }
     assert.deepEqual(bad, []);
   });
 
