@@ -164,13 +164,14 @@ body.am-light .am-native-main .am-chevron:not(:hover) {--text-base:#272727}
 .am-native-main [data-shelf] .am-chevron:first-child {margin-left:-12px}
 .am-native-main [data-shelf] .am-chevron:last-child {margin-right:-4px}
 .am-native-main [data-shelf] .am-chevron > svg {display:none}
-.am-native-main [data-shelf] .am-chevron::before,:is(#am-artist,#am-search) .am-shelf-arrow::before {content:'';width:7px;height:20px;background:var(--text-base);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
-.am-native-main [data-shelf] .am-chevron:last-child::before,:is(#am-artist,#am-search) .am-next::before {transform:scaleX(-1)}
+.am-native-main [data-shelf] .am-chevron::before {content:'';width:7px;height:20px;background:var(--text-base);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 20'%3E%3Cpath d='M5.6 1.2 1.4 10l4.2 8.8' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.am-native-main [data-shelf] .am-chevron:last-child::before {transform:scaleX(-1)}
 /* Apple's capsule is frosted through (the covers' edges do not show in it) and mostly a neutral grey: sampled from the
    screenshots, (54,50,49) over a black cover and (77,74,73) over a lighter one in dark; 150 to 182 in light. */
 body.am-liquid:not(.am-solid) .am-native-main [data-shelf] .am-chevron {--chevrons-button-color:rgb(58 58 58/.72);--chevrons-button-backdrop-filter:blur(10px) url(#am-glass-chevron);box-shadow:none}
 body.am-liquid.am-light:not(.am-solid) .am-native-main [data-shelf] .am-chevron:not(:hover) {--chevrons-button-color:rgb(185 185 185/.6)}
 .am-chevron-probe {position:fixed;left:-100px;top:0;width:22px;height:40px;visibility:hidden;pointer-events:none}
+.am-chevron-probe.am-arrow-probe {width:30px;height:30px}
 /* Spotify's artwork shadow (0 8px 24px at 50% black) turned into a grey haze around covers in light, cut hard where the
    carousel clips it. Light keeps a hairline, so white covers still end, and a short faint shadow (the user's pick of three). */
 /* A card's image box: Spicetify's readable name where its css-map has one (macOS), else the image's parent (#109). */
@@ -1390,16 +1391,17 @@ body:not(.am-artist-open) .am-scroll-artist,body:not(.am-library-open) .am-scrol
 /* Rows reach under the sidebar, so cards slide behind the glass as they scroll. */
 #am-artist .am-shelf-track {margin-left:calc(-1 * var(--am-side));padding-left:calc(var(--am-side) + 32px);scroll-padding-left:calc(var(--am-side) + 32px)}
 .am-shelf-track > * {scroll-snap-align:start}
-/* The theme's shelves take Home's arrows (.am-chevron above): a 22×40 capsule on the covers' middle (theme.js sets
-   --am-chev-y), 8px past the content's edge. The filter goes on only while an arrow shows: a page has two per shelf. */
-:is(#am-artist,#am-search) .am-shelf-arrow {--text-base:var(--am-text,#fff);--am-arrow-filter:var(--am-sd-filter);position:absolute;top:var(--am-chev-y,50%);margin-top:-20px;display:grid;place-items:center;width:22px;height:40px;border-radius:11px;background:var(--am-sd-fill);box-shadow:inset 0 0 0 .5px var(--am-rim-edge);opacity:0;transition:opacity .15s;z-index:2}
-:is(#am-artist,#am-search) .am-shelf-arrow > svg {display:none}
+/* The theme's shelves take Home's glass and colours (.am-chevron above) in a 30px circle, with a lens of its own size
+   (#am-glass-arrow), on the covers' middle (theme.js sets --am-chev-y). The filter goes on only while an arrow shows: a
+   page has two per shelf. */
+:is(#am-artist,#am-search) .am-shelf-arrow {--am-arrow-filter:var(--am-sd-filter);position:absolute;top:var(--am-chev-y,50%);margin-top:-15px;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:var(--am-text,#fff);background:var(--am-sd-fill);box-shadow:inset 0 0 0 .5px var(--am-rim-edge);opacity:0;transition:opacity .15s;z-index:2}
+:is(#am-artist,#am-search) .am-shelf-arrow svg {width:15px;height:15px;stroke-width:2.4}
 :is(#am-artist,#am-search) .am-shelf-arrow[hidden] {display:none}
 :is(#am-artist,#am-search) .am-shelf:hover .am-shelf-arrow,:is(#am-artist,#am-search) .am-shelf-arrow:focus-visible {opacity:1;backdrop-filter:var(--am-arrow-filter);-webkit-backdrop-filter:var(--am-arrow-filter)}
-body.am-liquid:not(.am-solid) :is(#am-artist,#am-search) .am-shelf-arrow {--am-arrow-filter:blur(10px) url(#am-glass-chevron);background:rgb(58 58 58/.72);box-shadow:none}
+body.am-liquid:not(.am-solid) :is(#am-artist,#am-search) .am-shelf-arrow {--am-arrow-filter:blur(10px) url(#am-glass-arrow);background:rgb(58 58 58/.72);box-shadow:none}
 body.am-liquid.am-light:not(.am-solid) :is(#am-artist,#am-search) .am-shelf-arrow {background:rgb(185 185 185/.6)}
-body.am-light :is(#am-artist,#am-search) .am-shelf-arrow {--text-base:#272727}
-:is(#am-artist,#am-search) .am-shelf-arrow:hover {--text-base:#fff;background:var(--am-accent)!important}
+body.am-light :is(#am-artist,#am-search) .am-shelf-arrow {color:#272727}
+:is(#am-artist,#am-search) .am-shelf-arrow:hover {color:#fff;background:var(--am-accent)!important}
 :is(#am-artist,#am-search) .am-shelf-arrow:focus-visible {outline:2px solid var(--am-accent-focus);outline-offset:2px}
 :is(#am-artist,#am-search) .am-prev {left:24px}
 :is(#am-artist,#am-search) .am-next {right:24px}

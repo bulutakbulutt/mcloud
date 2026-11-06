@@ -349,7 +349,7 @@
       f.querySelectorAll(':scope > [data-am-tone],:scope > [data-am-scheme]').forEach(n=>n.remove());
       f.insertAdjacentHTML('beforeend',menuToneMarkup(light?lightTones.menu.map((t,i)=>[Math.min(255,i*32),t]):menuTonePoints));
     }
-    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter#am-glass-chevron,filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
+    for(const f of document.querySelectorAll('filter[id^="am-glass-toast"],filter#am-glass-chevron,filter#am-glass-arrow,filter[id^="am-tglass-"][id$="-tone"],filter[id^="am-tglass-"][id$="-lite"]')){
       const table=tables.glass;let step=f.querySelector(':scope > [data-am-scheme]');
       if(!table){f.querySelectorAll(':scope > [data-am-scheme]').forEach(n=>n.remove());continue;}
       if(!step){const ns='http://www.w3.org/2000/svg';step=document.createElementNS(ns,'feComponentTransfer');step.setAttribute('data-am-scheme','');
@@ -1491,7 +1491,7 @@
   // below 1 opacity is its children's backdrop root, which would blank the three-layer glass while it fades.
   // Spotify draws its playing equaliser as a green GIF, out of reach of the colour variables; #am-accent-fill keeps
   // its shape (and animation) and fills it with the accent (user.css sets the flood colour).
-  glass.innerHTML=glassFilter('am-glass-chevron',glassStates.arrow)+glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
+  glass.innerHTML=glassFilter('am-glass-chevron',glassStates.arrow)+glassFilter('am-glass-arrow',glassStates.arrow)+glassFilter('am-glass-toast',glassStates.focused)+glassFilter('am-glass-toast-1',glassStates.focused)+glassFilter('am-glass-toast-2',glassStates.focused)
     +`<filter id="am-glow-cap" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCap}/><feFuncG type="table" ${glowCap}/><feFuncB type="table" ${glowCap}/></feComponentTransfer></filter>`
     +`<filter id="am-glow-cap-light" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR type="table" ${glowCapLight}/><feFuncG type="table" ${glowCapLight}/><feFuncB type="table" ${glowCapLight}/></feComponentTransfer></filter>`
     +'<filter id="am-accent-fill" color-interpolation-filters="sRGB"><feFlood/><feComposite in2="SourceAlpha" operator="in"/></filter>'
@@ -1542,6 +1542,8 @@
   toastSlots.forEach((slot,i)=>glassLens('am-glass-toast'+(i?'-'+i:''),slot.t,glassStates.focused));
   // Spotify's carousel arrows are all one size, so one lens serves them all: its map is drawn on a hidden probe of that size.
   const arrowProbe=el('div','am-chevron-probe');document.body.append(arrowProbe);glassLens('am-glass-chevron',arrowProbe,glassStates.arrow);
+  // The artist and search shelves' arrows are circles, so theirs is drawn apart.
+  const roundProbe=el('div','am-chevron-probe am-arrow-probe');document.body.append(roundProbe);glassLens('am-glass-arrow',roundProbe,glassStates.arrow);
   // Menus (ours and Spotify's): macOS 27's NSMenu, fitted over 45° stripes (research/menus/REPORT.md §9-11). The page
   // blurs (6.8pt) and bends near the rim: the edge shows the page ~29pt inward at 3pt from it, nothing moves past 18pt,
   // and the bend turns over the last 40pt before each corner (fitted; a bend square to the edge missed twice as much).
