@@ -894,7 +894,7 @@ body.am-ready .main-view-container__scroll-node {padding-bottom:100px}
 body:not(.am-library-open) #am-library {display:none!important}
 /* opacity too: Spotify's adaptive titles set visibility:visible and showed through once a sheet lifted #main. */
 body.am-library-open .am-native-main {visibility:hidden!important;opacity:0!important;pointer-events:none!important}
-#am-library {box-sizing:border-box;position:fixed;inset:var(--am-page-top) 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:24px var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
+#am-library {box-sizing:border-box;position:fixed;inset:0 0 0 var(--am-side);z-index:10;background:var(--am-bg);color:var(--am-text);overflow:auto;padding:calc(var(--am-page-top) + 24px) var(--am-pad) 120px;font-family:var(--encore-body-font-stack);-webkit-font-smoothing:antialiased}
 .am-library-title {font-size:28px;letter-spacing:-.04em;margin:0 0 8px;font-weight:650}
 .am-library-status {font-size:13px;color:var(--am-sub);margin:0 0 24px}
 .am-library-tools {display:flex;align-items:center;gap:10px;margin:14px 0 10px}
@@ -1164,10 +1164,10 @@ body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #main
 body.am-panel-open:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body.am-np-spicy:is(.am-library-open,.am-artist-open,.am-search-results) #global-nav-bar,body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) #global-nav-bar {pointer-events:auto}
 /* Spotify fades .Root's background over .5s; with #main lifted over the library that fade is a grey flash. */
 body.am-panel-open :is(#main,.Root,.am-layout),body.am-np-spicy :is(#main,.Root,.am-layout),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown),body:is(.am-library-open,.am-search-results) #main:has(#search-dropdown) :is(.Root,.am-layout) {background:transparent!important;transition:none!important}
-/* Search results start at the window's top, under the toolbar: #main stays lifted over them while they show. */
-body.am-search-results #main {z-index:30!important;pointer-events:none}
-body.am-search-results #global-nav-bar {pointer-events:auto}
-body.am-search-results :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
+/* Search results and the library start at the window's top, under the toolbar (#145): #main stays lifted over them. */
+body:is(.am-library-open,.am-search-results) #main {z-index:30!important;pointer-events:none}
+body:is(.am-library-open,.am-search-results) #global-nav-bar {pointer-events:auto}
+body:is(.am-library-open,.am-search-results) :is(#main,.Root,.am-layout) {background:transparent!important;transition:none!important}
 /* The feed fills the sheet in normal flow; its own backgrounds give way to the glass. Marked by attributes, not classes:
    React rewrites the panel's class as it closes, which dropped it back to Spotify's layout while it faded out. */
 body.am-ready [data-am-sheet] {position:relative!important;inset:auto!important;width:100%!important;max-width:100%!important;height:100%!important;border:0!important;box-shadow:none;box-sizing:border-box;overflow:auto;background:transparent!important;--background-base:transparent}
