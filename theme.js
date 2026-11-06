@@ -4301,7 +4301,7 @@
     if(request!==albumRequest)return;
     if(!info){albumStyle.textContent='';return;}
     setListInfo(info.list);
-    const sub='.main-trackList-rowMainContent > :last-child';
+    const sub='.main-trackList-rowMainContent > :is(a,div,span):last-child'; // a tag, not a bare :last-child, after :has() (#137)
     // Without its artist line a row's title sits in the middle, so its number is centred too (Spotify lifts it 4px to
     // meet a title on the top line; #93).
     const own=`body.am-album-clean .am-native-main [data-testid="album-page"] .main-trackList-trackListRow:not(:has(${sub} a[href*="/artist/"]${info.artists.map(a=>`:not([href$="/artist/${a}"])`).join('')}))`;
