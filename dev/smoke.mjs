@@ -2104,11 +2104,11 @@ try {
             <div style="display:flex;flex-direction:column;flex-basis:50%"><div><span data-testid="watch-feed-title">Midnight Sun</span></div>
               <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
                 <div><div><img src="${cover}"></div><div role="progressbar" data-testid="watch-feed-progress-bar"><div style="inline-size:20%"></div></div></div></div>
-              <div><div><a href="/artist/1">Zara Larsson</a><button class="mock-secondary">Follow</button></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
+              <div><div style="display:flex;flex-wrap:wrap;gap:8px"><figure style="margin:0;width:32px;height:32px"></figure><div style="display:flex"><div><div><span><a href="/artist/1">Zara Larsson with a name long enough to take the whole of the card's first column</a></span></div></div><div><span>53M</span></div></div><div><button class="mock-secondary">Follow</button></div></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
             <div style="display:flex;flex-basis:50%"><div style="position:absolute;top:0;width:41%;height:100%"><div><img src="${cover}"></div></div></div>
             <div style="display:flex;flex-direction:column;width:128px"><div><div><button aria-label="Unmute">m</button></div><button data-testid="watch-feed-close-button" aria-label="Close" onclick="document.getElementById('mock-feed').remove()">x</button></div>
               <div style="display:flex;flex-direction:column"><button aria-label="More">…</button><button aria-label="Add to queue">+</button></div>
-              <div style="display:flex;flex-direction:column"><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
+              <div style="display:flex;flex-direction:column"><button aria-label="Previous"><span>Previous</span></button><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
           </div></div></div>`);
     }, cover);
     await page.waitForFunction(() => document.body.classList.contains('am-preview-open'));
@@ -2127,6 +2127,18 @@ try {
     assert.notEqual(look.dim, 'none', 'the sidebar dims with the page');
     assert.match(look.frost, /^(blur\(12px\) saturate\(1\.4\)|none)$/, 'frosted buttons (plain in Eco)');
     await shot('song-preview');
+    // #151: the first song has only Next, absolute in a 0×0 box, the others previous and next in the flow; the song's
+    // name and the actions stay where they are. The artist stays on one line, however long the name.
+    const placed = () => page.evaluate(() => {
+      const grid = document.querySelector('[data-testid="watch-feed-view"] > div'), top = e => Math.round(e.getBoundingClientRect().top);
+      const meta = grid.querySelector(':scope > div:first-child > div:nth-child(3)'), follow = meta.querySelector('button'), name = meta.querySelector('a');
+      return { rows: getComputedStyle(grid).gridTemplateRows, info: top(grid.querySelector(':scope > div:first-child > div:nth-child(2)')), acts: top(grid.querySelector(':scope > div:last-child > div:nth-child(2)')), meta: top(meta),
+        row: Math.abs(follow.getBoundingClientRect().top - name.getBoundingClientRect().top) < 24 };
+    });
+    const later = await placed();
+    assert.ok(later.row, 'Follow stays beside a long artist name');
+    await page.evaluate(() => { document.querySelector('[data-testid="watch-feed-view"] > div > div:last-child > div:last-child').innerHTML = '<div style="position:absolute;right:0;bottom:0"><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div><div></div>'; });
+    assert.deepEqual(await placed(), later, 'the first song is laid out as the others');
     // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
     await settingsWindow.pick('previewMaterial', 'Cam');
     assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
