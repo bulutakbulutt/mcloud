@@ -2093,6 +2093,17 @@ try {
     await page.evaluate(() => document.getElementById('mock-feed').remove());
   });
 
+  await check('song preview in light mode: the card keeps its own text colour, its menus the page\'s', async () => {
+    // Spotify colours links and tertiary buttons with --spice-text, dark in light mode, over a card that stays dark.
+    const colours = await page.evaluate(() => { const root = document.documentElement, was = root.classList.contains('am-light'); root.classList.add('am-light'); document.body.classList.add('am-light');
+      document.querySelector('.Root').insertAdjacentHTML('beforeend', '<div id="mock-feed-light" role="presentation" data-am-preview><div data-testid="watch-feed-view"><a href="/track/1">Song</a><div data-tippy-root><a href="/artist/1">Go to artist</a></div></div></div>');
+      const view = document.querySelector('#mock-feed-light [data-testid="watch-feed-view"]'), read = (e, n) => getComputedStyle(e).getPropertyValue(n).trim();
+      const out = [read(view, '--spice-text') === read(view, '--am-pv-text'), read(view.querySelector('[data-tippy-root]'), '--spice-text').replace(/\s/g, '')];
+      if (!was) { root.classList.remove('am-light'); document.body.classList.remove('am-light'); } document.getElementById('mock-feed-light').remove(); return out; });
+    await page.waitForFunction(() => !document.body.classList.contains('am-preview-open'));
+    assert.deepEqual(colours, [true, 'rgb(39,39,39)']);
+  });
+
   await check('song preview: an Apple sheet, its background from settings, the sidebar closes it (#75)', async () => {
     // Spotify 1.3's watch feed, reduced to the structure user.css relies on: info column (feed title, song, artist,
     // cover + progress, artist row), canvas column, button column (mute/close, actions, previous/next).
