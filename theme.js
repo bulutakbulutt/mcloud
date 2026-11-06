@@ -506,10 +506,12 @@
     }
   }
   // Apple centres a carousel's arrows on its covers, not on the whole card (cover, title and subtitle). The covers' middle
-  // is read when the pointer comes over a shelf, the only time its arrows show, and written only when it changed.
+  // is read when the pointer comes over a shelf, the only time its arrows show, and written only when it changed. A shelf
+  // of the theme's without covers (Top Songs) takes its row's middle.
   document.addEventListener('pointerover',event=>{
-    const shelf=event.target.closest?.('.am-native-main [data-shelf]'),pair=shelf?.querySelector('.am-chevron')?.parentElement;
-    const cover=pair&&shelf.querySelector('[data-encore-id="card"] img');if(!cover)return;
+    const own=event.target.closest?.(':is(#am-artist,#am-search) .am-shelf');
+    const shelf=own?null:event.target.closest?.('.am-native-main [data-shelf]'),pair=own||shelf?.querySelector('.am-chevron')?.parentElement;
+    const cover=own?own.querySelector('.am-card-art')||own.querySelector('.am-shelf-track'):pair&&shelf.querySelector('[data-encore-id="card"] img');if(!cover)return;
     const box=cover.getBoundingClientRect(),y=Math.round(box.top-pair.getBoundingClientRect().top+box.height/2)+'px';
     if(box.height&&pair.style.getPropertyValue('--am-chev-y')!==y)pair.style.setProperty('--am-chev-y',y);
   },{passive:true});

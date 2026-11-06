@@ -1031,6 +1031,9 @@ try {
     await row.hover();
     // #165: the arrows show while the pointer is over the shelf (the rule hiding them has an id, so the one showing them needs it too).
     await page.waitForFunction(i => getComputedStyle(document.querySelectorAll('#am-artist .am-shelf-track')[i].parentElement.querySelector('.am-next')).opacity === '1', index, { timeout: 3000 });
+    // Home's capsule, on the covers' middle.
+    assert.deepEqual(await page.evaluate(i => { const shelf = document.querySelectorAll('#am-artist .am-shelf-track')[i].parentElement, next = shelf.querySelector('.am-next'), cover = shelf.querySelector('.am-card-art') || shelf.querySelector('.am-shelf-track'), middle = e => { const b = e.getBoundingClientRect(); return b.top + b.height / 2; }, cs = getComputedStyle(next);
+      return [cs.width, cs.height, cs.borderTopLeftRadius, Math.abs(middle(next) - middle(cover)) <= 1, getComputedStyle(next.querySelector('svg')).display, getComputedStyle(next, '::before').content !== 'none']; }, index), ['22px', '40px', '11px', true, 'none', true]);
     const top = await pageTop();
     await page.mouse.wheel(0, 200);
     await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);
