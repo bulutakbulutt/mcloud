@@ -546,7 +546,9 @@ body.am-pv-glass [data-am-preview][data-am-preview] {--am-pv-sheet-rim:var(--am-
 [data-am-preview] > [data-testid="watch-feed-view"] {width:min(94cqw,94cqh*var(--aspect-ratio,1.6),1180px)!important;max-width:none!important;border:0!important;border-radius:var(--am-pv-r)!important;isolation:isolate;overflow:hidden;background-image:none!important;color:var(--am-pv-text);
   box-shadow:var(--am-pv-sheet-rim),0 22px 70px #0000008c!important;animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1)}
 /* Spotify's text in it follows the card (white over artwork in either appearance), not the page's Encore colours. */
-[data-am-preview] > [data-testid="watch-feed-view"] {--text-base:var(--am-pv-text);--text-subdued:var(--am-pv-sub);--essential-base:var(--am-pv-text)}
+[data-am-preview] > [data-testid="watch-feed-view"] {--text-base:var(--am-pv-text);--text-subdued:var(--am-pv-sub);--essential-base:var(--am-pv-text);--spice-text:var(--am-pv-text);--spice-subtext:var(--am-pv-sub)}
+/* Spotify's menus open inside the card and sit on the theme's glass, not on the card. */
+[data-am-preview] [data-tippy-root] {--spice-text:rgb(var(--spice-rgb-text));--spice-subtext:rgb(var(--spice-rgb-subtext))}
 /* The rim again above the content, which runs to the card's edge. */
 [data-am-preview] > [data-testid="watch-feed-view"]::after {content:'';position:absolute;inset:0;z-index:9;border-radius:inherit;pointer-events:none;box-shadow:var(--am-pv-sheet-rim)}
 /* Materials: the song's cover blurred behind the card (as the issue's reference), the sheets' frosted glass over the
