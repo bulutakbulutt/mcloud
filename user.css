@@ -2034,12 +2034,17 @@ body.am-mix-titles [data-encore-id="card"]:has(img:is([src^="https://pickasso.sp
 [data-encore-id="card"]:has(.am-mix-ready[data-am-mix-style]) [data-encore-id="cardTitle"] span {opacity:1!important}
 .am-mix-ready[data-am-mix-style]::before {content:"";position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;background:var(--am-mix-photo) center 22%/cover no-repeat,var(--am-mix-band)}
 .am-mix-ready[data-am-mix-style]::after {position:absolute;z-index:1;pointer-events:none;box-sizing:border-box;font-family:var(--encore-title-font-stack,inherit);overflow:hidden}
-/* Band: the name in a band of the photo's colour over the top of the photo, as Apple's Essentials covers. The box is not
-   the pseudo-elements' containing block in Spotify's cards, so its overflow does not clip the band: it rounds its own top (#84). */
-.am-mix-ready[data-am-mix-style="band"]::after {content:attr(data-am-mix);left:0;right:0;top:0;min-height:26%;border-start-start-radius:inherit;border-start-end-radius:inherit;display:flex;align-items:flex-end;padding:5cqw 6cqw 3.5cqw;background:var(--am-mix-band);color:#000000e0;font-size:12cqw;font-weight:500;line-height:1.08;letter-spacing:-.01em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+/* Band: Apple's Essentials covers, measured on their 1000px originals (#160): a band of the photo's colour over the top
+   31.5%, the name set in it at 4.9% from the left with its baseline 3.7% above the band's edge (cap height 9.5%, SF at
+   weight 550: stem and width per cap height matched Apple's 0.168 and 6.05), and the photo full width from under the
+   band with its top 13.5% hidden (Apple's crops measured 0-15%). ::before draws the band and the photo; the name sits on
+   the band's lower edge and a second line grows into the band's empty top. The box is not the pseudo-elements'
+   containing block in Spotify's cards, so its overflow does not clip them: ::before rounds itself (#84). */
+.am-mix-ready[data-am-mix-style="band"]:not(.am-mix-plain)::before {background:linear-gradient(var(--am-mix-band),var(--am-mix-band)) top/100% 31.5cqw no-repeat,var(--am-mix-photo) 50% 18cqw/100% auto no-repeat,var(--am-mix-band)}
+.am-mix-ready[data-am-mix-style="band"]::after {content:attr(data-am-mix);left:0;right:0;bottom:calc(100% - 31.5cqw);padding:0 4.6cqw 1.7cqw 4.1cqw;color:#000000e0;font-size:12.9cqw;font-weight:550;line-height:1.08;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 /* Gradient: Apple's personal mixes, the name large on a two-colour gradient (no photo). */
 .am-mix-ready.am-mix-plain[data-am-mix-style]::before,.am-mix-ready[data-am-mix-style="gradient"]::before {background:radial-gradient(120% 90% at 0 0,var(--am-mix-from),transparent 70%),linear-gradient(135deg,var(--am-mix-from),var(--am-mix-to))}
-.am-mix-ready.am-mix-plain[data-am-mix-style]::after,.am-mix-ready[data-am-mix-style="gradient"]::after {content:attr(data-am-mix);left:0;right:0;top:50%;translate:0 -50%;min-height:0;padding:0 8cqw;background:none;color:#fff;font-size:15cqw;font-weight:700;line-height:1.02;letter-spacing:-.02em;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.am-mix-ready.am-mix-plain[data-am-mix-style]::after,.am-mix-ready[data-am-mix-style="gradient"]::after {content:attr(data-am-mix);left:0;right:0;top:50%;bottom:auto;translate:0 -50%;min-height:0;padding:0 8cqw;background:none;color:#fff;font-size:15cqw;font-weight:700;line-height:1.02;letter-spacing:-.02em;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
 /* Station: the photo in a circle on its colour, as Apple's artist stations. */
 .am-mix-ready[data-am-mix-style="station"]:not(.am-mix-plain)::before {background:var(--am-mix-band)}
 .am-mix-ready[data-am-mix-style="station"]:not(.am-mix-plain)::after {content:"";left:17%;top:17%;width:66%;aspect-ratio:1;border-radius:50%;background:var(--am-mix-photo) center 22%/cover no-repeat;box-shadow:0 2cqw 6cqw rgb(0 0 0/.28)}

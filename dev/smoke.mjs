@@ -2775,6 +2775,12 @@ try {
     // The hidden title shows under a redrawn cover, the image under it is hidden, and the band is drawn.
     assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), t = b.closest('[data-encore-id="card"]').querySelector('[data-encore-id="cardTitle"]');
       return [t.offsetHeight > 0, getComputedStyle(b.querySelector('img')).opacity, getComputedStyle(b, '::after').content]; }), [true, '0', '"Daily Mix 2"']);
+    // #160: the band as Apple's Essentials (measured on Apple's originals): 31.5% tall, the name on its lower edge at
+    // weight 550, the photo full width from under it with its top 13.5% hidden.
+    assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), w = b.getBoundingClientRect().width, a = getComputedStyle(b, '::after'), f = getComputedStyle(b, '::before');
+      const r = v => Math.round(parseFloat(v) / w * 1000) / 10;
+      return [r(a.bottom), r(a.paddingLeft), r(a.paddingBottom), r(a.fontSize), a.fontWeight, f.backgroundSize.split(',')[1].trim().replace(/ auto$/, ''), r(f.backgroundPositionY.split(',')[1])]; }),
+      [68.5, 4.1, 1.7, 12.9, '550', '100%', 18]);
     await settingsWindow.pick('mixCovers', 'Renk geçişi (kişisel mix)');
     assert.deepEqual((await covers()).map(c => c[1]), ['gradient', 'gradient', 'gradient', '']);
     await settingsWindow.pick('mixCovers', 'Spotify');
