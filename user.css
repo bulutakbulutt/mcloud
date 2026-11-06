@@ -535,15 +535,15 @@ body.am-ready .Root > div > [data-testid="watch-feed-view"] {width:min(85%,min(1
    info (first), canvas cards (second), buttons (last: mute/close, actions, previous/next). */
 body.am-preview-open :is(#am-sidebar,#am-player)::after {content:'';position:absolute;inset:0;z-index:100;border-radius:inherit;background:var(--am-pv-dim,#00000080);animation:am-dim-in .24s ease-out}
 body.am-preview-open #am-toolbar-glass {opacity:.5}
-[data-am-preview] {--am-pv-dim:#00000080;--am-pv-base:#1c1c1e;--am-pv-sheet:#28282abf;--am-pv-fill:#ffffff1f;--am-pv-fill-hover:#ffffff33;--am-pv-text:#fff;--am-pv-sub:#ffffffa6;--am-pv-r:26px;
+[data-am-preview] {--am-pv-dim:#00000080;--am-pv-base:#1c1c1e;--am-pv-sheet:#28282abf;--am-pv-fill:#ffffff1f;--am-pv-fill-hover:#ffffff33;--am-pv-text:#fff;--am-pv-sub:#ffffffa6;--am-pv-on-sub:#1c1c1e;--am-pv-r:26px;--am-pv-pad:clamp(20px,3cqi,28px);
   --am-pv-rim:inset 0 1px #ffffff2e,inset 0 -1px #ffffff14,inset 0 0 0 .5px #ffffff1a;--am-pv-sheet-rim:inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12}
 /* Over artwork or the cover's colour the card stays dark in any appearance; the glass card takes the theme's sheet and
    ink tokens (light mode, #74), with the dark values as fallbacks. */
 body.am-pv-glass {--am-pv-dim:#00000059}
-body.am-pv-glass [data-am-preview] {--am-pv-sheet:var(--am-sheet-fill,#28282abf);--am-pv-fill:rgb(var(--am-ink,255 255 255)/.122);--am-pv-fill-hover:rgb(var(--am-ink,255 255 255)/.2);--am-pv-text:var(--am-label,#fff);--am-pv-sub:rgb(var(--am-ink,255 255 255)/.65)}
+body.am-pv-glass [data-am-preview] {--am-pv-sheet:var(--am-sheet-fill,#28282abf);--am-pv-fill:rgb(var(--am-ink,255 255 255)/.122);--am-pv-fill-hover:rgb(var(--am-ink,255 255 255)/.2);--am-pv-text:var(--am-label,#fff);--am-pv-sub:rgb(var(--am-ink,255 255 255)/.65);--am-pv-on-sub:var(--am-bg,#1c1c1e)}
 body.am-pv-glass [data-am-preview][data-am-preview] {--am-pv-sheet-rim:var(--am-rim-lines,inset 0 0 0 .5px #000000d9,inset 0 1px #ffffff1f,inset 0 1.5px #ffffff33,inset 0 -1px #ffffff1f,inset 0 -1.5px #ffffff30,inset 1px 0 #ffffff0a,inset 1.5px 0 #ffffff12,inset -1px 0 #ffffff0a,inset -1.5px 0 #ffffff12)}
 [data-am-preview] {z-index:100!important;background:var(--am-pv-dim)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;animation:am-dim-in .24s ease-out}
-[data-am-preview] > [data-testid="watch-feed-view"] {width:min(94cqw,94cqh*var(--aspect-ratio,1.6),1180px)!important;max-width:none!important;border:0!important;border-radius:var(--am-pv-r)!important;isolation:isolate;overflow:hidden;background-image:none!important;color:var(--am-pv-text);
+[data-am-preview] > [data-testid="watch-feed-view"] {width:min(94cqw,94cqh*var(--aspect-ratio,1.6),980px)!important;max-width:none!important;border:0!important;border-radius:var(--am-pv-r)!important;isolation:isolate;overflow:hidden;background-image:none!important;color:var(--am-pv-text);
   box-shadow:var(--am-pv-sheet-rim),0 22px 70px #0000008c!important;animation:am-sheet-in .24s cubic-bezier(.2,.8,.2,1)}
 /* Spotify's text in it follows the card (white over artwork in either appearance), not the page's Encore colours. */
 [data-am-preview] > [data-testid="watch-feed-view"] {--text-base:var(--am-pv-text);--text-subdued:var(--am-pv-sub);--essential-base:var(--am-pv-text);--spice-text:var(--am-pv-text);--spice-subtext:var(--am-pv-sub)}
@@ -575,7 +575,7 @@ body.am-pv-color [data-am-preview] > [data-testid="watch-feed-view"]::before {co
 /* Frosted, not the menus' bending glass (menuGlass): its nine-piece map left dark seams on 40px circles and along a
    36px capsule's straight edges (tried in the client, 2026-11-02). In Eco they are plain fills. */
 body.am-solid [data-am-preview] :is(button,div) {backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > :is(div:nth-child(2) > button,div:first-child > div > button) {color:var(--am-pv-text)!important;opacity:.92}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > :is(div:nth-child(2),div:first-child > div) > button {color:var(--am-pv-text)!important}
 [data-am-preview] [data-testid="watch-feed-view"] :is(button[class*="chip"],button[class*="secondary"]) {border:0!important;border-radius:999px!important;background:var(--am-pv-fill)!important;box-shadow:var(--am-pv-rim)!important;color:var(--am-pv-text)!important}
 [data-am-preview] [data-testid="watch-feed-view"] :is(button[class*="chip"],button[class*="secondary"]):hover {background:var(--am-pv-fill-hover)!important}
 [data-am-preview] [data-testid="watch-feed-view"] button[class*="chip"] > span {border:0!important;background:none!important;box-shadow:none!important;color:var(--am-pv-text)!important}
@@ -583,40 +583,47 @@ body.am-solid [data-am-preview] :is(button,div) {backdrop-filter:none!important;
 [data-am-preview] [data-testid="watch-feed-progress-bar"] > div {border-radius:2px!important;background:var(--am-pv-text)!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:nth-child(2) :is([style],div) {border-radius:16px}
 [data-am-preview] [data-testid="watch-feed-view"] a {text-decoration:none!important}
-/* Apple: the title in a capsule at the top left, the cover beside the song's name, the progress under them, then the
-   actions in a row of capsules, the artist and hashtags at the bottom; the canvas cards on the right, close at the top
-   right and previous/next at the bottom right. Spotify's columns become display:contents, so their parts are placed
-   in the card's grid without moving a node. */
-[data-am-preview] [data-testid="watch-feed-view"] > div {display:grid!important;grid-template-columns:minmax(0,1fr) 34% 112px;grid-template-rows:auto 1fr auto auto 1fr;grid-template-areas:"pill canvas top" ". canvas ." "info canvas ." "acts canvas ." "meta canvas .";gap:0!important}
+/* Apple: the title in a capsule at the top left; the cover beside the song's name, the progress, the actions in a row of
+   capsules, the artist and the hashtags together at the bottom; the canvas cards on the right, close at the top right
+   and previous/next at the bottom right. Spotify's columns become display:contents, so their parts are placed in the
+   card's grid without moving a node. min-height:0: as a flex item the grid would otherwise grow past the card, whose
+   overflow is clipped, and take the artist's height for the empty 1fr row too (#151). */
+[data-am-preview] [data-testid="watch-feed-view"] > div {display:grid!important;grid-template-columns:minmax(0,1fr) 34% 112px;grid-template-rows:auto minmax(0,1fr) auto auto auto;grid-template-areas:"pill canvas top" ". canvas ." "info canvas ." "acts canvas ." "meta canvas .";gap:0!important;min-height:0!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:is(:first-child,:last-child) {display:contents!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:first-child {grid-area:pill;justify-self:start;box-sizing:border-box;max-width:calc(100% - 48px);margin:24px 0 0 24px;padding:9px 16px;border-radius:999px;background:var(--am-pv-fill);box-shadow:var(--am-pv-rim);backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4)}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:first-child {grid-area:pill;justify-self:start;box-sizing:border-box;max-width:calc(100% - 2*var(--am-pv-pad));margin:var(--am-pv-pad) 0 0 var(--am-pv-pad);padding:9px 16px;border-radius:999px;background:var(--am-pv-fill);box-shadow:var(--am-pv-rim);backdrop-filter:blur(12px) saturate(1.4);-webkit-backdrop-filter:blur(12px) saturate(1.4)}
 [data-am-preview] [data-testid="watch-feed-title"] {font-size:15px!important;line-height:20px!important;font-weight:600!important;-webkit-line-clamp:1!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) {grid-area:info;display:grid!important;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"art title" "art artist" "prog prog";align-items:end;gap:4px 0!important;padding:0 32px 0 40px!important}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) {grid-area:info;display:grid!important;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"art title" "art artist" "prog prog";align-items:end;gap:4px 0!important;padding:0 var(--am-pv-pad)!important}
 /* A song's name is mounted twice while one slides out and the next in; both sit in the same cell. */
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> span > a[href*="/track/"]) {grid-area:title;align-self:end;min-height:0!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> span > a[href*="/track/"]) > span {min-height:0!important;font-size:clamp(22px,3.4cqi,40px)!important;line-height:1.15!important;font-weight:700!important;letter-spacing:-.01em}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> span > a[href*="/track/"]) > span {min-height:0!important;font-size:clamp(20px,3.2cqi,32px)!important;line-height:1.15!important;font-weight:700!important;letter-spacing:-.01em}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> span > a[href*="/track/"]) > span > a {display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(a[href*="/artist/"]) {grid-area:artist;align-self:start}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(a[href*="/artist/"]) span {font-size:clamp(14px,1.6cqi,20px)!important;color:var(--am-pv-sub)!important}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(a[href*="/artist/"]) span:not([data-encore-id="tagIcon"]) {font-size:clamp(14px,1.6cqi,16px)!important;color:var(--am-pv-sub)!important}
+[data-am-preview] [data-testid="watch-feed-view"] [data-encore-id="tagIcon"] {flex:none;box-sizing:border-box;width:14px!important;height:14px!important;margin-inline-end:6px;padding:0!important;border-radius:3px!important;background:var(--am-pv-sub)!important;color:var(--am-pv-on-sub)!important;font-size:10px!important;line-height:1!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> [data-testid="watch-feed-progress-bar"]) {display:contents!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> [data-testid="watch-feed-progress-bar"]) > div:has(> img) {grid-area:art;align-self:center;margin-right:18px}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> [data-testid="watch-feed-progress-bar"]) > div:has(> img) img {width:clamp(64px,10cqi,96px)!important;height:clamp(64px,10cqi,96px)!important;border-radius:10px!important;box-shadow:0 6px 18px #00000059}
-[data-am-preview] [data-testid="watch-feed-view"] [data-testid="watch-feed-progress-bar"] {grid-area:prog;width:100%!important;margin-top:20px}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) {grid-area:acts;align-self:start;flex-direction:row!important;gap:12px!important;margin:0!important;padding:20px 32px 0 40px!important}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button {flex:1 1 0;max-width:96px;height:40px!important;min-block-size:40px!important;padding:0!important;border-radius:999px!important;background:var(--am-pv-fill)!important;box-shadow:var(--am-pv-rim)!important;display:grid!important;place-items:center}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> [data-testid="watch-feed-progress-bar"]) > div:has(> img) {grid-area:art;align-self:center;margin-right:clamp(12px,1.8cqi,18px)}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(2) > div:has(> [data-testid="watch-feed-progress-bar"]) > div:has(> img) img {width:clamp(56px,9cqi,88px)!important;height:clamp(56px,9cqi,88px)!important;border-radius:10px!important;box-shadow:0 6px 18px #00000059}
+[data-am-preview] [data-testid="watch-feed-view"] [data-testid="watch-feed-progress-bar"] {grid-area:prog;width:100%!important;margin-top:clamp(12px,1.8cqi,18px)}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) {grid-area:acts;align-self:start;flex-direction:row!important;gap:clamp(8px,1.2cqi,12px)!important;margin:0!important;padding:clamp(12px,1.8cqi,18px) var(--am-pv-pad) 0!important}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button {flex:1 1 0;max-width:88px;height:clamp(36px,4cqi,40px)!important;min-block-size:0!important;padding:0!important;border-radius:999px!important;background:var(--am-pv-fill)!important;box-shadow:var(--am-pv-rim)!important;display:grid!important;place-items:center}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button:hover {background:var(--am-pv-fill-hover)!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button svg {width:20px!important;height:20px!important}
-/* The artist and hashtags claim their height, so in a small window the middle gives way, not the gap above them. The
-   artist stays on one line: a long name shortens before Follow would drop to a line of its own. */
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) {grid-area:meta;align-self:end;min-height:min-content!important;padding:16px 32px 32px 40px!important}
+/* The artist stays on one line: a long name shortens before Follow would drop to a line of its own. In a small card the
+   listener count goes first, and in the smallest the hashtags and the avatar (Spotify's row shows one line of hashtags
+   and clips the rest). */
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) {grid-area:meta;min-height:0!important;padding:clamp(12px,1.8cqi,18px) var(--am-pv-pad) var(--am-pv-pad)!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child {flex-wrap:nowrap!important}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div {margin-inline-start:-2px}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :not(:nth-child(2)) {flex:none!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2),[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :first-child {min-width:0!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :last-child:not(:first-child) {flex:none!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :first-child * {overflow:hidden;min-width:0;white-space:nowrap;text-overflow:ellipsis}
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:first-child {grid-area:top;justify-self:end;align-items:center!important;gap:8px!important;margin:24px 24px 0 0}
+@container (max-width:700px) {[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :last-child:not(:first-child) {display:none!important}}
+@container (max-width:520px) {[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > :is(div:nth-child(2),div:first-child > :first-child) {display:none!important}}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:first-child {grid-area:top;justify-self:end;align-items:center!important;gap:8px!important;margin:var(--am-pv-pad) var(--am-pv-pad) 0 0}
 /* Out of the grid: the first song has only Next, absolute in a 0×0 box, the others previous and next in the flow. As a
    grid row that difference moved the song's name and the actions 50px between the first song and the rest (#151). */
-[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:last-child {position:absolute!important;right:24px;bottom:24px;flex:none!important;width:auto!important;gap:10px;margin:0}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:last-child {position:absolute!important;right:var(--am-pv-pad);bottom:var(--am-pv-pad);flex:none!important;width:auto!important;gap:10px;margin:0}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:nth-child(2) {grid-area:canvas;height:100%!important;padding:0!important}
 /* The card list is sized from the card (41% in Spotify's layout); here it fills its column. */
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:nth-child(2) > div:first-child {box-sizing:border-box;width:34%!important;padding:0 2.5%!important}
@@ -1500,7 +1507,8 @@ body.am-search-results .am-native-main {visibility:hidden!important;opacity:0!im
 #am-search .am-top-open > svg {flex:none;width:14px;height:14px;margin-left:8px;stroke-width:2.4;color:rgb(var(--am-ink)/.6)}
 #am-search .am-top-more {flex:none;display:grid;place-items:center;width:28px;height:28px;margin-right:10px;border-radius:50%;color:rgb(var(--am-ink)/.8)}
 #am-search .am-top-more:hover {background:rgb(var(--am-ink)/.1)}
-/* Apple's explicit mark: a small grey square with the page's colour for the letter. */
+/* Apple's explicit mark: a small grey square with the page's colour for the letter. Spotify's own lists take it too. */
+.am-native-main [data-encore-id="tagIcon"] {box-sizing:border-box;width:12px!important;height:12px!important;padding:0!important;border-radius:3px!important;background:rgb(var(--am-ink)/.45)!important;color:var(--am-bg)!important;font-size:9px!important;line-height:1!important;letter-spacing:0}
 .am-explicit {flex:none;display:inline-grid;place-items:center;width:12px;height:12px;border-radius:3px;background:rgb(var(--am-ink)/.45);color:var(--am-bg);font-size:9px;font-weight:700;line-height:1;letter-spacing:0}
 .am-song-name {display:flex;align-items:center;gap:5px}
 /* Songs: columns of three rows. */

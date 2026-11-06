@@ -2113,12 +2113,12 @@ try {
         <div data-testid="watch-feed-view" style="--aspect-ratio:16 / 10;position:relative;display:flex;flex-direction:column;container-type:inline-size;width:min(85%,min(1680px,85vh * (var(--aspect-ratio))));aspect-ratio:var(--aspect-ratio);background-color:rgb(40,60,90)">
           <div style="display:flex;flex:1;position:relative">
             <div style="display:flex;flex-direction:column;flex-basis:50%"><div><span data-testid="watch-feed-title">Midnight Sun</span></div>
-              <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
+              <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><span data-encore-id="tagIcon" role="img" aria-label="Explicit" style="width:16px;height:16px;padding:4px;font-size:12px">E</span><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
                 <div><div><img src="${cover}"></div><div role="progressbar" data-testid="watch-feed-progress-bar"><div style="inline-size:20%"></div></div></div></div>
               <div><div style="display:flex;flex-wrap:wrap;gap:8px"><figure style="margin:0;width:32px;height:32px"></figure><div style="display:flex"><div><div><span><a href="/artist/1">Zara Larsson with a name long enough to take the whole of the card's first column</a></span></div></div><div><span>53M</span></div></div><div><button class="mock-secondary">Follow</button></div></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
             <div style="display:flex;flex-basis:50%"><div style="position:absolute;top:0;width:41%;height:100%"><div><img src="${cover}"></div></div></div>
             <div style="display:flex;flex-direction:column;width:128px"><div><div><button aria-label="Unmute">m</button></div><button data-testid="watch-feed-close-button" aria-label="Close" onclick="document.getElementById('mock-feed').remove()">x</button></div>
-              <div style="display:flex;flex-direction:column"><button aria-label="More">…</button><button aria-label="Add to queue">+</button></div>
+              <div style="display:flex;flex-direction:column"><button aria-label="More" style="color:rgb(187,214,163)">…</button><button aria-label="Add to queue">+</button></div>
               <div style="display:flex;flex-direction:column"><button aria-label="Previous"><span>Previous</span></button><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
           </div></div></div>`);
     }, cover);
@@ -2150,6 +2150,24 @@ try {
     assert.ok(later.row, 'Follow stays beside a long artist name');
     await page.evaluate(() => { document.querySelector('[data-testid="watch-feed-view"] > div > div:last-child > div:last-child').innerHTML = '<div style="position:absolute;right:0;bottom:0"><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div><div></div>'; });
     assert.deepEqual(await placed(), later, 'the first song is laid out as the others');
+    // #151: the grid is the card's height at any window size (as a flex item it grew past the card, which clips it, and
+    // the hashtags and Next fell off); the card has a cap; the explicit mark and the action icons follow the card.
+    const fitted = () => page.evaluate(() => {
+      const view = document.querySelector('[data-testid="watch-feed-view"]'), grid = view.firstElementChild, card = view.getBoundingClientRect();
+      const bottom = e => Math.round(e.getBoundingClientRect().bottom), last = grid.querySelector(':scope > div:first-child > div:nth-child(3)');
+      return { width: Math.round(card.width), grid: Math.abs(grid.getBoundingClientRect().height - card.height) < 1, meta: bottom(last) <= Math.round(card.bottom), next: bottom(document.querySelector('[data-testid="watch-feed-next-button"]')) < card.bottom };
+    });
+    const windowSize = page.viewportSize();
+    for (const [width, height] of [[893, 699], [800, 600]]) {
+      await page.setViewportSize({ width, height });
+      const fit = await fitted();
+      assert.deepEqual([fit.grid, fit.meta, fit.next], [true, true, true], `everything stays in the card at ${width}×${height}`);
+    }
+    await page.setViewportSize({ width: 1800, height: 1100 });
+    assert.ok((await fitted()).width <= 980, 'the card has a cap in a large window');
+    await page.setViewportSize(windowSize);
+    assert.deepEqual(await page.evaluate(() => { const view = document.querySelector('[data-testid="watch-feed-view"]'), mark = view.querySelector('[data-encore-id="tagIcon"]'), cs = getComputedStyle(mark), art = getComputedStyle(view.querySelector('[aria-label="More"]'));
+      return [cs.width, cs.fontSize, cs.borderTopLeftRadius, cs.color === cs.backgroundColor, art.color]; }), ['14px', '10px', '3px', false, 'rgb(255, 255, 255)']);
     // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
     await settingsWindow.pick('previewMaterial', 'Cam');
     assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
