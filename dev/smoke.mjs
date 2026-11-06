@@ -2292,6 +2292,34 @@ try {
       assert.ok((await rect('.am-native-main')).right > 1430, 'the page runs under the card');
       assert.ok((await rect('#am-player')).bottom < pane.bottom + 96 && (await rect('#am-player')).top > pane.bottom, 'the player stays below the card');
       assert.equal(await page.textContent('#am-nowplaying .am-np-title .am-marquee-inner > span'), 'Nights');
+      // #153: the explicit mark follows the song.
+      assert.equal(await page.isVisible('#am-nowplaying .am-explicit'), false, 'no mark on a clean song');
+      await page.evaluate(() => { const i = Spicetify.Player.data.item; i.isExplicit = true; i.uri = 'spotify:track:1e'; window.__firePlayer('songchange'); });
+      await page.waitForSelector('#am-nowplaying .am-explicit', { state: 'visible' });
+      await page.evaluate(() => { const i = Spicetify.Player.data.item; delete i.isExplicit; i.uri = 'spotify:track:1'; window.__firePlayer('songchange'); });
+      await page.waitForSelector('#am-nowplaying .am-explicit', { state: 'hidden' });
+      // #153: compact puts the small cover beside the title and gives the big cover's room to the lyrics; Plain has no artwork to shrink.
+      const npLook = () => page.evaluate(() => { const box = s => document.querySelector('#am-nowplaying ' + s).getBoundingClientRect(); return { compact: document.body.classList.contains('am-np-compact'), art: box('.am-np-art').height, thumb: box('.am-np-thumb').width, lyrics: box('.am-np-lyrics').height }; });
+      const npLarge = await npLook();
+      assert.deepEqual([npLarge.compact, npLarge.art > 100, npLarge.thumb], [false, true, 0]);
+      await pick('npArtSize', 'Kompakt');
+      await page.waitForFunction(() => document.body.classList.contains('am-np-compact'));
+      const npSmall = await npLook();
+      assert.deepEqual([npSmall.art, npSmall.thumb, npSmall.lyrics > npLarge.lyrics + npLarge.art / 2], [0, 50, true], JSON.stringify([npLarge, npSmall]));
+      await pick('npBg', 'Sade (Apple)');
+      assert.equal((await npLook()).compact, false, 'Plain has no artwork to shrink');
+      await pick('npBg', 'Spicy Lyrics');
+      // #153: blended runs the cover to the pane's edges and fades it; only over the cover's own colours.
+      await pick('npArtSize', 'Zemine eriyen');
+      await page.waitForFunction(() => document.body.classList.contains('am-np-blend'));
+      assert.deepEqual(await page.evaluate(() => { const pane = document.getElementById('am-nowplaying').getBoundingClientRect(), art = document.querySelector('#am-nowplaying .am-np-art'), box = art.getBoundingClientRect(), cover = getComputedStyle(art.querySelector('.am-np-cover'));
+        return [box.left === pane.left, box.top === pane.top, box.width === pane.width, cover.borderTopLeftRadius, getComputedStyle(art).webkitMaskImage.startsWith('linear-gradient'), document.querySelector('#am-nowplaying .am-np-meta').getBoundingClientRect().top < box.bottom]; }), [true, true, true, '0px', true, true]);
+      await pick('npBg', 'Cam');
+      assert.equal(await page.evaluate(() => document.body.classList.contains('am-np-blend')), false, 'not over glass');
+      await pick('npBg', 'Spicy Lyrics');
+      await pick('npArtSize', 'Büyük');
+      assert.equal((await npLook()).compact, false);
+      assert.equal(await page.evaluate(() => document.body.classList.contains('am-np-blend')), false);
       assert.ok(await page.isVisible('#am-player .am-transport'), 'the floating player keeps its controls');
       assert.equal(await page.locator('#am-nowplaying .am-transport').count(), 0, 'no second set of transport controls');
       assert.equal(await page.locator('#am-nowplaying .am-np-lyrics-toggle').count(), 0, 'no lyrics button in the pane');
@@ -2416,6 +2444,13 @@ try {
       await page.waitForFunction(top => Math.abs(document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top - top) <= 1, lyricsTop);
       const asideTop = await page.evaluate(() => document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top);
       assert.deepEqual([state.col, Math.abs(asideTop - lyricsTop) <= 1], [paneRect, true], 'one background in the pane\'s place; Spicy\'s view starts where the lyrics did');
+      // #153: in compact Spicy's view moves up with them, into the big cover's room.
+      await pick('npArtSize', 'Kompakt');
+      await page.waitForFunction(() => document.body.classList.contains('am-np-compact'));
+      await page.waitForFunction(() => { const card = document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top, lyrics = document.querySelector('#am-nowplaying .am-np-lyrics').getBoundingClientRect().top; return Math.abs(card - lyrics) <= 1; });
+      assert.ok((await rect('#am-nowplaying .am-np-lyrics')).top < lyricsTop - 100, 'the lyrics start higher in compact');
+      await pick('npArtSize', 'Büyük');
+      await page.waitForFunction(top => Math.abs(document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top - top) <= 1, lyricsTop);
       const topAt = (x, y) => page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e?.closest('.am-native-right') ? 'column' : e?.closest('#am-nowplaying') ? 'pane' : e?.tagName; }, [x, y]);
       const art = await rect('#am-nowplaying .am-np-cover');
       assert.deepEqual([await topAt(art.left + 20, art.top + 20), await topAt(state.col.left + state.col.width / 2, lyricsTop + 40)], ['pane', 'column']);
