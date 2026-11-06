@@ -914,6 +914,7 @@ try {
     // A heading opens its own page at Spotify's tab route: Songs as Apple's table, 30 rows, then the next 30 (15 here) as
     // the page nears its end; the request is made while the pointer rests on the heading.
     await page.hover('#am-search .am-shelf-songs .am-shelf-title');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#am-search .am-shelf-songs .am-next')).opacity === '1', null, { timeout: 3000 });
     await page.waitForFunction(() => window.__searchRequests.some(v => v.kind === 'searchTracks' && v.searchTerm === 'sena' && v.offset === 0 && v.limit === 30));
     await page.click('#am-search .am-shelf-songs .am-shelf-title');
     await page.waitForSelector('body.am-search-results #am-search .am-song-table .am-table-row');
@@ -1028,6 +1029,11 @@ try {
     const pageTop = () => page.evaluate(() => document.getElementById('am-artist').scrollTop);
     // A plain wheel over a row scrolls the page, as in any browser...
     await row.hover();
+    // #165: the arrows show while the pointer is over the shelf (the rule hiding them has an id, so the one showing them needs it too).
+    await page.waitForFunction(i => getComputedStyle(document.querySelectorAll('#am-artist .am-shelf-track')[i].parentElement.querySelector('.am-next')).opacity === '1', index, { timeout: 3000 });
+    // A circle of Home's glass, on the covers' middle.
+    assert.deepEqual(await page.evaluate(i => { const shelf = document.querySelectorAll('#am-artist .am-shelf-track')[i].parentElement, next = shelf.querySelector('.am-next'), cover = shelf.querySelector('.am-card-art') || shelf.querySelector('.am-shelf-track'), middle = e => { const b = e.getBoundingClientRect(); return b.top + b.height / 2; }, cs = getComputedStyle(next);
+      return [next.offsetWidth, next.offsetHeight, cs.borderTopLeftRadius, Math.abs(middle(next) - middle(cover)) <= 1, !!document.getElementById('am-glass-arrow')?.querySelector('feImage')]; }, index), [30, 30, '50%', true, true]);
     const top = await pageTop();
     await page.mouse.wheel(0, 200);
     await page.waitForFunction(t => document.getElementById('am-artist').scrollTop > t && document.querySelector('.am-scroll-artist').style.opacity === '1', top);
@@ -2895,6 +2901,18 @@ try {
     }), ['13px', '13px', 'none', true, 'none']);
     await page.hover('#mock-home125 [data-encore-id="card"] a[href^="/album"]');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-home125 [data-encore-id="card"] a[href^="/album"]')).textDecorationLine), 'none', 'a card title is not underlined on hover');
+    // #163: a title hidden in the artwork keeps its flex gap, so the subtitle started lower than another card's title;
+    // a long title takes one line.
+    assert.deepEqual(await page.evaluate(() => {
+      const card = (title, style) => `<div class="m163" data-encore-id="card" style="width:180px"><div><img alt="" style="display:block;width:100%;aspect-ratio:1"></div><div style="display:flex;flex-direction:column;gap:4px"><a href="/album/163"><p data-encore-id="cardTitle" style="margin:0;${style}"><span style="--encore-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:var(--encore-line-clamp)">${title}</span></p></a><div data-encore-id="cardSubtitle">Subtitle</div></div></div>`;
+      const host = document.getElementById('mock-home125'), box = document.createElement('div');
+      box.innerHTML = card('Album', '') + card('Hidden in the artwork', 'height:0;visibility:hidden') + card('A title long enough to take more than one line of the card, however wide it is', '');
+      host.append(box);
+      const rect = (c, s) => c.querySelector(s).getBoundingClientRect(), [titled, hidden, long] = box.children;
+      const under = (c, s) => Math.round(rect(c, s).top - rect(c, 'img').bottom), out = [under(titled, '[data-encore-id="cardTitle"]') === under(hidden, '[data-encore-id="cardSubtitle"]'), Math.round(rect(titled, '[data-encore-id="cardSubtitle"]').top - rect(titled, '[data-encore-id="cardTitle"]').bottom), rect(long, '[data-encore-id="cardTitle"]').height === rect(titled, '[data-encore-id="cardTitle"]').height];
+      box.remove();
+      return out;
+    }), [true, 0, true]);
     // Shortcuts as the song rows: 56px rows, 48px artwork, a rule under the row from its text, 13px names, and "…" at
     // the end opens Spotify's menu.
     const sc = await box('[data-am-shortcut]'), art = await box('[data-am-shortcut] img');
