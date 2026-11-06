@@ -2646,13 +2646,15 @@
   // card in Spicy's expanded state (its own button, clicked). Nothing is moved. Without the card (Spicy missing or its
   // card off, a song it has no lyrics for, the queue in that column) the pane comes back with Spotify's lyrics.
   // Under the artwork (not Plain) the pane stays for its artwork and title, cut off where its lyrics start; the column
-  // fills the rest. The cut is measured (--am-np-split) whenever the pane or its lyrics box changes size.
+  // fills the rest. The cut is measured (--am-np-split) whenever the pane or its lyrics box changes size, and after npApply
+  // changes the look: in a short window Large and Blended give the lyrics box the same size in another place (#153).
   const npSpicyCard=()=>document.querySelector('.am-native-right #SpicyLyricsNPVCard');
   let npSpicyOn=false,npSpicySplit=false,npSpicyExpanded=false,npSpicyClicked=null;
-  const npSplitObserver=new ResizeObserver(()=>{
+  const npMeasureSplit=()=>{
     if(!npSpicySplit||np.hidden)return;
     document.body.style.setProperty('--am-np-split',Math.round(npLyricsBox.getBoundingClientRect().top-np.getBoundingClientRect().top)+'px');
-  });
+  };
+  const npSplitObserver=new ResizeObserver(npMeasureSplit);
   // On Spicy Lyrics' page the pane stays (#120) with the artwork and title only: the page has the lyrics.
   const npOnSpicyPage=()=>document.body.classList.contains('am-spicy-route');
   const npOpenFor=mode=>mode==='only'||mode==='beside';
@@ -2756,6 +2758,7 @@
     // (with Spotify's lyrics, or when Spicy's "Animated Background" is off).
     const artbg=settings.npBg==='artwork'||settings.npBg==='spicy';b.toggle('am-np-spicybg',settings.npBg==='spicy');
     b.toggle('am-np-artbg',artbg);np.classList.toggle('am-scheme-dark',artbg||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');b.toggle('am-np-compact',npCompact());b.toggle('am-np-blend',npBlend());
+    npMeasureSplit();
     const on=mode!=='off',shown=open&&(!spicy||split),leaving=!!npLeaveTimer;
     const opening=shown&&(np.hidden||leaving),closing=!shown&&!np.hidden&&!leaving;
     if(shown){

@@ -2451,6 +2451,15 @@ try {
       assert.ok((await rect('#am-nowplaying .am-np-lyrics')).top < lyricsTop - 100, 'the lyrics start higher in compact');
       await pick('npArtSize', 'Büyük');
       await page.waitForFunction(top => Math.abs(document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top - top) <= 1, lyricsTop);
+      // #153: in a short window Large and Blended give the lyrics box the same size in another place, so only npApply's own
+      // measure moves Spicy's view (with the ResizeObserver alone, Blended to Large cut the title in half).
+      const fullSize = page.viewportSize();
+      await page.setViewportSize({ width: 1000, height: 620 });
+      const cutAt = () => page.evaluate(() => [document.querySelector('#am-nowplaying .am-np-lyrics'), document.getElementById('SpicyLyricsNPVCard')].map(e => Math.round(e.getBoundingClientRect().top)));
+      await page.waitForFunction(() => { const [l, c] = [document.querySelector('#am-nowplaying .am-np-lyrics'), document.getElementById('SpicyLyricsNPVCard')].map(e => e.getBoundingClientRect().top); return Math.abs(l - c) <= 1; });
+      for (const size of ['Zemine eriyen', 'Büyük']) { await pick('npArtSize', size); await page.waitForTimeout(300); const [l, c] = await cutAt(); assert.ok(Math.abs(l - c) <= 1, `Spicy's view starts where the lyrics do after ${size} in a short window (${l}, ${c})`); }
+      await page.setViewportSize(fullSize);
+      await page.waitForFunction(top => Math.abs(document.getElementById('SpicyLyricsNPVCard').getBoundingClientRect().top - top) <= 1, lyricsTop);
       const topAt = (x, y) => page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e?.closest('.am-native-right') ? 'column' : e?.closest('#am-nowplaying') ? 'pane' : e?.tagName; }, [x, y]);
       const art = await rect('#am-nowplaying .am-np-cover');
       assert.deepEqual([await topAt(art.left + 20, art.top + 20), await topAt(state.col.left + state.col.width / 2, lyricsTop + 40)], ['pane', 'column']);
