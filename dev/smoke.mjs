@@ -2149,6 +2149,20 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.style.getPropertyValue('--am-preview-art')), '');
   });
 
+  await check('a Spotify menu inside a song preview gets the theme\'s menu, and its submenu fits the card (#152)', async () => {
+    // The menu's [data-tippy-root] sits in the card's actions cell; the overlay's role is presentation, not a dialog's.
+    await page.evaluate(() => document.querySelector('.Root').insertAdjacentHTML('beforeend', `<div id="mock-feed-menus" role="presentation" style="position:absolute;inset:0;z-index:6"><div data-testid="watch-feed-view" style="--aspect-ratio:16 / 10;position:relative;container-type:inline-size;aspect-ratio:var(--aspect-ratio)"><div><div></div><div></div><div><div></div><div id="mock-feed-actions"></div><div></div></div></div></div></div>`));
+    await page.waitForFunction(() => document.body.classList.contains('am-preview-open'));
+    await page.evaluate(() => { const tip = document.createElement('div'); tip.setAttribute('data-tippy-root', ''); tip.id = 'mock-feed-menu';
+      tip.innerHTML = '<div><ul role="menu"><li><button role="menuitem"><div><svg width="16" height="16"></svg></div><span>Add to playlist</span></button><div data-tippy-root id="mock-feed-sub"><div><ul role="menu" style="overflow:auto"><li><button role="menuitem"><span>Find a playlist</span></button></li><div style="height:3000px"></div></ul></div></div></li></ul></div>';
+      document.getElementById('mock-feed-actions').append(tip); });
+    await page.waitForFunction(() => document.getElementById('mock-feed-menu').dataset.amGlass !== undefined);
+    assert.deepEqual(await page.evaluate(() => { const tip = document.getElementById('mock-feed-menu'), list = tip.querySelector('ul'), card = document.querySelector('[data-testid="watch-feed-view"]').getBoundingClientRect().height;
+      return [list.dataset.amGlassList, getComputedStyle(list).borderTopLeftRadius, getComputedStyle(tip, '::before').content !== 'none', document.querySelector('#mock-feed-sub ul').getBoundingClientRect().height <= card * .53]; }), ['', '13px', true, true]);
+    await page.evaluate(() => document.getElementById('mock-feed-menus').remove());
+    await page.waitForFunction(() => !document.body.classList.contains('am-preview-open'));
+  });
+
   await check('Browse all tiles: Apple\'s Browse Categories (#75)', async () => {
     await page.evaluate(() => {
       const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;

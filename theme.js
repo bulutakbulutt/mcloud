@@ -1604,13 +1604,13 @@
       slot.node=node;node.dataset.amGlass=slot.i;slot.watch.observe(node);place(slot);
     };
     // Spotify's menus: each list in a [data-tippy-root] of its own, appended to body or, for some submenus (Add to
-    // playlist), inside the parent menu's list; a few open inside a sheet (Shared with's Listener ▾: Leave playlist),
-    // which is watched from when it takes focus, as it does on opening. The glass goes on the root (user.css draws it
+    // playlist), inside the parent menu's list; a few open inside a song preview's card or a sheet (Shared with's Listener ▾: Leave playlist),
+    // a sheet watched from when it takes focus, as it does on opening. The glass goes on the root (user.css draws it
     // in its ::before), never on the list: a backdrop-filter makes the list the containing block of a submenu inside
     // it, which its scrolling then clipped away. Lists can be replaced inside a root.
     const sync=()=>{
       for(const slot of slots)if(slot.node&&!slot.node.isConnected){slot.watch.unobserve(slot.node);slot.node=null;}
-      for(const tip of document.querySelectorAll('body > [data-tippy-root],:is(dialog,[role="dialog"]) [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
+      for(const tip of document.querySelectorAll('body > [data-tippy-root],:is(dialog,[role="dialog"],[data-am-preview]) [data-tippy-root]')){if(!watched.has(tip)){watched.add(tip);tips.observe(tip,{childList:true,subtree:true});}
         // Spotify puts a closed submenu (Add to playlist) back when it opens again, still marked with a slot another
         // menu took meanwhile: its glass then drew that menu's map. A root is attached whenever its slot is not its own.
         for(const menu of tip.querySelectorAll('ul[role="menu"]')){const root=menu.closest('[data-tippy-root]');menu.dataset.amGlassList='';if(slots[root.dataset.amGlass]?.node!==root)attach(root);}
@@ -1664,8 +1664,9 @@
     const featherQueue=new Set();let featherFrame=0;
     function featherSoon(list) { if(!list||list.nodeType!==1)return;featherQueue.add(list);featherFrame||=requestAnimationFrame(()=>{featherFrame=0;for(const l of featherQueue)if(l.isConnected)feather(l);featherQueue.clear();}); }
     const tips=new MutationObserver(sync);tips.observe(document.body,{childList:true});
-    document.addEventListener('focusin',event=>{const sheet=event.target.closest?.('dialog,[role="dialog"]');if(sheet&&!watched.has(sheet)){watched.add(sheet);tips.observe(sheet,{childList:true,subtree:true});}},true);
-    return {attach,sync,featherSoon};
+    const watch=node=>{if(!watched.has(node)){watched.add(node);tips.observe(node,{childList:true,subtree:true});}};
+    document.addEventListener('focusin',event=>{const sheet=event.target.closest?.('dialog,[role="dialog"]');if(sheet)watch(sheet);},true);
+    return {attach,sync,featherSoon,watch};
   })();
   // One shared popover serves the "…" track menu and the profile menu, with an optional flyout submenu.
   const popover=el('div','am-popover');popover.id='am-popover';popover.setAttribute('role','menu');popover.tabIndex=-1;popover.hidden=true;
@@ -4152,6 +4153,7 @@
     previewView=view;document.body.classList.toggle('am-preview-open',!!view);
     if(!view){document.documentElement.style.removeProperty('--am-preview-art');return;}
     if(!view.parentElement.hasAttribute('data-am-preview'))view.parentElement.setAttribute('data-am-preview','');
+    menuGlass.watch(view);
     previewWatch=new MutationObserver(previewArtSoon);previewWatch.observe(view,{subtree:true,childList:true,attributes:true,attributeFilter:['src']});
     view.addEventListener('scrollend',previewArtSoon,{capture:true,passive:true});previewArt();
   }
