@@ -448,10 +448,13 @@
   const legacyRoots=new Set(),legacyRows=new WeakSet();
   // Selecting a row rewrites its class too, so a row whose aria-selected changed is tagged again.
   const legacyWatch={childList:true,subtree:true,attributes:true,attributeFilter:['aria-selected']};
+  let legacyClassWatch=false;
+  const tag=(node,...names)=>{if(node)for(const name of names)if(!node.classList.contains(name))node.classList.add(name);};
   const legacyObserver=new MutationObserver(records=>{
     const early=[];
     for(const record of records){
-      if(record.type==='attributes')legacyRoots.add(record.target);
+      // A class rewrite only matters inside a track row (on a hashed build, below); the row is tagged again.
+      if(record.type==='attributes'){if(record.attributeName!=='class')legacyRoots.add(record.target);else{const row=record.target.closest?.('[role="row"]');if(row)legacyRoots.add(row);}}
       else for(const node of record.addedNodes)if(node.nodeType===1){
         legacyRoots.add(node);
         if(mixReady&&settings.mixCovers!=='spotify')for(const img of node.matches(mixImages)?[node]:node.querySelectorAll(mixImages))if(mixCovers.has(img.getAttribute('src')))early.push(img);
@@ -529,14 +532,19 @@
     // them without our having put them there is an older build's.
     const box=cells[0].parentElement,header=cells[0].matches('[role="columnheader"]');
     if(box.classList.contains('main-trackList-trackListRowGrid')&&!legacyRows.has(box))return;
+    // Spotify rewrites a row's classes when the selection changes, including rows whose aria-selected stays the same
+    // (#131: the rows selected before the last click lost their names, so the clean album list showed their artists).
+    // From the first row tagged here on, the observer follows class changes inside rows too; names are only added
+    // when missing, so tagging again does not record a change of its own.
+    if(!legacyClassWatch&&main){legacyClassWatch=true;legacyWatch.attributeFilter=['aria-selected','class'];legacyObserver.observe(main,legacyWatch);}
     legacyRows.add(box);
-    box.classList.add('main-trackList-trackListRowGrid',header?'main-trackList-trackListHeaderRow':'main-trackList-trackListRow');
-    cells.forEach((cell,i)=>cell.classList.add(i===0?'main-trackList-rowSectionIndex':i===1?'main-trackList-rowSectionStart':i===cells.length-1&&cells.length>2?'main-trackList-rowSectionEnd':'main-trackList-rowSectionVariable'));
+    tag(box,'main-trackList-trackListRowGrid',header?'main-trackList-trackListHeaderRow':'main-trackList-trackListRow');
+    cells.forEach((cell,i)=>tag(cell,i===0?'main-trackList-rowSectionIndex':i===1?'main-trackList-rowSectionStart':i===cells.length-1&&cells.length>2?'main-trackList-rowSectionEnd':'main-trackList-rowSectionVariable'));
     const index=cells[0],start=cells[1],end=cells[cells.length-1];
-    index?.firstElementChild?.classList.add('main-trackList-rowMarker');
+    tag(index?.firstElementChild,'main-trackList-rowMarker');
     // A row's artwork needs no name: user.css finds it as the title cell's img, however late it lands.
-    if(start)[...start.children].find(c=>c.tagName==='DIV')?.classList.add('main-trackList-rowMainContent');
-    if(cells.length>2)for(const c of end.children)if(c.matches('[data-encore-id="text"]'))c.classList.add('main-trackList-rowDuration');
+    if(start)tag([...start.children].find(c=>c.tagName==='DIV'),'main-trackList-rowMainContent');
+    if(cells.length>2)for(const c of end.children)if(c.matches('[data-encore-id="text"]'))tag(c,'main-trackList-rowDuration');
   }
   // Browse all's category grid, whose tiles link to /genre/.
   function tagGenreList(list) {
