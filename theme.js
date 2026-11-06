@@ -2619,7 +2619,9 @@
   for(const img of [npBg,npImg]){img.alt='';img.decoding='async';img.addEventListener('error',()=>img.removeAttribute('src'));}
   npCover.append(npImg,npMotion);npArt.append(npCover);
   const npMeta=el('div','am-np-meta'),npThumb=el('img','am-np-thumb'),npText=el('div','am-np-text');npThumb.alt='';npThumb.decoding='async';
-  const npTitle=marquee('am-np-title'),npArtist=marquee('am-np-artist');npText.append(npTitle.root,npArtist.root);
+  const npTitle=marquee('am-np-title'),npArtist=marquee('am-np-artist'),npTitleRow=el('div','am-np-titlerow'),npExplicit=el('span','am-explicit','E');
+  npExplicit.title=T('Müstehcen','Explicit');npExplicit.setAttribute('aria-label',npExplicit.title);npExplicit.hidden=true;
+  npTitleRow.append(npTitle.root,npExplicit);npText.append(npTitleRow,npArtist.root);
   npTitle.root.addEventListener('click',()=>{const item=S.Player.data?.item,uri=item?.album?.uri||item?.metadata?.album_uri;if(uri)go('/'+uri.split(':').slice(1).join('/'));});
   npArtist.root.addEventListener('click',()=>{const uri=S.Player.data?.item?.artists?.[0]?.uri||S.Player.data?.item?.metadata?.artist_uri;if(uri?.startsWith('spotify:artist:'))go('/artist/'+uri.split(':')[2]);});
   const npStar=button(T('Beğenilen Şarkılar\'a ekle','Add to Liked Songs'),'star',()=>star.click(),'am-np-star');
@@ -2648,13 +2650,15 @@
   // card in Spicy's expanded state (its own button, clicked). Nothing is moved. Without the card (Spicy missing or its
   // card off, a song it has no lyrics for, the queue in that column) the pane comes back with Spotify's lyrics.
   // Under the artwork (not Plain) the pane stays for its artwork and title, cut off where its lyrics start; the column
-  // fills the rest. The cut is measured (--am-np-split) whenever the pane or its lyrics box changes size.
+  // fills the rest. The cut is measured (--am-np-split) whenever the pane or its lyrics box changes size, and after npApply
+  // changes the look: in a short window Large and Blended give the lyrics box the same size in another place (#153).
   const npSpicyCard=()=>document.querySelector('.am-native-right #SpicyLyricsNPVCard');
   let npSpicyOn=false,npSpicySplit=false,npSpicyExpanded=false,npSpicyClicked=null;
-  const npSplitObserver=new ResizeObserver(()=>{
+  const npMeasureSplit=()=>{
     if(!npSpicySplit||np.hidden)return;
     document.body.style.setProperty('--am-np-split',Math.round(npLyricsBox.getBoundingClientRect().top-np.getBoundingClientRect().top)+'px');
-  });
+  };
+  const npSplitObserver=new ResizeObserver(npMeasureSplit);
   // On Spicy Lyrics' page the pane stays (#120) with the artwork and title only: the page has the lyrics.
   const npOnSpicyPage=()=>document.body.classList.contains('am-spicy-route');
   const npOpenFor=mode=>mode==='only'||mode==='beside';
@@ -2738,6 +2742,12 @@
   // A pane sliding out counts as hidden: nothing new is loaded while it goes.
   const npVisible=()=>!np.hidden&&!document.hidden&&!npLeaveTimer;
   let npReady=false,npTrackKey='',npContent='';
+  // Compact (#153): the small cover beside the title, the lyrics take the rest. Only where the pane shows lyrics; on Spicy
+  // Lyrics' page, with lyrics only in full screen or with Plain's no artwork at all, the setting has nothing to give room to.
+  const npCompact=()=>settings.npArtSize==='compact'&&settings.npLyricsPlace==='below'&&settings.npBg!=='plain'&&!npOnSpicyPage();
+  // Blended (#153, as on iOS 27): the cover runs to the pane's edges and fades into the background. Only over the cover's
+  // own colours: fading into glass or a flat colour would look like a bad cut.
+  const npBlend=()=>settings.npArtSize==='blend'&&(settings.npBg==='artwork'||settings.npBg==='spicy');
   function npApply() {
     if(!npReady)return;
     const mode=npWant??settings.nowPlaying,b=document.body.classList,open=npOpenFor(mode),spicy=npSpicyWanted(mode);
@@ -2751,7 +2761,8 @@
     // Spicy Lyrics' colours are Spicy's own moving background, drawn in its view; the cover's colours stand in for them
     // (with Spotify's lyrics, or when Spicy's "Animated Background" is off).
     const artbg=settings.npBg==='artwork'||settings.npBg==='spicy';b.toggle('am-np-spicybg',settings.npBg==='spicy');
-    b.toggle('am-np-artbg',artbg);np.classList.toggle('am-scheme-dark',artbg||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');
+    b.toggle('am-np-artbg',artbg);np.classList.toggle('am-scheme-dark',artbg||split);b.toggle('am-np-plain',settings.npBg==='plain');b.toggle('am-np-lyrics-below',settings.npLyricsPlace==='below');b.toggle('am-np-compact',npCompact());b.toggle('am-np-blend',npBlend());
+    npMeasureSplit();
     const on=mode!=='off',shown=open&&(!spicy||split),leaving=!!npLeaveTimer;
     const opening=shown&&(np.hidden||leaving),closing=!shown&&!np.hidden&&!leaving;
     if(shown){
@@ -2763,7 +2774,7 @@
     setAttributeIfChanged(npToggle,'title',on?T('Şimdi Çalan\'ı gizle','Hide Now Playing'):T('Şimdi Çalan\'ı göster','Show Now Playing'));
     npMove(mode==='only');
     // What the pane holds is kept while it is closed (and readied by npPrepare); only a change of look rebuilds it.
-    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt,npOnSpicyPage()].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
+    const content=[settings.npBg,settings.npLyricsPlace,settings.npArt,npOnSpicyPage(),npCompact()].join();if(content!==npContent){npContent=content;npTrackKey='';npLyricUri=null;}
     if(!npLyricsShown()){npLyricsBox.replaceChildren();npLyrics=null;npLyricUri=null;}
     if(!shown){
       npStopVideo();clearTimeout(npLyricTimer);
@@ -2797,6 +2808,7 @@
     // Spotify's view, standing in for the pane (npSpicy), takes the pane's artwork colours from this.
     const cover=npBg.getAttribute('src');document.body.style.setProperty('--am-np-cover',cover?`url("${cover}")`:'none');
     npTitle.set(item?.name||meta.title||'');npArtist.set(meta.artist_name||item?.artists?.map(a=>a.name).join(', ')||'');
+    npExplicit.hidden=!(item?.isExplicit||meta.is_explicit==='true');
     np.classList.toggle('am-np-empty',!item?.uri);
     if(npVisible())npLoadMotion(item);
     if(npLyricsShown())npLoadLyrics(item);
@@ -2826,7 +2838,7 @@
   }
   async function npLoadMotion(item) {
     const token=++npMotionToken,kind=settings.npArt;npStopVideo();
-    if(!item?.uri||kind==='cover'||settings.npBg==='plain')return;
+    if(!item?.uri||kind==='cover'||settings.npBg==='plain'||npCompact())return;
     if(kind==='canvas'){npCanvasFrom=null;npCanvasSrc='';npSyncCanvas();return;}
     if(!h264)return;
     const source=await appleMotion(item,kind==='appleTall');
@@ -2839,7 +2851,7 @@
   // Checked every player tick, since that view swaps its clip (or its element) a moment after the track changes.
   let npCanvasFrom=null,npCanvasSrc='';
   function npSyncCanvas() {
-    if(settings.npArt!=='canvas'||!npVisible())return;
+    if(settings.npArt!=='canvas'||!npVisible()||npCompact())return;
     const meta=S.Player.data?.item?.metadata||{},has=!!meta['canvas.url']&&!/IMAGE/.test(meta['canvas.type']||'');
     const native=has?[...document.querySelectorAll('.am-native-right video')].find(v=>v.currentSrc||v.srcObject)||null:null,src=native?.currentSrc||(native?.srcObject?'stream':'');
     if(native===npCanvasFrom&&src===npCanvasSrc)return;
@@ -2953,10 +2965,14 @@
   npSetting({key:'npBg',group:'nowplaying',type:'choice',style:'segmented',default:'spicy',label:T('Panel arka planı','Sidebar background'),
     options:[['spicy','Spicy Lyrics'],['artwork',T('Kapak renkleri','Artwork colours')],['glass',T('Cam','Glass')],['plain',T('Sade (Apple)','Plain (Apple)')]],
     note:T('“Spicy Lyrics”: Spicy’nin hareketli renkleri (Spicy’nin ayarlarında “Animated Background” açıkken); yoksa kapak renkleri. “Sade”: Apple Music’in Mac’teki söz paneli gibi; kapak ve başlık yok, yalnızca sözler.','“Spicy Lyrics”: Spicy’s moving colours (with “Animated Background” on in Spicy’s settings), otherwise the artwork’s colours. “Plain”: like Apple Music’s lyrics pane on the Mac: no artwork or header, only the lyrics.'),apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
+  npSetting({key:'npArtSize',group:'nowplaying',type:'choice',style:'segmented',default:'large',label:T('Kapak boyutu','Artwork size'),
+    options:[['large',T('Büyük','Large')],['blend',T('Zemine eriyen','Blended')],['compact',T('Kompakt','Compact')]],
+    note:T('“Zemine eriyen”: kapak panelin kenarlarına kadar uzanır ve arka plana karışır (Spicy Lyrics ve kapak renkleri arka planlarında). “Kompakt”: üstte başlığın yanında küçük kapak, panelin geri kalanında sözler.','“Blended”: the cover runs to the sidebar’s edges and fades into the background (with the Spicy Lyrics and artwork colours backgrounds). “Compact”: a small cover beside the title at the top, and the lyrics in the rest of the sidebar.'),
+    apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'&&settings.npBg!=='plain'&&(settings.npLyricsPlace==='below'||settings.npArtSize==='blend')});
   npSetting({key:'npArt',group:'nowplaying',type:'choice',default:'cover',label:T('Hareketli kapak','Animated artwork'),
     options:[['cover',T('Kapalı (sabit kapak)','Off (still artwork)')],...(h264?[['apple',T('Apple Music (kare)','Apple Music (square)')],['appleTall',T('Apple Music (tam boy)','Apple Music (full height)')]]:[]),['canvas','Spotify Canvas']],
     note:h264?T('Apple Music hareketli kapakları m8tec’in dizininden gelir (github.com/m8tec/apple-music-animated-artworks).','Apple Music animated artwork comes from m8tec’s index (github.com/m8tec/apple-music-animated-artworks).'):undefined,
-    apply:()=>{npTrackKey='';npTick();},when:()=>(npWant??settings.nowPlaying)!=='off'});
+    apply:()=>{npTrackKey='';npTick();},when:()=>(npWant??settings.nowPlaying)!=='off'&&!npCompact()});
   npSetting({key:'npLyricsPlace',group:'nowplaying',type:'choice',style:'segmented',default:'below',label:T('Sözler','Lyrics'),
     options:[['below',T('Kapağın altında','Under the artwork')],['full',T('Yalnızca tam ekranda','Only in full screen')]],apply:npApplyAll,when:()=>(npWant??settings.nowPlaying)!=='off'});
   npSetting({key:'npLyricsSource',group:'nowplaying',type:'choice',style:'segmented',default:'spicy',label:T('Söz kaynağı','Lyrics source'),
