@@ -1278,6 +1278,19 @@ try {
     assert.deepEqual(await page.evaluate(() => { const r = document.querySelectorAll('#search-dropdown [role="row"]')[3], img = r.querySelector('img').getBoundingClientRect(), play = r.querySelector('[id$="-play"]');
       return [getComputedStyle(play).opacity, !!document.elementFromPoint(img.x + img.width / 2, img.y + img.height / 2).closest('[id$="-play"] button'), Math.round(play.getBoundingClientRect().width), getComputedStyle(r.querySelector('[class*="list-row__slot"]')).visibility]; }),
       ['1', true, 46, 'visible']);
+    // #161: an artist's Follow is a flat capsule, on the selection too; the shortcut hint stands at the field's end in small flat keys.
+    assert.deepEqual(await page.evaluate(() => {
+      const slot = document.querySelectorAll('#search-dropdown [role="row"]')[3].querySelector('[class*="list-row__slot"]'), follow = document.createElement('button');
+      follow.setAttribute('data-encore-id', 'buttonSecondary'); follow.textContent = 'Follow'; follow.style.cssText = 'border:1px solid #7c7c7c;border-radius:8px;height:32px'; slot.append(follow);
+      const f = getComputedStyle(follow), button = [follow.offsetHeight, f.borderTopWidth, f.borderTopLeftRadius, f.fontSize, f.backgroundColor];
+      follow.remove();
+      const form = document.createElement('form'); form.setAttribute('role', 'search'); form.style.cssText = 'position:fixed;left:0;top:0;width:400px';
+      form.innerHTML = '<div></div><div style="display:flex;align-items:center;box-sizing:border-box;width:400px;padding:0 64px 0 36px"><span>What do you want to play?</span><span style="margin-inline-end:-12px;padding:0 12px"><kbd style="padding:2px 6px;margin:0 2px;font-size:16px">Ctrl</kbd><kbd style="padding:2px 6px;margin:0 2px;font-size:16px">L</kbd></span></div>';
+      document.getElementById('global-nav-bar').append(form);
+      const keys = form.querySelectorAll('kbd'), k = getComputedStyle(keys[1]), hint = [Math.round(form.getBoundingClientRect().right - keys[1].getBoundingClientRect().right), keys[1].offsetHeight, k.fontSize, k.boxShadow, keys[0].getBoundingClientRect().top === keys[1].getBoundingClientRect().top];
+      form.remove();
+      return [button, hint];
+    }), [[26, '0px', '999px', '12px', 'rgba(255, 255, 255, 0.22)'], [64, 20, '11px', 'none', true]]);
     await shot('search-results');
     await page.mouse.click(700, 500);
     await page.waitForFunction(() => !document.getElementById('search-dropdown'));
