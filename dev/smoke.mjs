@@ -1052,6 +1052,10 @@ try {
     await page.click('text=Albümler');
     await page.waitForSelector('.am-library-card');
     assert.equal(await page.locator('.am-library-card').count(), 20);
+    // Cards scroll under the toolbar and its shade, as on Spotify's pages (#145); the title starts below it, and the
+    // toolbar's controls still take clicks over the library.
+    assert.deepEqual(await page.evaluate(() => { const v = document.getElementById('am-library'), top = parseFloat(getComputedStyle(document.body).getPropertyValue('--am-page-top')), field = document.querySelector('#global-nav-bar input').getBoundingClientRect();
+      return [v.getBoundingClientRect().top, v.querySelector('.am-library-title').getBoundingClientRect().top >= top, document.elementFromPoint(field.x + field.width / 2, field.y + field.height / 2)?.closest('#global-nav-bar') != null]; }), [0, true, true]);
     // Album cards name the artist, which Spotify sends in artists[] (albums have no owner).
     assert.equal(await page.textContent('.am-library-card .am-library-sub'), 'Sanatçı 0');
     await page.fill('.am-library-filter', 'rain');
@@ -1063,7 +1067,8 @@ try {
     assert.equal(results, 'search-dropdown');
     await page.fill('#global-nav-bar input', '');
     await page.mouse.click(700, 500);
-    assert.equal(await page.evaluate(() => [!!document.getElementById('search-dropdown'), getComputedStyle(document.getElementById('main')).zIndex].join()), 'false,0');
+    // #main stays lifted over the library either way: the library starts at the window's top, under the toolbar (#145).
+    assert.equal(await page.evaluate(() => [!!document.getElementById('search-dropdown'), getComputedStyle(document.getElementById('main')).zIndex].join()), 'false,30');
     await page.click('.am-library-sort');
     await page.click('#am-popover [role="menuitemradio"]:has-text("Ada göre (A–Z)")');
     assert.equal(await page.textContent('.am-library-sort'), 'Ada göre (A–Z)');
