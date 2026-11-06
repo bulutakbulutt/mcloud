@@ -2155,13 +2155,15 @@ try {
     const fitted = () => page.evaluate(() => {
       const view = document.querySelector('[data-testid="watch-feed-view"]'), grid = view.firstElementChild, card = view.getBoundingClientRect();
       const bottom = e => Math.round(e.getBoundingClientRect().bottom), last = grid.querySelector(':scope > div:first-child > div:nth-child(3)');
-      return { width: Math.round(card.width), grid: Math.abs(grid.getBoundingClientRect().height - card.height) < 1, meta: bottom(last) <= Math.round(card.bottom), next: bottom(document.querySelector('[data-testid="watch-feed-next-button"]')) < card.bottom };
+      return { width: Math.round(card.width), grid: Math.abs(grid.getBoundingClientRect().height - card.height) < 1, meta: bottom(last) <= Math.round(card.bottom), next: bottom(document.querySelector('[data-testid="watch-feed-next-button"]')) < card.bottom, avatar: getComputedStyle(last.firstElementChild.firstElementChild).display };
     });
     const windowSize = page.viewportSize();
-    for (const [width, height] of [[893, 699], [800, 600]]) {
+    for (const [width, height] of [[893, 699], [800, 600], [720, 520]]) {
       await page.setViewportSize({ width, height });
       const fit = await fitted();
       assert.deepEqual([fit.grid, fit.meta, fit.next], [true, true, true], `everything stays in the card at ${width}×${height}`);
+      // Under 520px the avatar goes, so a short artist name is not cut to a letter (the selector once never matched it).
+      assert.equal(fit.avatar === 'none', fit.width <= 520, `the avatar goes only under 520px (${fit.width}px at ${width}×${height})`);
     }
     await page.setViewportSize({ width: 1800, height: 1100 });
     assert.ok((await fitted()).width <= 980, 'the card has a cap in a large window');

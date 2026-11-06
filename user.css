@@ -619,7 +619,7 @@ body.am-solid [data-am-preview] :is(button,div) {backdrop-filter:none!important;
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :last-child:not(:first-child) {flex:none!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :first-child * {overflow:hidden;min-width:0;white-space:nowrap;text-overflow:ellipsis}
 @container (max-width:700px) {[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :nth-child(2) > :last-child:not(:first-child) {display:none!important}}
-@container (max-width:520px) {[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > :is(div:nth-child(2),div:first-child > :first-child) {display:none!important}}
+@container (max-width:520px) {[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:nth-child(2),[data-am-preview] [data-testid="watch-feed-view"] > div > div:first-child > div:nth-child(3) > div:first-child > :first-child {display:none!important}}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:first-child {grid-area:top;justify-self:end;align-items:center!important;gap:8px!important;margin:var(--am-pv-pad) var(--am-pv-pad) 0 0}
 /* Out of the grid: the first song has only Next, absolute in a 0×0 box, the others previous and next in the flow. As a
    grid row that difference moved the song's name and the actions 50px between the first song and the rest (#151). */
