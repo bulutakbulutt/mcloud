@@ -2888,6 +2888,18 @@ try {
     }), ['13px', '13px', 'none', true, 'none']);
     await page.hover('#mock-home125 [data-encore-id="card"] a[href^="/album"]');
     assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#mock-home125 [data-encore-id="card"] a[href^="/album"]')).textDecorationLine), 'none', 'a card title is not underlined on hover');
+    // #163: a title hidden in the artwork keeps its flex gap, so the subtitle started lower than another card's title;
+    // a long title takes one line.
+    assert.deepEqual(await page.evaluate(() => {
+      const card = (title, style) => `<div class="m163" data-encore-id="card" style="width:180px"><div><img alt="" style="display:block;width:100%;aspect-ratio:1"></div><div style="display:flex;flex-direction:column;gap:4px"><a href="/album/163"><p data-encore-id="cardTitle" style="margin:0;${style}"><span style="--encore-line-clamp:2;display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;-webkit-line-clamp:var(--encore-line-clamp)">${title}</span></p></a><div data-encore-id="cardSubtitle">Subtitle</div></div></div>`;
+      const host = document.getElementById('mock-home125'), box = document.createElement('div');
+      box.innerHTML = card('Album', '') + card('Hidden in the artwork', 'height:0;visibility:hidden') + card('A title long enough to take more than one line of the card, however wide it is', '');
+      host.append(box);
+      const rect = (c, s) => c.querySelector(s).getBoundingClientRect(), [titled, hidden, long] = box.children;
+      const under = (c, s) => Math.round(rect(c, s).top - rect(c, 'img').bottom), out = [under(titled, '[data-encore-id="cardTitle"]') === under(hidden, '[data-encore-id="cardSubtitle"]'), Math.round(rect(titled, '[data-encore-id="cardSubtitle"]').top - rect(titled, '[data-encore-id="cardTitle"]').bottom), rect(long, '[data-encore-id="cardTitle"]').height === rect(titled, '[data-encore-id="cardTitle"]').height];
+      box.remove();
+      return out;
+    }), [true, 0, true]);
     // Shortcuts as the song rows: 56px rows, 48px artwork, a rule under the row from its text, 13px names, and "…" at
     // the end opens Spotify's menu.
     const sc = await box('[data-am-shortcut]'), art = await box('[data-am-shortcut] img');
