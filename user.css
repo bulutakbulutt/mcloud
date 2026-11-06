@@ -610,6 +610,13 @@ body.am-solid [data-am-preview] :is(button,div) {backdrop-filter:none!important;
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button {flex:1 1 0;max-width:88px;height:clamp(36px,4cqi,40px)!important;min-block-size:0!important;padding:0!important;border-radius:999px!important;background:var(--am-pv-fill)!important;box-shadow:var(--am-pv-rim)!important;display:grid!important;place-items:center}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button:hover {background:var(--am-pv-fill-hover)!important}
 [data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) > button svg {width:20px!important;height:20px!important}
+/* Save is Apple's star, as in track lists (#97): outlined, filled in the accent once saved. Spotify's + / tick Lottie plays
+   in a 32px box for about a second after a press; the box draws the star at the icon's 20px and the animation is hidden. */
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) button[aria-checked] :is(svg,div[style*="pointer-events: none"]) {background:currentColor;-webkit-mask:var(--am-star-line) center/20px no-repeat;mask:var(--am-star-line) center/20px no-repeat}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) button[aria-checked] svg path {display:none}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) button[aria-checked] div[style*="pointer-events: none"] > div {opacity:0;filter:none}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) button[aria-checked="true"] {color:var(--am-accent)!important}
+[data-am-preview] [data-testid="watch-feed-view"] > div > div:last-child > div:nth-child(2) button[aria-checked="true"] :is(svg,div[style*="pointer-events: none"]) {-webkit-mask-image:var(--am-star-fill);mask-image:var(--am-star-fill)}
 /* The artist stays on one line: a long name shortens before Follow would drop to a line of its own. In a small card the
    listener count goes first, and in the smallest the hashtags and the avatar (Spotify's row shows one line of hashtags
    and clips the rest). */

@@ -2121,7 +2121,7 @@ try {
               <div><div style="display:flex;flex-wrap:wrap;gap:8px"><figure style="margin:0;width:32px;height:32px"></figure><div style="display:flex"><div><div><span><a href="/artist/1">Zara Larsson with a name long enough to take the whole of the card's first column</a></span></div></div><div><span>53M</span></div></div><div><button class="mock-secondary">Follow</button></div></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
             <div style="display:flex;flex-basis:50%"><div style="position:absolute;top:0;width:41%;height:100%"><div><img src="${cover}"></div></div></div>
             <div style="display:flex;flex-direction:column;width:128px"><div><div><button aria-label="Unmute">m</button></div><button data-testid="watch-feed-close-button" aria-label="Close" onclick="document.getElementById('mock-feed').remove()">x</button></div>
-              <div style="display:flex;flex-direction:column"><button aria-label="More" style="color:rgb(187,214,163)">…</button><button aria-label="Add to queue">+</button></div>
+              <div style="display:flex;flex-direction:column"><button aria-label="More" style="color:rgb(187,214,163)">…</button><button aria-label="Add to queue">+</button><button aria-label="Add to Liked Songs" aria-checked="false"><svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg></button></div>
               <div style="display:flex;flex-direction:column"><button aria-label="Previous"><span>Previous</span></button><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
           </div></div></div>`);
     }, cover);
@@ -2173,6 +2173,13 @@ try {
     await page.setViewportSize(windowSize);
     assert.deepEqual(await page.evaluate(() => { const view = document.querySelector('[data-testid="watch-feed-view"]'), mark = view.querySelector('[data-encore-id="tagIcon"]'), cs = getComputedStyle(mark), art = getComputedStyle(view.querySelector('[aria-label="More"]'));
       return [cs.width, cs.fontSize, cs.borderTopLeftRadius, cs.color === cs.backgroundColor, art.color]; }), ['14px', '10px', '3px', false, 'rgb(255, 255, 255)']);
+    // Save is Apple's star (#97): outlined, then filled in the accent once saved, Spotify's tick hidden.
+    const star = () => page.evaluate(() => { const save = document.querySelector('[data-testid="watch-feed-view"] [aria-label="Add to Liked Songs"]'), svg = getComputedStyle(save.querySelector('svg')), probe = document.createElement('i');
+      probe.style.color = 'var(--am-accent)'; save.after(probe); const accent = getComputedStyle(probe).color; probe.remove();
+      return [(svg.maskImage || svg.webkitMaskImage).includes("fill='none'"), getComputedStyle(save.querySelector('path')).display, getComputedStyle(save).color === accent]; });
+    assert.deepEqual(await star(), [true, 'none', false], 'an unsaved song shows the outlined star');
+    await page.evaluate(() => document.querySelector('[data-testid="watch-feed-view"] [aria-label="Add to Liked Songs"]').setAttribute('aria-checked', 'true'));
+    assert.deepEqual(await star(), [false, 'none', true], 'a saved song shows the filled star in the accent');
     // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
     await settingsWindow.pick('previewMaterial', 'Cam');
     assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
