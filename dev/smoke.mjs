@@ -2115,12 +2115,15 @@ try {
   await check('song preview in light mode: the card keeps its own text colour, its menus the page\'s', async () => {
     // Spotify colours links and tertiary buttons with --spice-text, dark in light mode, over a card that stays dark.
     const colours = await page.evaluate(() => { const root = document.documentElement, was = root.classList.contains('am-light'); root.classList.add('am-light'); document.body.classList.add('am-light');
-      document.querySelector('.Root').insertAdjacentHTML('beforeend', '<div id="mock-feed-light" role="presentation" data-am-preview><div data-testid="watch-feed-view"><a href="/track/1">Song</a><div data-tippy-root><a href="/artist/1">Go to artist</a></div></div></div>');
+      document.querySelector('.Root').insertAdjacentHTML('beforeend', '<div id="mock-feed-light" role="presentation" data-am-preview><div data-testid="watch-feed-view"><a href="/track/1">Song</a><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=#equaliser-animated-white"><div data-tippy-root><a href="/artist/1">Go to artist</a></div></div></div>');
       const view = document.querySelector('#mock-feed-light [data-testid="watch-feed-view"]'), read = (e, n) => getComputedStyle(e).getPropertyValue(n).trim();
       const out = [read(view, '--spice-text') === read(view, '--am-pv-text'), read(view.querySelector('[data-tippy-root]'), '--spice-text').replace(/\s/g, '')];
+      // On the light glass card Spotify's white playing equaliser takes the icons' dark tone.
+      const glass = document.body.classList.contains('am-pv-glass'); document.body.classList.add('am-pv-glass');
+      const eq = getComputedStyle(view.querySelector('img')); out.push(eq.filter, eq.opacity); document.body.classList.toggle('am-pv-glass', glass);
       if (!was) { root.classList.remove('am-light'); document.body.classList.remove('am-light'); } document.getElementById('mock-feed-light').remove(); return out; });
     await page.waitForFunction(() => !document.body.classList.contains('am-preview-open'));
-    assert.deepEqual(colours, [true, 'rgb(39,39,39)']);
+    assert.deepEqual(colours, [true, 'rgb(39,39,39)', 'brightness(0)', '0.65']);
   });
 
   await check('song preview: an Apple sheet, its background from settings, the sidebar closes it (#75)', async () => {
@@ -2132,12 +2135,12 @@ try {
         <div data-testid="watch-feed-view" style="--aspect-ratio:16 / 10;position:relative;display:flex;flex-direction:column;container-type:inline-size;width:min(85%,min(1680px,85vh * (var(--aspect-ratio))));aspect-ratio:var(--aspect-ratio);background-color:rgb(40,60,90)">
           <div style="display:flex;flex:1;position:relative">
             <div style="display:flex;flex-direction:column;flex-basis:50%"><div><span data-testid="watch-feed-title">Midnight Sun</span></div>
-              <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
+              <div><div><span><a href="/track/1">Midnight Sun</a></span></div><div><span data-encore-id="tagIcon" role="img" aria-label="Explicit" style="width:16px;height:16px;padding:4px;font-size:12px">E</span><div><a href="/artist/1"><span>Zara Larsson</span></a></div></div>
                 <div><div><img src="${cover}"></div><div role="progressbar" data-testid="watch-feed-progress-bar"><div style="inline-size:20%"></div></div></div></div>
               <div><div style="display:flex;flex-wrap:wrap;gap:8px"><figure style="margin:0;width:32px;height:32px"></figure><div style="display:flex"><div><div><span><a href="/artist/1">Zara Larsson with a name long enough to take the whole of the card's first column</a></span></div></div><div><span>53M</span></div></div><div><button class="mock-secondary">Follow</button></div></div><div><button class="e-10860-legacy-chip"><span>pop</span></button></div></div></div>
             <div style="display:flex;flex-basis:50%"><div style="position:absolute;top:0;width:41%;height:100%"><div><img src="${cover}"></div></div></div>
             <div style="display:flex;flex-direction:column;width:128px"><div><div><button aria-label="Unmute">m</button></div><button data-testid="watch-feed-close-button" aria-label="Close" onclick="document.getElementById('mock-feed').remove()">x</button></div>
-              <div style="display:flex;flex-direction:column"><button aria-label="More">…</button><button aria-label="Add to queue">+</button></div>
+              <div style="display:flex;flex-direction:column"><button aria-label="More" style="color:rgb(187,214,163)">…</button><button aria-label="Add to queue">+</button><button aria-label="Add to Liked Songs" aria-checked="false"><svg viewBox="0 0 24 24"><path d="M2 2h20v20H2z"/></svg></button></div>
               <div style="display:flex;flex-direction:column"><button aria-label="Previous"><span>Previous</span></button><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div></div>
           </div></div></div>`);
     }, cover);
@@ -2169,6 +2172,33 @@ try {
     assert.ok(later.row, 'Follow stays beside a long artist name');
     await page.evaluate(() => { document.querySelector('[data-testid="watch-feed-view"] > div > div:last-child > div:last-child').innerHTML = '<div style="position:absolute;right:0;bottom:0"><button data-testid="watch-feed-next-button" aria-label="Next"><span>Next</span></button></div><div></div>'; });
     assert.deepEqual(await placed(), later, 'the first song is laid out as the others');
+    // #151: the grid is the card's height at any window size (as a flex item it grew past the card, which clips it, and
+    // the hashtags and Next fell off); the card has a cap; the explicit mark and the action icons follow the card.
+    const fitted = () => page.evaluate(() => {
+      const view = document.querySelector('[data-testid="watch-feed-view"]'), grid = view.firstElementChild, card = view.getBoundingClientRect();
+      const bottom = e => Math.round(e.getBoundingClientRect().bottom), last = grid.querySelector(':scope > div:first-child > div:nth-child(3)');
+      return { width: Math.round(card.width), grid: Math.abs(grid.getBoundingClientRect().height - card.height) < 1, meta: bottom(last) <= Math.round(card.bottom), next: bottom(document.querySelector('[data-testid="watch-feed-next-button"]')) < card.bottom, avatar: getComputedStyle(last.firstElementChild.firstElementChild).display };
+    });
+    const windowSize = page.viewportSize();
+    for (const [width, height] of [[893, 699], [800, 600], [720, 520]]) {
+      await page.setViewportSize({ width, height });
+      const fit = await fitted();
+      assert.deepEqual([fit.grid, fit.meta, fit.next], [true, true, true], `everything stays in the card at ${width}×${height}`);
+      // Under 520px the avatar goes, so a short artist name is not cut to a letter (the selector once never matched it).
+      assert.equal(fit.avatar === 'none', fit.width <= 520, `the avatar goes only under 520px (${fit.width}px at ${width}×${height})`);
+    }
+    await page.setViewportSize({ width: 1800, height: 1100 });
+    assert.ok((await fitted()).width <= 980, 'the card has a cap in a large window');
+    await page.setViewportSize(windowSize);
+    assert.deepEqual(await page.evaluate(() => { const view = document.querySelector('[data-testid="watch-feed-view"]'), mark = view.querySelector('[data-encore-id="tagIcon"]'), cs = getComputedStyle(mark), art = getComputedStyle(view.querySelector('[aria-label="More"]'));
+      return [cs.width, cs.fontSize, cs.borderTopLeftRadius, cs.color === cs.backgroundColor, art.color]; }), ['14px', '10px', '3px', false, 'rgb(255, 255, 255)']);
+    // Save is Apple's star (#97): outlined, then filled in the accent once saved, Spotify's tick hidden.
+    const star = () => page.evaluate(() => { const save = document.querySelector('[data-testid="watch-feed-view"] [aria-label="Add to Liked Songs"]'), svg = getComputedStyle(save.querySelector('svg')), probe = document.createElement('i');
+      probe.style.color = 'var(--am-accent)'; save.after(probe); const accent = getComputedStyle(probe).color; probe.remove();
+      return [(svg.maskImage || svg.webkitMaskImage).includes("fill='none'"), getComputedStyle(save.querySelector('path')).display, getComputedStyle(save).color === accent]; });
+    assert.deepEqual(await star(), [true, 'none', false], 'an unsaved song shows the outlined star');
+    await page.evaluate(() => document.querySelector('[data-testid="watch-feed-view"] [aria-label="Add to Liked Songs"]').setAttribute('aria-checked', 'true'));
+    assert.deepEqual(await star(), [false, 'none', true], 'a saved song shows the filled star in the accent');
     // Settings: the window lists the backgrounds; Glass switches to the sheets' frosted glass and is saved.
     await settingsWindow.pick('previewMaterial', 'Cam');
     assert.deepEqual(await page.evaluate(() => [document.body.classList.contains('am-pv-glass'), document.body.classList.contains('am-pv-artwork'), getComputedStyle(document.querySelector('[data-testid="watch-feed-view"]'), '::before').content, JSON.parse(localStorage.getItem('mcloud:settings')).previewMaterial]), [true, false, 'none', 'glass']);
