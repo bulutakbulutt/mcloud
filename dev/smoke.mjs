@@ -2779,8 +2779,8 @@ try {
     // weight 550, the photo full width from under it with its top 13.5% hidden.
     assert.deepEqual(await page.evaluate(() => { const b = document.querySelector('#mock-home .am-mix'), w = b.getBoundingClientRect().width, a = getComputedStyle(b, '::after'), f = getComputedStyle(b, '::before');
       const r = v => Math.round(parseFloat(v) / w * 1000) / 10;
-      return [r(a.bottom), r(a.paddingLeft), r(a.paddingBottom), r(a.fontSize), a.fontWeight, f.backgroundSize.split(',')[1].trim(), r(f.backgroundPositionY.split(',')[1])]; }),
-      [68.5, 4.1, 1.7, 12.9, '550', '100% auto', 18]);
+      return [r(a.bottom), r(a.paddingLeft), r(a.paddingBottom), r(a.fontSize), a.fontWeight, f.backgroundSize.split(',')[1].trim().replace(/ auto$/, ''), r(f.backgroundPositionY.split(',')[1])]; }),
+      [68.5, 4.1, 1.7, 12.9, '550', '100%', 18]);
     await settingsWindow.pick('mixCovers', 'Renk geçişi (kişisel mix)');
     assert.deepEqual((await covers()).map(c => c[1]), ['gradient', 'gradient', 'gradient', '']);
     await settingsWindow.pick('mixCovers', 'Spotify');
