@@ -1987,7 +1987,7 @@ try {
           <div><button data-encore-id="buttonPrimary" aria-label="Play"><span>${svg}</span></button></div>
           <div data-testid="action-bar-row-actions"><button data-encore-id="buttonTertiary" class="e-1-button-tertiary--condensed-all" aria-label="Shuffle"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-save" aria-label="Save to Your Library" aria-checked="false"><span>${svg}</span></button><button data-encore-id="buttonTertiary" class="mock-download" aria-label="Download" aria-checked="false"><span>${svg}</span></button></div></div></div></div></div>
         <div class="contentSpacing"><div class="main-trackList-trackListContainer"><div class="main-trackList-trackList" role="grid"><div role="row"><div class="main-trackList-trackListRow"><button class="mock-hide" role="switch" aria-label="Hide in this playlist" aria-checked="false">${svg}</button><button class="mock-like" aria-label="Add to Liked Songs" aria-checked="false">${svg}</button><button class="mock-liked" aria-label="Add to playlist" aria-checked="true">${svg}</button></div></div></div></div>
-          ${kind === 'album' ? '<div><div><p class="mock-date">August 20, 2016</p><div><p>℗ 2016 Boys Don\'t Cry</p></div></div></div>' : ''}</div></section>`);
+          ${kind === 'album' ? '<div><div><p class="mock-date">August 20, 2016</p><div><p class="mock-c">© 2016 Boys Don\'t Cry</p><p class="mock-p">℗ 2016 Boys Don\'t Cry</p></div></div></div>' : ''}</div></section>`);
       Spicetify.Platform.History.push(`/${kind}/${id}`);
     }, [kind, id]);
     const css = (sel, prop, pseudo) => page.$eval('#mock-97 ' + sel, (e, [prop, pseudo]) => getComputedStyle(e, pseudo)[prop], [prop, pseudo]);
@@ -1998,6 +1998,8 @@ try {
     assert.equal(await info(), '"3 şarkı, 1 saat, 2 dakika"');
     assert.equal(await css('.mock-date', 'content', '::after'), '"3 şarkı, 1 saat, 2 dakika"');
     assert.deepEqual([await css('.mock-count', 'display'), await css('.mock-dot2', 'display'), await css('.mock-year', 'display') !== 'none'], ['none', 'none', true]);
+    // One copyright line, the ℗ one, as Music.
+    assert.deepEqual([await css('.mock-c', 'display'), await css('.mock-p', 'display')], ['none', 'block']);
     // Music's artwork is 270pt at every window width.
     assert.equal(await css('.main-entityHeader-imageContainer', 'width'), '270px');
     // Save is a star, outlined until saved, in the accent like shuffle; Download keeps its glyph. Rows: the liked one is filled.

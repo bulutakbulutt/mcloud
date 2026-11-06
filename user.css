@@ -234,6 +234,8 @@ body.am-ready .am-native-main :is([data-testid="playlist-page"],[data-testid="al
 body.am-list-info .am-native-main :is([data-testid="playlist-page"],[data-testid="album-page"]):has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-entityHeader-headerText > div:has(> .main-entityHeader-creatorWrapper) > :is(div:not(.main-entityHeader-creatorWrapper),span:has(+ div:not(.main-entityHeader-creatorWrapper)),div:not(.main-entityHeader-creatorWrapper) + span) {display:none!important}
 body.am-list-info .am-native-main [data-testid="album-page"]:has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-trackList-trackListContainer + div > div > p:first-child::after {content:var(--am-list-info);display:block}
 body.am-list-info .am-native-main [data-testid="playlist-page"]:has(> [data-testid="entity-header"] :is(.main-entityHeader-imageContainer,.am-photo-art)) .main-trackList-trackListContainer::after {content:var(--am-list-info);display:block;padding:24px 16px 8px;font-size:13px;line-height:16px;color:rgb(var(--am-ink)/.502)}
+/* Music prints one copyright line under an album, the ℗ one; Spotify prints © and then ℗, often the same text twice. */
+body.am-ready .am-native-main [data-testid="album-page"] .main-trackList-trackListContainer + div > div > p:first-child + div > p:has(+ p) {display:none}
 /* A mix's "About recommendations" link (a button in the header) goes under the track list with the count and length,
    as Music's footer; in the header it read as a second description. It is anchored to the list's end, so the header
    stops being its containing block (its colour layers are hidden here). */
