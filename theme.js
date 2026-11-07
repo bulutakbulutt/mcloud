@@ -471,18 +471,18 @@
     const scope=roots?.length?roots:[main];if(!main)return;
     for(const root of scope){
       if(!(root instanceof Element)||!root.isConnected||!main.contains(root)&&root!==main)continue;
-      const tagged='[role="grid"],[role="row"],[role="list"],section.Shelf,[data-testid="component-shelf"],[data-testid="shortcut-background"]';
+      const tagged='[role="grid"],[role="row"],[role="list"],.main-gridContainer-gridContainer,section.Shelf,[data-testid="component-shelf"],[data-testid="shortcut-background"]';
       const nodes=root.matches(tagged)?[root]:[];
       nodes.push(...root.querySelectorAll(tagged));
       for(const node of nodes){
         if(node.matches('[data-testid="shortcut-background"]'))tagShortcut(node);
         else if(node.matches('[role="grid"]'))tagTrackList(node);
         else if(node.matches('[role="row"]'))tagTrackRow(node);
-        else if(node.matches('[role="list"]'))tagGenreList(node);
+        else if(node.matches('[role="list"],.main-gridContainer-gridContainer'))tagGenreList(node);
         else if(!node.hasAttribute('data-shelf'))node.setAttribute('data-shelf','');
       }
       // Browse all's tiles arrive one by one after the empty list; a list's header and a row's cells can land after theirs.
-      const list=root.closest('[role="list"]');if(list)tagGenreList(list);
+      const list=root.closest('[role="list"],.main-gridContainer-gridContainer');if(list)tagGenreList(list);
       const grid=root.closest('[role="grid"]');if(grid)tagTrackList(grid);
       const row=root.closest('[role="row"]');if(row)tagTrackRow(row);
       root.closest('section.Shelf,[data-testid="component-shelf"]')?.setAttribute('data-shelf','');
@@ -548,12 +548,13 @@
     if(start)tag([...start.children].find(c=>c.tagName==='DIV'),'main-trackList-rowMainContent');
     if(cells.length>2)for(const c of end.children)if(c.matches('[data-encore-id="text"]'))tag(c,'main-trackList-rowDuration');
   }
-  // Browse all's category grid, whose tiles link to /genre/.
+  // Browse all's category grid, whose tiles link to /genre/. user.css and syncBrowse find it by data-am-genres: Spotify
+  // rewrites the list's class when it renders the page again, which took the readable name and the duotones with it
+  // until a visibility change ran the sync again (#167). The name is still given back for Spotify's own grid rules.
   function tagGenreList(list) {
-    if(!list.classList.contains('main-gridContainer-gridContainer')&&list.querySelector(':scope > [role="listitem"] > a[href*="/genre/"]')){
-      list.classList.add('main-gridContainer-gridContainer');
-      if(duoReady)syncBrowse(20);
-    }
+    if(list.hasAttribute('data-am-genres')||!list.querySelector(':scope > [role="listitem"] > a[href*="/genre/"]'))return;
+    list.setAttribute('data-am-genres','');tag(list,'main-gridContainer-gridContainer');
+    if(duoReady)syncBrowse(20);
   }
   for (let i = 0; i < 120 && !bindLayout(); i++) await wait(250);
   if (!main) return;
@@ -4148,7 +4149,7 @@
   // The grid mounts a moment after Search opens; it is looked for a few times, then its tiles are watched.
   function syncBrowse(tries=0) {
     clearTimeout(duoTimer);
-    const grid=routePath()==='/search'&&!document.hidden?document.querySelector('.am-native-main .main-gridContainer-gridContainer:has(> [role="listitem"] > a[href*="/genre/"])'):null;
+    const grid=routePath()==='/search'&&!document.hidden?document.querySelector('.am-native-main [data-am-genres]:has(> [role="listitem"] > a[href*="/genre/"])'):null;
     if(grid!==duoGrid){duoObserver?.disconnect();duoAdded.disconnect();for(const tile of [...duoTiles.keys()])duoHide(tile);duoGrid=grid;if(grid)duoAdded.observe(grid,{childList:true});}
     if(!grid){if(routePath()==='/search'&&!document.hidden&&tries<20)duoTimer=setTimeout(()=>syncBrowse(tries+1),250);return;}
     for(const tile of grid.querySelectorAll(':scope > [role="listitem"] > a > div[style*="background-color"]'))duoObserver?.observe(tile);
