@@ -1919,6 +1919,15 @@ body.am-np-spicy:not(.am-panel-open).am-ready #SpicyLyricsNPVCard .CardHeader {d
 /* Windows: keep the toolbar and floating controls clear of the minimise/maximise/close buttons. */
 body.am-windows.am-ready #global-nav-bar {right:150px!important}
 body.am-windows #am-artist .am-artist-actions {right:150px}
+/* #150: Spotify's native shell draws those buttons and the app menu's "…" (top left) over the page with white glyphs,
+   and offers no way to recolour them (DesktopUpdateUi sets only the title bar's height, the buttons' visibility and the
+   menu's state). In light mode a dark capsule sits under each group so the glyphs stay readable. Spotify's title bar is
+   64px (setTitlebarHeight(64)), so the glyphs' middle is at 32px; the buttons are ~45px wide (reporter, 125%). */
+body.am-windows.am-light {--am-caption-fill:color-mix(in srgb,#1e1e1e 62%,transparent);--am-caption-solid:#6e6e6e}
+body.am-windows.am-light::before,body.am-windows.am-light::after {content:'';position:fixed;top:16px;height:32px;border-radius:16px;z-index:2147483647;pointer-events:none;background:var(--am-caption-fill);-webkit-backdrop-filter:blur(16px) saturate(1.4);backdrop-filter:blur(16px) saturate(1.4);box-shadow:inset 0 0 0 .5px #ffffff26}
+body.am-windows.am-light::before {left:12px;width:46px}
+body.am-windows.am-light::after {right:2px;width:134px}
+body.am-windows.am-light.am-solid::before,body.am-windows.am-light.am-solid::after {background:var(--am-caption-solid);-webkit-backdrop-filter:none;backdrop-filter:none}
 
 /* Home as Apple Music's (issue #84, settings.homeStyle): cards without a plate or hover fill, 8px artwork, 13px text,
    round glass play (bottom left) and "…" (bottom right, .am-card-more, added by theme.js) over the artwork on hover,
