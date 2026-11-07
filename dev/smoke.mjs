@@ -1748,6 +1748,30 @@ try {
     await page.click('#am-settings .am-settings-ok');
   });
 
+  await check('Windows light mode: dark capsules under the native caption buttons and the "…"; none on macOS or in dark (#150)', async () => {
+    const caps = (classes) => page.evaluate(classes => {
+      const b = document.body, root = document.documentElement, was = ['am-windows', 'am-light', 'am-solid'].filter(c => b.classList.contains(c)), rootLight = root.classList.contains('am-light');
+      for (const c of ['am-windows', 'am-light', 'am-solid']) b.classList.toggle(c, classes.includes(c));
+      root.classList.toggle('am-light', classes.includes('am-light'));
+      const out = ['::before', '::after'].map(p => { const cs = getComputedStyle(b, p); return cs.content === 'none' ? null : { bg: cs.backgroundColor, pos: cs.position, top: cs.top, h: cs.height, w: cs.width, events: cs.pointerEvents, blur: cs.backdropFilter !== 'none', side: p === '::before' ? cs.left : cs.right }; });
+      for (const c of ['am-windows', 'am-light', 'am-solid']) b.classList.toggle(c, was.includes(c));
+      root.classList.toggle('am-light', rootLight);
+      return out;
+    }, classes);
+    const [menu, buttons] = await caps(['am-windows', 'am-light']);
+    for (const c of [menu, buttons]) {
+      assert.ok(c, 'capsule drawn');
+      assert.deepEqual([c.pos, c.top, c.h, c.events, c.blur], ['fixed', '16px', '32px', 'none', true]);
+      // Dark enough for white glyphs over the white page: alpha-composite over #fff stays at or below #808080.
+      const [r, , , a = 1] = c.bg.match(/[\d.]+/g).map(Number), over = r * a + 255 * (1 - a);
+      assert.ok(over <= 128, 'capsule darkens white to ' + over);
+    }
+    assert.deepEqual([menu.side, menu.w, buttons.side, buttons.w], ['12px', '46px', '2px', '134px']);
+    const solid = await caps(['am-windows', 'am-light', 'am-solid']);
+    assert.deepEqual(solid.map(c => [c.bg, c.blur]), [['rgb(110, 110, 110)', false], ['rgb(110, 110, 110)', false]]);
+    for (const classes of [['am-light'], ['am-windows'], []]) assert.deepEqual(await caps(classes), [null, null], 'no capsules with ' + classes);
+  });
+
   await check('player buttons: the Player tab picks which show, on a small bar that follows; play, title and scrubber stay', async () => {
     await page.evaluate(() => window.__menuItems.find(i => i.name === 'mcloud Ayarları').onClick());
     await page.click('#am-settings .am-settings-tab:has-text("Oynatıcı")');
