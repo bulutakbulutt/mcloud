@@ -2243,12 +2243,12 @@ try {
   await check('Browse all tiles: Apple\'s Browse Categories (#75)', async () => {
     await page.evaluate(() => {
       const tile = (name, color) => `<div role="listitem" style="padding:12px"><a href="/genre/${name}" style="display:block;position:relative"><div style="background-color: ${color};position:relative;overflow:hidden;border-radius:8px;padding-bottom:56.25%"><img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=" style="position:absolute;bottom:0;right:0;width:45%;transform:rotate(25deg)"><span style="position:absolute;padding:16px;font-size:24px"><span>${name}</span></span></div></a></div>`;
-      document.querySelector('main').insertAdjacentHTML('afterbegin', `<section id="mock-browse" data-shelf="shelf"><div><h2>Browse all</h2></div><div class="main-gridContainer-gridContainer" style="--min-column-width:254px;display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min-column-width),1fr))">${tile('Music', 'rgb(220, 20, 140)')}${tile('Pop', 'rgb(70, 130, 180)')}</div></section>`);
+      document.querySelector('main').insertAdjacentHTML('afterbegin', `<section id="mock-browse" data-shelf="shelf"><div><h2>Browse all</h2></div><div class="main-gridContainer-gridContainer" style="--min-column-width:254px">${tile('Music', 'rgb(220, 20, 140)')}${tile('Pop', 'rgb(70, 130, 180)')}</div></section>`);
       Spicetify.Platform.History.push('/search');
     });
     await page.waitForFunction(() => document.body.classList.contains('am-search-open'));
     const look = () => page.evaluate(() => {
-      const t = document.querySelector('#mock-browse a > div'), s = getComputedStyle(t.querySelector('span')), img = getComputedStyle(t.querySelector('img')), grid = getComputedStyle(document.querySelector('#mock-browse .main-gridContainer-gridContainer'));
+      const t = document.querySelector('#mock-browse a > div'), s = getComputedStyle(t.querySelector('span')), img = getComputedStyle(t.querySelector('img')), grid = getComputedStyle(t.closest('[role="listitem"]').parentElement);
       const item = t.closest('[role="listitem"]').getBoundingClientRect(), label = t.querySelector('span > span').getBoundingClientRect(), box = t.getBoundingClientRect();
       return { label: [s.fontSize, s.fontWeight, Math.round(box.bottom - label.bottom), Math.round(label.left - box.left)], img: img.visibility, duo: t.hasAttribute('data-am-duo') && getComputedStyle(t, '::before').backgroundImage.slice(0, 10), gap: grid.columnGap, pad: getComputedStyle(t.closest('[role="listitem"]')).paddingTop, h2: getComputedStyle(document.querySelector('#mock-browse h2')).fontSize, width: Math.round(item.width) };
     });
@@ -2268,6 +2268,12 @@ try {
     assert.deepEqual(pixel, [222, 0, 140]);
     assert.deepEqual([apple.gap, apple.pad, apple.h2], ['16px', '0px', '15px']);
     assert.ok(apple.width < 254, 'smaller tiles than Spotify\'s');
+    // Spotify renders the page again and rewrites the grid's class, dropping the readable name the theme gave it (#167):
+    // the duotones and the grid stay, with no visibility change to sync again.
+    await page.evaluate(() => { document.querySelector('#mock-browse a').parentElement.parentElement.className = 'x7Hashed9Grid'; });
+    await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+    const rerendered = await look();
+    assert.deepEqual([rerendered.img, rerendered.duo, rerendered.label.slice(0, 2), rerendered.gap, rerendered.width], ['hidden', 'url("blob:', ['13px', '700'], '16px', apple.width], 'the duotones and the grid survive Spotify rewriting the grid\'s class');
     // Only on Search: elsewhere Spotify's tiles keep their own look.
     await page.evaluate(() => Spicetify.Platform.History.push('/'));
     await page.waitForFunction(() => !document.body.classList.contains('am-search-open'));
